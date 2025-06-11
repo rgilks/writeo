@@ -1,75 +1,59 @@
-import * as cdk from 'aws-cdk-lib';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { Construct } from 'constructs';
+import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
+import * as cdk from 'aws-cdk-lib';
 
-export function createLanguageToolService(
-  scope: Construct,
-  id: string
-): {
-  endpoint: string;
-  vpcId: string;
-} {
-  const vpc = new ec2.Vpc(scope, `${id}Vpc`, {
-    maxAzs: 2,
-    natGateways: 0,
-    subnetConfiguration: [
-      {
-        cidrMask: 24,
-        name: 'Public',
-        subnetType: ec2.SubnetType.PUBLIC,
-      },
-    ],
+export function createLanguageToolService(backend: { createStack: (name: string) => cdk.Stack }) {
+  const languageToolStack = backend.createStack('LanguageToolStack');
+
+  const vpc = ec2.Vpc.fromLookup(languageToolStack, 'DefaultVPC', {
+    isDefault: true,
   });
 
-  const cluster = new ecs.Cluster(scope, `${id}Cluster`, {
+  const cluster = new ecs.Cluster(languageToolStack, 'LanguageToolCluster', {
     vpc,
     clusterName: 'languagetool-cluster',
   });
 
-  const securityGroup = new ec2.SecurityGroup(scope, `${id}SecurityGroup`, {
-    vpc,
-    description: 'Security group for LanguageTool ECS service',
-    allowAllOutbound: true,
-  });
-
-  securityGroup.addIngressRule(
-    ec2.Peer.ipv4(vpc.vpcCidrBlock),
-    ec2.Port.tcp(8081),
-    'Allow ALB to reach LanguageTool service'
+  const namespace = new servicediscovery.PrivateDnsNamespace(
+    languageToolStack,
+    'ServiceNamespace',
+    {
+      name: 'languagetool.local',
+      vpc,
+    }
   );
 
-  const logGroup = new logs.LogGroup(scope, `${id}LogGroup`, {
+  const logGroup = new logs.LogGroup(languageToolStack, 'LanguageToolLogGroup', {
     logGroupName: '/ecs/languagetool',
-    removalPolicy: cdk.RemovalPolicy.DESTROY,
     retention: logs.RetentionDays.ONE_WEEK,
   });
 
-  const taskDefinition = new ecs.FargateTaskDefinition(scope, `${id}Task`, {
+  const taskDefinition = new ecs.FargateTaskDefinition(languageToolStack, 'LanguageToolTaskDef', {
     memoryLimitMiB: 2048,
     cpu: 1024,
   });
 
-  taskDefinition.addContainer('languagetool', {
+  taskDefinition.addContainer('LanguageToolContainer', {
     image: ecs.ContainerImage.fromRegistry('meyay/languagetool:latest'),
-    containerName: 'languagetool',
-    portMappings: [{ containerPort: 8081 }],
+    memoryLimitMiB: 2048,
+    cpu: 1024,
+    portMappings: [
+      {
+        containerPort: 8081,
+        protocol: ecs.Protocol.TCP,
+      },
+    ],
     environment: {
-      LISTEN_PORT: '8081',
-      Java_Xms: '1g',
-      Java_Xmx: '1g',
+      JAVA_TOOL_OPTIONS: '-Xms1g -Xmx1800m',
     },
     logging: ecs.LogDrivers.awsLogs({
       streamPrefix: 'languagetool',
       logGroup,
     }),
     healthCheck: {
-      command: [
-        'CMD-SHELL',
-        'wget --no-verbose --tries=1 --spider http://localhost:8081/v2/languages || exit 1',
-      ],
+      command: ['CMD-SHELL', 'curl -f http://localhost:8081/v2/check?text=test || exit 1'],
       interval: cdk.Duration.seconds(30),
       timeout: cdk.Duration.seconds(5),
       retries: 3,
@@ -77,43 +61,48 @@ export function createLanguageToolService(
     },
   });
 
-  const fargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(
-    scope,
-    `${id}FargateService`,
-    {
-      cluster,
-      taskDefinition,
-      publicLoadBalancer: false,
-      assignPublicIp: true,
-      desiredCount: 1,
-      serviceName: 'languagetool-service',
-      listenerPort: 80,
-      protocol: cdk.aws_elasticloadbalancingv2.ApplicationProtocol.HTTP,
-      taskSubnets: {
-        subnetType: ec2.SubnetType.PUBLIC,
-      },
-      platformVersion: ecs.FargatePlatformVersion.LATEST,
-    }
-  );
-
-  fargateService.service.connections.addSecurityGroup(securityGroup);
-
-  fargateService.targetGroup.configureHealthCheck({
-    path: '/v2/languages',
-    port: '8081',
-    protocol: cdk.aws_elasticloadbalancingv2.Protocol.HTTP,
-    healthyHttpCodes: '200',
+  const ecsSecurityGroup = new ec2.SecurityGroup(languageToolStack, 'ECSSecurityGroup', {
+    vpc,
+    description: 'Security group for LanguageTool ECS service',
+    allowAllOutbound: true,
   });
 
-  const endpoint = `http://${fargateService.loadBalancer.loadBalancerDnsName}`;
+  ecsSecurityGroup.addIngressRule(
+    ec2.Peer.ipv4(vpc.vpcCidrBlock),
+    ec2.Port.tcp(8081),
+    'Allow LanguageTool access from within VPC'
+  );
 
-  new cdk.CfnOutput(scope, `${id}Endpoint`, {
-    value: endpoint,
-    description: 'LanguageTool service endpoint',
+  const service = new ecs.FargateService(languageToolStack, 'LanguageToolService', {
+    cluster,
+    taskDefinition,
+    desiredCount: 1,
+    assignPublicIp: true,
+    securityGroups: [ecsSecurityGroup],
+    serviceName: 'languagetool-service',
+    cloudMapOptions: {
+      name: 'languagetool',
+      cloudMapNamespace: namespace,
+      dnsRecordType: servicediscovery.DnsRecordType.A,
+    },
+  });
+
+  new cdk.CfnOutput(languageToolStack, 'LanguageToolServiceUrl', {
+    value: 'http://languagetool.languagetool.local:8081',
+    description: 'LanguageTool Service Discovery URL',
+    exportName: 'LanguageToolServiceUrl',
+  });
+
+  new cdk.CfnOutput(languageToolStack, 'LanguageToolVPCId', {
+    value: vpc.vpcId,
+    description: 'VPC ID for LanguageTool service',
+    exportName: 'LanguageToolVPCId',
   });
 
   return {
-    endpoint,
-    vpcId: vpc.vpcId,
+    vpc,
+    cluster,
+    service,
+    serviceUrl: 'http://languagetool.languagetool.local:8081',
   };
 }

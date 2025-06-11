@@ -8,12 +8,11 @@ const backend = defineBackend({
   data,
 });
 
-const languageToolStack = backend.createStack('LanguageToolStack');
-const languageToolService = createLanguageToolService(languageToolStack, 'LanguageTool');
+const languageToolService = createLanguageToolService(backend);
 
 backend.addOutput({
   custom: {
-    languageToolEndpoint: languageToolService.endpoint,
-    languageToolVpcId: languageToolService.vpcId,
+    languageToolEndpoint: languageToolService.serviceUrl,
+    languageToolVpcId: languageToolService.vpc.vpcId,
   },
 });
