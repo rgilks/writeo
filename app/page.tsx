@@ -1,8 +1,16 @@
+import LanguageToolDemo from './components/language-tool-demo';
+
 const Home = () => {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        Welcome to Writeo
+    <div className="min-h-screen bg-gray-50">
+      <main className="container mx-auto py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Writeo</h1>
+          <p className="text-gray-600">
+            AI-powered writing assistant with LanguageTool integration
+          </p>
+        </div>
+        <LanguageToolDemo />
       </main>
     </div>
   );

@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    LANGUAGETOOL_ENDPOINT: process.env.LANGUAGETOOL_ENDPOINT || '',
+  },
+  serverExternalPackages: ['aws-cdk-lib'],
 };
 
 export default nextConfig;

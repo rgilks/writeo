@@ -1,11 +1,19 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
+import { createLanguageToolService } from './languagetool/resource';
 
-/**
- * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
- */
-defineBackend({
+const backend = defineBackend({
   auth,
   data,
+});
+
+const languageToolStack = backend.createStack('LanguageToolStack');
+const languageToolService = createLanguageToolService(languageToolStack, 'LanguageTool');
+
+backend.addOutput({
+  custom: {
+    languageToolEndpoint: languageToolService.endpoint,
+    languageToolVpcId: languageToolService.vpcId,
+  },
 });
