@@ -12,15 +12,22 @@ class LanguageToolClient {
   }
 
   async checkText(request: LanguageToolCheckRequest): Promise<LanguageToolResponse> {
-    const formData = new FormData();
-    formData.append('text', request.text);
-    formData.append('language', request.language);
-    formData.append('enabledOnly', request.enabledOnly.toString());
-    formData.append('level', request.level);
+    console.log('LanguageTool API Request:', JSON.stringify(request, null, 2));
+    const params = new URLSearchParams();
+    params.append('text', request.text);
+    params.append('language', request.language);
+    params.append('enabledOnly', request.enabledOnly.toString());
+    params.append('level', request.level);
+    if (request.enabledCategories) {
+      params.append('enabledCategories', request.enabledCategories);
+    }
 
     const response = await fetch(`${this.endpoint}/v2/check`, {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params,
     });
 
     if (!response.ok) {
@@ -28,6 +35,7 @@ class LanguageToolClient {
     }
 
     const data = await response.json();
+    console.log('LanguageTool API Response:', JSON.stringify(data, null, 2));
     return LanguageToolResponseSchema.parse(data);
   }
 

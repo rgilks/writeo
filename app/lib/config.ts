@@ -28,8 +28,7 @@ export const getLanguageToolEndpoint = (): string => {
     }
   }
 
-  console.warn('No LanguageTool endpoint configured, using public demo instance');
-  return 'https://api.languagetool.org';
+  throw new Error('No LanguageTool endpoint configured');
 };
 
 export const config = {

@@ -32,11 +32,16 @@ export const LanguageToolResponseSchema = z.object({
     buildDate: z.string(),
   }),
   warnings: z
-    .array(
+    .union([
       z.object({
         incompleteResults: z.boolean(),
-      })
-    )
+      }),
+      z.array(
+        z.object({
+          incompleteResults: z.boolean(),
+        })
+      ),
+    ])
     .optional(),
   language: z.object({
     name: z.string(),
@@ -55,6 +60,7 @@ export const LanguageToolCheckRequestSchema = z.object({
   language: z.string().default('auto'),
   enabledOnly: z.boolean().default(false),
   level: z.enum(['default', 'picky']).default('default'),
+  enabledCategories: z.string().optional(),
 });
 
 export type LanguageToolMatch = z.infer<typeof LanguageToolMatchSchema>;

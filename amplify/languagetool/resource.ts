@@ -2,7 +2,6 @@ import { Construct } from 'constructs';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cdk from 'aws-cdk-lib';
 
@@ -21,29 +20,19 @@ export class LanguageToolService extends Construct {
           name: 'PublicSubnet',
           subnetType: ec2.SubnetType.PUBLIC,
         },
-        {
-          cidrMask: 24,
-          name: 'PrivateSubnet',
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-        },
       ],
-      enableDnsHostnames: true,
-      enableDnsSupport: true,
+      natGateways: 0,
     });
 
     const cluster = new ecs.Cluster(this, 'LanguageToolCluster', {
       vpc: this.vpc,
-      clusterName: 'languagetool-cluster',
-    });
-
-    const namespace = new servicediscovery.PrivateDnsNamespace(this, 'ServiceNamespace', {
-      name: 'languagetool.local',
-      vpc: this.vpc,
+      clusterName: `languagetool-cluster-${cdk.Aws.STACK_NAME}`,
     });
 
     const logGroup = new logs.LogGroup(this, 'LanguageToolLogGroup', {
-      logGroupName: '/ecs/languagetool',
+      logGroupName: `/ecs/languagetool-${cdk.Aws.STACK_NAME}`,
       retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     const taskDefinition = new ecs.FargateTaskDefinition(this, 'LanguageToolTaskDef', {
@@ -75,80 +64,58 @@ export class LanguageToolService extends Construct {
       allowAllOutbound: true,
     });
 
-    const albSecurityGroup = new ec2.SecurityGroup(this, 'ALBSecurityGroup', {
-      vpc: this.vpc,
-      description: 'Security group for LanguageTool ALB',
-      allowAllOutbound: true,
-    });
-
-    albSecurityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(80),
-      'Allow HTTP access from anywhere'
-    );
-
     ecsSecurityGroup.addIngressRule(
-      albSecurityGroup,
+      ec2.Peer.anyIpv4(),
       ec2.Port.tcp(8081),
-      'Allow ALB access to LanguageTool'
+      'Allow NLB access to LanguageTool'
     );
 
-    const alb = new elbv2.ApplicationLoadBalancer(this, 'LanguageToolALB', {
+    const nlb = new elbv2.NetworkLoadBalancer(this, 'LanguageToolNLB', {
       vpc: this.vpc,
       internetFacing: true,
-      securityGroup: albSecurityGroup,
     });
 
-    const listener = alb.addListener('LanguageToolListener', {
+    const listener = nlb.addListener('LanguageToolListener', {
       port: 80,
-      protocol: elbv2.ApplicationProtocol.HTTP,
+      protocol: elbv2.Protocol.TCP,
     });
 
     const service = new ecs.FargateService(this, 'LanguageToolService', {
       cluster,
       taskDefinition,
       desiredCount: 1,
-      assignPublicIp: false,
+      assignPublicIp: true,
       securityGroups: [ecsSecurityGroup],
-      serviceName: 'languagetool-service-1',
-      cloudMapOptions: {
-        name: 'languagetool',
-        cloudMapNamespace: namespace,
-        dnsRecordType: servicediscovery.DnsRecordType.A,
-      },
+      serviceName: `languagetool-service-${cdk.Aws.STACK_NAME}`,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        subnetType: ec2.SubnetType.PUBLIC,
       },
     });
 
-    listener.addTargets('LanguageToolTargets', {
+    const targetGroup = listener.addTargets('LanguageToolTargets', {
       port: 8081,
-      protocol: elbv2.ApplicationProtocol.HTTP,
+      protocol: elbv2.Protocol.TCP,
       targets: [
         service.loadBalancerTarget({
           containerName: 'LanguageToolContainer',
           containerPort: 8081,
         }),
       ],
-      healthCheck: {
-        path: '/v2/languages',
-        interval: cdk.Duration.seconds(60),
-        timeout: cdk.Duration.seconds(30),
-        healthyThresholdCount: 2,
-        unhealthyThresholdCount: 5,
-      },
     });
 
-    this.publicUrl = `http://${alb.loadBalancerDnsName}`;
-
-    new cdk.CfnOutput(this, 'LanguageToolServiceUrl', {
-      value: 'http://languagetool.languagetool.local:8081',
-      description: 'LanguageTool Service Discovery URL (internal)',
+    targetGroup.configureHealthCheck({
+      protocol: elbv2.Protocol.TCP,
+      interval: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(10),
+      healthyThresholdCount: 2,
+      unhealthyThresholdCount: 2,
     });
+
+    this.publicUrl = `http://${nlb.loadBalancerDnsName}`;
 
     new cdk.CfnOutput(this, 'LanguageToolPublicUrl', {
       value: this.publicUrl,
-      description: 'LanguageTool Public URL via ALB',
+      description: 'LanguageTool Public URL via NLB',
     });
 
     new cdk.CfnOutput(this, 'LanguageToolVPCId', {
