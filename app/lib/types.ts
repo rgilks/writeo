@@ -58,6 +58,7 @@ export const LanguageToolResponseSchema = z.object({
 export const LanguageToolCheckRequestSchema = z.object({
   text: z.string().min(1, 'Text is required'),
   language: z.string().default('auto'),
+  motherTongue: z.string().optional(),
   enabledOnly: z.boolean().default(false),
   level: z.enum(['default', 'picky']).default('default'),
   enabledCategories: z.string().optional(),

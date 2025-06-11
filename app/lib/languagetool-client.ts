@@ -16,6 +16,9 @@ class LanguageToolClient {
     const params = new URLSearchParams();
     params.append('text', request.text);
     params.append('language', request.language);
+    if (request.motherTongue) {
+      params.append('motherTongue', request.motherTongue);
+    }
     params.append('enabledOnly', request.enabledOnly.toString());
     params.append('level', request.level);
     if (request.enabledCategories) {
