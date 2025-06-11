@@ -93,19 +93,19 @@ The deployment creates the following AWS resources:
 
 #### Custom ECS Resources
 
-- **Default VPC**: Uses existing VPC to reduce costs
+- **Minimal VPC**: Creates dedicated VPC with public subnets only
 - **ECS Cluster**: Fargate-based container orchestration
 - **Task Definition**: LanguageTool container specification
-- **ECS Service**: Managed service with health checks in public subnets
-- **Application Load Balancer**: Internal load balancer
+- **ECS Service**: Managed service with health checks and service discovery
+- **Service Discovery**: Private DNS namespace for internal communication
 - **CloudWatch Log Group**: Centralized logging
 - **Security Groups**: Restrictive network access control
 
 #### Networking
 
-- **Default VPC**: No additional VPC costs
-- **Public Subnets**: Direct internet access (no NAT gateway needed)
-- **Internet Gateway**: Existing gateway for container registry access
+- **Minimal VPC**: Creates simple VPC with public subnets (no NAT gateway costs)
+- **Public Subnets**: Direct internet access for container registry
+- **Service Discovery**: Internal DNS resolution (`languagetool.languagetool.local:8081`)
 - **Security Groups**: VPC-only access to LanguageTool service
 
 ### Resource Specifications
@@ -125,9 +125,7 @@ Launch Type: FARGATE
 Image: meyay/languagetool:latest
 Port: 8081
 Environment Variables:
-  LISTEN_PORT: '8081'
-  Java_Xms: '1g'
-  Java_Xmx: '1g'
+  JAVA_TOOL_OPTIONS: '-Xms1g -Xmx1800m'
 ```
 
 ## Configuration Management
@@ -141,7 +139,7 @@ The application automatically loads configuration from:
 
 #### Key Configuration Values
 
-- `LANGUAGETOOL_ENDPOINT`: Auto-generated ALB DNS name
+- `LANGUAGETOOL_ENDPOINT`: Service discovery URL (`http://languagetool.languagetool.local:8081`)
 - `LANGUAGETOOL_VPC_ID`: VPC identifier for debugging
 
 ### Custom Configuration
@@ -157,10 +155,8 @@ const taskDefinition = new ecs.FargateTaskDefinition(scope, `${id}Task`, {
 
 // Modify container environment
 environment: {
-  LISTEN_PORT: '8081',
-  Java_Xms: '2g',       // Increase heap size
-  Java_Xmx: '2g',
-  download_ngrams_for_langs: 'en,es,fr', // Language models
+  JAVA_TOOL_OPTIONS: '-Xms2g -Xmx3500m',  // Increase heap size
+  download_ngrams_for_langs: 'en,es,fr',  // Language models
 },
 ```
 
@@ -197,8 +193,11 @@ aws logs filter-log-events \
 #### Application Health Check
 
 ```bash
-# Test service endpoint (replace with actual ALB DNS)
-curl http://internal-alb-xxx.region.elb.amazonaws.com/v2/languages
+# Test service endpoint via service discovery (requires VPC access)
+curl http://languagetool.languagetool.local:8081/v2/languages
+
+# Or test via Next.js application server action
+# The service is only accessible from within the VPC
 ```
 
 ## Scaling Configuration

@@ -6,30 +6,31 @@ The LanguageTool service integration has been optimized for cost-effectiveness w
 
 ## Key Cost Savings
 
-### Default VPC Usage
+### Minimal VPC with Service Discovery
 
-**Savings: ~$45-90/month**
+**Savings: ~$16-61/month**
 
-Instead of creating a new VPC with NAT gateways, the service uses your AWS account's default VPC:
+Instead of using an Application Load Balancer and NAT gateways, the service uses:
 
-- ✅ **No VPC Creation Costs**: Uses existing default VPC
+- ✅ **Minimal VPC**: Creates simple VPC with public subnets only
 - ✅ **No NAT Gateway Costs**: Saves ~$45/month per availability zone
-- ✅ **No Additional Routing Costs**: Uses existing internet gateway
-- ✅ **Simplified Management**: Fewer resources to monitor and maintain
+- ✅ **No ALB Costs**: Saves ~$16/month by using service discovery
+- ✅ **Direct Service Communication**: ECS-to-ECS via DNS names
+- ✅ **Simplified Architecture**: Fewer components to manage and monitor
 
 ### Architecture Comparison
 
 #### ❌ Expensive Approach (Original)
 
 ```
-Custom VPC + Private Subnets + NAT Gateway
-Monthly Cost: ~$50-100 (NAT Gateway + data transfer)
+Custom VPC + Private Subnets + NAT Gateway + ALB
+Monthly Cost: ~$66-116 (NAT Gateway + ALB + data transfer)
 ```
 
 #### ✅ Cost-Optimized Approach (Current)
 
 ```
-Default VPC + Public Subnets + Security Groups
+Minimal VPC + Public Subnets + Service Discovery
 Monthly Cost: ~$5-15 (ECS tasks only)
 ```
 
@@ -37,21 +38,21 @@ Monthly Cost: ~$5-15 (ECS tasks only)
 
 ### Still Secure
 
-Even though ECS tasks run in public subnets, the service remains secure:
+Even with the cost-optimized approach, the service remains secure:
 
-- **Internal Load Balancer**: ALB is not internet-facing
+- **Isolated VPC**: Dedicated VPC separate from other resources
 - **Security Groups**: Only allow VPC traffic to port 8081
-- **No Public Access**: LanguageTool service not directly accessible from internet
-- **Amplify Integration**: Service only accessible through your application
+- **Service Discovery**: Internal DNS names not accessible from internet
+- **No Public Endpoints**: LanguageTool only accessible via service discovery
 
 ### Security Group Configuration
 
 ```typescript
 // Only allows traffic from within the VPC
-securityGroup.addIngressRule(
+ecsSecurityGroup.addIngressRule(
   ec2.Peer.ipv4(vpc.vpcCidrBlock), // Only VPC traffic
   ec2.Port.tcp(8081), // Only port 8081
-  'Allow ALB to reach LanguageTool service'
+  'Allow LanguageTool access from within VPC'
 );
 ```
 
@@ -62,8 +63,8 @@ securityGroup.addIngressRule(
 ```
 ECS Fargate Tasks:     $5-10/month
 CloudWatch Logs:       $1-2/month
-Application Load Balancer: $16/month
-Total:                 $22-28/month
+VPC (minimal):         ~$0/month
+Total:                 $6-12/month
 ```
 
 ### Production Environment (with auto-scaling)
@@ -71,17 +72,17 @@ Total:                 $22-28/month
 ```
 ECS Fargate Tasks:     $20-50/month
 CloudWatch Logs:       $2-5/month
-Application Load Balancer: $16/month
-Total:                 $38-71/month
+Service Discovery:     ~$0/month
+Total:                 $22-55/month
 ```
 
 ### What You're NOT Paying For
 
 ```
+Application Load Balancer: $16/month (saved)
 NAT Gateway:           $45/month (saved)
-Additional VPC:        $0 (but complexity saved)
 Data Transfer (NAT):   $10-20/month (saved)
-Total Savings:         $55-65/month
+Total Savings:         $71-81/month
 ```
 
 ## Scaling Considerations

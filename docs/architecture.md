@@ -55,13 +55,13 @@ Writeo is built as a modern, scalable writing assistant application using AWS cl
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Default VPC                             │
+│                    Minimal VPC                             │
 │  ┌─────────────────┐              ┌─────────────────┐      │
 │  │  Public Subnet  │              │ Public Subnet   │      │
 │  │                 │              │                 │      │
 │  │ ┌─────────────┐ │              │ ┌─────────────┐ │      │
-│  │ │ Internal ALB│ │              │ │ ECS Service │ │      │
-│  │ │ (Private)   │ │──────────────▶│ │ (Public IP) │ │      │
+│  │ │ Service     │ │              │ │ ECS Service │ │      │
+│  │ │ Discovery   │ │──────────────▶│ │ (Port 8081) │ │      │
 │  │ └─────────────┘ │              │ └─────────────┘ │      │
 │  │                 │              │                 │      │
 │  │ ┌─────────────┐ │              │ ┌─────────────┐ │      │
@@ -76,10 +76,11 @@ Writeo is built as a modern, scalable writing assistant application using AWS cl
 
 #### LanguageTool Service
 
-- **Container**: Official LanguageTool Docker image
+- **Container**: Official LanguageTool Docker image (`meyay/languagetool:latest`)
 - **Runtime**: Java 21 JRE optimized for container usage
 - **Resources**: 1 vCPU, 2GB RAM (configurable)
-- **Scaling**: Horizontal scaling with target tracking
+- **Port**: 8081 (current default)
+- **Access**: Service Discovery via `languagetool.languagetool.local:8081`
 
 #### Service Configuration
 
@@ -88,16 +89,19 @@ Container Specifications:
   Image: meyay/languagetool:latest
   Port: 8081
   Environment:
-    LISTEN_PORT: 8081
-    Java_Xms: 1g
-    Java_Xmx: 1g
+    JAVA_TOOL_OPTIONS: '-Xms1g -Xmx1800m'
 
 Health Check:
-  Command: wget --spider http://localhost:8081/v2/languages
+  Command: curl -f http://localhost:8081/v2/check?text=test
   Interval: 30s
   Timeout: 5s
   Retries: 3
   Start Period: 60s
+
+Service Discovery:
+  Namespace: languagetool.local
+  Service Name: languagetool
+  DNS: languagetool.languagetool.local:8081
 ```
 
 ## Data Flow
@@ -149,10 +153,10 @@ The ECS service is defined using AWS CDK constructs:
 
 #### Network Security
 
-- **Public Subnets**: ECS tasks run in public subnets with restrictive security groups
+- **Minimal VPC**: Creates dedicated VPC with public subnets only (no NAT gateways)
 - **Security Groups**: Only allow VPC traffic to LanguageTool port (8081)
-- **Internal ALB**: Not publicly accessible (scheme=internal)
-- **Direct Internet Access**: No NAT gateway required for container registry access
+- **Service Discovery**: Internal DNS resolution (`languagetool.languagetool.local`)
+- **No Public ALB**: Direct service-to-service communication via service discovery
 
 #### Application Security
 
