@@ -13,6 +13,10 @@ try {
 }
 
 export const getLanguageToolEndpoint = (): string => {
+  if (process.env.LANGUAGETOOL_ENDPOINT) {
+    return process.env.LANGUAGETOOL_ENDPOINT;
+  }
+
   if (
     amplifyConfig?.custom &&
     typeof amplifyConfig.custom === 'object' &&
@@ -24,14 +28,8 @@ export const getLanguageToolEndpoint = (): string => {
     }
   }
 
-  const endpoint = process.env.LANGUAGETOOL_ENDPOINT;
-  if (!endpoint) {
-    throw new Error(
-      'LanguageTool endpoint not configured. Please deploy the Amplify backend or set LANGUAGETOOL_ENDPOINT environment variable.'
-    );
-  }
-
-  return endpoint;
+  console.warn('No LanguageTool endpoint configured, using public demo instance');
+  return 'https://api.languagetool.org';
 };
 
 export const config = {
