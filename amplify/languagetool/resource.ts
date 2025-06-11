@@ -61,13 +61,6 @@ export function createLanguageToolService(backend: { createStack: (name: string)
       streamPrefix: 'languagetool',
       logGroup,
     }),
-    healthCheck: {
-      command: ['CMD-SHELL', 'curl -f http://localhost:8081/v2/check?text=test || exit 1'],
-      interval: cdk.Duration.seconds(30),
-      timeout: cdk.Duration.seconds(5),
-      retries: 3,
-      startPeriod: cdk.Duration.seconds(60),
-    },
   });
 
   const ecsSecurityGroup = new ec2.SecurityGroup(languageToolStack, 'ECSSecurityGroup', {
