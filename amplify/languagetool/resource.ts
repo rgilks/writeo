@@ -7,8 +7,17 @@ import * as cdk from 'aws-cdk-lib';
 export function createLanguageToolService(backend: { createStack: (name: string) => cdk.Stack }) {
   const languageToolStack = backend.createStack('LanguageToolStack');
 
-  const vpc = ec2.Vpc.fromLookup(languageToolStack, 'DefaultVPC', {
-    isDefault: true,
+  const vpc = new ec2.Vpc(languageToolStack, 'LanguageToolVPC', {
+    maxAzs: 2,
+    subnetConfiguration: [
+      {
+        cidrMask: 24,
+        name: 'PublicSubnet',
+        subnetType: ec2.SubnetType.PUBLIC,
+      },
+    ],
+    enableDnsHostnames: true,
+    enableDnsSupport: true,
   });
 
   const cluster = new ecs.Cluster(languageToolStack, 'LanguageToolCluster', {
