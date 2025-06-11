@@ -88,7 +88,7 @@ export function createLanguageToolService(backend: { createStack: (name: string)
     desiredCount: 1,
     assignPublicIp: true,
     securityGroups: [ecsSecurityGroup],
-    serviceName: 'languagetool-service',
+    serviceName: 'languagetool-service-1',
     cloudMapOptions: {
       name: 'languagetool',
       cloudMapNamespace: namespace,

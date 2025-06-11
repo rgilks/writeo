@@ -226,7 +226,7 @@ scaling.scaleOnCpuUtilization('CpuScaling', {
 # Scale service via AWS CLI
 aws ecs update-service \
   --cluster languagetool-cluster \
-  --service languagetool-service \
+  --service languagetool-service-1 \
   --desired-count 3
 ```
 
@@ -344,7 +344,7 @@ aws logs tail /ecs/languagetool --follow
 aws ecs describe-task-definition --task-definition languagetool
 
 # Check service events
-aws ecs describe-services --cluster languagetool-cluster --services languagetool-service
+aws ecs describe-services --cluster languagetool-cluster --services languagetool-service-1
 ```
 
 #### 2. Health Check Failures
@@ -408,10 +408,10 @@ aws cloudformation describe-stack-events --stack-name amplify-writeo-main
 
 ```bash
 # Get service status
-aws ecs describe-services --cluster languagetool-cluster --services languagetool-service
+aws ecs describe-services --cluster languagetool-cluster --services languagetool-service-1
 
 # List running tasks
-aws ecs list-tasks --cluster languagetool-cluster --service languagetool-service
+aws ecs list-tasks --cluster languagetool-cluster --service languagetool-service-1
 
 # Get task details
 aws ecs describe-tasks --cluster languagetool-cluster --tasks <task-arn>
@@ -522,7 +522,7 @@ npx amplify rollback
 # Rollback specific service version
 aws ecs update-service \
   --cluster languagetool-cluster \
-  --service languagetool-service \
+  --service languagetool-service-1 \
   --task-definition languagetool:PREVIOUS_REVISION
 ```
 
