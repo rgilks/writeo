@@ -27,6 +27,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // Default: no server storage
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -519,6 +520,7 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     // Create submission - results returned immediately
+    // Note: storeResults: true is required for GET endpoint to work
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
@@ -535,6 +537,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: true, // Required for GET endpoint to retrieve results
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -593,7 +596,7 @@ describe("API Tests", () => {
     expect(explanationResponse2.status).toBe(200);
     expect(explanationResponse2.json.message).toBe(explanationMessage1); // Should be identical (stored)
 
-    // Verify stored feedback is in results
+    // Verify stored feedback is in results (requires storeResults: true)
     const results = await apiRequest("GET", `/text/submissions/${submissionId}`);
     expect(results.status).toBe(200);
     const teacherAssessor = getAssessorResults(results.json.results.parts[0]).find(

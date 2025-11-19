@@ -253,6 +253,15 @@ paths:
                     version:
                       type: integer
                       example: 1
+                storeResults:
+                  type: boolean
+                  description: |
+                    Opt-in server storage flag. Default: false (no server storage).
+                    When false, results are returned immediately but not stored on the server.
+                    Results are stored only in the user's browser (localStorage).
+                    When true, results are stored on the server for 90 days, allowing access from any device.
+                  default: false
+                  example: false
       responses:
         "200":
           description: Submission processed successfully - results returned immediately in response body
@@ -347,6 +356,14 @@ paths:
       description: |
         Retrieves the assessment results for a submission.
         Returns 'pending' status if assessment is still in progress.
+
+        **Note:** This endpoint only works for submissions where `storeResults: true` was set during submission.
+        By default, results are stored only in the user's browser (localStorage) and are not available via this endpoint.
+
+        If results are not found (404), it may mean:
+        - The submission was created with `storeResults: false` (default)
+        - The results have expired (90-day retention for opt-in storage)
+        - The submission ID is incorrect
       operationId: getSubmissionResults
       security:
         - ApiKeyAuth: []

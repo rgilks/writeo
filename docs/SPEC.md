@@ -79,9 +79,12 @@ Creates a submission and triggers assessment. The `submission_id` must be a vali
       ]
     }
   ],
-  "template": { "name": "generic", "version": 1 }
+  "template": { "name": "generic", "version": 1 },
+  "storeResults": false
 }
 ```
+
+**Note:** The `storeResults` parameter is optional and defaults to `false`. When `false` (default), results are returned immediately but not stored on the server. Results are stored only in the user's browser (localStorage). Set `storeResults: true` to enable server storage for 90 days.
 
 **With Referenced Question** (question must exist, omit question-text):
 
@@ -117,7 +120,7 @@ Creates a submission and triggers assessment. The `submission_id` must be a vali
 
 **GET** `/text/submissions/{submission_id}`
 
-Retrieves assessment results for a submission.
+Retrieves assessment results for a submission. **Note:** This endpoint only works for submissions where `storeResults: true` was set. By default, results are stored only in the user's browser (localStorage) and are not available via this endpoint.
 
 **Response (Pending):**
 

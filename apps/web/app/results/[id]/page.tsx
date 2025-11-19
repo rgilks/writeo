@@ -26,16 +26,26 @@ export default function ResultsPage() {
     searchParams?.get("parent") ||
     (typeof window !== "undefined" ? localStorage.getItem(`draft_parent_${submissionId}`) : null);
 
-  // Check if results were passed via router state (from write page)
+  // Check if results were passed via router state (from write page) or stored locally
   const [initialResults] = useState<AssessmentResults | null>(() => {
-    // Try to get results from sessionStorage (set by write page)
+    // Try to get results from localStorage or sessionStorage (client-side storage)
     if (typeof window !== "undefined") {
-      const stored = sessionStorage.getItem(`results_${submissionId}`);
-      if (stored) {
+      // First check sessionStorage (from write page)
+      const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
+      if (sessionStored) {
         try {
-          const parsed = JSON.parse(stored);
+          const parsed = JSON.parse(sessionStored);
           sessionStorage.removeItem(`results_${submissionId}`); // Clean up
           return parsed;
+        } catch {
+          // Fall through to localStorage check
+        }
+      }
+      // Then check localStorage (persistent storage)
+      const localStored = localStorage.getItem(`results_${submissionId}`);
+      if (localStored) {
+        try {
+          return JSON.parse(localStored);
         } catch {
           return null;
         }
@@ -70,13 +80,38 @@ export default function ResultsPage() {
     async function fetchResults() {
       try {
         setStatus("pending");
-        // Use draft tracking if parent ID is provided
-        const results = parentId
-          ? await getSubmissionResultsWithDraftTracking(submissionId, parentId)
-          : await getSubmissionResults(submissionId);
-        if (!cancelled) {
-          setData(results);
-          setStatus("success");
+        // Try to fetch from server (only works if user opted in to server storage)
+        try {
+          const results = parentId
+            ? await getSubmissionResultsWithDraftTracking(submissionId, parentId)
+            : await getSubmissionResults(submissionId);
+          if (!cancelled) {
+            setData(results);
+            setStatus("success");
+            // Also save to localStorage for future access
+            if (typeof window !== "undefined") {
+              localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
+            }
+          }
+        } catch (serverError) {
+          // If server fetch fails, try localStorage as fallback
+          if (typeof window !== "undefined") {
+            const localStored = localStorage.getItem(`results_${submissionId}`);
+            if (localStored) {
+              try {
+                const parsed = JSON.parse(localStored);
+                if (!cancelled) {
+                  setData(parsed);
+                  setStatus("success");
+                  return;
+                }
+              } catch {
+                // Fall through to error handling
+              }
+            }
+          }
+          // If both fail, show error
+          throw serverError;
         }
       } catch (err) {
         if (!cancelled) {
@@ -85,8 +120,9 @@ export default function ResultsPage() {
           const friendlyMessage =
             errorMessage.includes("Server Component") ||
             errorMessage.includes("omitted in production") ||
-            errorMessage.includes("Server Components")
-              ? "We couldn't load your results. This might happen if the submission ID is incorrect or the results are no longer available."
+            errorMessage.includes("Server Components") ||
+            errorMessage.includes("not found")
+              ? "We couldn't load your results. This might happen if the submission ID is incorrect, the results weren't saved on the server, or they're no longer available. Results are stored in your browser by default."
               : errorMessage;
           setError(friendlyMessage);
           setStatus("error");

@@ -86,8 +86,8 @@ graph TB
 **Processing Flow:**
 
 1. **End User** uses Web Frontend UI, OR **External System** calls API directly
-2. API Worker stores questions, answers, and submission in R2 (parallelized)
-3. API Worker retrieves submission data from R2 (parallelized)
+2. **If `storeResults: true` (opt-in):** API Worker stores questions, answers, and submission in R2 (parallelized)
+3. API Worker builds request from inline data (answers are always sent inline)
 4. API Worker calls **services in parallel**:
    - Essay Scoring Service (`modal-essay`) for essay scoring
    - LanguageTool Service (`modal-lt`) for grammar checking
@@ -95,7 +95,9 @@ graph TB
 5. API Worker merges results from parallel services
 6. API Worker calls **AI Feedback** (Groq) with full context from Essay Scoring and LanguageTool results
 7. API Worker merges results from all services (including AI feedback)
-8. Results stored in KV and returned to client immediately in PUT response body (typically 3-10s, max <20s)
+8. **If `storeResults: true` (opt-in):** Results stored in KV (90-day TTL)
+9. Results returned to client immediately in PUT response body (typically 3-10s, max <20s)
+10. **Default behavior:** Results stored only in browser localStorage (no server storage)
 
 ---
 
@@ -103,12 +105,13 @@ graph TB
 
 ### 3.1 Cloudflare Components
 
-| Component        | Technology               | Responsibility                                         | Scale-to-Zero        |
-| ---------------- | ------------------------ | ------------------------------------------------------ | -------------------- |
-| **Web Frontend** | Next.js 15+ (App Router) | User interface, form handling, result display          | ✅ Yes               |
-| **API Worker**   | Cloudflare Workers       | REST API, request validation, data orchestration       | ✅ Yes               |
-| **R2 Storage**   | Cloudflare R2            | Persistent storage for questions, answers, submissions | ❌ No (storage only) |
-| **KV Store**     | Cloudflare KV            | Assessment results cache (90-day TTL)                  | ❌ No (storage only) |
+| Component           | Technology                  | Responsibility                                                       | Scale-to-Zero        |
+| ------------------- | --------------------------- | -------------------------------------------------------------------- | -------------------- |
+| **Web Frontend**    | Next.js 15+ (App Router)    | User interface, form handling, result display                        | ✅ Yes               |
+| **API Worker**      | Cloudflare Workers          | REST API, request validation, data orchestration                     | ✅ Yes               |
+| **R2 Storage**      | Cloudflare R2               | Persistent storage for questions, answers, submissions (opt-in only) | ❌ No (storage only) |
+| **KV Store**        | Cloudflare KV               | Assessment results cache (90-day TTL, opt-in only)                   | ❌ No (storage only) |
+| **Browser Storage** | localStorage/sessionStorage | Default storage location (client-side only)                          | ✅ Yes (client-side) |
 
 ### 3.2 Modal Services
 
@@ -294,9 +297,27 @@ sequenceDiagram
 
 ## 5. Storage Architecture
 
-### 5.1 R2 Object Storage
+**Important:** Writeo uses an **opt-in server storage model**. By default (`storeResults: false`), no data is stored on servers. Results are stored only in the user's browser (localStorage). Server storage (R2/KV) is only used when `storeResults: true` is explicitly set.
 
-**Bucket:** `writeo-data`
+### 5.1 Browser Storage (Default)
+
+**Location:** Client-side localStorage/sessionStorage
+
+| Storage Type     | Purpose                             | Retention                      |
+| ---------------- | ----------------------------------- | ------------------------------ |
+| `localStorage`   | Persistent results storage          | Until user clears browser data |
+| `sessionStorage` | Temporary results during navigation | Until browser tab closes       |
+
+**Access Patterns:**
+
+- **Write**: Automatic after submission processing
+- **Read**: Immediate access from browser
+- **Privacy**: Data never leaves user's device
+
+### 5.2 R2 Object Storage (Opt-in Only)
+
+**Bucket:** `writeo-data`  
+**Usage:** Only when `storeResults: true`
 
 | Path Pattern                       | Content Type       | Structure                                    |
 | ---------------------------------- | ------------------ | -------------------------------------------- |
@@ -306,13 +327,14 @@ sequenceDiagram
 
 **Access Patterns:**
 
-- **Write**: Single PUT per resource creation
-- **Read**: Batch reads during submission processing
+- **Write**: Single PUT per resource creation (opt-in only)
+- **Read**: Batch reads during submission processing (opt-in only)
 - **TTL**: No automatic expiration (consider lifecycle policies)
 
-### 5.2 KV Storage
+### 5.3 KV Storage (Opt-in Only)
 
-**Namespace:** `WRITEO_RESULTS`
+**Namespace:** `WRITEO_RESULTS`  
+**Usage:** Only when `storeResults: true`
 
 | Key Pattern                  | Value Type  | TTL                         |
 | ---------------------------- | ----------- | --------------------------- |
@@ -320,18 +342,18 @@ sequenceDiagram
 
 **Access Patterns:**
 
-- **Write**: Single PUT after processing completes
-- **Read**: Single GET per client poll request
+- **Write**: Single PUT after processing completes (opt-in only)
+- **Read**: Single GET per client poll request (opt-in only)
 - **Consistency**: Eventual consistency (read-after-write may have delay)
 
 ### 5.3 Data Size Estimates
 
-| Resource Type      | Average Size | Max Size | Storage Location |
-| ------------------ | ------------ | -------- | ---------------- |
-| Question           | ~100 bytes   | 1 KB     | R2               |
-| Answer (essay)     | ~2 KB        | 50 KB    | R2               |
-| Submission         | ~500 bytes   | 5 KB     | R2               |
-| Assessment Results | ~1-5 KB      | 10 KB    | KV               |
+| Resource Type      | Average Size | Max Size | Storage Location (Default) | Storage Location (Opt-in) |
+| ------------------ | ------------ | -------- | -------------------------- | ------------------------- |
+| Question           | ~100 bytes   | 1 KB     | Not stored                 | R2                        |
+| Answer (essay)     | ~2 KB        | 50 KB    | Not stored                 | R2                        |
+| Submission         | ~500 bytes   | 5 KB     | Not stored                 | R2                        |
+| Assessment Results | ~1-5 KB      | 10 KB    | localStorage               | KV (90-day TTL)           |
 
 ---
 

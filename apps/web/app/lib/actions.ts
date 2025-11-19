@@ -147,7 +147,8 @@ const apiRequest = async (endpoint: string, method: string, body: any): Promise<
 
 async function createSubmission(
   questionText: string,
-  answerText: string
+  answerText: string,
+  storeResults: boolean = false // Default: false (no server storage)
 ): Promise<{ submissionId: string; results: any }> {
   const submissionId = generateUUID();
   const questionId = generateUUID();
@@ -171,6 +172,7 @@ async function createSubmission(
       },
     ],
     template: { name: "generic", version: 1 },
+    storeResults: storeResults, // Opt-in server storage
   };
 
   // Note: API ignores draft tracking fields
@@ -261,7 +263,8 @@ async function getDraftInfo(parentSubmissionId: string): Promise<{
 export async function submitEssay(
   questionText: string,
   answerText: string,
-  parentSubmissionId?: string
+  parentSubmissionId?: string,
+  storeResults: boolean = false // Default: false (no server storage)
 ): Promise<{ submissionId: string; results: any }> {
   try {
     if (!questionText?.trim()) throw new Error("Question text is required");
@@ -287,7 +290,11 @@ export async function submitEssay(
 
     // Create submission with inline format - API will auto-create question and answer
     // This reduces from 3 API calls to 1
-    const { submissionId, results } = await createSubmission(questionText, answerText);
+    const { submissionId, results } = await createSubmission(
+      questionText,
+      answerText,
+      storeResults
+    );
 
     // Handle draft tracking if parent submission provided
     if (parentSubmissionId && results) {

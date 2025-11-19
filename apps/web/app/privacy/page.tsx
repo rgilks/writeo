@@ -49,6 +49,10 @@ export default function PrivacyPage() {
               📝 How We Store Your Writing
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>By default, we don't store your data on our servers.</strong> Your privacy is
+              our priority.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               When you submit an essay for feedback:
             </p>
             <ul
@@ -60,11 +64,32 @@ export default function PrivacyPage() {
               }}
               lang="en"
             >
-              <li lang="en">Your essay text is stored securely in our database</li>
-              <li lang="en">Assessment results are stored for 90 days</li>
-              <li lang="en">Draft history is preserved so you can track your progress</li>
-              <li lang="en">Your writing is not publicly accessible</li>
+              <li lang="en">
+                <strong>Default (no server storage):</strong> Your results are stored only in your
+                browser's localStorage. This means your data stays on your device and is never sent
+                to our servers for storage.
+              </li>
+              <li lang="en">
+                <strong>Optional server storage:</strong> You can choose to enable server storage
+                when submitting. If you opt in, your essay and assessment results are stored
+                securely on our servers for 90 days, allowing you to access your results from any
+                device.
+              </li>
+              <li lang="en">Your writing is never publicly accessible</li>
+              <li lang="en">We don't store your data unless you explicitly opt in</li>
             </ul>
+            <p
+              style={{
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                fontSize: "16px",
+                color: "var(--text-secondary)",
+              }}
+              lang="en"
+            >
+              <strong>Note:</strong> Even when server storage is enabled, your data is processed
+              only to provide immediate feedback and is automatically deleted after 90 days.
+            </p>
           </div>
 
           <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
@@ -173,7 +198,12 @@ export default function PrivacyPage() {
               🗑️ Data Retention
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              We keep your data for a limited time:
+              <strong>By default, we don't store your data on our servers.</strong> Your results are
+              stored only in your browser and can be cleared at any time by clearing your browser
+              data.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              If you opt in to server storage:
             </p>
             <ul
               style={{
@@ -188,10 +218,12 @@ export default function PrivacyPage() {
                 <strong>Assessment results:</strong> Stored for 90 days, then automatically deleted
               </li>
               <li lang="en">
-                <strong>Your essays and submissions:</strong> Stored until you request deletion
+                <strong>Your essays and submissions:</strong> Stored for 90 days, then automatically
+                deleted
               </li>
               <li lang="en">
-                <strong>Questions and answers:</strong> Stored as part of your submission history
+                <strong>Questions and answers:</strong> Stored for 90 days as part of your
+                submission history
               </li>
             </ul>
             <p
@@ -203,8 +235,9 @@ export default function PrivacyPage() {
               }}
               lang="en"
             >
-              You can request deletion of your data at any time. To delete your account and all
-              associated data, please contact us through the support channels listed below.
+              <strong>Browser storage:</strong> Results stored in your browser (localStorage) remain
+              until you clear your browser data or manually delete them. You have full control over
+              this data.
             </p>
           </div>
 

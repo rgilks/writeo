@@ -124,161 +124,137 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     }
     timings["1b_validate_submission"] = performance.now() - validateStartTime;
 
+    // Check if user opted in to server storage (default: false - no storage)
+    const storeResults = body.storeResults === true;
+
     const autoCreateStartTime = performance.now();
     const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
 
-    const questionPromises = questionsToCreate.map(async (question) => {
-      const existing = await storage.getQuestion(question.id);
-      if (!existing) {
-        await storage.putQuestion(question.id, { text: question.text });
-      } else {
-        if (existing.text !== question.text) {
-          throw new Error(`Question ${question.id} already exists with different content`);
-        }
-      }
-    });
-
-    const questionResults = await Promise.allSettled(questionPromises);
-    for (const result of questionResults) {
-      if (result.status === "rejected") {
-        return errorResponse(
-          409,
-          result.reason instanceof Error ? result.reason.message : String(result.reason)
-        );
-      }
-    }
-
-    const answersWithoutQuestionText = answersToCreate.filter((answer) => {
-      return !questionsToCreate.some((q) => q.id === answer.questionId);
-    });
-
-    for (const answer of answersWithoutQuestionText) {
-      const existingQuestion = await storage.getQuestion(answer.questionId);
-      if (!existingQuestion) {
-        return errorResponse(
-          400,
-          `question-text is required when question ${answer.questionId} does not exist`
-        );
-      }
-    }
-
-    // Create a set of question IDs that were just created for quick lookup
-    const createdQuestionIds = new Set(questionsToCreate.map((q) => q.id));
-
-    const answerPromises = answersToCreate.map(async (answer) => {
-      const existing = await storage.getAnswer(answer.id);
-      if (!existing) {
-        // If question was just created inline, we know it exists
-        // Otherwise, check storage for referenced questions
-        if (!createdQuestionIds.has(answer.questionId)) {
-          const questionExists = await storage.getQuestion(answer.questionId);
-          if (!questionExists) {
-            throw new Error(`Referenced question does not exist: ${answer.questionId}`);
+    // Only store questions/answers if user opted in to server storage
+    if (storeResults) {
+      const questionPromises = questionsToCreate.map(async (question) => {
+        const existing = await storage.getQuestion(question.id);
+        if (!existing) {
+          await storage.putQuestion(question.id, { text: question.text });
+        } else {
+          if (existing.text !== question.text) {
+            throw new Error(`Question ${question.id} already exists with different content`);
           }
         }
-        await storage.putAnswer(answer.id, {
-          "question-id": answer.questionId,
-          text: answer.answerText,
-        });
-      } else {
-        if (existing["question-id"] !== answer.questionId || existing.text !== answer.answerText) {
-          throw new Error(`Answer ${answer.id} already exists with different content`);
+      });
+
+      const questionResults = await Promise.allSettled(questionPromises);
+      for (const result of questionResults) {
+        if (result.status === "rejected") {
+          return errorResponse(
+            409,
+            result.reason instanceof Error ? result.reason.message : String(result.reason)
+          );
         }
       }
-    });
 
-    const answerResults = await Promise.allSettled(answerPromises);
-    for (const result of answerResults) {
-      if (result.status === "rejected") {
-        return errorResponse(
-          409,
-          result.reason instanceof Error ? result.reason.message : String(result.reason)
-        );
+      const answersWithoutQuestionText = answersToCreate.filter((answer) => {
+        return !questionsToCreate.some((q) => q.id === answer.questionId);
+      });
+
+      for (const answer of answersWithoutQuestionText) {
+        const existingQuestion = await storage.getQuestion(answer.questionId);
+        if (!existingQuestion) {
+          return errorResponse(
+            400,
+            `question-text is required when question ${answer.questionId} does not exist`
+          );
+        }
       }
+
+      // Create a set of question IDs that were just created for quick lookup
+      const createdQuestionIds = new Set(questionsToCreate.map((q) => q.id));
+
+      const answerPromises = answersToCreate.map(async (answer) => {
+        const existing = await storage.getAnswer(answer.id);
+        if (!existing) {
+          // If question was just created inline, we know it exists
+          // Otherwise, check storage for referenced questions
+          if (!createdQuestionIds.has(answer.questionId)) {
+            const questionExists = await storage.getQuestion(answer.questionId);
+            if (!questionExists) {
+              throw new Error(`Referenced question does not exist: ${answer.questionId}`);
+            }
+          }
+          await storage.putAnswer(answer.id, {
+            "question-id": answer.questionId,
+            text: answer.answerText,
+          });
+        } else {
+          if (
+            existing["question-id"] !== answer.questionId ||
+            existing.text !== answer.answerText
+          ) {
+            throw new Error(`Answer ${answer.id} already exists with different content`);
+          }
+        }
+      });
+
+      const answerResults = await Promise.allSettled(answerPromises);
+      for (const result of answerResults) {
+        if (result.status === "rejected") {
+          return errorResponse(
+            409,
+            result.reason instanceof Error ? result.reason.message : String(result.reason)
+          );
+        }
+      }
+
+      // Check/store submission if user opted in
+      const checkExistingStartTime = performance.now();
+      const existing = await storage.getSubmission(submissionId);
+      if (existing) {
+        if (JSON.stringify(existing) === JSON.stringify(body)) {
+          return new Response(null, { status: 204 });
+        } else {
+          return errorResponse(409, "Submission already exists with different content", c);
+        }
+      }
+      timings["2_check_existing"] = performance.now() - checkExistingStartTime;
+
+      const storeSubmissionStartTime = performance.now();
+      await storage.putSubmission(submissionId, body);
+      timings["3_store_submission"] = performance.now() - storeSubmissionStartTime;
     }
     timings["1c_auto_create_entities"] = performance.now() - autoCreateStartTime;
 
-    const checkExistingStartTime = performance.now();
-    const existing = await storage.getSubmission(submissionId);
-    if (existing) {
-      if (JSON.stringify(existing) === JSON.stringify(body)) {
-        return new Response(null, { status: 204 });
-      } else {
-        return errorResponse(409, "Submission already exists with different content", c);
-      }
-    }
-    timings["2_check_existing"] = performance.now() - checkExistingStartTime;
-
-    const storeSubmissionStartTime = performance.now();
-    await storage.putSubmission(submissionId, body);
-    timings["3_store_submission"] = performance.now() - storeSubmissionStartTime;
-
     const loadDataStartTime = performance.now();
     const modalParts: ModalRequest["parts"] = [];
-    const answerIdsToLoad: Array<{ part: number; answerId: string }> = [];
 
-    for (const part of body.submission) {
-      for (const answerRef of part.answers) {
-        answerIdsToLoad.push({ part: part.part, answerId: answerRef.id });
-      }
-    }
-
-    const answerLoadPromises = answerIdsToLoad.map(async ({ answerId }) => {
-      const answer = await storage.getAnswer(answerId);
-      if (!answer) {
-        return {
-          answerId,
-          answer: null,
-          error: `Answer ${answerId} not found`,
-        };
-      }
-      return { answerId, answer, questionId: answer["question-id"] };
-    });
-
-    const answerLoadResults = await Promise.all(answerLoadPromises);
-    const questionIds = new Set<string>();
-    for (const result of answerLoadResults) {
-      if (result.answer && result.questionId) {
-        questionIds.add(result.questionId);
-      }
-    }
-
-    const questionLoadPromises = Array.from(questionIds).map(async (questionId) => {
-      const question = await storage.getQuestion(questionId);
-      if (!question) {
-        return {
-          questionId,
-          question: null,
-          error: `Question ${questionId} not found`,
-        };
-      }
-      return { questionId, question };
-    });
-
-    const questionLoadResults = await Promise.all(questionLoadPromises);
-    const questionMap = new Map<string, string>();
-    for (const result of questionLoadResults) {
-      if (result.question) {
-        questionMap.set(result.questionId, result.question.text);
-      }
-    }
-
+    // Build Modal request directly from inline data (answers are always sent inline)
     for (const part of body.submission) {
       const modalAnswers: ModalRequest["parts"][0]["answers"] = [];
       for (const answerRef of part.answers) {
-        const answerResult = answerLoadResults.find((r) => r.answerId === answerRef.id);
-        if (!answerResult || !answerResult.answer) {
-          continue;
+        // Get question text - either from inline data or from storage (if stored)
+        let questionText: string | undefined = answerRef["question-text"];
+        if (!questionText && storeResults) {
+          // Try to load from storage if not inline
+          const question = await storage.getQuestion(answerRef["question-id"] || "");
+          questionText = question?.text;
         }
-        const questionText = questionMap.get(answerResult.questionId);
         if (!questionText) {
-          continue;
+          return errorResponse(
+            400,
+            `question-text is required for answer ${answerRef.id} (either inline or must exist in storage)`
+          );
         }
+
+        // Answer text is always sent inline
+        const answerText = answerRef.text;
+        if (!answerText) {
+          return errorResponse(400, `Answer text is required for answer ${answerRef.id}`);
+        }
+
         modalAnswers.push({
           id: answerRef.id,
-          question_id: answerResult.questionId,
+          question_id: answerRef["question-id"] || "",
           question_text: questionText,
-          answer_text: answerResult.answer.text,
+          answer_text: answerText,
         });
       }
       modalParts.push({ part: part.part, answers: modalAnswers });
@@ -687,9 +663,12 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     mergedAssessment.meta.timestamp = new Date().toISOString();
     timings["10a_metadata"] = performance.now() - metadataStartTime;
 
-    const storeResultsStartTime = performance.now();
-    await storage.putResults(submissionId, mergedAssessment, 60 * 60 * 24 * 90);
-    timings["11_store_results"] = performance.now() - storeResultsStartTime;
+    // Only store results if user opted in to server storage
+    if (storeResults) {
+      const storeResultsStartTime = performance.now();
+      await storage.putResults(submissionId, mergedAssessment, 60 * 60 * 24 * 90);
+      timings["11_store_results"] = performance.now() - storeResultsStartTime;
+    }
 
     timings["0_total"] = performance.now() - requestStartTime;
 

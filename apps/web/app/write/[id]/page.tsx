@@ -66,6 +66,7 @@ export default function WritePage() {
     supportedOpinion: false,
     variedStructure: false,
   });
+  const [storeResults, setStoreResults] = useState(false); // Default: false (no server storage)
 
   // Handle textarea change with explicit state update
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -114,7 +115,7 @@ export default function WritePage() {
 
     try {
       // Wrap Server Action call with timeout to prevent hanging
-      const submitPromise = submitEssay(task.prompt, answer);
+      const submitPromise = submitEssay(task.prompt, answer, undefined, storeResults);
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("Request timed out. Please try again.")), 60000);
       });
@@ -124,8 +125,12 @@ export default function WritePage() {
       if (!submissionId || !results) {
         throw new Error("No submission ID or results returned");
       }
-      // Store results in sessionStorage for immediate display (no loading page needed)
+
+      // Always store results in localStorage (client-side only)
       if (typeof window !== "undefined") {
+        // Store in localStorage for persistence across sessions
+        localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
+        // Also store in sessionStorage for immediate display
         sessionStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
       }
       // Redirect to results page - results will be available immediately
@@ -379,6 +384,46 @@ export default function WritePage() {
                   </div>
                 </div>
               )}
+
+              {/* Server Storage Opt-in */}
+              <div
+                style={{
+                  marginTop: "var(--spacing-md)",
+                  padding: "var(--spacing-md)",
+                  backgroundColor: "rgba(102, 126, 234, 0.05)",
+                  borderRadius: "8px",
+                  border: "1px solid rgba(102, 126, 234, 0.2)",
+                }}
+                lang="en"
+              >
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "var(--spacing-sm)",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    lineHeight: "1.5",
+                  }}
+                  lang="en"
+                >
+                  <input
+                    type="checkbox"
+                    checked={storeResults}
+                    onChange={(e) => setStoreResults(e.target.checked)}
+                    style={{ cursor: "pointer", marginTop: "2px" }}
+                  />
+                  <span>
+                    <strong>Save results on server (optional)</strong>
+                    <br />
+                    <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                      By default, your results are only saved in your browser. Check this box to
+                      enable server storage so you can access your results from any device. Your
+                      data will be stored for 90 days.
+                    </span>
+                  </span>
+                </label>
+              </div>
 
               <div
                 style={{

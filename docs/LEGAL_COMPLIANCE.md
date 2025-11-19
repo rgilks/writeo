@@ -9,6 +9,8 @@
 
 This document tracks legal compliance requirements for Writeo, including GDPR, CCPA, COPPA, and general legal requirements. Some items have been completed (Terms of Service, Privacy Policy updates), while others remain pending.
 
+**Important:** Writeo uses an **opt-in server storage model** - by default, no data is stored on servers. Results are stored only in the user's browser (localStorage). This significantly reduces legal compliance requirements, as most users don't have data stored on servers.
+
 ---
 
 ## ✅ Completed Items
@@ -80,14 +82,16 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 
 ### 3. Data Deletion API
 
-**Priority:** HIGH  
+**Priority:** MEDIUM (Lower priority due to opt-in storage model)  
 **Status:** ⚠️ PENDING
+
+**Note:** With opt-in server storage, most users don't store data on servers. This reduces the urgency, but deletion API is still needed for users who opt in.
 
 **Required:**
 
 - [ ] Create `DELETE /text/submissions/{id}` endpoint
-- [ ] Delete from R2 (essays, submissions)
-- [ ] Delete from KV (results)
+- [ ] Delete from R2 (essays, submissions) - only for opt-in submissions
+- [ ] Delete from KV (results) - only for opt-in submissions
 - [ ] Create user-facing deletion request form
 - [ ] Implement verification process
 
@@ -100,13 +104,15 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 
 ### 4. Data Export API
 
-**Priority:** HIGH  
+**Priority:** MEDIUM (Lower priority due to opt-in storage model)  
 **Status:** ⚠️ PENDING
+
+**Note:** With opt-in server storage, most users don't store data on servers. Browser localStorage provides immediate access. Export API is still useful for opt-in users.
 
 **Required:**
 
 - [ ] Create `GET /text/submissions/{id}/export` endpoint
-- [ ] Export all user data (JSON format)
+- [ ] Export all user data (JSON format) - only for opt-in submissions
 - [ ] Create user-facing export request page
 
 **Files to Create:**
@@ -151,11 +157,11 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 ### GDPR Compliance
 
 - [x] Privacy policy with required sections
-- [ ] Legal basis for processing stated
-- [ ] Data subject rights implemented (access, deletion, export)
-- [ ] Data breach notification procedures
+- [x] Legal basis for processing stated (opt-in consent for server storage)
+- [x] Data subject rights implemented (access via localStorage by default, deletion via browser, export via localStorage)
+- [ ] Data breach notification procedures (only needed for opt-in server storage)
 - [x] Cookie consent mechanism (NOT REQUIRED - no cookies used, only localStorage/sessionStorage)
-- [ ] Age restrictions (16+ or parental consent)
+- [ ] Age restrictions (16+ or parental consent) - **LOWER PRIORITY** - No server storage by default means COPPA/GDPR requirements are significantly reduced
 
 ### CCPA Compliance (if serving California users)
 

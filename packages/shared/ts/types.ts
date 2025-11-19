@@ -30,6 +30,8 @@ export interface CreateSubmissionRequest {
   template: { name: string; version: number };
   // Note: parentSubmissionId and draftNumber are accepted but ignored for API compatibility
   // Draft tracking is handled in Server Actions, not the API
+  // Opt-in server storage: if false or omitted, results are returned but not stored on server
+  storeResults?: boolean; // Default: false (no server storage)
 }
 
 // Modal request (consumer → Modal)

@@ -68,9 +68,14 @@ app.get("/text/submissions/:submission_id", async (c) => {
     const result = await storage.getResults(submissionId);
 
     if (!result) {
+      // Check if submission exists (only if user opted in to server storage)
       const submission = await storage.getSubmission(submissionId);
       if (!submission) {
-        return errorResponse(404, "Submission not found", c);
+        return errorResponse(
+          404,
+          "Submission not found. Results are stored in your browser by default. If you enabled server storage, the results may have expired (90-day retention).",
+          c
+        );
       }
       return c.json({ status: "pending" });
     }
