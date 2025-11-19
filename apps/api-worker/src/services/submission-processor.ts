@@ -22,6 +22,7 @@ import { checkAnswerRelevance, type RelevanceCheck } from "./relevance";
 import { mergeAssessmentResults } from "./merge-results";
 import type { AIFeedback, TeacherFeedback } from "./feedback";
 import { MAX_ANSWER_TEXT_LENGTH } from "../utils/constants";
+import { parseLLMProvider, getDefaultModel, getAPIKey, type LLMProvider } from "./llm";
 
 export async function processSubmission(c: Context<{ Bindings: Env }>) {
   const submissionId = c.req.param("submission_id");
@@ -312,7 +313,20 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       }
     }
 
-    const aiModel = c.env.AI_MODEL || "llama-3.3-70b-versatile";
+    const llmProvider = parseLLMProvider(c.env.LLM_PROVIDER);
+    const defaultModel = getDefaultModel(llmProvider);
+    const aiModel = c.env.AI_MODEL || defaultModel;
+    const apiKey = getAPIKey(llmProvider, {
+      GROQ_API_KEY: c.env.GROQ_API_KEY,
+      OPENAI_API_KEY: c.env.OPENAI_API_KEY,
+    });
+
+    if (!apiKey) {
+      throw new Error(
+        `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`
+      );
+    }
+
     const llmAssessmentRequests: Array<{
       answerId: string;
       questionText: string;
@@ -326,7 +340,8 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
           questionText: answer.question_text,
           answerText: answer.answer_text,
           request: getLLMAssessment(
-            c.env.GROQ_API_KEY,
+            llmProvider,
+            apiKey,
             answer.question_text,
             answer.answer_text,
             aiModel
@@ -565,7 +580,8 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
             (async () => {
               const feedback = await getCombinedFeedbackWithRetry(
                 {
-                  groqApiKey: c.env.GROQ_API_KEY,
+                  llmProvider,
+                  apiKey,
                   questionText: answer.question_text,
                   answerText: answer.answer_text,
                   modelName: aiModel,
@@ -619,6 +635,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       modalRequest,
       language,
       aiModel,
+      llmProvider,
       llmFeedbackByAnswerId,
       relevanceByAnswerId,
       teacherFeedbackByAnswerId

@@ -16,7 +16,8 @@ export function mergeAssessmentResults(
   answerTexts: Map<string, string>,
   request: ModalRequest,
   language: string,
-  aiModel: string = "llama-3.3-70b-versatile",
+  aiModel: string = "gpt-4o-mini",
+  llmProvider: string = "openai",
   llmFeedback: Map<string, AIFeedback> = new Map(),
   relevanceChecks: Map<string, RelevanceCheck> = new Map(),
   teacherFeedback: Map<string, TeacherFeedback> = new Map()
@@ -71,7 +72,7 @@ export function mergeAssessmentResults(
           type: "feedback",
           errors: answerLlmErrors,
           meta: {
-            engine: "Groq",
+            engine: llmProvider === "groq" ? "Groq" : "OpenAI",
             model: aiModel,
             errorCount: answerLlmErrors.length,
           },
@@ -88,7 +89,7 @@ export function mergeAssessmentResults(
           meta: {
             relevance: feedback.relevance,
             feedback: feedback.feedback,
-            engine: "Groq",
+            engine: llmProvider === "groq" ? "Groq" : "OpenAI",
             model: aiModel,
           },
         });
@@ -122,7 +123,7 @@ export function mergeAssessmentResults(
           meta: {
             message: teacher.message,
             focusArea: teacher.focusArea,
-            engine: "Groq",
+            engine: llmProvider === "groq" ? "Groq" : "OpenAI",
             model: aiModel,
           },
         });

@@ -1,13 +1,14 @@
 import type { LanguageToolError } from "@writeo/shared";
-import { callGroqAPI } from "./groq";
+import { callLLMAPI, type LLMProvider } from "./llm";
 import { validateAndCorrectErrorPosition } from "../utils/text-processing";
 import { MAX_TOKENS_GRAMMAR_CHECK } from "../utils/constants";
 
 export async function getLLMAssessment(
-  groqApiKey: string,
+  llmProvider: LLMProvider,
+  apiKey: string,
   questionText: string,
   answerText: string,
-  modelName: string = "llama-3.3-70b-versatile"
+  modelName: string
 ): Promise<LanguageToolError[]> {
   try {
     const prompt = `You are an expert English grammar and language checker. Your task is to identify ALL grammar, spelling, style, and punctuation errors in the student's answer.
@@ -69,8 +70,9 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
   ]
 }`;
 
-    const text = await callGroqAPI(
-      groqApiKey,
+    const text = await callLLMAPI(
+      llmProvider,
+      apiKey,
       modelName,
       [
         {

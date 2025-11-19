@@ -6,7 +6,13 @@ import { safeLogError, sanitizeError } from "../utils/logging";
 import { validateText, validateRequestBodySize } from "../utils/validation";
 import { StorageService } from "../services/storage";
 import { getTeacherFeedback } from "../services/feedback";
-import { callGroqAPI } from "../services/groq";
+import {
+  callLLMAPI,
+  parseLLMProvider,
+  getDefaultModel,
+  getAPIKey,
+  type LLMProvider,
+} from "../services/llm";
 import { truncateEssayText, truncateQuestionText } from "../utils/text-processing";
 import { MAX_ANSWER_TEXT_LENGTH, MAX_REQUEST_BODY_SIZE } from "../utils/constants";
 import type {
@@ -108,7 +114,21 @@ feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", async
       }
     }
 
-    const aiModel = c.env.AI_MODEL || "llama-3.3-70b-versatile";
+    const llmProvider = parseLLMProvider(c.env.LLM_PROVIDER);
+    const defaultModel = getDefaultModel(llmProvider);
+    const aiModel = c.env.AI_MODEL || defaultModel;
+    const apiKey = getAPIKey(llmProvider, {
+      GROQ_API_KEY: c.env.GROQ_API_KEY,
+      OPENAI_API_KEY: c.env.OPENAI_API_KEY,
+    });
+
+    if (!apiKey) {
+      return errorResponse(
+        500,
+        `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`
+      );
+    }
+
     let essayContext = "";
     if (essayScores) {
       essayContext = `\n\nAssessment Results:
@@ -187,8 +207,9 @@ Respond in a clear, professional manner. Don't mention technical terms like "CEF
             )
           );
 
-          const responseText = await callGroqAPI(
-            c.env.GROQ_API_KEY,
+          const responseText = await callLLMAPI(
+            llmProvider,
+            apiKey,
             aiModel,
             [
               {
@@ -441,9 +462,24 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
       };
     } else {
       // Generate new feedback
-      const aiModel = c.env.AI_MODEL || "llama-3.3-70b-versatile";
+      const llmProvider = parseLLMProvider(c.env.LLM_PROVIDER);
+      const defaultModel = getDefaultModel(llmProvider);
+      const aiModel = c.env.AI_MODEL || defaultModel;
+      const apiKey = getAPIKey(llmProvider, {
+        GROQ_API_KEY: c.env.GROQ_API_KEY,
+        OPENAI_API_KEY: c.env.OPENAI_API_KEY,
+      });
+
+      if (!apiKey) {
+        return errorResponse(
+          500,
+          `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`
+        );
+      }
+
       teacherFeedback = await getTeacherFeedback(
-        c.env.GROQ_API_KEY,
+        llmProvider,
+        apiKey,
         questionText,
         answerText,
         aiModel,
@@ -482,7 +518,7 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
             focusArea: teacherFeedback.focusArea || existingMeta.focusArea,
             ...(mode === "clues" && { cluesMessage: teacherFeedback.message }),
             ...(mode === "explanation" && { explanationMessage: teacherFeedback.message }),
-            engine: "Groq",
+            engine: llmProvider === "groq" ? "Groq" : "OpenAI",
             model: aiModel,
           };
 

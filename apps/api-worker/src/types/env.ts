@@ -7,7 +7,9 @@ export type Env = {
   API_KEY: string;
   TEST_API_KEY?: string; // Optional test API key with higher rate limits
   AI: Ai;
-  GROQ_API_KEY: string;
+  GROQ_API_KEY?: string; // Optional, used when LLM_PROVIDER=groq
+  OPENAI_API_KEY?: string; // Optional, used when LLM_PROVIDER=openai
+  LLM_PROVIDER?: string; // Provider: "groq", "openai", "anthropic", "google" (default: "openai")
   AI_MODEL?: string;
   ALLOWED_ORIGINS?: string;
 };

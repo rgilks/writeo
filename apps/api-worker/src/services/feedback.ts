@@ -1,4 +1,4 @@
-import { callGroqAPI } from "./groq";
+import { callLLMAPI, parseLLMProvider, getDefaultModel, getAPIKey, type LLMProvider } from "./llm";
 import { truncateEssayText, truncateQuestionText } from "../utils/text-processing";
 import {
   MAX_TOKENS_DETAILED_FEEDBACK,
@@ -33,10 +33,11 @@ export interface CombinedFeedback {
 }
 
 export async function getCombinedFeedback(
-  groqApiKey: string,
+  llmProvider: LLMProvider,
+  apiKey: string,
   questionText: string,
   answerText: string,
-  modelName: string = "llama-3.3-70b-versatile",
+  modelName: string,
   essayScores?: {
     overall?: number;
     dimensions?: { TA?: number; CC?: number; Vocab?: number; Grammar?: number; Overall?: number };
@@ -179,8 +180,9 @@ Respond ONLY with valid JSON (no markdown, no explanations):
 }
 }`;
 
-  const responseText = await callGroqAPI(
-    groqApiKey,
+  const responseText = await callLLMAPI(
+    llmProvider,
+    apiKey,
     modelName,
     [
       {
@@ -228,7 +230,8 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function getCombinedFeedbackWithRetry(
   params: {
-    groqApiKey: string;
+    llmProvider: LLMProvider;
+    apiKey: string;
     questionText: string;
     answerText: string;
     modelName: string;
@@ -265,7 +268,8 @@ export async function getCombinedFeedbackWithRetry(
     attempt += 1;
     try {
       const feedback = await getCombinedFeedback(
-        params.groqApiKey,
+        params.llmProvider,
+        params.apiKey,
         params.questionText,
         params.answerText,
         params.modelName,
@@ -295,10 +299,11 @@ export async function getCombinedFeedbackWithRetry(
 }
 
 export async function getTeacherFeedback(
-  groqApiKey: string,
+  llmProvider: LLMProvider,
+  apiKey: string,
   questionText: string,
   answerText: string,
-  modelName: string = "llama-3.3-70b-versatile",
+  modelName: string,
   mode: "initial" | "clues" | "explanation" = "initial",
   essayScores?: {
     overall?: number;
@@ -455,8 +460,9 @@ Use markdown formatting (headers, bullet points, bold for emphasis). Be specific
       ? "You are an experienced writing instructor providing detailed analysis for another teacher. Use markdown formatting to structure your analysis. Be comprehensive, specific, and cite examples from the student's work. Never mention technical terms like CEFR or band scores."
       : "You are a professional writing tutor specializing in academic argumentative writing. Always respond with clear, direct feedback. Never mention technical terms like CEFR or band scores. Focus on actionable improvements.";
 
-  const responseText = await callGroqAPI(
-    groqApiKey,
+  const responseText = await callLLMAPI(
+    llmProvider,
+    apiKey,
     modelName,
     [
       {
