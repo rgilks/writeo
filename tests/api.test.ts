@@ -1256,7 +1256,11 @@ describe("API Tests", () => {
 
     // Debug: log error if not 200
     if (teacherResponse.status !== 200) {
-      console.error("Teacher feedback error:", teacherResponse.json);
+      console.error("Teacher feedback error:", {
+        status: teacherResponse.status,
+        json: teacherResponse.json,
+        requestBody: JSON.stringify(requestBody).substring(0, 200),
+      });
     }
 
     expect(teacherResponse.status).toBe(200);

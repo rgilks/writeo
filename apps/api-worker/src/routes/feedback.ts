@@ -263,9 +263,12 @@ Respond in a clear, professional manner. Don't mention technical terms like "CEF
 });
 
 feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (c) => {
+  console.log("[teacher-feedback] Endpoint called, method:", c.req.method, "path:", c.req.path);
   const submissionId = c.req.param("submission_id");
+  console.log("[teacher-feedback] submissionId:", submissionId);
   if (!isValidUUID(submissionId)) {
-    return errorResponse(400, "Invalid submission_id format");
+    console.log("[teacher-feedback] Invalid UUID");
+    return errorResponse(400, "Invalid submission_id format", c);
   }
 
   const apiKey = c.req.header("Authorization")?.replace(/^Token\s+/i, "");
@@ -274,13 +277,13 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
   // Accept either API_KEY or TEST_API_KEY
   const isValidKey = apiKey && (apiKey === c.env.API_KEY || (testApiKey && apiKey === testApiKey));
   if (!isValidKey) {
-    return errorResponse(401, "Unauthorized");
+    return errorResponse(401, "Unauthorized", c);
   }
 
   try {
     const sizeValidation = await validateRequestBodySize(c.req.raw, 1024 * 1024);
     if (!sizeValidation.valid) {
-      return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)");
+      return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
     }
 
     const body = (await c.req.json()) as {
@@ -310,21 +313,36 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
     };
     const { answerId, mode, answerText, questionText: providedQuestionText, assessmentData } = body;
 
+    // Debug logging
+    console.log("[teacher-feedback] Request received:", {
+      submissionId,
+      answerId,
+      mode,
+      hasQuestionText: !!providedQuestionText,
+      questionTextLength: providedQuestionText?.length || 0,
+      hasAssessmentData: !!assessmentData,
+      assessmentDataKeys: assessmentData ? Object.keys(assessmentData) : [],
+    });
+
     if (!answerId || !mode || !answerText) {
-      return errorResponse(400, "Missing required fields: answerId, mode, answerText");
+      return errorResponse(400, "Missing required fields: answerId, mode, answerText", c);
     }
 
     if (!isValidUUID(answerId)) {
-      return errorResponse(400, "Invalid answerId format");
+      return errorResponse(400, "Invalid answerId format", c);
     }
 
     if (mode !== "clues" && mode !== "explanation") {
-      return errorResponse(400, "Mode must be 'clues' or 'explanation'");
+      return errorResponse(400, "Mode must be 'clues' or 'explanation'", c);
     }
 
     const textValidation = validateText(answerText, 50000);
     if (!textValidation.valid) {
-      return errorResponse(400, `Invalid answerText: ${textValidation.error || "Invalid content"}`);
+      return errorResponse(
+        400,
+        `Invalid answerText: ${textValidation.error || "Invalid content"}`,
+        c
+      );
     }
 
     let questionText = providedQuestionText || "";
@@ -397,7 +415,8 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
         // If no storage and no question text provided, we can't proceed
         return errorResponse(
           400,
-          "questionText is required when submission is not stored. Please provide questionText in the request body."
+          "questionText is required when submission is not stored. Please provide questionText in the request body.",
+          c
         );
       }
     }
@@ -406,7 +425,8 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
     if (!questionText || questionText.trim().length === 0) {
       return errorResponse(
         400,
-        "questionText is required. Please provide questionText in the request body."
+        "questionText is required. Please provide questionText in the request body.",
+        c
       );
     }
 

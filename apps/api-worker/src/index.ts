@@ -55,6 +55,8 @@ app.route("/", questionsRouter);
 app.route("/", feedbackRouter);
 
 // Submission routes
+// Note: PUT and GET routes must come AFTER feedbackRouter to avoid route conflicts
+// feedbackRouter has POST /text/submissions/:id/teacher-feedback which is more specific
 app.put("/text/submissions/:submission_id", processSubmissionHandler);
 
 app.get("/text/submissions/:submission_id", async (c) => {
