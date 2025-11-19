@@ -14,6 +14,8 @@ NC='\033[0m' # No Color
 ACCOUNT_ID="571f130502618993d848f58d27ae288d"
 R2_BUCKET="writeo-data"
 KV_NAMESPACE_ID="17677e5237b248b3b94ae3b7c9468933"
+KV_NAMESPACE_NAME="WRITEO_RESULTS"
+WRANGLER_TOML="apps/api-worker/wrangler.toml"
 
 echo "=== Clear Cloudflare Data ==="
 echo ""
@@ -54,143 +56,151 @@ fi
 echo -e "${GREEN}✓${NC} Wrangler authenticated"
 echo ""
 
-# Function to clear R2 bucket using Cloudflare API bulk delete
+# Function to clear R2 bucket by deleting and recreating it
 clear_r2_bucket() {
     local bucket=$1
     echo "Clearing R2 bucket: ${bucket}"
-    echo "  Listing objects..."
+    echo "  Deleting bucket (this will remove all objects)..."
     
-    local cursor=""
-    local total_deleted=0
-    local batch_size=1000  # R2 bulk delete supports up to 1000 objects per request
+    # Delete the bucket (this deletes all objects automatically)
+    local delete_response=$(curl -s -X DELETE \
+        "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/r2/buckets/${bucket}" \
+        -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+        -H "Content-Type: application/json")
     
-    while true; do
-        # List objects
-        local url="https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/r2/buckets/${bucket}/objects"
-        local params=""
+    # Check if deletion was successful or bucket doesn't exist
+    if echo "$delete_response" | jq -e '.success == false' > /dev/null 2>&1; then
+        local error=$(echo "$delete_response" | jq -r '.errors[0].message // "Unknown error"')
+        local error_code=$(echo "$delete_response" | jq -r '.errors[0].code // ""')
         
-        if [ -n "$cursor" ]; then
-            params="?cursor=${cursor}"
+        # If bucket doesn't exist, that's fine - we'll create it
+        if [[ "$error" == *"not found"* ]] || [[ "$error_code" == "10009" ]]; then
+            echo "  Bucket doesn't exist, will create it..."
+        else
+            echo -e "  ${YELLOW}⚠${NC}  Warning: ${error}"
+            echo "  Attempting to continue..."
         fi
+    else
+        echo -e "  ${GREEN}✓${NC} Bucket deleted"
+    fi
+    
+    # Wait a moment for deletion to propagate
+    sleep 2
+    
+    # Recreate the bucket
+    echo "  Recreating bucket..."
+    local create_response=$(curl -s -X POST \
+        "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/r2/buckets" \
+        -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"name\":\"${bucket}\"}")
+    
+    if echo "$create_response" | jq -e '.success == false' > /dev/null 2>&1; then
+        local error=$(echo "$create_response" | jq -r '.errors[0].message // "Unknown error"')
+        local error_code=$(echo "$create_response" | jq -r '.errors[0].code // ""')
         
-        local response=$(curl -s -X GET "${url}${params}" \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H "Content-Type: application/json")
-        
-        # Check for errors
-        if echo "$response" | jq -e '.success == false' > /dev/null 2>&1; then
-            local error=$(echo "$response" | jq -r '.errors[0].message // "Unknown error"')
-            echo -e "  ${RED}✘${NC} Error: $error"
+        # If bucket already exists, that's fine
+        if [[ "$error" == *"already exists"* ]] || [[ "$error_code" == "10013" ]]; then
+            echo -e "  ${GREEN}✓${NC} Bucket already exists"
+        else
+            echo -e "  ${RED}✘${NC} Error creating bucket: $error"
             return 1
         fi
-        
-        # Extract objects
-        local objects_json=$(echo "$response" | jq -r '.result // []')
-        local object_count=$(echo "$objects_json" | jq 'length')
-        
-        if [ "$object_count" -eq 0 ]; then
-            break
-        fi
-        
-        # Build bulk delete payload (up to 1000 objects per request)
-        local i=0
-        while [ $i -lt "$object_count" ]; do
-            local batch_keys=""
-            local batch_count=0
-            
-            # Collect up to batch_size keys
-            while [ $i -lt "$object_count" ] && [ $batch_count -lt $batch_size ]; do
-                local key=$(echo "$objects_json" | jq -r ".[$i].key")
-                if [ -n "$key" ] && [ "$key" != "null" ]; then
-                    if [ -z "$batch_keys" ]; then
-                        batch_keys="[\"${key}\""
-                    else
-                        batch_keys="${batch_keys},\"${key}\""
-                    fi
-                    batch_count=$((batch_count + 1))
-                fi
-                i=$((i + 1))
-            done
-            
-            if [ -n "$batch_keys" ]; then
-                batch_keys="${batch_keys}]"
-                echo "  Deleting batch of ${batch_count} objects..."
-                
-                # Bulk delete
-                local delete_response=$(curl -s -X POST \
-                    "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/r2/buckets/${bucket}/objects/bulk-delete" \
-                    -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-                    -H "Content-Type: application/json" \
-                    -d "{\"keys\":${batch_keys}}")
-                
-                if echo "$delete_response" | jq -e '.success == false' > /dev/null 2>&1; then
-                    local error=$(echo "$delete_response" | jq -r '.errors[0].message // "Unknown error"')
-                    echo -e "    ${RED}✘${NC} Error deleting batch: $error"
-                else
-                    total_deleted=$((total_deleted + batch_count))
-                fi
-            fi
-        done
-        
-        # Check if there are more pages
-        local truncated=$(echo "$response" | jq -r '.result_info.is_truncated // false')
-        if [ "$truncated" != "true" ]; then
-            break
-        fi
-        
-        cursor=$(echo "$response" | jq -r '.result_info.cursor // empty')
-        if [ -z "$cursor" ] || [ "$cursor" = "null" ]; then
-            break
-        fi
-    done
+    else
+        echo -e "  ${GREEN}✓${NC} Bucket recreated"
+    fi
     
-    echo -e "  ${GREEN}✓${NC} Deleted ${total_deleted} objects from ${bucket}"
     echo ""
 }
 
-# Function to clear KV namespace
+# Function to clear KV namespace by deleting and recreating it
 clear_kv_namespace() {
     local namespace_id=$1
+    local namespace_name=$2
     echo "Clearing KV namespace: ${namespace_id}"
     
-    # List all keys
-    echo "  Listing keys..."
-    local keys_output=$(cd apps/api-worker && wrangler kv key list --namespace-id="${namespace_id}" --json 2>/dev/null || echo "[]")
-    
-    if [ "$keys_output" = "[]" ] || [ -z "$keys_output" ]; then
-        echo -e "  ${GREEN}✓${NC} No keys found (already empty)"
-        echo ""
-        return 0
-    fi
-    
-    # Extract key names into array
-    local key_count=$(echo "$keys_output" | jq 'length' 2>/dev/null || echo "0")
-    
-    if [ "$key_count" -eq 0 ]; then
-        echo -e "  ${GREEN}✓${NC} No keys found (already empty)"
-        echo ""
-        return 0
-    fi
-    
-    echo "  Found ${key_count} keys"
-    
-    # Delete each key
-    local deleted=0
-    local i=0
-    while [ $i -lt "$key_count" ]; do
-        local key=$(echo "$keys_output" | jq -r ".[$i].name // empty" 2>/dev/null)
-        if [ -n "$key" ] && [ "$key" != "null" ]; then
-            echo "    Deleting: ${key}"
-            if cd apps/api-worker && wrangler kv key delete "${key}" --namespace-id="${namespace_id}" > /dev/null 2>&1; then
-                deleted=$((deleted + 1))
-            else
-                echo -e "      ${RED}✘${NC} Failed to delete ${key}"
-            fi
+    # Get namespace title (name) from API if not provided
+    if [ -z "$namespace_name" ]; then
+        echo "  Getting namespace info..."
+        local ns_info=$(curl -s -X GET \
+            "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${namespace_id}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json")
+        
+        if echo "$ns_info" | jq -e '.success == true' > /dev/null 2>&1; then
+            namespace_name=$(echo "$ns_info" | jq -r '.result.title // "WRITEO_RESULTS"')
+        else
+            namespace_name="WRITEO_RESULTS"
         fi
-        i=$((i + 1))
-    done
+    fi
     
-    echo -e "  ${GREEN}✓${NC} Deleted ${deleted} keys from KV namespace"
+    echo "  Deleting namespace '${namespace_name}'..."
+    
+    # Delete the namespace
+    local delete_response=$(curl -s -X DELETE \
+        "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces/${namespace_id}" \
+        -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+        -H "Content-Type: application/json")
+    
+    # Check if deletion was successful or namespace doesn't exist
+    if echo "$delete_response" | jq -e '.success == false' > /dev/null 2>&1; then
+        local error=$(echo "$delete_response" | jq -r '.errors[0].message // "Unknown error"')
+        local error_code=$(echo "$delete_response" | jq -r '.errors[0].code // ""')
+        
+        # If namespace doesn't exist, that's fine - we'll create it
+        if [[ "$error" == *"not found"* ]] || [[ "$error_code" == "10009" ]]; then
+            echo "  Namespace doesn't exist, will create it..."
+        else
+            echo -e "  ${YELLOW}⚠${NC}  Warning: ${error}"
+            echo "  Attempting to continue..."
+        fi
+    else
+        echo -e "  ${GREEN}✓${NC} Namespace deleted"
+    fi
+    
+    # Wait a moment for deletion to propagate
+    sleep 2
+    
+    # Recreate the namespace
+    echo "  Recreating namespace '${namespace_name}'..."
+    local create_response=$(curl -s -X POST \
+        "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/storage/kv/namespaces" \
+        -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"title\":\"${namespace_name}\"}")
+    
+    if echo "$create_response" | jq -e '.success == false' > /dev/null 2>&1; then
+        local error=$(echo "$create_response" | jq -r '.errors[0].message // "Unknown error"')
+        echo -e "  ${RED}✘${NC} Error creating namespace: $error"
+        return 1
+    fi
+    
+    local new_namespace_id=$(echo "$create_response" | jq -r '.result.id // empty')
+    
+    if [ -z "$new_namespace_id" ] || [ "$new_namespace_id" = "null" ]; then
+        echo -e "  ${RED}✘${NC} Failed to get new namespace ID"
+        return 1
+    fi
+    
+    echo -e "  ${GREEN}✓${NC} Namespace recreated with ID: ${new_namespace_id}"
+    
+    # Update wrangler.toml with new namespace ID
+    if [ -f "$WRANGLER_TOML" ]; then
+        echo "  Updating ${WRANGLER_TOML} with new namespace ID..."
+        # Use sed to replace the namespace ID (be careful with the exact format)
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS sed
+            sed -i '' "s/id = \"${namespace_id}\"/id = \"${new_namespace_id}\"/g" "$WRANGLER_TOML"
+        else
+            # Linux sed
+            sed -i "s/id = \"${namespace_id}\"/id = \"${new_namespace_id}\"/g" "$WRANGLER_TOML"
+        fi
+        echo -e "  ${GREEN}✓${NC} Updated wrangler.toml"
+    else
+        echo -e "  ${YELLOW}⚠${NC}  wrangler.toml not found, please update manually:"
+        echo "    id = \"${new_namespace_id}\""
+    fi
+    
     echo ""
 }
 
@@ -214,11 +224,14 @@ echo ""
 clear_r2_bucket "${R2_BUCKET}"
 
 # Clear KV namespace
-clear_kv_namespace "${KV_NAMESPACE_ID}"
+clear_kv_namespace "${KV_NAMESPACE_ID}" "${KV_NAMESPACE_NAME}"
 
 echo -e "${GREEN}✓${NC} All data cleared successfully!"
 echo ""
 echo "Summary:"
-echo "  - R2 bucket '${R2_BUCKET}': Cleared"
-echo "  - KV namespace '${KV_NAMESPACE_ID}': Cleared"
+echo "  - R2 bucket '${R2_BUCKET}': Cleared (recreated)"
+echo "  - KV namespace '${KV_NAMESPACE_NAME}': Cleared (recreated)"
+echo ""
+echo "Note: If the KV namespace ID changed, ${WRANGLER_TOML} has been updated automatically."
+echo "      You may need to redeploy your worker for the changes to take effect."
 

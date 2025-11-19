@@ -48,9 +48,9 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
     maxRequests = isTest ? 2000 : 60; // Test keys: 2000/min, Production: 60/min
     limitType = "results";
   } else if (path.startsWith("/text/submissions/") && c.req.method === "PUT") {
-    // Limit submissions to 5/min to keep costs under $100/day
-    // 5/min = 7,200/day max × $0.03/submission = ~$216/day max (but rate limiting prevents constant usage)
-    maxRequests = isTest ? 500 : 5; // Test keys: 500/min, Production: 5/min
+    // Limit submissions to 10/min to keep costs under control
+    // 10/min = 14,400/day max × $0.03/submission = ~$432/day max (but rate limiting prevents constant usage)
+    maxRequests = isTest ? 500 : 10; // Test keys: 500/min, Production: 10/min
     limitType = "submissions";
   } else if (path.startsWith("/text/questions/")) {
     maxRequests = isTest ? 1000 : 30; // Test keys: 1000/min, Production: 30/min

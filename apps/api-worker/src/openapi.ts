@@ -29,7 +29,7 @@ Authorization: Token <your_api_key>
 Contact support to obtain an API key.
 
 ### Rate Limits (per IP)
-- Submissions: 5 requests per minute (expensive operations)
+- Submissions: 10 requests per minute (expensive operations)
 - Results: 60 requests per minute (read-only)
 - Questions/Answers: 30 requests per minute (data writes)
 - Other endpoints: 30 requests per minute

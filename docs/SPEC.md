@@ -280,7 +280,7 @@ The PUT response format matches the GET response format - see "Get Submission Re
 
 Rate limits are applied per IP address:
 
-- **Submissions**: 5 requests per minute (expensive operations)
+- **Submissions**: 10 requests per minute (expensive operations)
 - **Results (GET)**: 60 requests per minute (read-only)
 - **Questions/Answers**: 30 requests per minute (data writes)
 - **Other endpoints**: 30 requests per minute
