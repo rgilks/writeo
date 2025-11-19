@@ -27,58 +27,119 @@ export const TEST_ESSAYS = {
 };
 
 // API configuration - loaded from .env or .env.local
+// Always prefer TEST_API_KEY for tests (higher rate limits)
 const API_BASE = process.env.API_BASE || process.env.API_BASE_URL || "http://localhost:8787";
-const API_KEY = process.env.API_KEY || "";
+const API_KEY = process.env.TEST_API_KEY || process.env.API_KEY || "";
+
+// Track last submission time to add delays between parallel test submissions
+// Note: This is per-worker (each Playwright worker has its own instance)
+// This helps prevent hitting rate limits when multiple tests run in parallel
+let lastSubmissionTime = 0;
+const MIN_DELAY_MS = 200; // Minimum 200ms between submissions (helps with parallel workers)
 
 /**
- * Create a test submission via API
+ * Create a test submission via API with retry logic for rate limiting
  * Returns submission ID and results
  */
 export async function createTestSubmission(
   questionText: string,
-  answerText: string
+  answerText: string,
+  retries = 3
 ): Promise<{ submissionId: string; results: any }> {
   if (!API_KEY) {
-    throw new Error("API_KEY environment variable required for E2E tests");
+    throw new Error("TEST_API_KEY or API_KEY environment variable required for E2E tests");
   }
+
+  // Add small delay to prevent hitting rate limits when tests run in parallel
+  const now = Date.now();
+  const timeSinceLastSubmission = now - lastSubmissionTime;
+  if (timeSinceLastSubmission < MIN_DELAY_MS) {
+    await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_MS - timeSinceLastSubmission));
+  }
+  lastSubmissionTime = Date.now();
 
   const submissionId = randomUUID();
   const questionId = randomUUID();
   const answerId = randomUUID();
 
-  const response = await fetch(`${API_BASE}/text/submissions/${submissionId}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Token ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": questionText,
-              text: answerText,
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    }),
-  });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    // Exponential backoff: wait longer on each retry
+    if (attempt > 0) {
+      const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Max 10 seconds
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
 
-  if (!response.ok) {
+    const response = await fetch(`${API_BASE}/text/submissions/${submissionId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Token ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        submission: [
+          {
+            part: 1,
+            answers: [
+              {
+                id: answerId,
+                "question-number": 1,
+                "question-id": questionId,
+                "question-text": questionText,
+                text: answerText,
+              },
+            ],
+          },
+        ],
+        template: { name: "generic", version: 1 },
+        storeResults: false, // No server storage for tests
+      }),
+    });
+
+    if (response.ok) {
+      const results = await response.json();
+      return { submissionId, results };
+    }
+
+    // Handle rate limiting (429) with retry
+    if (response.status === 429) {
+      const errorText = await response.text();
+      let errorJson: { error?: string } = { error: errorText };
+      try {
+        errorJson = JSON.parse(errorText);
+      } catch {
+        // If not JSON, use the text as error message
+        errorJson = { error: errorText };
+      }
+
+      // Extract wait time from error message if available
+      const waitMatch = errorJson.error?.match(/wait (\d+)/i);
+      const waitSeconds = waitMatch ? parseInt(waitMatch[1]) : null;
+
+      if (attempt < retries) {
+        // If we have a specific wait time, use it; otherwise use exponential backoff
+        const waitMs = waitSeconds
+          ? waitSeconds * 1000
+          : Math.min(1000 * Math.pow(2, attempt), 10000);
+        console.log(
+          `Rate limited, retrying after ${waitMs}ms (attempt ${attempt + 1}/${retries + 1})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        continue;
+      }
+
+      // Last attempt failed
+      throw new Error(
+        `Failed to create submission after ${retries + 1} attempts: ${response.status} ${errorText}`
+      );
+    }
+
+    // For non-rate-limit errors, throw immediately
     const errorText = await response.text();
     throw new Error(`Failed to create submission: ${response.status} ${errorText}`);
   }
 
-  const results = await response.json();
-  return { submissionId, results };
+  // Should never reach here, but TypeScript needs it
+  throw new Error("Unexpected error in createTestSubmission");
 }
 
 /**
