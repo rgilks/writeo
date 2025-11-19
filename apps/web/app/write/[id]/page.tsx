@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { submitEssay } from "@/app/lib/actions";
@@ -67,6 +67,24 @@ export default function WritePage() {
     variedStructure: false,
   });
   const [storeResults, setStoreResults] = useState(false); // Default: false (no server storage)
+
+  // Load saved preference from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("writeo-store-results");
+      if (saved === "true") {
+        setStoreResults(true);
+      }
+    }
+  }, []);
+
+  // Save preference to localStorage whenever it changes
+  const handleStoreResultsChange = (checked: boolean) => {
+    setStoreResults(checked);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("writeo-store-results", checked.toString());
+    }
+  };
 
   // Handle textarea change with explicit state update
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -410,7 +428,7 @@ export default function WritePage() {
                   <input
                     type="checkbox"
                     checked={storeResults}
-                    onChange={(e) => setStoreResults(e.target.checked)}
+                    onChange={(e) => handleStoreResultsChange(e.target.checked)}
                     style={{ cursor: "pointer", marginTop: "2px" }}
                   />
                   <span>
