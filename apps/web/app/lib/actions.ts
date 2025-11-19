@@ -538,10 +538,63 @@ export async function getTeacherFeedback(
     }
 
     const data = await response.json();
-    return {
+    const feedbackResult = {
       message: data.message || "",
       focusArea: data.focusArea,
     };
+
+    // Store teacher feedback locally in localStorage
+    if (typeof window !== "undefined") {
+      try {
+        const storedResults = localStorage.getItem(`results_${submissionId}`);
+        if (storedResults) {
+          const results = JSON.parse(storedResults) as any;
+
+          // Find or create the teacher feedback assessor in the results structure
+          if (results.results?.parts?.[0]?.answers?.[0]) {
+            const firstAnswer = results.results.parts[0].answers[0];
+            if (!firstAnswer["assessor-results"]) {
+              firstAnswer["assessor-results"] = [];
+            }
+
+            // Find existing teacher feedback assessor
+            let teacherAssessor = firstAnswer["assessor-results"].find(
+              (a: any) => a.id === "T-TEACHER-FEEDBACK"
+            );
+
+            if (!teacherAssessor) {
+              // Create new teacher feedback assessor
+              teacherAssessor = {
+                id: "T-TEACHER-FEEDBACK",
+                name: "Teacher's Feedback",
+                type: "feedback",
+                meta: {},
+              };
+              firstAnswer["assessor-results"].push(teacherAssessor);
+            }
+
+            // Update meta with feedback data
+            const existingMeta = (teacherAssessor.meta || {}) as Record<string, any>;
+            teacherAssessor.meta = {
+              ...existingMeta,
+              message: existingMeta.message || feedbackResult.message,
+              focusArea: feedbackResult.focusArea || existingMeta.focusArea,
+              // Store mode-specific messages
+              ...(mode === "clues" && { cluesMessage: feedbackResult.message }),
+              ...(mode === "explanation" && { explanationMessage: feedbackResult.message }),
+            };
+
+            // Save updated results back to localStorage
+            localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
+          }
+        }
+      } catch (storageError) {
+        // Don't fail the request if localStorage update fails
+        console.warn("[getTeacherFeedback] Failed to store feedback locally:", storageError);
+      }
+    }
+
+    return feedbackResult;
   } catch (error) {
     console.error("[getTeacherFeedback] Error:", error);
     throw makeSerializableError(error);
