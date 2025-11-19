@@ -1,0 +1,8 @@
+{
+  "include": ["."],
+  "exclude": ["**/node_modules", "**/__pycache__"],
+  "reportMissingImports": false,
+  "reportMissingModuleSource": false,
+  "reportImportCycles": false,
+  "typeCheckingMode": "basic"
+}

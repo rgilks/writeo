@@ -1,0 +1,126 @@
+"""Pydantic schemas for Modal service request/response."""
+
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, Literal
+
+
+class ModalAnswer(BaseModel):
+    """Answer data with question and answer text for scoring."""
+    id: str = Field(..., description="Unique identifier for the answer (UUID)", example="550e8400-e29b-41d4-a716-446655440000")
+    question_id: str = Field(..., description="Unique identifier for the question (UUID)", example="660e8400-e29b-41d4-a716-446655440000")
+    question_text: str = Field(..., description="The question text that the answer responds to", example="Describe your weekend. What did you do?")
+    answer_text: str = Field(..., description="The student's answer text to be scored", example="I went to the park yesterday and played football with my friends. It was a beautiful sunny day.")
+    
+    class Config:
+        populate_by_name = True
+        json_schema_extra = {
+            "example": {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "question_id": "660e8400-e29b-41d4-a716-446655440000",
+                "question_text": "Describe your weekend. What did you do?",
+                "answer_text": "I went to the park yesterday and played football with my friends. It was a beautiful sunny day."
+            }
+        }
+
+
+class ModalPart(BaseModel):
+    """A part of the submission containing multiple answers."""
+    part: int = Field(..., description="Part number (typically 1 or 2)", example=1, ge=1)
+    answers: List[ModalAnswer] = Field(..., description="List of answers in this part", min_length=1)
+
+
+class ModalRequest(BaseModel):
+    """Request model for essay scoring."""
+    submission_id: str = Field(..., description="Unique identifier for the submission (UUID)", example="770e8400-e29b-41d4-a716-446655440000")
+    template: Dict[str, Any] = Field(..., description="Template metadata with name and version", example={"name": "essay-task-2", "version": 1})
+    parts: List[ModalPart] = Field(..., description="List of submission parts to be scored", min_length=1)
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "submission_id": "770e8400-e29b-41d4-a716-446655440000",
+                "template": {"name": "essay-task-2", "version": 1},
+                "parts": [
+                    {
+                        "part": 1,
+                        "answers": [
+                            {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "question_id": "660e8400-e29b-41d4-a716-446655440000",
+                                "question_text": "Describe your weekend. What did you do?",
+                                "answer_text": "I went to the park yesterday and played football with my friends. It was a beautiful sunny day."
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+
+
+class LanguageToolError(BaseModel):
+    """LanguageTool error structure."""
+    start: int = Field(..., description="Character offset (0-based)", example=10)
+    end: int = Field(..., description="Character offset (exclusive)", example=14)
+    length: int = Field(..., description="end - start (for convenience)", example=4)
+    sentenceIndex: Optional[int] = Field(None, description="Optional: sentence number (0-based)", example=0)
+    category: str = Field(..., description="Error category (e.g., GRAMMAR, TYPOGRAPHY, STYLE)", example="GRAMMAR")
+    rule_id: str = Field(..., description="LanguageTool rule identifier", example="SVA")
+    message: str = Field(..., description="Human-readable error message", example="Possible subject–verb agreement error.")
+    suggestions: Optional[List[str]] = Field(None, description="Array of suggested corrections (top 3-5)", example=["go", "went"])
+    source: Literal["LT"] = Field("LT", description="Always 'LT' for LanguageTool")
+    severity: Literal["warning", "error"] = Field(..., description="Error severity level", example="warning")
+
+
+class AssessorResult(BaseModel):
+    """Result from an assessor (scoring model)."""
+    id: str = Field(..., description="Assessor identifier", example="T-AES-ESSAY")
+    name: str = Field(..., description="Human-readable assessor name", example="Essay scorer")
+    type: Literal["grader", "conf", "ard", "feedback"] = Field(..., description="Type of assessor: grader (scores essays), conf (confidence), ard (automated response detection), feedback (grammar errors)")
+    overall: Optional[float] = Field(None, description="Overall band score (0-9, 0.5 increments)", example=7.5, ge=0.0, le=9.0)
+    label: Optional[str] = Field(None, description="CEFR level label (A2, B1, B2, C1, C2)", example="C1")
+    dimensions: Optional[Dict[str, float]] = Field(None, description="Detailed scores by dimension (TA, CC, Vocab, Grammar, Overall)", example={"TA": 7.5, "CC": 7.0, "Vocab": 8.0, "Grammar": 7.5, "Overall": 7.5})
+    errors: Optional[List[LanguageToolError]] = Field(None, description="LanguageTool errors (for type: 'feedback')")
+    meta: Optional[Dict[str, Any]] = Field(None, description="Assessor metadata")
+
+
+class AnswerResult(BaseModel):
+    """Answer result with assessor results."""
+    id: str = Field(..., description="Answer ID (UUID)", example="550e8400-e29b-41d4-a716-446655440000")
+    assessor_results: List[AssessorResult] = Field(..., alias="assessor-results", description="List of assessor results for this answer", min_length=1)
+    
+    class Config:
+        populate_by_name = True  # Allow using field name (assessor_results) or alias (assessor-results)
+
+
+class AssessmentPart(BaseModel):
+    """Assessment results for a single part of the submission."""
+    part: int = Field(..., description="Part number", example=1, ge=1)
+    status: Literal["success", "error"] = Field(..., description="Processing status for this part")
+    answers: List[AnswerResult] = Field(..., description="List of answer results with assessor results", min_length=1)
+    
+    class Config:
+        populate_by_name = True
+
+
+class AssessmentResults(BaseModel):
+    """Complete assessment results for a submission."""
+    status: Literal["success", "error", "pending", "bypassed"] = Field(..., description="Overall processing status")
+    results: Optional[Dict[str, List[AssessmentPart]]] = Field(None, description="Assessment results organized by parts. Contains a 'parts' key with list of AssessmentPart objects.")
+    template: Dict[str, Any] = Field(..., description="Template metadata (echoed from request)", example={"name": "essay-task-2", "version": 1})
+    error_message: Optional[str] = Field(None, description="Error message if status is 'error'", example="RuntimeError: Failed to load model engessay")
+    meta: Optional[Dict[str, Any]] = Field(None, description="Metadata (e.g., answer texts for frontend)")
+
+
+def map_score_to_cefr(overall: float) -> str:
+    """Map overall band score to CEFR level."""
+    if overall >= 8.5:
+        return "C2"
+    elif overall >= 7.0:
+        return "C1"
+    elif overall >= 5.5:
+        return "B2"
+    elif overall >= 4.0:
+        return "B1"
+    else:
+        return "A2"
+

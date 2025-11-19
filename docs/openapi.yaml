@@ -1,0 +1,1078 @@
+openapi: 3.0.0
+info:
+  title: Writeo API Documentation
+  version: 1.0.0
+  description: |
+    # Writeo API Documentation
+
+    Comprehensive API documentation for the Writeo essay assessment platform.
+
+    ## Overview
+
+    Writeo provides two main APIs:
+
+    1. **Text API** (Cloudflare Workers) - Public-facing API for creating questions, answers, and submissions
+    2. **Essay Scorer API** (Modal/FastAPI) - Internal ML service for essay scoring
+
+    ## Architecture
+
+    - **Edge API**: Cloudflare Workers for low-latency global access
+    - **Storage**: R2 bucket for questions/answers/submissions, KV namespace for results
+    - **ML Service**: Modal-hosted FastAPI service with transformer models for essay scoring
+    - **Models**: Multiple scoring models available (engessay, distilbert, fallback)
+
+    ## Authentication
+
+    All endpoints (except `/health`, `/docs`, `/openapi.json`) require API key authentication via the `Authorization` header:
+    ```
+    Authorization: Token <api_key>
+    ```
+
+    ## Rate Limits
+
+    Rate limits are applied per IP address:
+
+    - **Submissions**: 5 requests per minute (expensive operations)
+    - **Results (GET)**: 60 requests per minute (read-only)
+    - **Questions**: 30 requests per minute (data writes)
+    - **Other endpoints**: 30 requests per minute
+
+    Contact support for higher limits.
+
+  contact:
+    name: Writeo API Support
+    url: https://github.com/your-org/writeo
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: https://your-api-worker.workers.dev
+    description: Production Text API server (configure via API_BASE_URL)
+  - url: https://your-username--writeo-essay-fastapi-app.modal.run
+    description: Production Essay Scorer API server (configure via MODAL_GRADE_URL)
+  - url: http://localhost:8787
+    description: Local Text API development server
+
+tags:
+  - name: Questions
+    description: Question management endpoints
+  - name: Submissions
+    description: Submission processing and results retrieval
+  - name: Feedback
+    description: AI-powered feedback and learning assistance endpoints
+  - name: Assessment
+    description: Essay scoring and assessment endpoints (Essay Scorer API)
+  - name: Models
+    description: Model management and comparison (Essay Scorer API)
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  # Text API Endpoints
+  /text/questions/{question_id}:
+    put:
+      tags: [Questions]
+      summary: Create or update a question
+      description: |
+        Creates a new question or updates an existing one if the content is identical.
+        Questions are stored in R2 storage.
+      operationId: createQuestion
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: question_id
+          in: path
+          required: true
+          description: Unique identifier for the question (UUID format)
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  description: The question text
+                  example: "Describe your weekend. What did you do?"
+      responses:
+        "201":
+          description: Question created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Question created"
+        "204":
+          description: Question already exists with identical content
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid question_id format"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Question already exists with different content"
+        "500":
+          description: Internal server error
+
+  /text/submissions/{submission_id}:
+    put:
+      tags: [Submissions]
+      summary: Create a submission for assessment
+      description: |
+        Creates a submission and immediately processes it for assessment.
+        Results are returned synchronously in the response body.
+
+        **Submission Format:**
+        - **Answers**: Must always be sent inline with the submission (using the `text` field). Answers cannot be referenced by ID.
+        - **Questions**: Can be sent inline (with `question-text`) OR referenced by ID (using `question-id` only, question must already exist via PUT /text/questions/{question_id}).
+
+        **Example with inline question:**
+        ```json
+        {
+          "submission": [{
+            "part": 1,
+            "answers": [{
+              "id": "answer-uuid",
+              "question-number": 1,
+              "question-id": "question-uuid",
+              "question-text": "Describe your weekend.",
+              "text": "I went to the park..."
+            }]
+          }],
+          "template": {"name": "essay-task-2", "version": 1}
+        }
+        ```
+
+        **Example with referenced question:**
+        ```json
+        {
+          "submission": [{
+            "part": 1,
+            "answers": [{
+              "id": "answer-uuid",
+              "question-number": 1,
+              "question-id": "question-uuid",
+              "text": "I went to the park..."
+            }]
+          }],
+          "template": {"name": "essay-task-2", "version": 1}
+        }
+        ```
+      operationId: createSubmission
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          description: Unique identifier for the submission (UUID format)
+          schema:
+            type: string
+            format: uuid
+            example: "770e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [submission, template]
+              properties:
+                submission:
+                  type: array
+                  description: Array of submission parts
+                  items:
+                    type: object
+                    required: [part, answers]
+                    properties:
+                      part:
+                        type: integer
+                        description: Part number (typically 1 or 2)
+                        example: 1
+                        minimum: 1
+                      answers:
+                        type: array
+                        description: |
+                          Array of answers. Each answer must include: id, question-number, question-id, and text.
+                          Optionally include question-text to create/update the question inline.
+                        items:
+                          type: object
+                          required:
+                            - id
+                            - question-number
+                            - question-id
+                            - text
+                          properties:
+                            id:
+                              type: string
+                              format: uuid
+                              description: Answer ID (will be created)
+                            question-number:
+                              type: integer
+                              description: Question number within the part
+                            question-id:
+                              type: string
+                              format: uuid
+                              description: Question ID (required - will auto-create question if question-text is provided, otherwise question must exist)
+                            question-text:
+                              type: string
+                              description: Question text (optional - if provided, will create/update question; if omitted, question must exist)
+                            text:
+                              type: string
+                              description: Answer text (required - answers must always be sent inline)
+                template:
+                  type: object
+                  required: [name, version]
+                  properties:
+                    name:
+                      type: string
+                      example: "essay-task-2"
+                    version:
+                      type: integer
+                      example: 1
+      responses:
+        "200":
+          description: Submission processed successfully - results returned immediately in response body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentResults"
+              example:
+                status: "success"
+                results:
+                  parts:
+                    - part: 1
+                      status: "success"
+                      answers:
+                        - id: "550e8400-e29b-41d4-a716-446655440000"
+                          assessor-results:
+                            - id: "T-AES-ESSAY"
+                              name: "Essay scorer"
+                              type: "grader"
+                              overall: 6.5
+                              label: "B2"
+                              dimensions:
+                                TA: 6.0
+                                CC: 6.5
+                                Vocab: 6.5
+                                Grammar: 6.0
+                                Overall: 6.5
+                template:
+                  name: "essay-task-2"
+                  version: 1
+                meta:
+                  wordCount: 150
+                  errorCount: 3
+                  overallScore: 6.5
+                  timestamp: "2025-01-18T16:00:00Z"
+        "204":
+          description: Submission already exists with identical content
+        "400":
+          description: Bad request - invalid format or missing required fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Answer text is required. Answers must be sent inline with the submission."
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unauthorized"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Submission already exists with different content"
+        "413":
+          description: Payload too large (max 1MB)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Request body too large (max 1MB)"
+        "500":
+          description: Internal server error or assessment failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+    get:
+      tags: [Submissions]
+      summary: Get submission results
+      description: |
+        Retrieves the assessment results for a submission.
+        Returns 'pending' status if assessment is still in progress.
+      operationId: getSubmissionResults
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          description: Unique identifier for the submission (UUID format)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Submission results
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [pending]
+                  - $ref: "#/components/schemas/AssessmentResults"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid submission_id format"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unauthorized"
+        "404":
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Submission not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  /text/submissions/{submission_id}/ai-feedback/stream:
+    post:
+      tags: [Feedback]
+      summary: Stream AI feedback generation
+      description: |
+        Generates AI-powered feedback for an answer using Server-Sent Events (SSE).
+        The feedback is streamed in real-time as it's generated, providing a smooth user experience.
+
+        The feedback includes:
+        - Relevance assessment
+        - Strengths identification
+        - Improvement suggestions
+        - Overall summary
+
+        Uses essay scores and LanguageTool errors as context for more relevant feedback.
+      operationId: streamAIFeedback
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          description: Unique identifier for the submission (UUID format)
+          schema:
+            type: string
+            format: uuid
+            example: "770e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answerId, answerText]
+              properties:
+                answerId:
+                  type: string
+                  format: uuid
+                  description: UUID of the answer to generate feedback for
+                  example: "660e8400-e29b-41d4-a716-446655440000"
+                answerText:
+                  type: string
+                  description: The answer text to analyze
+                  example: "I went to the park yesterday and played football with my friends."
+      responses:
+        "200":
+          description: Streaming feedback (Server-Sent Events)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream with the following event types:
+                  - `start`: Initial event indicating feedback generation has started
+                  - `chunk`: Text chunk of the feedback (sent multiple times)
+                  - `done`: Final event indicating completion
+                  - `error`: Error event if generation fails
+
+                  Each event is in the format: `data: {JSON}\n\n`
+              example: |
+                data: {"type":"start","message":"Starting AI feedback generation..."}
+
+                data: {"type":"chunk","text":"Your answer demonstrates "}
+
+                data: {"type":"chunk","text":"good understanding of the question. "}
+
+                data: {"type":"done","message":"Feedback generation complete"}
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Missing required fields: answerId, answerText"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unauthorized"
+        "404":
+          description: Submission or answer not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Submission not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  /text/submissions/{submission_id}/teacher-feedback:
+    post:
+      tags: [Feedback]
+      summary: Get Teacher feedback (clues or explanation)
+      description: |
+        Provides interactive learning feedback from a helpful teacher.
+        Supports two modes:
+        - **clues**: Provides hints to help the student improve without giving away the answer
+        - **explanation**: Provides detailed explanations of what could be improved
+
+        Uses essay scores and LanguageTool errors as context for targeted feedback.
+      operationId: getTeacherFeedback
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: submission_id
+          in: path
+          required: true
+          description: Unique identifier for the submission (UUID format)
+          schema:
+            type: string
+            format: uuid
+            example: "770e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answerId, mode, answerText]
+              properties:
+                answerId:
+                  type: string
+                  format: uuid
+                  description: UUID of the answer to get feedback for
+                  example: "660e8400-e29b-41d4-a716-446655440000"
+                mode:
+                  type: string
+                  enum: [clues, explanation]
+                  description: Feedback mode - 'clues' provides hints, 'explanation' provides detailed feedback
+                  example: "clues"
+                answerText:
+                  type: string
+                  description: The answer text to analyze
+                  example: "I went to the park yesterday and played football with my friends."
+      responses:
+        "200":
+          description: Teacher feedback response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherFeedback"
+              example:
+                message: "Consider using more varied sentence structures to improve your coherence score. Try connecting your ideas with transition words like 'however' or 'furthermore'."
+                focusArea: "Coherence & Cohesion"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Mode must be 'clues' or 'explanation'"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Unauthorized"
+        "404":
+          description: Submission or answer not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Submission not found"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  # Essay Scorer API Endpoints
+  /grade:
+    post:
+      tags: [Assessment]
+      summary: Grade essay submission
+      description: |
+        Scores an essay submission using machine learning models
+        and returns detailed assessment results.
+      operationId: gradeEssay
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: model_key
+          in: query
+          description: Model to use (engessay, distilbert, or fallback)
+          schema:
+            type: string
+            enum: [engessay, distilbert, fallback]
+            default: engessay
+            example: engessay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModalRequest"
+      responses:
+        "200":
+          description: Assessment completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentResults"
+              example:
+                status: "success"
+                results:
+                  parts:
+                    - part: 1
+                      status: "success"
+                      assessor-results:
+                        - id: "T-AES-ESSAY"
+                          name: "Essay scorer"
+                          type: "grader"
+                          overall: 7.5
+                          label: "C1"
+                          dimensions:
+                            TA: 7.5
+                            CC: 7.0
+                            Vocab: 8.0
+                            Grammar: 7.5
+                            Overall: 7.5
+                template:
+                  name: "essay-task-2"
+                  version: 1
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid request format"
+        "500":
+          description: Assessment failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentResults"
+              example:
+                status: "error"
+                template:
+                  name: "essay-task-2"
+                  version: 1
+                error_message: "RuntimeError: Failed to load model engessay"
+
+  /grade/compare:
+    post:
+      tags: [Models]
+      summary: Compare models on same submission
+      description: |
+        Scores the same submission using all available models
+        and returns a comparison.
+      operationId: compareModels
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModalRequest"
+      responses:
+        "200":
+          description: Model comparison results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comparison:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        TA:
+                          type: number
+                          minimum: 0
+                          maximum: 9
+                        CC:
+                          type: number
+                          minimum: 0
+                          maximum: 9
+                        Vocab:
+                          type: number
+                          minimum: 0
+                          maximum: 9
+                        Grammar:
+                          type: number
+                          minimum: 0
+                          maximum: 9
+                        Overall:
+                          type: number
+                          minimum: 0
+                          maximum: 9
+              example:
+                comparison:
+                  engessay:
+                    TA: 7.5
+                    CC: 7.0
+                    Vocab: 8.0
+                    Grammar: 7.5
+                    Overall: 7.5
+                  distilbert:
+                    TA: 7.0
+                    CC: 7.0
+                    Vocab: 7.5
+                    Grammar: 7.0
+                    Overall: 7.0
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid request format"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  /models:
+    get:
+      tags: [Models]
+      summary: List available models
+      description: Returns a list of all available scoring models and their current status.
+      operationId: listModels
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          nullable: true
+                        type:
+                          type: string
+                        status:
+                          type: string
+                        is_default:
+                          type: boolean
+                  default:
+                    type: string
+              example:
+                models:
+                  engessay:
+                    name: "KevSun/Engessay_grading_ML"
+                    type: "roberta"
+                    status: "loaded"
+                    is_default: true
+                  distilbert:
+                    name: "Michau96/distilbert-base-uncased-essay_scoring"
+                    type: "distilbert"
+                    status: "loaded"
+                    is_default: false
+                  fallback:
+                    name: null
+                    type: "heuristic"
+                    status: "available"
+                    is_default: false
+                default: "engessay"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Returns the health status of the service
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+              example:
+                status: "ok"
+
+components:
+  schemas:
+    ModalAnswer:
+      type: object
+      required: [id, question_id, question_text, answer_text]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the answer
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        question_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the question
+          example: "660e8400-e29b-41d4-a716-446655440000"
+        question_text:
+          type: string
+          description: The question text
+          example: "Describe your weekend. What did you do?"
+        answer_text:
+          type: string
+          description: The student's answer text
+          example: "I went to the park yesterday and played football with my friends."
+
+    ModalPart:
+      type: object
+      required: [part, answers]
+      properties:
+        part:
+          type: integer
+          description: Part number (typically 1 or 2)
+          example: 1
+          minimum: 1
+        answers:
+          type: array
+          description: List of answers in this part
+          items:
+            $ref: "#/components/schemas/ModalAnswer"
+          minItems: 1
+
+    ModalRequest:
+      type: object
+      required: [submission_id, template, parts]
+      properties:
+        submission_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the submission
+          example: "770e8400-e29b-41d4-a716-446655440000"
+        template:
+          type: object
+          description: Template metadata
+          properties:
+            name:
+              type: string
+              example: "essay-task-2"
+            version:
+              type: integer
+              example: 1
+        parts:
+          type: array
+          description: List of submission parts
+          items:
+            $ref: "#/components/schemas/ModalPart"
+          minItems: 1
+
+    AssessorResult:
+      type: object
+      required: [id, name, type]
+      properties:
+        id:
+          type: string
+          description: Assessor identifier
+          example: "T-AES-ESSAY"
+        name:
+          type: string
+          description: Human-readable assessor name
+          example: "Essay scorer"
+        type:
+          type: string
+          enum: [grader, conf, ard]
+          description: Type of assessor
+        overall:
+          type: number
+          description: Overall band score (0-9, 0.5 increments)
+          minimum: 0
+          maximum: 9
+          example: 7.5
+        label:
+          type: string
+          enum: [A2, B1, B2, C1, C2]
+          description: CEFR level label
+          example: "C1"
+        dimensions:
+          type: object
+          description: Detailed scores by dimension
+          properties:
+            TA:
+              type: number
+              minimum: 0
+              maximum: 9
+              description: Task Achievement score
+            CC:
+              type: number
+              minimum: 0
+              maximum: 9
+              description: Coherence & Cohesion score
+            Vocab:
+              type: number
+              minimum: 0
+              maximum: 9
+              description: Vocabulary score
+            Grammar:
+              type: number
+              minimum: 0
+              maximum: 9
+              description: Grammar score
+            Overall:
+              type: number
+              minimum: 0
+              maximum: 9
+              description: Overall score
+
+    AnswerResult:
+      type: object
+      required: [id, assessor-results]
+      description: Answer result with assessor results
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Answer ID (UUID)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        assessor-results:
+          type: array
+          description: List of assessor results for this answer
+          items:
+            $ref: "#/components/schemas/AssessorResult"
+          minItems: 1
+
+    AssessmentPart:
+      type: object
+      required: [part, status, answers]
+      description: Assessment results for a single part of the submission
+      properties:
+        part:
+          type: integer
+          description: Part number
+          example: 1
+          minimum: 1
+        status:
+          type: string
+          enum: [success, error]
+          description: Processing status for this part
+        answers:
+          type: array
+          description: List of answer results with assessor results
+          items:
+            $ref: "#/components/schemas/AnswerResult"
+          minItems: 1
+
+    AssessmentResults:
+      type: object
+      required: [status, template]
+      properties:
+        status:
+          type: string
+          enum: [success, error, pending, bypassed]
+          description: Overall processing status
+        results:
+          type: object
+          description: Assessment results organized by parts
+          properties:
+            parts:
+              type: array
+              items:
+                $ref: "#/components/schemas/AssessmentPart"
+        template:
+          type: object
+          description: Template metadata (echoed from request)
+          properties:
+            name:
+              type: string
+            version:
+              type: integer
+        error_message:
+          type: string
+          description: Error message if status is 'error'
+          example: "RuntimeError: Failed to load model engessay"
+        meta:
+          type: object
+          description: Additional metadata (e.g., question texts, processing timestamps)
+          additionalProperties: true
+
+    TeacherFeedback:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: The feedback message from the Teacher
+          example: "Consider using more varied sentence structures to improve your coherence score."
+        focusArea:
+          type: string
+          description: Optional focus area for the feedback (e.g., "Coherence & Cohesion", "Vocabulary")
+          example: "Coherence & Cohesion"
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        API key authentication using the format: `Token <api_key>`
+
+        Example: `Authorization: Token your-api-key-here`
+
+        All endpoints except `/health`, `/docs`, and `/openapi.json` require this authentication.

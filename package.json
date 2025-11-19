@@ -1,0 +1,38 @@
+{
+  "name": "writeo",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspace=@writeo/shared && npm run build --workspaces --if-present",
+    "deploy": "npm run deploy --workspaces",
+    "deploy:all": "./scripts/deploy-all.sh",
+    "deploy:modal": "./scripts/deploy-modal.sh",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:all": "npm test && npm run test:e2e",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "nuke": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'package-lock.json' -type f -delete && find . -name 'dist' -type d -prune -exec rm -rf '{}' + && find . -name '.next' -type d -prune -exec rm -rf '{}' + && find . -name '.wrangler' -type d -prune -exec rm -rf '{}' + && find . -name '.wrangler-*' -type d -prune -exec rm -rf '{}' + && find . -name '__pycache__' -type d -prune -exec rm -rf '{}' + && find . -name '*.tsbuildinfo' -type f -delete && find . -name 'test-results' -type d -prune -exec rm -rf '{}' + && find . -name 'playwright-report' -type d -prune -exec rm -rf '{}' + && find . -name '.cache' -type d -prune -exec rm -rf '{}' + && find . -name '.open-next' -type d -prune -exec rm -rf '{}' + && find . -name '.opennext' -type d -prune -exec rm -rf '{}' + && find . -name 'out' -type d -prune -exec rm -rf '{}' + && find . -name 'build' -type d -prune -exec rm -rf '{}' + && find . -name '.modal' -type d -prune -exec rm -rf '{}' + && find . -name '*.egg-info' -type d -prune -exec rm -rf '{}' + && find . -name '.pytest_cache' -type d -prune -exec rm -rf '{}' + && find . -name '.coverage' -type f -delete && find . -name '.coverage.*' -type f -delete",
+    "setup": "./scripts/setup.sh",
+    "install-hooks": "./scripts/install-hooks.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "dotenv": "^17.2.3",
+    "prettier": "^3.2.5",
+    "tsx": "^4.7.0",
+    "vitest": "^4.0.9"
+  }
+}

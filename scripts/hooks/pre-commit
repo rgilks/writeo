@@ -1,0 +1,72 @@
+#!/bin/sh
+#
+# Pre-commit hook for Writeo
+# Runs security checks, code formatting, linting, and type checking before commit
+#
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo "${GREEN}Running pre-commit checks...${NC}"
+
+# Get the root directory of the git repository
+ROOT_DIR=$(git rev-parse --show-toplevel)
+cd "$ROOT_DIR"
+
+# Step 0: Security check - prevent committing sensitive files
+echo "${YELLOW}Checking for sensitive files...${NC}"
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$STAGED_FILES" ]; then
+  SENSITIVE_PATTERNS="\.dev\.vars$|\.env$|\.env\.local$|\.env\..*\.local$|\.env\.production$|\.env\.development$|.*\.pem$|.*\.key$"
+  BLOCKED_FILES=$(echo "$STAGED_FILES" | grep -E "$SENSITIVE_PATTERNS" || true)
+  
+  if [ -n "$BLOCKED_FILES" ]; then
+    echo "${RED}❌ SECURITY ERROR: Attempted to commit sensitive files!${NC}"
+    echo ""
+    echo "${YELLOW}The following files contain secrets and cannot be committed:${NC}"
+    echo "$BLOCKED_FILES" | sed 's/^/  - /'
+    echo ""
+    echo "${RED}Please remove these files from staging:${NC}"
+    echo "  git reset HEAD <file>"
+    echo ""
+    echo "${YELLOW}If you need to commit a template file, rename it (e.g., .env.example)${NC}"
+    exit 1
+  fi
+fi
+
+echo "${GREEN}Security check passed.${NC}"
+
+# Step 1: Format code with Prettier
+echo "${YELLOW}Formatting code with Prettier...${NC}"
+if ! npm run format:check > /dev/null 2>&1; then
+  echo "${YELLOW}Code formatting issues detected. Auto-formatting...${NC}"
+  npm run format
+  # Stage the formatted files
+  git add -u
+  echo "${GREEN}Code formatted and staged.${NC}"
+fi
+
+# Step 2: Run linting
+echo "${YELLOW}Running linter...${NC}"
+if ! npm run lint; then
+  echo "${RED}Linting failed. Please fix the errors above.${NC}"
+  echo "${YELLOW}To skip this check, use: git commit --no-verify${NC}"
+  exit 1
+fi
+
+# Step 3: Run type checking
+echo "${YELLOW}Running type checker...${NC}"
+if ! npm run type-check; then
+  echo "${RED}Type checking failed. Please fix the errors above.${NC}"
+  echo "${YELLOW}To skip this check, use: git commit --no-verify${NC}"
+  exit 1
+fi
+
+echo "${GREEN}All pre-commit checks passed!${NC}"
+exit 0

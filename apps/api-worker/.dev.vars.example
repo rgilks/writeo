@@ -1,0 +1,32 @@
+# Local development environment variables for Cloudflare Workers
+# Copy this file to .dev.vars and fill in your values
+# DO NOT commit .dev.vars to git (it should be in .gitignore)
+
+# API Key for Writeo API authentication
+# Must match the API_KEY in apps/web/.env.local
+API_KEY=your-api-key-here
+
+# Optional: Test API key with higher rate limits for automated testing
+TEST_API_KEY=your-test-api-key-here
+
+# Modal Essay Scoring service URL
+# Get this after deploying: cd services/modal-essay && modal deploy app.py
+MODAL_GRADE_URL=https://your-username--writeo-essay-fastapi-app.modal.run
+
+# Optional: Modal LanguageTool service URL
+# Get this after deploying: cd services/modal-lt && modal deploy app.py
+MODAL_LT_URL=https://your-username--writeo-lt-fastapi-app.modal.run
+
+# Optional: Default language for LanguageTool
+LT_LANGUAGE=en-GB
+
+# Optional: AI Model for feedback (defaults to llama-3.3-70b-versatile)
+AI_MODEL=llama-3.3-70b-versatile
+
+# Groq API key for AI feedback
+# Get your API key from: https://console.groq.com
+GROQ_API_KEY=your-groq-api-key-here
+
+# Optional: CORS origins (defaults to allow all in dev)
+ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
