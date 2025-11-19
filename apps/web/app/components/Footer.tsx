@@ -46,6 +46,22 @@ export function Footer() {
               width: "100%",
             }}
           >
+            <a
+              href="https://discord.gg/9rtwCKp2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-1"
+              style={{ lineHeight: "1.6" }}
+            >
+              Support
+            </a>
+            <span
+              className="text-gray-300 text-lg leading-none select-none"
+              aria-hidden="true"
+              style={{ margin: "0 4px" }}
+            >
+              •
+            </span>
             <Link
               href="/terms"
               className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-1"
@@ -66,6 +82,34 @@ export function Footer() {
               style={{ lineHeight: "1.6" }}
             >
               Privacy Policy
+            </Link>
+            <span
+              className="text-gray-300 text-lg leading-none select-none"
+              aria-hidden="true"
+              style={{ margin: "0 4px" }}
+            >
+              •
+            </span>
+            <Link
+              href="/accessibility"
+              className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-1"
+              style={{ lineHeight: "1.6" }}
+            >
+              Accessibility
+            </Link>
+            <span
+              className="text-gray-300 text-lg leading-none select-none"
+              aria-hidden="true"
+              style={{ margin: "0 4px" }}
+            >
+              •
+            </span>
+            <Link
+              href="/cookies"
+              className="text-base font-medium text-gray-600 hover:text-gray-900 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded px-1"
+              style={{ lineHeight: "1.6" }}
+            >
+              Cookies
             </Link>
           </nav>
         </div>

@@ -53,6 +53,61 @@ export default function TermsPage() {
               style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
               lang="en"
             >
+              👶 Age & Parental Guidance
+            </h2>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>Writeo is designed to be safe for users of all ages.</strong> Because Writeo
+              uses an opt-in server storage model—meaning no data is stored on our servers by
+              default—we don't collect personal information from children, so COPPA (Children's
+              Online Privacy Protection Act) requirements don't apply.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>For children under 13:</strong> We recommend parental guidance when using
+              Writeo. Parents should be aware that:
+            </p>
+            <ul
+              style={{
+                marginLeft: "var(--spacing-lg)",
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                paddingLeft: "var(--spacing-lg)",
+              }}
+              lang="en"
+            >
+              <li lang="en">
+                By default, all data stays on the child's device (browser localStorage)
+              </li>
+              <li lang="en">
+                If server storage is enabled (opt-in), data is stored for 90 days then automatically
+                deleted
+              </li>
+              <li lang="en">No personal information is collected without explicit opt-in</li>
+              <li lang="en">No advertising or marketing is shown</li>
+            </ul>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>For users 13-16 in the European Union:</strong> If you opt in to server
+              storage, you may need parental consent depending on your jurisdiction. By default (no
+              server storage), no consent is needed.
+            </p>
+            <p
+              style={{
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                fontSize: "16px",
+                color: "var(--text-secondary)",
+              }}
+              lang="en"
+            >
+              <strong>Note:</strong> Writeo is an educational tool. We encourage safe, responsible
+              use by learners of all ages, with appropriate parental guidance for younger users.
+            </p>
+          </div>
+
+          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
+            <h2
+              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
+              lang="en"
+            >
               👤 Use of Service
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
@@ -107,6 +162,64 @@ export default function TermsPage() {
               </li>
               <li lang="en">The service is provided "as is" without warranties of any kind</li>
             </ul>
+          </div>
+
+          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
+            <h2
+              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
+              lang="en"
+            >
+              ⚡ API Usage & Rate Limiting
+            </h2>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              Writeo implements rate limiting to ensure fair usage and service stability. The
+              following limits apply:
+            </p>
+            <ul
+              style={{
+                marginLeft: "var(--spacing-lg)",
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                paddingLeft: "var(--spacing-lg)",
+              }}
+              lang="en"
+            >
+              <li lang="en">
+                <strong>Essay submissions:</strong> 10 submissions per minute per IP address
+              </li>
+              <li lang="en">
+                <strong>General API requests:</strong> 30 requests per minute per IP address
+              </li>
+              <li lang="en">
+                <strong>Results retrieval:</strong> 60 requests per minute per IP address
+              </li>
+            </ul>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              If you exceed these limits, you will receive a 429 (Too Many Requests) error. Rate
+              limits reset after 60 seconds. These limits are subject to change and may vary for
+              different types of usage.
+            </p>
+            <p
+              style={{
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                fontSize: "16px",
+                color: "var(--text-secondary)",
+              }}
+              lang="en"
+            >
+              <strong>Note:</strong> Rate limits are applied per IP address. For API access with
+              higher limits, please contact us through our{" "}
+              <a
+                href="https://discord.gg/9rtwCKp2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                Discord server
+              </a>
+              .
+            </p>
           </div>
 
           <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
@@ -227,8 +340,16 @@ export default function TermsPage() {
               📧 Contact
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              If you have questions about these Terms of Service, please contact us. For
-              privacy-related inquiries, please see our{" "}
+              If you have questions about these Terms of Service, please contact us through our{" "}
+              <a
+                href="https://discord.gg/9rtwCKp2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                Discord server
+              </a>
+              . For privacy-related inquiries, please see our{" "}
               <Link href="/privacy" className="text-blue-600 hover:underline">
                 Privacy Policy
               </Link>

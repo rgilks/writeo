@@ -46,6 +46,58 @@ export default function PrivacyPage() {
               style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
               lang="en"
             >
+              👶 Children's Privacy & Age Guidelines
+            </h2>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>Writeo is designed to be safe for users of all ages.</strong> Because we use
+              an opt-in server storage model where no data is stored on our servers by default, we
+              don't collect personal information from children. This means COPPA (Children's Online
+              Privacy Protection Act) requirements don't apply to Writeo's default usage.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>For children under 13:</strong> Writeo can be used safely by children under
+              parental guidance. By default, all data stays on the child's device and is never sent
+              to our servers. We recommend parents:
+            </p>
+            <ul
+              style={{
+                marginLeft: "var(--spacing-lg)",
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                paddingLeft: "var(--spacing-lg)",
+              }}
+              lang="en"
+            >
+              <li lang="en">Review the privacy policy with their child</li>
+              <li lang="en">Understand that server storage is opt-in only</li>
+              <li lang="en">Monitor their child's use of the service</li>
+              <li lang="en">Help their child understand how to use the tool safely</li>
+            </ul>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>For users 13-16 in the European Union:</strong> If you opt in to server
+              storage, parental consent may be required depending on your jurisdiction. By default
+              (no server storage), no consent is needed.
+            </p>
+            <p
+              style={{
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                fontSize: "16px",
+                color: "var(--text-secondary)",
+              }}
+              lang="en"
+            >
+              <strong>Note:</strong> Writeo is an educational tool designed to help learners improve
+              their writing. We encourage safe, responsible use by learners of all ages, with
+              appropriate parental guidance for younger users.
+            </p>
+          </div>
+
+          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
+            <h2
+              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
+              lang="en"
+            >
               📝 How We Store Your Writing
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
@@ -120,8 +172,9 @@ export default function PrivacyPage() {
               <li lang="en">Show you your writing history</li>
             </ul>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              <strong>Third-Party AI Services:</strong> Your text is sent to third-party AI services
-              for analysis:
+              <strong>Third-Party AI Services & Data Processors:</strong> Your text is sent to
+              third-party services for analysis. These services act as data processors and are bound
+              by data processing agreements:
             </p>
             <ul
               style={{
@@ -134,16 +187,37 @@ export default function PrivacyPage() {
             >
               <li lang="en">
                 <strong>Groq API</strong> (Llama 3.3 70B model) - Used for generating AI feedback
-                and teacher-style comments
+                and teacher-style comments. Groq processes your text but does not retain it for
+                training purposes.
               </li>
               <li lang="en">
                 <strong>Cloudflare Workers AI</strong> - Used for relevance checking via embeddings
-                (to verify your answer addresses the question)
+                (to verify your answer addresses the question). Cloudflare processes data in
+                accordance with their privacy policy and terms.
               </li>
               <li lang="en">
                 <strong>Modal</strong> - Hosts essay scoring models and LanguageTool for grammar
-                checking
+                checking. Modal processes your text for scoring but does not retain it.
               </li>
+            </ul>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>Data Controller vs. Data Processor:</strong> Writeo acts as the data
+              controller, and these third-party services act as data processors. All processors are
+              contractually bound to:
+            </p>
+            <ul
+              style={{
+                marginLeft: "var(--spacing-lg)",
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                paddingLeft: "var(--spacing-lg)",
+              }}
+              lang="en"
+            >
+              <li lang="en">Process data only for the purpose of providing feedback</li>
+              <li lang="en">Not retain your data for training or other purposes</li>
+              <li lang="en">Maintain appropriate security measures</li>
+              <li lang="en">Comply with applicable data protection laws</li>
             </ul>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               These services process your text to provide feedback, but they do not retain your data
@@ -188,6 +262,146 @@ export default function PrivacyPage() {
               <li lang="en">Your data is not used for advertising or marketing</li>
               <li lang="en">We do not sell or rent your personal information</li>
             </ul>
+          </div>
+
+          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
+            <h2
+              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
+              lang="en"
+            >
+              🚫 Do Not Sell My Personal Information (CCPA)
+            </h2>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>Writeo does not sell your personal information.</strong> We do not sell, rent,
+              or trade your personal data to third parties for monetary or other valuable
+              consideration.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              Under the California Consumer Privacy Act (CCPA), California residents have the right
+              to opt out of the sale of personal information. Since we do not sell personal
+              information, no opt-out is necessary. However, if you have concerns or questions,
+              please contact us through our{" "}
+              <a
+                href="https://discord.gg/9rtwCKp2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                Discord server
+              </a>
+              .
+            </p>
+          </div>
+
+          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
+            <h2
+              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
+              lang="en"
+            >
+              ⚖️ Non-Discrimination (CCPA)
+            </h2>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>We will not discriminate against you</strong> for exercising your privacy
+              rights under the California Consumer Privacy Act (CCPA) or any other applicable
+              privacy laws.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              This means:
+            </p>
+            <ul
+              style={{
+                marginLeft: "var(--spacing-lg)",
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                paddingLeft: "var(--spacing-lg)",
+              }}
+              lang="en"
+            >
+              <li lang="en">
+                We will not deny you goods or services for exercising your privacy rights
+              </li>
+              <li lang="en">
+                We will not charge you different prices or rates for exercising your privacy rights
+              </li>
+              <li lang="en">
+                We will not provide you a different level or quality of services for exercising your
+                privacy rights
+              </li>
+              <li lang="en">
+                We will not suggest that you may receive different treatment for exercising your
+                privacy rights
+              </li>
+            </ul>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              Your service quality and access will remain the same regardless of whether you choose
+              to exercise your privacy rights.
+            </p>
+          </div>
+
+          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
+            <h2
+              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
+              lang="en"
+            >
+              🚨 Data Breach Notification
+            </h2>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              In the unlikely event of a data breach that affects your personal information, we are
+              committed to:
+            </p>
+            <ul
+              style={{
+                marginLeft: "var(--spacing-lg)",
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                paddingLeft: "var(--spacing-lg)",
+              }}
+              lang="en"
+            >
+              <li lang="en">
+                <strong>Immediate assessment:</strong> Investigating and containing the breach as
+                quickly as possible
+              </li>
+              <li lang="en">
+                <strong>Notification:</strong> Notifying affected users within 72 hours (as required
+                by GDPR) or as soon as reasonably possible
+              </li>
+              <li lang="en">
+                <strong>Transparency:</strong> Providing clear information about what happened, what
+                data was affected, and what steps we're taking
+              </li>
+              <li lang="en">
+                <strong>Remediation:</strong> Taking steps to prevent future breaches and mitigate
+                any harm
+              </li>
+            </ul>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>Note:</strong> Because Writeo uses an opt-in server storage model, most users
+              don't have data stored on our servers. This significantly reduces the risk of data
+              breaches. However, if you've opted in to server storage and a breach occurs, we will
+              notify you through the contact information you've provided or via our{" "}
+              <a
+                href="https://discord.gg/9rtwCKp2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                Discord server
+              </a>
+              .
+            </p>
+            <p
+              style={{
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                fontSize: "16px",
+                color: "var(--text-secondary)",
+              }}
+              lang="en"
+            >
+              If you believe your data may have been compromised, please contact us immediately
+              through our Discord server.
+            </p>
           </div>
 
           <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
@@ -251,6 +465,31 @@ export default function PrivacyPage() {
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               If you have questions about your privacy or want to exercise your rights (access,
               deletion, etc.), please contact us. We're committed to being transparent and helpful.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>Support:</strong> Join our{" "}
+              <a
+                href="https://discord.gg/9rtwCKp2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                Discord server
+              </a>{" "}
+              for support and questions.
+            </p>
+            <p
+              style={{
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                fontSize: "16px",
+                color: "var(--text-secondary)",
+              }}
+              lang="en"
+            >
+              <strong>Privacy Requests:</strong> For formal privacy requests (data access, deletion,
+              etc.), please use the support channel in our Discord server or contact us directly
+              through Discord.
             </p>
             <p
               style={{
