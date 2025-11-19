@@ -104,7 +104,8 @@ if [ "$API_RUNNING" = false ]; then
   show_time
   echo "${YELLOW}Starting API worker on port 8787...${NC}"
   cd "$ROOT_DIR/apps/api-worker"
-  npm run dev > /tmp/writeo-api-worker.log 2>&1 &
+  # Set GROQ_API_KEY to MOCK to enable mocking in tests (saves API costs)
+  GROQ_API_KEY=MOCK npm run dev > /tmp/writeo-api-worker.log 2>&1 &
   API_PID=$!
   cd "$ROOT_DIR"
 else

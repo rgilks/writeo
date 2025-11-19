@@ -5,6 +5,12 @@ import { resolve } from "path";
 config({ path: resolve(process.cwd(), ".env") });
 config({ path: resolve(process.cwd(), ".env.local"), override: true });
 
+// Enable Groq mocking by default in tests to avoid API costs
+// Set MOCK_GROQ=false to use real API (for integration tests)
+if (!process.env.MOCK_GROQ) {
+  process.env.MOCK_GROQ = "true";
+}
+
 export default defineConfig({
   test: {
     globals: true,
@@ -18,5 +24,9 @@ export default defineConfig({
       threads: { maxThreads: 3, minThreads: 1 },
     },
     retry: 1,
+    env: {
+      // Ensure MOCK_GROQ is available to test code
+      MOCK_GROQ: process.env.MOCK_GROQ || "true",
+    },
   },
 });

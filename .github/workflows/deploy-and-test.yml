@@ -80,6 +80,7 @@ jobs:
         env:
           API_BASE: ${{ env.PRODUCTION_API_URL }}
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
+          MOCK_GROQ: "true"  # Use mocked Groq API to avoid costs in CI
 
       - name: Run E2E tests against deployed site
         run: npm run test:e2e -- --reporter=list

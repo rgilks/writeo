@@ -25,6 +25,22 @@ API_BASE=http://localhost:8787
 PLAYWRIGHT_BASE_URL=http://localhost:3000
 ```
 
+## Cost Control: Groq API Mocking
+
+**Tests automatically use mocked Groq API responses by default** to avoid API costs. The mocking system:
+
+- ✅ **No API costs** - Tests use deterministic mock responses
+- ✅ **Automatic detection** - Enabled when `GROQ_API_KEY=MOCK` or `MOCK_GROQ=true`
+- ✅ **Realistic responses** - Mocks return proper data structures for testing
+
+**To use real API (for integration tests only):**
+
+```bash
+MOCK_GROQ=false npm test
+```
+
+See [docs/GROQ_COST_CONTROL.md](../docs/GROQ_COST_CONTROL.md) for details on token usage and cost optimization.
+
 ## Writing Tests
 
 **API Tests:**
