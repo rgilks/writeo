@@ -1,6 +1,7 @@
 import type { LanguageToolError } from "@writeo/shared";
 import { callGroqAPI } from "./groq";
 import { validateAndCorrectErrorPosition } from "../utils/text-processing";
+import { MAX_TOKENS_GRAMMAR_CHECK } from "../utils/constants";
 
 export async function getLLMAssessment(
   groqApiKey: string,
@@ -82,7 +83,7 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
           content: prompt,
         },
       ],
-      2500 // Reduced from 4000: Most error lists are concise, this saves ~$0.001-0.002 per request while maintaining quality
+      MAX_TOKENS_GRAMMAR_CHECK
     );
 
     if (!text) {

@@ -25,6 +25,7 @@ This directory contains all documentation for the Writeo project.
 
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Step-by-step deployment guide and troubleshooting
 - **[OPERATIONS.md](OPERATIONS.md)** - Environment variables, logging, monitoring, performance tuning
+- **[COST_REVIEW.md](COST_REVIEW.md)** - Comprehensive cost analysis, guardrails, and optimization strategies
 - **[TEST_PLAN.md](TEST_PLAN.md)** - Comprehensive testing guide with test cases and verification steps
 - **[openapi.yaml](openapi.yaml)** - OpenAPI 3.0 specification
 
@@ -42,6 +43,7 @@ This directory contains all documentation for the Writeo project.
 
 **API:** [SPEC.md](SPEC.md) | [Interactive Docs](https://your-api-worker.workers.dev/docs)  
 **Status & Roadmap:** [STATUS.md](STATUS.md)  
+**Cost Analysis:** [COST_REVIEW.md](COST_REVIEW.md)  
 **Testing:** [TEST_PLAN.md](TEST_PLAN.md)  
 **Deployment:** [DEPLOYMENT.md](DEPLOYMENT.md)  
 **Architecture:** [ARCHITECTURE.md](ARCHITECTURE.md)  

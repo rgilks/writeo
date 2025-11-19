@@ -1,4 +1,22 @@
 import type { LanguageToolError } from "@writeo/shared";
+import { MAX_ESSAY_LENGTH, MAX_QUESTION_LENGTH } from "./constants";
+
+/**
+ * Truncates essay text to the maximum allowed length for API processing
+ */
+export function truncateEssayText(text: string): string {
+  return text.length > MAX_ESSAY_LENGTH
+    ? text.slice(0, MAX_ESSAY_LENGTH) +
+        "\n\n[... essay continues but truncated for feedback generation ...]"
+    : text;
+}
+
+/**
+ * Truncates question text to the maximum allowed length
+ */
+export function truncateQuestionText(text: string): string {
+  return text.length > MAX_QUESTION_LENGTH ? text.slice(0, MAX_QUESTION_LENGTH) + "..." : text;
+}
 
 export function generateStructuredFeedback(
   match: any,

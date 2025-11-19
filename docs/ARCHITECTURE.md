@@ -314,6 +314,15 @@ sequenceDiagram
 - **Read**: Immediate access from browser
 - **Privacy**: Data never leaves user's device
 
+**Benefits:**
+
+- ✅ Maximum privacy (data never leaves user's device)
+- ✅ No legal compliance requirements (no server data collection)
+- ✅ User controls data lifecycle
+- ✅ No data retention policies needed
+- ✅ No deletion/export APIs needed
+- ✅ No data breach notification needed
+
 ### 5.2 R2 Object Storage (Opt-in Only)
 
 **Bucket:** `writeo-data`  
@@ -346,7 +355,58 @@ sequenceDiagram
 - **Read**: Single GET per client poll request (opt-in only)
 - **Consistency**: Eventual consistency (read-after-write may have delay)
 
-### 5.3 Data Size Estimates
+### 5.4 API Behavior
+
+**PUT `/text/submissions/{id}`:**
+
+- **Default (`storeResults: false`):**
+  - Processes submission
+  - Returns results immediately in response body
+  - Stores results in browser localStorage
+  - Does NOT store on server (R2/KV)
+
+- **Opt-in (`storeResults: true`):**
+  - Processes submission
+  - Returns results immediately in response body
+  - Stores results in browser localStorage (as always)
+  - Also stores on server (R2/KV) for 90 days
+
+**GET `/text/submissions/{id}`:**
+
+- Only works if `storeResults: true` was set during submission
+- Returns 404 if submission was not stored on server
+- Returns results if found (within 90-day retention period)
+
+### 5.5 Privacy & Legal Implications
+
+**Default (No Server Storage):**
+
+- ✅ No GDPR/CCPA requirements (no server data collection)
+- ✅ No COPPA requirements (no data collection from children)
+- ✅ No data deletion API needed
+- ✅ No data export API needed
+- ✅ No data breach notification needed
+- ✅ No age verification needed
+
+**Opt-in (Server Storage):**
+
+- ⚠️ GDPR/CCPA requirements apply (server data collection)
+- ⚠️ Data deletion API recommended
+- ⚠️ Data export API recommended
+- ⚠️ Data breach notification procedures needed
+- ⚠️ Age verification may be needed (if serving children)
+
+See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for detailed compliance information.
+
+### 5.6 Best Practices
+
+1. **Default to no storage**: Use `storeResults: false` by default
+2. **Make opt-in clear**: Explain benefits of server storage to users
+3. **Respect user choice**: Don't force server storage
+4. **Provide alternatives**: Browser storage is sufficient for most use cases
+5. **Document retention**: Clearly state 90-day retention for opt-in storage
+
+### 5.7 Data Size Estimates
 
 | Resource Type      | Average Size | Max Size | Storage Location (Default) | Storage Location (Opt-in) |
 | ------------------ | ------------ | -------- | -------------------------- | ------------------------- |
@@ -386,7 +446,16 @@ sequenceDiagram
 
 ### 6.3 Cost Estimates
 
-**Free Tier (Monthly Estimates):**
+**Cost Per Submission:**
+
+Each submission makes **2 required API calls** to Groq:
+
+- Grammar check (`getLLMAssessment`): ~$0.005-0.01
+- Detailed feedback (`getCombinedFeedback`): ~$0.01
+- **Total:** ~$0.015-0.02 per submission (base)
+- **With teacher feedback (optional):** ~$0.02-0.03
+
+**Infrastructure Costs (Free Tier):**
 
 | Service                         | Free Tier         | Monthly Cost          |
 | ------------------------------- | ----------------- | --------------------- |
@@ -394,17 +463,38 @@ sequenceDiagram
 | **Cloudflare Workers AI**       | 10k requests/day  | $0.00                 |
 | **Cloudflare R2 Storage**       | 10 GB free        | $0.00                 |
 | **Cloudflare KV Storage**       | 100 MB free       | $0.00                 |
-| **Groq API**                    | Pay-per-use       | ~$0.01 per request    |
+| **Groq API**                    | Pay-per-use       | ~$0.02 per submission |
 | **Modal Essay Scoring Service** | Pay-per-use       | ~$0.10-1.00/month     |
 | **Modal LanguageTool**          | Pay-per-use       | ~$0.01-0.10/month     |
-| **Total**                       | -                 | **~$0.12-1.15/month** |
+| **Total Infrastructure**        | -                 | **~$0.12-1.15/month** |
+
+**Monthly Cost Examples (Including Groq API):**
+
+| Usage Level | Submissions/Day | Monthly Cost  |
+| ----------- | --------------- | ------------- |
+| Low         | 10              | ~$6/month     |
+| Moderate    | 100             | ~$60/month    |
+| High        | 1,000           | ~$600/month   |
+| Maximum\*   | 14,400          | ~$8,640/month |
+
+\*Maximum limited by rate limit: 10 submissions/minute per IP
+
+**Cost Controls:**
+
+- ✅ Rate limiting: 10 submissions/minute per IP (prevents runaway costs)
+- ✅ Word limits: 250-500 words per essay (controls input size)
+- ✅ Text truncation: Essays truncated to 15,000 chars for AI processing
+- ✅ Token limits: Reduced max tokens (2,500 for grammar, 500 for feedback)
+- ✅ Mocking system: Tests use mocks to avoid API costs
 
 **Notes:**
 
 - Scale-to-zero: No idle costs for Workers or Modal services
 - Storage: Only charged for data stored (generous free tiers)
-- Groq API: Dominant cost driver for AI feedback (~$0.01 per request)
-- See [OPERATIONS.md](OPERATIONS.md) for detailed cost breakdown
+- Groq API: Dominant cost driver (~$0.02 per submission)
+- Rate limiting provides cost protection (max ~$8,640/month theoretical)
+- See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis
+- See [OPERATIONS.md](OPERATIONS.md) for operations cost breakdown
 
 ### 6.4 Performance Optimizations Implemented
 

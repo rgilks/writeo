@@ -7,6 +7,8 @@ import { validateText, validateRequestBodySize } from "../utils/validation";
 import { StorageService } from "../services/storage";
 import { getTeacherFeedback } from "../services/feedback";
 import { callGroqAPI } from "../services/groq";
+import { truncateEssayText, truncateQuestionText } from "../utils/text-processing";
+import { MAX_ANSWER_TEXT_LENGTH, MAX_REQUEST_BODY_SIZE } from "../utils/constants";
 import type {
   CreateQuestionRequest,
   CreateAnswerRequest,
@@ -130,18 +132,8 @@ feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", async
     }
 
     // Truncate very long essays to keep costs under control
-    const MAX_ESSAY_LENGTH = 15000; // ~2500 words
-    const truncatedAnswerText =
-      answerText.length > MAX_ESSAY_LENGTH
-        ? answerText.slice(0, MAX_ESSAY_LENGTH) +
-          "\n\n[... essay continues but truncated for feedback generation ...]"
-        : answerText;
-
-    const MAX_QUESTION_LENGTH = 500;
-    const truncatedQuestionText =
-      questionText.length > MAX_QUESTION_LENGTH
-        ? questionText.slice(0, MAX_QUESTION_LENGTH) + "..."
-        : questionText;
+    const truncatedAnswerText = truncateEssayText(answerText);
+    const truncatedQuestionText = truncateQuestionText(questionText);
 
     const prompt = `You are an expert English language tutor specializing in academic argumentative writing. Analyze the following essay answer and provide detailed, contextual feedback.
 
@@ -281,7 +273,7 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
   }
 
   try {
-    const sizeValidation = await validateRequestBodySize(c.req.raw, 1024 * 1024);
+    const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
     if (!sizeValidation.valid) {
       return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
     }
@@ -336,7 +328,7 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
       return errorResponse(400, "Mode must be 'clues' or 'explanation'", c);
     }
 
-    const textValidation = validateText(answerText, 50000);
+    const textValidation = validateText(answerText, MAX_ANSWER_TEXT_LENGTH);
     if (!textValidation.valid) {
       return errorResponse(
         400,

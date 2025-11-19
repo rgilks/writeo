@@ -21,6 +21,7 @@ import { getCombinedFeedback, getCombinedFeedbackWithRetry } from "./feedback";
 import { checkAnswerRelevance, type RelevanceCheck } from "./relevance";
 import { mergeAssessmentResults } from "./merge-results";
 import type { AIFeedback, TeacherFeedback } from "./feedback";
+import { MAX_ANSWER_TEXT_LENGTH } from "../utils/constants";
 
 export async function processSubmission(c: Context<{ Bindings: Env }>) {
   const submissionId = c.req.param("submission_id");
@@ -91,7 +92,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
           return errorResponse(400, `Invalid question-id format: ${questionId}`, c);
         }
 
-        const answerTextValidation = validateText(answerText, 50000);
+        const answerTextValidation = validateText(answerText, MAX_ANSWER_TEXT_LENGTH);
         if (!answerTextValidation.valid) {
           return errorResponse(
             400,

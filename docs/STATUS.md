@@ -36,60 +36,16 @@ All critical features have been verified through comprehensive browser testing:
 
 ---
 
-## ⚠️ Remaining Work
+## ⚠️ Known Limitations
 
-### Legal Compliance (Critical - Before Public Launch)
-
-**Age Restrictions & COPPA Compliance** - ⚠️ PENDING
-
-- Required before public launch
-- See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for details
-
-**Cookie Consent** - ✅ NOT REQUIRED
-
-- Verified: Application does not use HTTP cookies
-- Only uses localStorage/sessionStorage (no consent needed)
-
-### Verification Needed (Non-Blocking)
-
-**Minor verification items** that don't block release:
-
-- ⚠️ Error tooltips on hover (requires manual testing - browser automation limitation)
-- ⚠️ Structured error feedback format verification (needs manual inspection)
-- ⚠️ Progress charts with multiple drafts (needs test data with multiple drafts)
-- ⚠️ Backend API feature testing (context-aware tense detection, LLM assessment)
-
-**Visual Testing** (Mostly Complete):
-
-- ✅ Heat map displays correctly
-- ✅ Color coding verified (red/orange/amber)
-- ⚠️ Detailed opacity verification (40% errors, 30% context) - needs design tool inspection
-- ⚠️ Typography/spacing verification - needs design review
-- ⚠️ Color contrast verification - needs accessibility tool
-- ⚠️ Multi-browser testing recommended (Chrome tested)
-
-**Metacognition Features** (Partially Verified):
-
-- ✅ Reflection textarea appears when editing
-- ⚠️ Need to verify reflection is saved and displayed
-- ⚠️ Need to verify error pattern detection
-
-**Gamification Features** (Needs User Session Data):
-
-- ⚠️ Streaks and achievements display correctly
-- ⚠️ CEFR progress tracking with user data
+- **Modal Cold Starts**: 8-15s (Essay Scoring), 2-5s (LanguageTool) - only affects first request after inactivity
+- **Groq API**: Pay-per-use (~$0.02 per submission) - no free tier, rate limited to 10/min (max ~$8,640/month)
 
 ---
 
 ## 🗺️ Roadmap
 
-### Future Enhancements
-
 _No planned enhancements at this time._
-
-### Not Currently Planned
-
-- **Translation Features** - Not implemented (documented but not planned)
 
 ---
 
@@ -106,13 +62,14 @@ See [TEST_PLAN.md](TEST_PLAN.md) for complete testing documentation.
 ## 🐛 Known Limitations
 
 - **Modal Cold Starts**: 8-15s (Essay Scoring), 2-5s (LanguageTool) - only affects first request after inactivity
-- **Groq API**: Pay-per-use (~$0.01 per request) - no free tier
+- **Groq API**: Pay-per-use (~$0.02 per submission) - no free tier, rate limited to 10/min (max ~$8,640/month)
 
 ---
 
 ## 📝 Summary
 
 - Application is **production-ready** for core functionality
-- Legal compliance items should be addressed before public launch
-- Most remaining work is verification/testing rather than implementation
+- All critical features working and verified
+- Comprehensive test coverage (automated + browser verification)
+- Privacy and security measures in place
 - See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for compliance details

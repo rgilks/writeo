@@ -389,27 +389,15 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for complete environment variable r
 
 ## 📚 Documentation
 
-### Getting Started
+**Quick Links:**
 
-- **[docs/README.md](docs/README.md)** - Documentation index and quick links
-- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Step-by-step deployment guide
-- **[docs/STATUS.md](docs/STATUS.md)** - Current status and roadmap
-
-### Core Documentation
-
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture, components, and data flow
-- **[docs/SPEC.md](docs/SPEC.md)** - Complete API specification with request/response examples
-- **[docs/OPERATIONS.md](docs/OPERATIONS.md)** - Operations guide: environment variables, logging, performance
-- **[docs/TEST_PLAN.md](docs/TEST_PLAN.md)** - Test plan with automated tests and manual verification
-- **[tests/README.md](tests/README.md)** - Test suite documentation and quick reference
-
-### API Documentation
-
-- **[docs/openapi.yaml](docs/openapi.yaml)** - OpenAPI 3.0 specification
-
-### Legal & Compliance
-
-- **[docs/LEGAL_COMPLIANCE.md](docs/LEGAL_COMPLIANCE.md)** - Legal compliance checklist and requirements
+- 📖 [Documentation Index](docs/README.md) - Complete documentation index
+- 🚀 [Deployment Guide](docs/DEPLOYMENT.md) - Step-by-step deployment instructions
+- 🏗️ [Architecture](docs/ARCHITECTURE.md) - System architecture and design
+- 🔌 [API Specification](docs/SPEC.md) - Complete API reference
+- 💰 [Cost Review](docs/COST_REVIEW.md) - Cost analysis and optimization
+- ⚖️ [Legal Compliance](docs/LEGAL_COMPLIANCE.md) - Compliance checklist
+- ✅ [Status](docs/STATUS.md) - Current status and roadmap
 
 ---
 
@@ -510,19 +498,49 @@ The system is designed for cost efficiency with scale-to-zero architecture:
 - **Free Tier Friendly**: Works on Cloudflare free tier (100k requests/day)
 - **Model Caching**: Modal Volume caches model weights to reduce cold starts
 - **Pay-Per-Use**: Only pay for what you use
+- **Rate Limiting**: 10 submissions/minute prevents runaway costs (max ~$8,640/month theoretical)
 
-**Estimated Monthly Costs (Free Tier)**:
+**Cost Breakdown Per Submission:**
+
+- **Base submission:** ~$0.015-0.02 (2 required API calls: grammar check + detailed feedback)
+- **With teacher feedback (optional):** ~$0.02-0.03
+- **Average:** ~$0.016-0.022 per submission
+
+**Estimated Monthly Costs**:
 
 | Service               | Cost              | Notes                        |
 | --------------------- | ----------------- | ---------------------------- |
 | Cloudflare Workers    | $0                | Free tier: 100k requests/day |
 | Cloudflare Workers AI | $0                | Free tier: 10k requests/day  |
-| Groq API              | ~$0.01/request    | LLM feedback (pay-per-use)   |
+| Groq API              | ~$0.02/submission | LLM feedback (pay-per-use)   |
 | R2 Storage            | ~$0.01-0.10/month | <10GB storage                |
 | KV Storage            | ~$0.01-0.05/month | <100MB storage               |
 | Modal                 | ~$0.10-1.00/month | Pay-per-use inference        |
 
-**Total**: ~$0.12-1.15/month on free tier (excluding Groq API usage)
+**Monthly Cost Examples:**
+
+- **Low usage** (10 submissions/day): ~$6/month
+- **Moderate usage** (100 submissions/day): ~$60/month
+- **High usage** (1,000 submissions/day): ~$600/month
+- **Maximum** (14,400/day, rate limited): ~$8,640/month
+
+**Total Infrastructure**: ~$0.12-1.15/month on free tier (excluding Groq API)
+
+**Cost Without Groq API:**
+
+- Infrastructure only: ~$0.11-1.10/month (essentially free tier)
+- No variable costs based on submission volume
+- Features still available: Essay scoring, LanguageTool grammar checking, relevance checking
+- Features unavailable: AI-powered feedback, teacher feedback, context-aware suggestions
+
+**Cost Controls:**
+
+- Rate limiting: 10 submissions/minute per IP
+- Word limits: 250-500 words per essay
+- Text truncation: Essays truncated to 15,000 chars for AI processing
+- Token limits: Reduced max tokens to minimize costs
+
+See [docs/COST_REVIEW.md](docs/COST_REVIEW.md) for detailed cost analysis, including costs without Groq API.
 
 ---
 
@@ -538,9 +556,9 @@ The system is designed for cost efficiency with scale-to-zero architecture:
 
 **Getting Help:**
 
-- See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed troubleshooting
-- See [docs/OPERATIONS.md](docs/OPERATIONS.md) for logging and monitoring
-- Check [docs/STATUS.md](docs/STATUS.md) for known limitations
+- 📖 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Detailed troubleshooting guide
+- 📖 [docs/OPERATIONS.md](docs/OPERATIONS.md) - Logging and monitoring
+- 📖 [docs/STATUS.md](docs/STATUS.md) - Known limitations
 
 ---
 
@@ -548,31 +566,22 @@ The system is designed for cost efficiency with scale-to-zero architecture:
 
 **Production Ready** - All core features deployed and operational.
 
-**Current Status:**
-
 - ✅ All critical features working and verified
-- ✅ Draft tracking and navigation implemented
 - ✅ Comprehensive test coverage (automated + browser verification)
 - ✅ Privacy and security measures in place
 
 **Known Limitations:**
 
 - Modal cold starts: 8-15s (Essay Scoring), 2-5s (LanguageTool) - only affects first request after inactivity
-- Groq API: Pay-per-use (~$0.01 per request) - no free tier
+- Groq API: Pay-per-use (~$0.02 per submission) - rate limited to 10/min
 
-For detailed status information, see [docs/STATUS.md](docs/STATUS.md).
+See [docs/STATUS.md](docs/STATUS.md) for detailed status information.
 
 ---
 
 ## 🗺️ Roadmap
 
-**Future Enhancements:**
-
 _No planned enhancements at this time._
-
-**Not Currently Planned:**
-
-- Translation features - Not implemented (documented but not planned)
 
 ---
 

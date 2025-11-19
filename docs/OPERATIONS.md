@@ -168,14 +168,37 @@ modal app logs writeo-lt
 - Cloudflare Workers AI: 10k requests/day
 - R2/KV: 10GB/100MB free
 
-**Monthly Costs (Free Tier):**
+**Cost Per Submission:**
+
+- **Base:** ~$0.015-0.02 (2 required Groq API calls)
+- **With teacher feedback:** ~$0.02-0.03
+- **Average:** ~$0.016-0.022
+
+**Monthly Costs:**
+
+**Infrastructure (Free Tier):**
 
 - Cloudflare: $0
 - Modal: ~$0.10-1.00/month
-- Groq API: ~$0.01 per request
-- **Total**: ~$0.12-1.15/month + Groq costs
+- **Total Infrastructure**: ~$0.12-1.15/month
+
+**Groq API (Pay-Per-Use):**
+
+- Low usage (10/day): ~$6/month
+- Moderate (100/day): ~$60/month
+- High (1,000/day): ~$600/month
+- Maximum (14,400/day, rate limited): ~$8,640/month
+
+**Cost Controls:**
+
+- Rate limiting: 10 submissions/minute per IP (prevents runaway costs)
+- Word limits: 250-500 words per essay
+- Text truncation: 15,000 chars max for AI processing
+- Token limits: Reduced to minimize costs
 
 **Scale-to-Zero:** No idle costs - services scale to zero when not in use.
+
+See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis and guardrails.
 
 ## References
 

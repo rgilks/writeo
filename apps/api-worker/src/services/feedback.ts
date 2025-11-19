@@ -1,4 +1,10 @@
 import { callGroqAPI } from "./groq";
+import { truncateEssayText, truncateQuestionText } from "../utils/text-processing";
+import {
+  MAX_TOKENS_DETAILED_FEEDBACK,
+  MAX_TOKENS_TEACHER_FEEDBACK_INITIAL,
+  MAX_TOKENS_TEACHER_FEEDBACK_EXPLANATION,
+} from "../utils/constants";
 
 // Types for AI feedback
 export interface AIFeedback {
@@ -55,19 +61,8 @@ export async function getCombinedFeedback(
 ): Promise<CombinedFeedback> {
   // Truncate very long essays to keep costs under control (max ~2500 words or ~15000 chars)
   // This prevents excessive token usage while preserving enough context for meaningful feedback
-  const MAX_ESSAY_LENGTH = 15000; // ~2500 words
-  const truncatedAnswerText =
-    answerText.length > MAX_ESSAY_LENGTH
-      ? answerText.slice(0, MAX_ESSAY_LENGTH) +
-        "\n\n[... essay continues but truncated for feedback generation ...]"
-      : answerText;
-
-  // Truncate very long questions too (shouldn't happen, but safety measure)
-  const MAX_QUESTION_LENGTH = 500;
-  const truncatedQuestionText =
-    questionText.length > MAX_QUESTION_LENGTH
-      ? questionText.slice(0, MAX_QUESTION_LENGTH) + "..."
-      : questionText;
+  const truncatedAnswerText = truncateEssayText(answerText);
+  const truncatedQuestionText = truncateQuestionText(questionText);
 
   let essayContext = "";
   if (essayScores) {
@@ -198,7 +193,7 @@ Respond ONLY with valid JSON (no markdown, no explanations):
         content: prompt,
       },
     ],
-    500
+    MAX_TOKENS_DETAILED_FEEDBACK
   );
 
   const trimmedResponseText = responseText.trim();
@@ -328,12 +323,7 @@ export async function getTeacherFeedback(
 ): Promise<TeacherFeedback> {
   // Truncate very long essays to keep context concise (max ~2500 words or ~15000 chars)
   // This keeps prompts efficient while preserving enough context for meaningful feedback
-  const MAX_ESSAY_LENGTH = 15000; // ~2500 words
-  const truncatedAnswerText =
-    answerText.length > MAX_ESSAY_LENGTH
-      ? answerText.slice(0, MAX_ESSAY_LENGTH) +
-        "\n\n[... essay continues but truncated for feedback generation ...]"
-      : answerText;
+  const truncatedAnswerText = truncateEssayText(answerText);
 
   let scoreContext = "";
   if (essayScores) {
@@ -478,7 +468,9 @@ Use markdown formatting (headers, bullet points, bold for emphasis). Be specific
         content: prompt,
       },
     ],
-    mode === "explanation" ? 800 : 150
+    mode === "explanation"
+      ? MAX_TOKENS_TEACHER_FEEDBACK_EXPLANATION
+      : MAX_TOKENS_TEACHER_FEEDBACK_INITIAL
   );
 
   const trimmedResponseText = responseText.trim();
