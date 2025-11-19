@@ -464,7 +464,27 @@ export async function getTeacherFeedback(
   submissionId: string,
   answerId: string,
   mode: "clues" | "explanation",
-  answerText: string
+  answerText: string,
+  questionText?: string,
+  assessmentData?: {
+    essayScores?: {
+      overall?: number;
+      dimensions?: {
+        TA?: number;
+        CC?: number;
+        Vocab?: number;
+        Grammar?: number;
+        Overall?: number;
+      };
+    };
+    ltErrors?: any[];
+    llmErrors?: any[];
+    relevanceCheck?: {
+      addressesQuestion: boolean;
+      score: number;
+      threshold: number;
+    };
+  }
 ): Promise<{ message: string; focusArea?: string }> {
   try {
     if (!submissionId || !answerId || !mode || !answerText) {
@@ -482,6 +502,20 @@ export async function getTeacherFeedback(
       throw new Error("Server configuration error: API credentials not set");
     }
 
+    const requestBody: any = {
+      answerId,
+      mode,
+      answerText,
+    };
+
+    // Add optional fields if provided (allows endpoints to work without storage)
+    if (questionText) {
+      requestBody.questionText = questionText;
+    }
+    if (assessmentData) {
+      requestBody.assessmentData = assessmentData;
+    }
+
     const response = await retryWithBackoff(async () => {
       const res = await fetch(`${apiBase}/text/submissions/${submissionId}/teacher-feedback`, {
         method: "POST",
@@ -489,11 +523,7 @@ export async function getTeacherFeedback(
           "Content-Type": "application/json",
           Authorization: `Token ${apiKey}`,
         },
-        body: JSON.stringify({
-          answerId,
-          mode,
-          answerText,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!res.ok && res.status >= 500) {
@@ -526,7 +556,21 @@ export async function getTeacherFeedback(
 export async function streamAIFeedback(
   submissionId: string,
   answerId: string,
-  answerText: string
+  answerText: string,
+  questionText?: string,
+  assessmentData?: {
+    essayScores?: {
+      overall?: number;
+      dimensions?: {
+        TA?: number;
+        CC?: number;
+        Vocab?: number;
+        Grammar?: number;
+        Overall?: number;
+      };
+    };
+    ltErrors?: any[];
+  }
 ): Promise<Response> {
   try {
     if (!submissionId || !answerId || !answerText) {
@@ -540,6 +584,19 @@ export async function streamAIFeedback(
       throw new Error("Server configuration error: API credentials not set");
     }
 
+    const requestBody: any = {
+      answerId,
+      answerText,
+    };
+
+    // Add optional fields if provided (allows endpoints to work without storage)
+    if (questionText) {
+      requestBody.questionText = questionText;
+    }
+    if (assessmentData) {
+      requestBody.assessmentData = assessmentData;
+    }
+
     // Call the API worker's streaming endpoint
     const response = await fetch(`${apiBase}/text/submissions/${submissionId}/ai-feedback/stream`, {
       method: "POST",
@@ -547,10 +604,7 @@ export async function streamAIFeedback(
         "Content-Type": "application/json",
         Authorization: `Token ${apiKey}`,
       },
-      body: JSON.stringify({
-        answerId,
-        answerText,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

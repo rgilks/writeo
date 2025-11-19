@@ -31,37 +31,9 @@ feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", async
     const body = (await c.req.json()) as {
       answerId: string;
       answerText: string;
-    };
-    const { answerId, answerText } = body;
-
-    if (!answerId || !answerText) {
-      return errorResponse(400, "Missing required fields: answerId, answerText");
-    }
-
-    const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
-    const results = await storage.getResults(submissionId);
-    if (!results) {
-      return errorResponse(404, "Submission not found");
-    }
-
-    let questionText = "";
-    const questionTexts = results.meta?.questionTexts as Record<string, string> | undefined;
-    if (questionTexts && questionTexts[answerId]) {
-      questionText = questionTexts[answerId];
-    } else {
-      const answer = await storage.getAnswer(answerId);
-      if (!answer) {
-        return errorResponse(404, "Answer not found");
-      }
-      const question = await storage.getQuestion(answer["question-id"]);
-      if (!question) {
-        return errorResponse(404, "Question not found");
-      }
-      questionText = question.text;
-    }
-
-    let essayScores:
-      | {
+      questionText?: string;
+      assessmentData?: {
+        essayScores?: {
           overall?: number;
           dimensions?: {
             TA?: number;
@@ -70,21 +42,67 @@ feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", async
             Grammar?: number;
             Overall?: number;
           };
-        }
-      | undefined;
-    let ltErrors: LanguageToolError[] | undefined;
+        };
+        ltErrors?: LanguageToolError[];
+      };
+    };
+    const { answerId, answerText, questionText: providedQuestionText, assessmentData } = body;
 
-    // Extract essay scores and LanguageTool errors from answers
-    for (const part of results.results?.parts || []) {
-      for (const answer of part.answers || []) {
-        for (const assessor of answer["assessor-results"] || []) {
-          if (assessor.id === "T-AES-ESSAY") {
-            essayScores = { overall: assessor.overall, dimensions: assessor.dimensions };
-          }
-          if (assessor.id === "T-GEC-LT") {
-            ltErrors = assessor.errors as LanguageToolError[] | undefined;
+    if (!answerId || !answerText) {
+      return errorResponse(400, "Missing required fields: answerId, answerText");
+    }
+
+    let questionText = providedQuestionText || "";
+    let essayScores = assessmentData?.essayScores;
+    let ltErrors = assessmentData?.ltErrors;
+
+    // Check if we have questionText (required to proceed)
+    // Assessment data is optional - if not provided, we'll try storage or proceed without it
+    const hasQuestionText = !!providedQuestionText;
+
+    // If questionText not provided in request, try to get from storage
+    if (!hasQuestionText) {
+      const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
+      const results = await storage.getResults(submissionId);
+
+      if (results) {
+        // Extract question text if not provided
+        if (!questionText) {
+          const questionTexts = results.meta?.questionTexts as Record<string, string> | undefined;
+          if (questionTexts && questionTexts[answerId]) {
+            questionText = questionTexts[answerId];
+          } else {
+            const answer = await storage.getAnswer(answerId);
+            if (answer) {
+              const question = await storage.getQuestion(answer["question-id"]);
+              if (question) {
+                questionText = question.text;
+              }
+            }
           }
         }
+
+        // Extract assessment data if not provided
+        if (!essayScores || !ltErrors) {
+          for (const part of results.results?.parts || []) {
+            for (const answer of part.answers || []) {
+              for (const assessor of answer["assessor-results"] || []) {
+                if (!essayScores && assessor.id === "T-AES-ESSAY") {
+                  essayScores = { overall: assessor.overall, dimensions: assessor.dimensions };
+                }
+                if (!ltErrors && assessor.id === "T-GEC-LT") {
+                  ltErrors = assessor.errors as LanguageToolError[] | undefined;
+                }
+              }
+            }
+          }
+        }
+      } else if (!questionText) {
+        // If no storage and no question text provided, we can't proceed
+        return errorResponse(
+          400,
+          "questionText is required when submission is not stored. Please provide questionText in the request body."
+        );
       }
     }
 
@@ -269,8 +287,28 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
       answerId: string;
       mode: "clues" | "explanation";
       answerText: string;
+      questionText?: string;
+      assessmentData?: {
+        essayScores?: {
+          overall?: number;
+          dimensions?: {
+            TA?: number;
+            CC?: number;
+            Vocab?: number;
+            Grammar?: number;
+            Overall?: number;
+          };
+        };
+        ltErrors?: LanguageToolError[];
+        llmErrors?: LanguageToolError[];
+        relevanceCheck?: {
+          addressesQuestion: boolean;
+          score: number;
+          threshold: number;
+        };
+      };
     };
-    const { answerId, mode, answerText } = body;
+    const { answerId, mode, answerText, questionText: providedQuestionText, assessmentData } = body;
 
     if (!answerId || !mode || !answerText) {
       return errorResponse(400, "Missing required fields: answerId, mode, answerText");
@@ -289,77 +327,90 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
       return errorResponse(400, `Invalid answerText: ${textValidation.error || "Invalid content"}`);
     }
 
-    const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
-    const results = await storage.getResults(submissionId);
-    if (!results) {
-      return errorResponse(404, "Submission not found");
-    }
+    let questionText = providedQuestionText || "";
+    let essayScores = assessmentData?.essayScores;
+    let ltErrors = assessmentData?.ltErrors;
+    let llmErrors = assessmentData?.llmErrors;
+    let relevanceCheck = assessmentData?.relevanceCheck;
+    let results: AssessmentResults | null = null;
+    let teacherAssessor: any = undefined;
 
-    let questionText = "";
-    const questionTexts = results.meta?.questionTexts as Record<string, string> | undefined;
-    if (questionTexts && questionTexts[answerId]) {
-      questionText = questionTexts[answerId];
-    } else {
-      const answer = await storage.getAnswer(answerId);
-      if (!answer) {
-        return errorResponse(404, "Answer not found");
-      }
-      const question = await storage.getQuestion(answer["question-id"]);
-      if (!question) {
-        return errorResponse(404, "Question not found");
-      }
-      questionText = question.text;
-    }
+    // Check if we have required data, otherwise try storage
+    // At minimum we need questionText to proceed
+    const hasRequiredData = providedQuestionText;
 
-    let essayScores:
-      | {
-          overall?: number;
-          dimensions?: {
-            TA?: number;
-            CC?: number;
-            Vocab?: number;
-            Grammar?: number;
-            Overall?: number;
-          };
-        }
-      | undefined;
-    let ltErrors: LanguageToolError[] | undefined;
-    let llmErrors: LanguageToolError[] | undefined;
-    let relevanceCheck:
-      | { addressesQuestion: boolean; score: number; threshold: number }
-      | undefined;
+    // If assessment data not provided in request, try to get from storage
+    if (!hasRequiredData) {
+      const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
+      results = await storage.getResults(submissionId);
 
-    // Extract essay scores, errors, and relevance check from all sources
-    for (const part of results.results?.parts || []) {
-      for (const answer of part.answers || []) {
-        for (const assessor of answer["assessor-results"] || []) {
-          if (assessor.id === "T-AES-ESSAY") {
-            essayScores = { overall: assessor.overall, dimensions: assessor.dimensions };
-          }
-          if (assessor.id === "T-GEC-LT") {
-            ltErrors = assessor.errors as LanguageToolError[] | undefined;
-          }
-          if (assessor.id === "T-GEC-LLM") {
-            llmErrors = assessor.errors as LanguageToolError[] | undefined;
-          }
-          if (assessor.id === "T-RELEVANCE-CHECK" && assessor.meta) {
-            const meta = assessor.meta as any;
-            relevanceCheck = {
-              addressesQuestion: meta.addressesQuestion ?? false,
-              score: meta.similarityScore ?? 0,
-              threshold: meta.threshold ?? 0.5,
-            };
+      if (results) {
+        // Extract question text if not provided
+        if (!questionText) {
+          const questionTexts = results.meta?.questionTexts as Record<string, string> | undefined;
+          if (questionTexts && questionTexts[answerId]) {
+            questionText = questionTexts[answerId];
+          } else {
+            const answer = await storage.getAnswer(answerId);
+            if (answer) {
+              const question = await storage.getQuestion(answer["question-id"]);
+              if (question) {
+                questionText = question.text;
+              }
+            }
           }
         }
+
+        // Extract assessment data if not provided
+        if (!essayScores || !ltErrors || !llmErrors || !relevanceCheck) {
+          for (const part of results.results?.parts || []) {
+            for (const answer of part.answers || []) {
+              for (const assessor of answer["assessor-results"] || []) {
+                if (!essayScores && assessor.id === "T-AES-ESSAY") {
+                  essayScores = { overall: assessor.overall, dimensions: assessor.dimensions };
+                }
+                if (!ltErrors && assessor.id === "T-GEC-LT") {
+                  ltErrors = assessor.errors as LanguageToolError[] | undefined;
+                }
+                if (!llmErrors && assessor.id === "T-GEC-LLM") {
+                  llmErrors = assessor.errors as LanguageToolError[] | undefined;
+                }
+                if (!relevanceCheck && assessor.id === "T-RELEVANCE-CHECK" && assessor.meta) {
+                  const meta = assessor.meta as any;
+                  relevanceCheck = {
+                    addressesQuestion: meta.addressesQuestion ?? false,
+                    score: meta.similarityScore ?? 0,
+                    threshold: meta.threshold ?? 0.5,
+                  };
+                }
+              }
+            }
+          }
+        }
+
+        // Get teacher assessor if results exist
+        const firstPart = results.results?.parts?.[0];
+        teacherAssessor = firstPart?.answers?.[0]?.["assessor-results"]?.find(
+          (a: any) => a.id === "T-TEACHER-FEEDBACK"
+        );
+      } else if (!questionText) {
+        // If no storage and no question text provided, we can't proceed
+        return errorResponse(
+          400,
+          "questionText is required when submission is not stored. Please provide questionText in the request body."
+        );
       }
     }
 
-    const firstPart = results.results?.parts?.[0];
-    let teacherAssessor = firstPart?.answers?.[0]?.["assessor-results"]?.find(
-      (a: any) => a.id === "T-TEACHER-FEEDBACK"
-    );
+    // Ensure we have questionText before proceeding (double-check)
+    if (!questionText || questionText.trim().length === 0) {
+      return errorResponse(
+        400,
+        "questionText is required. Please provide questionText in the request body."
+      );
+    }
 
-    // Check if we already have cached feedback for this mode
+    // Check if we already have cached feedback for this mode (only if results exist)
     const existingMeta = (teacherAssessor?.meta || {}) as Record<string, any>;
     const cachedMessage =
       mode === "clues"
@@ -391,35 +442,40 @@ feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (
         relevanceCheck
       );
 
-      // Store the new feedback
-      if (firstPart) {
-        if (!teacherAssessor) {
-          teacherAssessor = {
-            id: "T-TEACHER-FEEDBACK",
-            name: "Teacher's Feedback",
-            type: "feedback",
-            meta: {},
+      // Store the new feedback (only if results exist from storage)
+      if (results) {
+        const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
+        const firstPart = results.results?.parts?.[0];
+        if (firstPart) {
+          if (!teacherAssessor) {
+            teacherAssessor = {
+              id: "T-TEACHER-FEEDBACK",
+              name: "Teacher's Feedback",
+              type: "feedback",
+              meta: {},
+            };
+
+            // Add to first answer's assessor-results
+            const firstAnswer = firstPart.answers[0];
+            if (!firstAnswer["assessor-results"]) {
+              firstAnswer["assessor-results"] = [];
+            }
+            firstAnswer["assessor-results"].push(teacherAssessor);
+          }
+
+          const existingMeta = (teacherAssessor?.meta || {}) as Record<string, any>;
+          teacherAssessor.meta = {
+            ...existingMeta,
+            message: existingMeta.message || teacherFeedback.message,
+            focusArea: teacherFeedback.focusArea || existingMeta.focusArea,
+            ...(mode === "clues" && { cluesMessage: teacherFeedback.message }),
+            ...(mode === "explanation" && { explanationMessage: teacherFeedback.message }),
+            engine: "Groq",
+            model: aiModel,
           };
 
-          // Add to first answer's assessor-results
-          const firstAnswer = firstPart.answers[0];
-          if (!firstAnswer["assessor-results"]) {
-            firstAnswer["assessor-results"] = [];
-          }
-          firstAnswer["assessor-results"].push(teacherAssessor);
+          await storage.putResults(submissionId, results, 60 * 60 * 24 * 90);
         }
-
-        teacherAssessor.meta = {
-          ...existingMeta,
-          message: existingMeta.message || teacherFeedback.message,
-          focusArea: teacherFeedback.focusArea || existingMeta.focusArea,
-          ...(mode === "clues" && { cluesMessage: teacherFeedback.message }),
-          ...(mode === "explanation" && { explanationMessage: teacherFeedback.message }),
-          engine: "Groq",
-          model: aiModel,
-        };
-
-        await storage.putResults(submissionId, results, 60 * 60 * 24 * 90);
       }
     }
 

@@ -473,6 +473,40 @@ paths:
                   type: string
                   description: The answer text to analyze
                   example: "I went to the park yesterday and played football with my friends."
+                questionText:
+                  type: string
+                  description: |
+                    Optional. The question text. If not provided, the endpoint will attempt to retrieve it from storage.
+                    Required if submission was not stored (storeResults: false).
+                  example: "Describe your weekend. What did you do?"
+                assessmentData:
+                  type: object
+                  description: |
+                    Optional. Assessment data from the submission response. If not provided, the endpoint will attempt to retrieve it from storage.
+                    Required if submission was not stored (storeResults: false).
+                  properties:
+                    essayScores:
+                      type: object
+                      properties:
+                        overall:
+                          type: number
+                        dimensions:
+                          type: object
+                          properties:
+                            TA:
+                              type: number
+                            CC:
+                              type: number
+                            Vocab:
+                              type: number
+                            Grammar:
+                              type: number
+                            Overall:
+                              type: number
+                    ltErrors:
+                      type: array
+                      items:
+                        type: object
       responses:
         "200":
           description: Streaming feedback (Server-Sent Events)
@@ -582,6 +616,53 @@ paths:
                   type: string
                   description: The answer text to analyze
                   example: "I went to the park yesterday and played football with my friends."
+                questionText:
+                  type: string
+                  description: |
+                    Optional. The question text. If not provided, the endpoint will attempt to retrieve it from storage.
+                    Required if submission was not stored (storeResults: false).
+                  example: "Describe your weekend. What did you do?"
+                assessmentData:
+                  type: object
+                  description: |
+                    Optional. Assessment data from the submission response. If not provided, the endpoint will attempt to retrieve it from storage.
+                    Required if submission was not stored (storeResults: false).
+                  properties:
+                    essayScores:
+                      type: object
+                      properties:
+                        overall:
+                          type: number
+                        dimensions:
+                          type: object
+                          properties:
+                            TA:
+                              type: number
+                            CC:
+                              type: number
+                            Vocab:
+                              type: number
+                            Grammar:
+                              type: number
+                            Overall:
+                              type: number
+                    ltErrors:
+                      type: array
+                      items:
+                        type: object
+                    llmErrors:
+                      type: array
+                      items:
+                        type: object
+                    relevanceCheck:
+                      type: object
+                      properties:
+                        addressesQuestion:
+                          type: boolean
+                        score:
+                          type: number
+                        threshold:
+                          type: number
       responses:
         "200":
           description: Teacher feedback response

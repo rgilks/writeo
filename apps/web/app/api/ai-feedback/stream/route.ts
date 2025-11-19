@@ -10,7 +10,7 @@ import { getApiBase, getApiKey } from "@/app/lib/api-config";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { submissionId, answerId, answerText } = body;
+    const { submissionId, answerId, answerText, questionText, assessmentData } = body;
 
     if (!submissionId || !answerId || !answerText) {
       return new Response(
@@ -35,6 +35,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build request body with optional fields
+    const requestBody: any = {
+      answerId,
+      answerText,
+    };
+    if (questionText) {
+      requestBody.questionText = questionText;
+    }
+    if (assessmentData) {
+      requestBody.assessmentData = assessmentData;
+    }
+
     // Call the API worker's streaming endpoint
     const response = await fetch(`${apiBase}/text/submissions/${submissionId}/ai-feedback/stream`, {
       method: "POST",
@@ -42,10 +54,7 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         Authorization: `Token ${apiKey}`,
       },
-      body: JSON.stringify({
-        answerId,
-        answerText,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

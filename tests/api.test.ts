@@ -8,6 +8,13 @@ function getAssessorResults(part: any): any[] {
 describe("API Tests", () => {
   // Note: Cleanup endpoint has been removed for security reasons.
   // Tests use unique IDs to avoid conflicts and are independent.
+  //
+  // Storage Policy:
+  // - By default, all tests use storeResults: false to prevent data storage
+  // - Only 1 test uses storeResults: true because it tests storage-dependent features:
+  //   1. "teacher-feedback - persistence and modes" - Tests GET endpoint and feedback persistence (requires storage)
+  // - Other tests that use teacher-feedback/streaming endpoints now pass assessment data in the request body,
+  //   allowing them to work without storage (matching real-world usage where frontend has the data)
 
   test.concurrent("smoke - full E2E workflow", async () => {
     const { questionId, answerId, submissionId } = generateIds();
@@ -618,6 +625,8 @@ describe("API Tests", () => {
 
   test.concurrent("streaming - AI feedback stream", async () => {
     const { questionId, answerId, submissionId } = generateIds();
+    const questionText = "Describe your weekend. What did you do?";
+    const answerText = "Last weekend I go to the park with my friend.";
 
     // Create submission - results returned immediately
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
@@ -629,17 +638,42 @@ describe("API Tests", () => {
               id: answerId,
               "question-number": 1,
               "question-id": questionId,
-              "question-text": "Describe your weekend. What did you do?",
-              text: "Last weekend I go to the park with my friend.",
+              "question-text": questionText,
+              text: answerText,
             },
           ],
         },
       ],
       template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
+      storeResults: false, // No server storage - using assessment data from response
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
+
+    // Extract assessment data from response
+    const firstPart = json.results.parts[0];
+    const firstAnswer = firstPart.answers[0];
+    const assessorResults = firstAnswer["assessor-results"] || [];
+    const essayAssessor = assessorResults.find((a: any) => a.id === "T-AES-ESSAY");
+    const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
+
+    const requestBody: any = {
+      answerId,
+      answerText,
+      questionText,
+    };
+
+    if (essayAssessor || ltAssessor) {
+      requestBody.assessmentData = {
+        essayScores: essayAssessor
+          ? {
+              overall: essayAssessor.overall,
+              dimensions: essayAssessor.dimensions,
+            }
+          : undefined,
+        ltErrors: ltAssessor?.errors || undefined,
+      };
+    }
 
     let chunks = 0;
     const response = await fetch(
@@ -650,10 +684,7 @@ describe("API Tests", () => {
           Authorization: `Token ${API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          answerId,
-          answerText: "Last weekend I go to the park.",
-        }),
+        body: JSON.stringify(requestBody),
       }
     );
 
@@ -1147,7 +1178,7 @@ describe("API Tests", () => {
 
   test.concurrent("teacher-feedback - includes all assessment sources", async () => {
     const { questionId, answerId, submissionId } = generateIds();
-
+    const questionText = "What are the benefits of exercise?";
     const answerText =
       "Exercise has many benefit. It improve physical health and mental well-being.";
 
@@ -1161,14 +1192,14 @@ describe("API Tests", () => {
               id: answerId,
               "question-number": 1,
               "question-id": questionId,
-              "question-text": "What are the benefits of exercise?",
+              "question-text": questionText,
               text: answerText,
             },
           ],
         },
       ],
       template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
+      storeResults: false, // No server storage - using assessment data from response
     });
 
     // If submission fails, log the error for debugging
@@ -1179,19 +1210,48 @@ describe("API Tests", () => {
     expect(status).toBe(200);
     expect(json.status).toBe("success");
 
-    // Wait a moment for results to be stored
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Extract assessment data from response
+    const firstPart = json.results.parts[0];
+    const firstAnswer = firstPart.answers[0];
+    const assessorResults = firstAnswer["assessor-results"] || [];
+    const essayAssessor = assessorResults.find((a: any) => a.id === "T-AES-ESSAY");
+    const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
+    const llmAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LLM");
+    const relevanceAssessor = assessorResults.find((a: any) => a.id === "T-RELEVANCE-CHECK");
+
+    const requestBody: any = {
+      answerId,
+      mode: "clues",
+      answerText,
+      questionText,
+    };
+
+    if (essayAssessor || ltAssessor || llmAssessor || relevanceAssessor) {
+      requestBody.assessmentData = {
+        essayScores: essayAssessor
+          ? {
+              overall: essayAssessor.overall,
+              dimensions: essayAssessor.dimensions,
+            }
+          : undefined,
+        ltErrors: ltAssessor?.errors || undefined,
+        llmErrors: llmAssessor?.errors || undefined,
+        relevanceCheck: relevanceAssessor?.meta
+          ? {
+              addressesQuestion: relevanceAssessor.meta.addressesQuestion ?? false,
+              score: relevanceAssessor.meta.similarityScore ?? 0,
+              threshold: relevanceAssessor.meta.threshold ?? 0.5,
+            }
+          : undefined,
+      };
+    }
 
     // Request teacher feedback - should include context from all sources
     // Note: API only accepts "clues" or "explanation" mode, not "initial"
     const teacherResponse = await apiRequest(
       "POST",
       `/text/submissions/${submissionId}/teacher-feedback`,
-      {
-        answerId,
-        mode: "clues",
-        answerText: answerText,
-      }
+      requestBody
     );
 
     // Debug: log error if not 200

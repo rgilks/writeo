@@ -474,6 +474,20 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
         submissionId={submissionId}
         answerId={answerId}
         answerText={finalAnswerText}
+        questionText={questionText}
+        ltErrors={ltErrors}
+        llmErrors={llmErrors}
+        relevanceCheck={(() => {
+          const relevanceAssessor = assessorResults.find((a: any) => a.id === "T-RELEVANCE-CHECK");
+          if (relevanceAssessor?.meta) {
+            return {
+              addressesQuestion: Boolean(relevanceAssessor.meta.addressesQuestion ?? false),
+              score: Number(relevanceAssessor.meta.similarityScore ?? 0),
+              threshold: Number(relevanceAssessor.meta.threshold ?? 0.5),
+            };
+          }
+          return undefined;
+        })()}
       />
 
       {/* Overall Score & Dimensions - Clean, Learner-Focused */}

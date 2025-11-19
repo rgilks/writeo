@@ -24,6 +24,14 @@ interface TeacherFeedbackProps {
   submissionId?: string;
   answerId?: string;
   answerText?: string;
+  questionText?: string;
+  ltErrors?: any[];
+  llmErrors?: any[];
+  relevanceCheck?: {
+    addressesQuestion: boolean;
+    score: number;
+    threshold: number;
+  };
 }
 
 /**
@@ -38,6 +46,10 @@ export function TeacherFeedback({
   submissionId,
   answerId,
   answerText,
+  questionText,
+  ltErrors,
+  llmErrors,
+  relevanceCheck,
 }: TeacherFeedbackProps) {
   // Initialize from stored feedback if available
   const [feedbackMode, setFeedbackMode] = useState<"initial" | "explanation">("initial");
@@ -91,7 +103,15 @@ export function TeacherFeedback({
     setInitialLoading(true);
     setInitialError(null);
 
-    getTeacherFeedback(submissionId, answerId, "clues", answerText)
+    getTeacherFeedback(submissionId, answerId, "clues", answerText, questionText, {
+      essayScores: {
+        overall,
+        dimensions,
+      },
+      ltErrors,
+      llmErrors,
+      relevanceCheck,
+    })
       .then((data) => {
         if (cancelled) {
           return;
@@ -144,7 +164,22 @@ export function TeacherFeedback({
       });
 
       // Use Server Action instead of API route
-      const data = await getTeacherFeedback(submissionId, answerId, "explanation", answerText);
+      const data = await getTeacherFeedback(
+        submissionId,
+        answerId,
+        "explanation",
+        answerText,
+        questionText,
+        {
+          essayScores: {
+            overall,
+            dimensions,
+          },
+          ltErrors,
+          llmErrors,
+          relevanceCheck,
+        }
+      );
       console.log("Received feedback data:", data);
 
       const explanationText = data.message || "Let me explain the issues in your essay...";
