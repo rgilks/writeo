@@ -55,6 +55,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -82,6 +83,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -113,6 +115,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -169,6 +172,7 @@ describe("API Tests", () => {
           },
         ],
         template: { name: "generic", version: 1 },
+        storeResults: false, // No server storage for tests
       }
     );
     expect(status2).toBe(200);
@@ -245,6 +249,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -320,6 +325,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -397,6 +403,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -453,6 +460,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -628,6 +636,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -709,6 +718,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     const duration = Date.now() - start;
 
@@ -737,6 +747,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     const processingTime = (Date.now() - submissionStart) / 1000; // Convert to seconds
 
@@ -808,6 +819,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     // API accepts it (frontend validation prevents submission)
     expect(status).toBe(200);
@@ -838,6 +850,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     // API accepts it (frontend validation prevents submission)
     expect(status).toBe(200);
@@ -860,6 +873,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     // Missing text field should return 400 (bad request)
     expect(status).toBe(400);
@@ -886,6 +900,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -915,6 +930,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -948,6 +964,7 @@ describe("API Tests", () => {
         gender: "m",
       },
       type: "test",
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200); // Should accept and ignore these fields
     expect(json.status).toBe("success");
@@ -977,6 +994,7 @@ describe("API Tests", () => {
           },
         ],
         template: { name: "generic", version: 1 },
+        storeResults: false, // No server storage for tests
       }
     );
     const duration = Date.now() - start;
@@ -1008,6 +1026,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     const duration = Date.now() - start;
 
@@ -1041,6 +1060,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
     expect(status).toBe(200);
     expect(json.status).toBe("success");
@@ -1089,6 +1109,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
 
     // Should succeed (truncation happens internally in feedback generation)
@@ -1147,6 +1168,7 @@ describe("API Tests", () => {
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     });
 
     // If submission fails, log the error for debugging

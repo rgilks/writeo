@@ -68,6 +68,7 @@ export async function createTestSubmission(
         },
       ],
       template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
     }),
   });
 
