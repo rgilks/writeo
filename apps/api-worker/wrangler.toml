@@ -10,13 +10,12 @@ compatibility_date = "2024-01-15"
 
 [[r2_buckets]]
 binding = "WRITEO_DATA"
-bucket_name = "writeo-data"
-preview_bucket_name = "writeo-data-preview"
+bucket_name = "writeo-data-1"
 
 [[kv_namespaces]]
 binding = "WRITEO_RESULTS"
-id = "17677e5237b248b3b94ae3b7c9468933"
-preview_id = "8e5a66f3a7324e4ab0f3699f25691635"
+id = "7a0dc51ef6884c81829ac2ff8e9261a9"
+preview_id = "d4eba63e6e0a4be5826cbc414a8c5578"
 
 # Cloudflare Workers AI binding (free tier: 10,000 requests/day)
 [ai]
