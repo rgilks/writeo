@@ -339,13 +339,15 @@ The project uses git hooks to ensure code quality:
 - **Pre-commit hook**: Automatically formats code, runs linting, and type checking
 - **Pre-push hook**: Runs all tests against local servers before pushing
 
-**Git hooks are automatically installed** when you run `npm install` (via the `postinstall` script). If you need to reinstall them manually:
+**Git hooks must be installed manually** by running:
 
 ```bash
 npm run install-hooks
 # or
 ./scripts/install-hooks.sh
 ```
+
+This is a one-time setup step that each developer should run after cloning the repository.
 
 **Available commands:**
 
