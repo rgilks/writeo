@@ -386,7 +386,7 @@ git push --no-verify    # Skip pre-push hook
 
 **Optional:**
 
-- `LLM_PROVIDER` - LLM provider: "openai" (default), "groq", "anthropic", "google"
+- `LLM_PROVIDER` - LLM provider: "openai" (default) or "groq"
 - `AI_MODEL` - Model name (default: "gpt-4o-mini" for OpenAI, "llama-3.3-70b-versatile" for Groq)
 - `MODAL_LT_URL` - LanguageTool Modal service endpoint
 - `LT_LANGUAGE` - Default language code (default: `"en-GB"`)

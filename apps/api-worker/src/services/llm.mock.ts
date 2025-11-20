@@ -1,33 +1,18 @@
 /**
- * Mock implementation of OpenAI API for testing
+ * Shared mock implementation for LLM APIs (OpenAI, Groq)
  * Returns deterministic responses to avoid API costs during tests
  */
 
-export interface MockOpenAIResponse {
-  content: string;
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-/**
- * Mock OpenAI API call - returns deterministic responses based on input
- */
-export async function mockCallOpenAIAPI(
+export async function mockCallLLMAPI(
   apiKey: string,
   modelName: string,
   messages: Array<{ role: string; content: string }>,
   maxTokens: number
 ): Promise<string> {
-  // Simulate API delay (10-50ms)
   await new Promise((resolve) => setTimeout(resolve, Math.random() * 40 + 10));
 
   const userMessage = messages.find((m) => m.role === "user")?.content || "";
-  const systemMessage = messages.find((m) => m.role === "system")?.content || "";
 
-  // Detect what type of request this is based on the prompt
   const isGrammarCheck =
     userMessage.includes("grammar and language checker") ||
     userMessage.includes("identify ALL grammar");
@@ -39,7 +24,6 @@ export async function mockCallOpenAIAPI(
     userMessage.includes("Give clear, direct feedback");
 
   if (isGrammarCheck) {
-    // Mock grammar error detection response
     return JSON.stringify({
       errors: [
         {
@@ -69,7 +53,6 @@ export async function mockCallOpenAIAPI(
   }
 
   if (isTeacherFeedback) {
-    // Mock teacher feedback response
     if (userMessage.includes("clues")) {
       return "Try checking your verb tenses - look for words like 'yesterday' or 'last week' that indicate past time.";
     }
@@ -86,12 +69,10 @@ The student's essay shows good effort but needs improvement in grammar accuracy 
 - Subject-verb agreement issues present
 - These errors affect clarity and should be corrected`;
     }
-    // Initial feedback
     return "Your essay shows good ideas, but there are some grammar errors that need attention. Focus on using correct verb tenses, especially when describing past events.";
   }
 
   if (isFeedbackRequest) {
-    // Mock detailed feedback response
     return JSON.stringify({
       detailed: {
         relevance: {
@@ -123,27 +104,19 @@ The student's essay shows good effort but needs improvement in grammar accuracy 
     });
   }
 
-  // Default mock response
-  return "Mock OpenAI API response";
+  return "Mock LLM API response";
 }
 
-/**
- * Mock OpenAI streaming API - yields text chunks asynchronously
- */
-export async function* mockStreamOpenAIAPI(
+export async function* mockStreamLLMAPI(
   apiKey: string,
   modelName: string,
   messages: Array<{ role: string; content: string }>,
   maxTokens: number
 ): AsyncGenerator<string, void, unknown> {
-  // Get the full response using the non-streaming mock
-  const fullResponse = await mockCallOpenAIAPI(apiKey, modelName, messages, maxTokens);
-
-  // Simulate streaming by yielding word by word with small delays
+  const fullResponse = await mockCallLLMAPI(apiKey, modelName, messages, maxTokens);
   const words = fullResponse.match(/\S+|\s+/g) || [];
   for (const word of words) {
     yield word;
-    // Small delay to simulate network streaming (5-15ms per word)
     await new Promise((resolve) => setTimeout(resolve, Math.random() * 10 + 5));
   }
 }

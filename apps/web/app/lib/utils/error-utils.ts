@@ -1,8 +1,5 @@
 import type { LanguageToolError } from "@writeo/shared";
 
-/**
- * Group errors by type
- */
 export function groupErrorsByType(
   errors: LanguageToolError[]
 ): Record<string, LanguageToolError[]> {
@@ -19,9 +16,6 @@ export function groupErrorsByType(
   return grouped;
 }
 
-/**
- * Get error count by type
- */
 export function getErrorCountByType(errors: LanguageToolError[]): Record<string, number> {
   const counts: Record<string, number> = {};
 

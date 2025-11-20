@@ -11,8 +11,4 @@ directory = ".open-next/assets"
 binding = "ASSETS"
 
 [vars]
-# API base URL for server-side calls
 API_BASE_URL = "https://writeo-api-worker.rob-gilks.workers.dev"
-
-# Note: API_KEY should be set as a secret via 'wrangler secret put API_KEY'
-# With nodejs_compat flag and cloudflare-node wrapper, secrets are available via process.env

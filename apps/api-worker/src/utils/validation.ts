@@ -1,7 +1,3 @@
-/**
- * Validates text input with comprehensive security checks
- * Includes Unicode normalization, XSS detection, and edge case handling
- */
 export function validateText(
   text: string,
   maxLength: number = 50000
@@ -10,8 +6,6 @@ export function validateText(
     return { valid: false, error: "Text must be a non-empty string" };
   }
 
-  // Normalize Unicode to prevent homograph attacks and encoding issues
-  // NFKC normalization: Compatibility decomposition followed by canonical composition
   let normalizedText: string;
   try {
     normalizedText = text.normalize("NFKC");
@@ -23,7 +17,6 @@ export function validateText(
     return { valid: false, error: "Text cannot be empty or whitespace only" };
   }
 
-  // Check for excessive length (prevent DoS)
   if (normalizedText.length > maxLength) {
     return {
       valid: false,
@@ -31,7 +24,6 @@ export function validateText(
     };
   }
 
-  // Check for suspiciously long sequences of the same character (potential DoS)
   if (/(.)\1{100,}/.test(normalizedText)) {
     return {
       valid: false,
@@ -39,7 +31,6 @@ export function validateText(
     };
   }
 
-  // XSS and injection pattern detection
   const dangerousPatterns = [
     /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
     /<script[\s\S]*?>/gi,

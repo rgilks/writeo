@@ -278,7 +278,7 @@ Set `OPENAI_API_KEY=MOCK` or `GROQ_API_KEY=MOCK` to use mock responses (no real 
 
 ### 5. Mocking System ✅
 
-**Implementation:** `apps/api-worker/src/services/openai.ts` + `openai.mock.ts`
+**Implementation:** `apps/api-worker/src/services/openai.ts` + `llm.mock.ts`
 
 - Tests automatically use mocks (no real API calls)
 - Development can use mocks to avoid costs
@@ -452,7 +452,7 @@ OPENAI_API_KEY=test_anything npm run dev
 
 **Mock Responses Not Working:**
 
-- Check `openai.mock.ts` for correct response format
+- Check `llm.mock.ts` for correct response format
 - Verify mock detection logic in `openai.ts`
 - Ensure mock module is imported correctly
 

@@ -1,9 +1,6 @@
 import type { DraftHistory, ProgressMetrics } from "../stores/draft-store";
 import type { LanguageToolError } from "@writeo/shared";
 
-/**
- * Calculate error reduction between two drafts
- */
 export function calculateErrorReduction(
   previousDraft: DraftHistory | null,
   currentDraft: DraftHistory
@@ -18,9 +15,6 @@ export function calculateErrorReduction(
   return previousDraft.errorCount - currentDraft.errorCount;
 }
 
-/**
- * Calculate score improvement between two drafts
- */
 export function calculateScoreImprovement(
   previousDraft: DraftHistory | null,
   currentDraft: DraftHistory
