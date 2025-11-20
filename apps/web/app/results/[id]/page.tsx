@@ -85,7 +85,7 @@ export default function ResultsPage() {
           typeof window !== "undefined"
             ? localStorage.getItem("writeo-store-results") === "true"
             : false;
-        
+
         // Get parent results from localStorage if in local mode
         let parentResults: any = undefined;
         if (!storeResults && typeof window !== "undefined" && parentId) {
@@ -98,11 +98,16 @@ export default function ResultsPage() {
             }
           }
         }
-        
+
         // Try to fetch from server (only works if user opted in to server storage)
         try {
           const results = parentId
-            ? await getSubmissionResultsWithDraftTracking(submissionId, parentId, storeResults, parentResults)
+            ? await getSubmissionResultsWithDraftTracking(
+                submissionId,
+                parentId,
+                storeResults,
+                parentResults
+              )
             : await getSubmissionResults(submissionId);
           if (!cancelled) {
             setData(results);

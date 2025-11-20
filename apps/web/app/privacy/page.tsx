@@ -153,9 +153,9 @@ export default function PrivacyPage() {
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               <strong>Writeo does not use HTTP cookies.</strong> We do not set, read, or store any
-              cookies on your device. This means you do not need to accept or manage cookie preferences
-              when using Writeo. There is no cookie consent banner because there are no cookies to
-              consent to.
+              cookies on your device. This means you do not need to accept or manage cookie
+              preferences when using Writeo. There is no cookie consent banner because there are no
+              cookies to consent to.
             </p>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               While we don't use cookies, Writeo does use browser storage APIs to provide

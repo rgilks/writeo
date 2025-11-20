@@ -219,6 +219,29 @@ export function EditableEssay({
         )}
       </AnimatePresence>
 
+      <textarea
+        value={editedText}
+        onChange={handleChange}
+        onInput={handleInput}
+        disabled={isSubmitting}
+        translate="no"
+        lang="en"
+        style={{
+          width: "100%",
+          minHeight: "300px",
+          padding: "var(--spacing-md)",
+          fontSize: "16px",
+          lineHeight: "1.5",
+          fontFamily: "inherit",
+          border: "1px solid rgba(139, 69, 19, 0.3)",
+          borderRadius: "var(--border-radius)",
+          backgroundColor: "var(--bg-primary)",
+          color: "var(--text-primary)",
+          resize: "vertical",
+          marginBottom: "var(--spacing-sm)",
+        }}
+      />
+
       {/* Reflection Prompt */}
       {hasChanges && (
         <div
@@ -268,29 +291,6 @@ export function EditableEssay({
           />
         </div>
       )}
-
-      <textarea
-        value={editedText}
-        onChange={handleChange}
-        onInput={handleInput}
-        disabled={isSubmitting}
-        translate="no"
-        lang="en"
-        style={{
-          width: "100%",
-          minHeight: "300px",
-          padding: "var(--spacing-md)",
-          fontSize: "16px",
-          lineHeight: "1.5",
-          fontFamily: "inherit",
-          border: "1px solid rgba(139, 69, 19, 0.3)",
-          borderRadius: "var(--border-radius)",
-          backgroundColor: "var(--bg-primary)",
-          color: "var(--text-primary)",
-          resize: "vertical",
-          marginBottom: "var(--spacing-sm)",
-        }}
-      />
 
       {/* Word count display */}
       <div

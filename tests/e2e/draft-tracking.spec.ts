@@ -193,8 +193,10 @@ test.describe("Draft Tracking", () => {
 
     // Create first submission and store in localStorage
     const essay1 = generateValidEssay();
-    const { submissionId: firstSubmissionId, results: firstResults } =
-      await createTestSubmission("Describe your weekend.", essay1);
+    const { submissionId: firstSubmissionId, results: firstResults } = await createTestSubmission(
+      "Describe your weekend.",
+      essay1
+    );
 
     // Store in localStorage (simulating what the app does)
     await page.evaluate(

@@ -424,13 +424,13 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
     try {
       // Use current submission ID as parent if not provided
       const parentId = parentSubmissionId || submissionId;
-      
+
       // Check if we're in local mode (not saving to server)
       const storeResults =
         typeof window !== "undefined"
           ? localStorage.getItem("writeo-store-results") === "true"
           : false;
-      
+
       // Get parent results from localStorage if in local mode
       let parentResults: any = undefined;
       if (!storeResults && typeof window !== "undefined" && parentId) {
@@ -443,7 +443,7 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
           }
         }
       }
-      
+
       const { submissionId: newSubmissionId, results } = await submitEssay(
         questionText,
         editedText,
