@@ -68,15 +68,13 @@ export default function WritePage() {
   });
   const [storeResults, setStoreResults] = useState(false); // Default: false (no server storage)
 
-  // Load saved preference from localStorage on mount
+  // Load saved preference from localStorage on mount and when route changes
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("writeo-store-results");
-      if (saved === "true") {
-        setStoreResults(true);
-      }
+      setStoreResults(saved === "true");
     }
-  }, []);
+  }, [taskId]); // Re-read when task ID changes
 
   // Save preference to localStorage whenever it changes
   const handleStoreResultsChange = (checked: boolean) => {

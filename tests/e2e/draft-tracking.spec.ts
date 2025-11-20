@@ -108,8 +108,10 @@ test.describe("Draft Tracking", () => {
     resultsPage,
     page,
   }) => {
+    // Navigate to a page first to enable localStorage access
+    await page.goto("/");
+
     // Ensure we're in local mode (storeResults = false)
-    await page.goto("/write/1");
     await page.evaluate(() => {
       localStorage.setItem("writeo-store-results", "false");
     });
@@ -117,11 +119,37 @@ test.describe("Draft Tracking", () => {
     // Create first draft
     const essay1 = generateValidEssay();
     await writePage.goto("1");
+
+    // Wait for component to mount and verify storeResults is false
+    await page.waitForTimeout(1000);
+
+    // Verify the checkbox is unchecked (storeResults = false)
+    const checkbox = page.locator('input[type="checkbox"][name="storeResults"]');
+    if ((await checkbox.count()) > 0) {
+      const isChecked = await checkbox.first().isChecked();
+      expect(isChecked).toBe(false);
+    }
+
     await writePage.typeEssay(essay1);
 
     // Wait for button to enable
     await page.waitForTimeout(1500);
+
+    // Check button is enabled before clicking
+    const isDisabled = await writePage.isSubmitButtonDisabled();
+    expect(isDisabled).toBe(false);
+
     await writePage.clickSubmit();
+
+    // Check for actual errors after submission attempt (not checklist text)
+    const error = page.locator('.error[role="alert"]');
+    if ((await error.count()) > 0) {
+      const errorText = await error.first().textContent();
+      // Ignore if it's just checklist text
+      if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
+        throw new Error(`Submission failed with error: ${errorText}`);
+      }
+    }
 
     // Wait for results
     await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
@@ -153,7 +181,22 @@ test.describe("Draft Tracking", () => {
 
     // Wait for button to enable
     await page.waitForTimeout(1500);
+
+    // Check button is enabled before clicking
+    const isDisabled2 = await writePage.isSubmitButtonDisabled();
+    expect(isDisabled2).toBe(false);
+
     await writePage.clickSubmit();
+
+    // Check for actual errors after submission attempt (not checklist text)
+    const error2 = page.locator('.error[role="alert"]');
+    if ((await error2.count()) > 0) {
+      const errorText = await error2.first().textContent();
+      // Ignore if it's just checklist text
+      if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
+        throw new Error(`Second submission failed with error: ${errorText}`);
+      }
+    }
 
     // Wait for second results
     await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
@@ -186,7 +229,7 @@ test.describe("Draft Tracking", () => {
     page,
   }) => {
     // Ensure we're in local mode
-    await page.goto("/write/1");
+    await page.goto("/");
     await page.evaluate(() => {
       localStorage.setItem("writeo-store-results", "false");
     });
@@ -227,6 +270,15 @@ test.describe("Draft Tracking", () => {
       if (buttonCount > 0) {
         await submitButton.first().click();
 
+        // Check for actual errors (not checklist text)
+        const error = page.locator('.error[role="alert"]');
+        if ((await error.count()) > 0) {
+          const errorText = await error.first().textContent();
+          if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
+            throw new Error(`Draft creation failed with error: ${errorText}`);
+          }
+        }
+
         // Wait for new results page
         await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
         await resultsPage.waitForResults();
@@ -240,6 +292,15 @@ test.describe("Draft Tracking", () => {
         // Verify draft was created successfully
         const newUrl = page.url();
         expect(newUrl).toContain("/results/");
+
+        // Verify the new submission is stored in localStorage
+        const newSubmissionId = newUrl.match(/\/results\/([a-f0-9-]+)/)?.[1];
+        expect(newSubmissionId).toBeTruthy();
+
+        const storedResults = await page.evaluate((submissionId) => {
+          return localStorage.getItem(`results_${submissionId}`);
+        }, newSubmissionId);
+        expect(storedResults).toBeTruthy();
       }
     } else {
       // If editable essay is not available, skip this part of the test
