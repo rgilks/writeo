@@ -187,8 +187,8 @@ test.describe("Draft Tracking", () => {
       }
     }
 
-    // Wait for results
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    // Wait for results - longer timeout for production API calls
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 });
     await resultsPage.waitForResults();
 
     // Get the first submission ID from URL
