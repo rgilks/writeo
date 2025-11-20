@@ -454,7 +454,6 @@ export default function WritePage() {
                   type="submit"
                   className="btn btn-primary"
                   disabled={loading || !answer.trim()}
-                  style={{ flex: 1 }}
                   title="We value your privacy – see our policy"
                 >
                   {loading ? (

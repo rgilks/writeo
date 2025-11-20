@@ -83,7 +83,7 @@ test.describe("Visual & UI Tests", () => {
     }
   });
 
-  test("TC-FE-036: Error tooltips appear on hover", async ({ resultsPage, page }) => {
+  test("TC-FE-036: Error popups appear on click", async ({ resultsPage, page }) => {
     const essay = getTestEssay("withErrors");
     const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
 
@@ -92,23 +92,25 @@ test.describe("Visual & UI Tests", () => {
 
     await page.waitForTimeout(3000);
 
-    // Find error spans (with title attribute or data attributes)
-    const errorSpans = page.locator("span[title], span[data-error], span[aria-label]");
+    // Find error spans (highlighted text with wavy underline)
+    const errorSpans = page.locator('span[style*="text-decoration"], span[style*="underline"]');
     const errorCount = await errorSpans.count();
 
     if (errorCount > 0) {
-      // Hover over first error span
+      // Click on first error span
       const firstError = errorSpans.first();
-      await firstError.hover();
+      await firstError.click();
 
       await page.waitForTimeout(500);
 
-      // Check if tooltip appears (title attribute or aria-label)
-      const title = await firstError.getAttribute("title");
-      const ariaLabel = await firstError.getAttribute("aria-label");
+      // Check if popup appears (should have error detail content)
+      const popup = page.locator('div[style*="position: fixed"]').filter({
+        hasText: /Error|Grammar|Spelling|Example/i,
+      });
+      const popupCount = await popup.count();
 
-      // Should have some tooltip text
-      expect(title || ariaLabel).toBeTruthy();
+      // Popup should appear when clicking on error
+      expect(popupCount).toBeGreaterThan(0);
     }
   });
 

@@ -5,7 +5,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { LanguageToolError } from "@writeo/shared";
 
 // Error detail component - simplified to show explanations directly
-function ErrorDetail({ error, errorText }: { error: LanguageToolError; errorText: string }) {
+function ErrorDetail({
+  error,
+  errorText,
+  onClose,
+}: {
+  error: LanguageToolError;
+  errorText: string;
+  onClose?: () => void;
+}) {
   const hasStructuredFeedback = !!(error.errorType || error.explanation || error.example);
 
   if (!hasStructuredFeedback) {
@@ -17,9 +25,37 @@ function ErrorDetail({ error, errorText }: { error: LanguageToolError; errorText
           fontSize: "14px",
           color: "var(--text-primary)",
           lineHeight: "1.5",
+          position: "relative",
         }}
         lang="en"
       >
+        {onClose && (
+          <button
+            onClick={onClose}
+            style={{
+              position: "absolute",
+              top: "-8px",
+              right: "-8px",
+              background: "var(--bg-primary)",
+              border: "1px solid var(--border-color)",
+              borderRadius: "50%",
+              width: "24px",
+              height: "24px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: 0,
+              color: "var(--text-secondary)",
+            }}
+            aria-label="Close"
+            lang="en"
+          >
+            ×
+          </button>
+        )}
         {error.message}
         {error.suggestions?.[0] && ` → "${error.suggestions[0]}"`}
       </div>
@@ -36,7 +72,36 @@ function ErrorDetail({ error, errorText }: { error: LanguageToolError; errorText
   const confidenceColor = isExperimental ? "#f59e0b" : isMediumConfidence ? "#f97316" : "#10b981";
 
   return (
-    <div style={{ marginTop: "var(--spacing-sm)" }} lang="en">
+    <div style={{ marginTop: "var(--spacing-sm)", position: "relative" }} lang="en">
+      {onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: "-8px",
+            right: "-8px",
+            background: "var(--bg-primary)",
+            border: "1px solid var(--border-color)",
+            borderRadius: "50%",
+            width: "24px",
+            height: "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            fontSize: "18px",
+            lineHeight: "1",
+            padding: 0,
+            color: "var(--text-secondary)",
+            zIndex: 1,
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          }}
+          aria-label="Close"
+          lang="en"
+        >
+          ×
+        </button>
+      )}
       {/* Error type badge with subtle confidence indicator */}
       <div
         style={{
@@ -562,35 +627,63 @@ function ErrorSpan({
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       const padding = 8; // Padding from viewport edges
+      const isMobile = viewportWidth < 640; // Mobile breakpoint
 
-      // Calculate initial position (below the error)
-      let top = rect.bottom + 4;
-      let left = rect.left;
+      let top: number;
+      let left: number;
 
-      // Adjust horizontal position if popup would go off right edge
-      if (left + popupRect.width > viewportWidth - padding) {
-        left = viewportWidth - popupRect.width - padding;
-        // If still too wide, align to left edge
+      if (isMobile) {
+        // On mobile, center horizontally and position below text
+        left = Math.max(padding, (viewportWidth - popupRect.width) / 2);
+        top = rect.bottom + 8; // 8px gap below the text
+
+        // If popup would go off bottom, try above
+        if (top + popupRect.height > viewportHeight - padding) {
+          const topAbove = rect.top - popupRect.height - 8;
+          if (topAbove >= padding) {
+            top = topAbove;
+          } else {
+            // If can't fit above, center vertically
+            top = Math.max(padding, (viewportHeight - popupRect.height) / 2);
+          }
+        }
+      } else {
+        // On desktop, try to position to the right of the text first
+        top = rect.top;
+        left = rect.right + 8; // 8px gap from the text
+
+        // If popup would go off right edge, try left side
+        if (left + popupRect.width > viewportWidth - padding) {
+          const leftSide = rect.left - popupRect.width - 8;
+          if (leftSide >= padding) {
+            left = leftSide;
+          } else {
+            // If can't fit on left either, align to right edge
+            left = viewportWidth - popupRect.width - padding;
+          }
+        }
+
+        // Adjust horizontal position if popup would go off left edge
         if (left < padding) {
           left = padding;
         }
-      }
 
-      // Adjust horizontal position if popup would go off left edge
-      if (left < padding) {
-        left = padding;
-      }
-
-      // Adjust vertical position if popup would go off bottom edge
-      if (top + popupRect.height > viewportHeight - padding) {
-        // Try above the error instead
-        const topAbove = rect.top - popupRect.height - 4;
-        if (topAbove >= padding) {
-          top = topAbove;
-        } else {
-          // If can't fit above either, position at bottom of viewport
-          top = viewportHeight - popupRect.height - padding;
+        // Adjust vertical position to keep popup aligned with text
+        if (top + popupRect.height > viewportHeight - padding) {
+          // Try above the error instead
+          const topAbove = rect.top - popupRect.height - 8;
+          if (topAbove >= padding) {
+            top = topAbove;
+          } else {
+            // If can't fit above either, position at bottom of viewport
+            top = viewportHeight - popupRect.height - padding;
+          }
         }
+      }
+
+      // Ensure popup doesn't go above viewport
+      if (top < padding) {
+        top = padding;
       }
 
       // Apply calculated position
@@ -609,6 +702,32 @@ function ErrorSpan({
     return () => window.removeEventListener("resize", positionPopup);
   }, [isActive]);
 
+  // Close popup when clicking outside
+  useEffect(() => {
+    if (!isActive) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        popupRef.current &&
+        errorRef.current &&
+        !popupRef.current.contains(event.target as Node) &&
+        !errorRef.current.contains(event.target as Node)
+      ) {
+        onDeactivate();
+      }
+    };
+
+    // Use a small delay to avoid closing immediately when opening
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isActive, onDeactivate]);
+
   return (
     <>
       <span
@@ -621,9 +740,14 @@ function ErrorSpan({
           display: "inline",
           marginBottom: 0,
         }}
-        onMouseEnter={onActivate}
-        onMouseLeave={onDeactivate}
-        onClick={() => (isActive ? onDeactivate() : onActivate())}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isActive) {
+            onDeactivate();
+          } else {
+            onActivate();
+          }
+        }}
       >
         <span
           className="underline decoration-wavy cursor-pointer"
@@ -637,6 +761,7 @@ function ErrorSpan({
             padding: "2px 2px",
             borderRadius: "3px",
             fontWeight: 500,
+            cursor: "pointer",
           }}
         >
           {errorText}
@@ -655,18 +780,18 @@ function ErrorSpan({
               borderRadius: "var(--border-radius)",
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               minWidth: "250px",
-              maxWidth: "400px",
+              maxWidth: "min(400px, calc(100vw - 16px))",
+              width: "max-content",
               zIndex: 1000,
             }}
             lang="en"
-            onMouseEnter={onActivate}
-            onMouseLeave={onDeactivate}
+            onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, y: -5, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -5, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           >
-            <ErrorDetail error={error} errorText={errorText} />
+            <ErrorDetail error={error} errorText={errorText} onClose={onDeactivate} />
           </motion.div>
         )}
       </AnimatePresence>
