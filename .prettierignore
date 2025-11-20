@@ -37,8 +37,17 @@ __pycache__/
 .Python
 *.egg-info/
 .pytest_cache/
+.mypy_cache/
+.mypy-cache/
 .coverage
 .coverage.*
+htmlcov/
+.tox/
+.venv/
+venv/
+ENV/
+env/
+*.egg
 
 # Modal
 .modal/
