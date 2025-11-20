@@ -416,58 +416,53 @@ test.describe("Draft Tracking", () => {
     // Create second draft via editable essay
     await page.waitForTimeout(2000);
     const editableEssay = await resultsPage.getEditableEssay();
-    const editableCount = await editableEssay.count();
+    await expect(editableEssay.first()).toBeVisible({ timeout: 10000 });
 
-    if (editableCount > 0) {
-      // Type additional text to create a draft
-      await editableEssay.first().fill(essay1 + " Improved version with server storage.");
+    // Type additional text to create a draft
+    await editableEssay.first().fill(essay1 + " Improved version with server storage.");
 
-      // Find and click submit/resubmit button
-      const submitButton = page.locator('button:has-text("Submit Improved Draft")');
-      const buttonCount = await submitButton.count();
+    // Find and click submit/resubmit button
+    const submitButton = page.locator('button:has-text("Submit Improved Draft")');
+    const buttonCount = await submitButton.count();
 
-      if (buttonCount > 0) {
-        await submitButton.first().click();
+    if (buttonCount > 0) {
+      await submitButton.first().click();
 
-        // Check for actual errors (not checklist text)
-        const error = page.locator('.error[role="alert"]');
-        if ((await error.count()) > 0) {
-          const errorText = await error.first().textContent();
-          if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
-            throw new Error(`Draft creation failed with error: ${errorText}`);
-          }
+      // Check for actual errors (not checklist text)
+      const error = page.locator('.error[role="alert"]');
+      if ((await error.count()) > 0) {
+        const errorText = await error.first().textContent();
+        if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
+          throw new Error(`Draft creation failed with error: ${errorText}`);
         }
-
-        // Wait for new results page - should load immediately from localStorage
-        await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
-        await resultsPage.waitForResults();
-
-        // Verify no "Results Not Available" error (critical fix)
-        const errorMessages = await page
-          .locator("text=/Results Not Available|submission.*not.*found/i")
-          .count();
-        expect(errorMessages).toBe(0);
-
-        // Verify the new submission is stored in localStorage immediately
-        const newUrl = page.url();
-        const newSubmissionId = newUrl.match(/\/results\/([a-f0-9-]+)/)?.[1];
-        expect(newSubmissionId).toBeTruthy();
-        expect(newSubmissionId).not.toBe(firstSubmissionId);
-
-        const storedResults = await page.evaluate((submissionId) => {
-          return localStorage.getItem(`results_${submissionId}`);
-        }, newSubmissionId);
-        expect(storedResults).toBeTruthy(); // Critical: should be stored immediately
-
-        // Verify parent relationship is stored
-        const parentStored = await page.evaluate((submissionId) => {
-          return localStorage.getItem(`draft_parent_${submissionId}`);
-        }, newSubmissionId);
-        expect(parentStored).toBe(firstSubmissionId);
       }
-    } else {
-      // If editable essay is not available, skip this part of the test
-      expect(firstSubmissionId).toBeTruthy();
+
+      // Wait for new results page - should load immediately from localStorage
+      await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+      await resultsPage.waitForResults();
+
+      // Verify no "Results Not Available" error (critical fix)
+      const errorMessages = await page
+        .locator("text=/Results Not Available|submission.*not.*found/i")
+        .count();
+      expect(errorMessages).toBe(0);
+
+      // Verify the new submission is stored in localStorage immediately
+      const newUrl = page.url();
+      const newSubmissionId = newUrl.match(/\/results\/([a-f0-9-]+)/)?.[1];
+      expect(newSubmissionId).toBeTruthy();
+      expect(newSubmissionId).not.toBe(firstSubmissionId);
+
+      const storedResults = await page.evaluate((submissionId) => {
+        return localStorage.getItem(`results_${submissionId}`);
+      }, newSubmissionId);
+      expect(storedResults).toBeTruthy(); // Critical: should be stored immediately
+
+      // Verify parent relationship is stored
+      const parentStored = await page.evaluate((submissionId) => {
+        return localStorage.getItem(`draft_parent_${submissionId}`);
+      }, newSubmissionId);
+      expect(parentStored).toBe(firstSubmissionId);
     }
   });
 
@@ -551,50 +546,45 @@ test.describe("Draft Tracking", () => {
 
     // Verify draft history is visible and shows unique drafts
     // Wait for draft history to appear (may take a moment to render)
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     const draftHistory = await resultsPage.getDraftHistory();
-    await expect(draftHistory).toBeVisible({ timeout: 10000 });
+    const historyVisible = (await draftHistory.count()) > 0;
 
-    // Get all draft elements - look for elements containing "Draft" text
-    // The draft history container should have multiple draft items
-    const draftElements = page.locator("div:has-text(/^Draft \\d+/)");
+    // Draft history should be visible for multiple drafts
+    if (!historyVisible) {
+      // If not visible, wait a bit more and check again
+      await page.waitForTimeout(2000);
+      const draftHistoryRetry = await resultsPage.getDraftHistory();
+      const retryVisible = (await draftHistoryRetry.count()) > 0;
+      expect(retryVisible).toBe(true);
+    }
+
+    // Get all draft elements by looking for text containing "Draft" followed by a number
+    // Use a more flexible selector that finds draft items
+    const draftElements = page.locator("div").filter({ hasText: /Draft \d+/ });
+    await page.waitForTimeout(1000); // Give time for elements to render
     const draftCount = await draftElements.count();
 
-    // If we can't find drafts with that selector, try alternative
-    if (draftCount < 2) {
-      // Try finding by parent container
-      const historyContainer = page.locator("text=Draft History").locator("..").locator("..");
-      const altDrafts = historyContainer.locator("div").filter({ hasText: /Draft \d+/ });
-      const altCount = await altDrafts.count();
-      expect(altCount).toBeGreaterThanOrEqual(2);
+    // Should have at least 2 drafts
+    expect(draftCount).toBeGreaterThanOrEqual(2);
 
-      // Verify each draft number appears only once
-      const draftNumbers = new Set<number>();
-      for (let i = 0; i < altCount; i++) {
-        const draftText = await altDrafts.nth(i).textContent();
-        const match = draftText?.match(/Draft (\d+)/);
-        if (match) {
-          const draftNum = parseInt(match[1], 10);
-          expect(draftNumbers.has(draftNum)).toBe(false); // Should not be duplicate
-          draftNumbers.add(draftNum);
+    // Verify each draft number appears only once
+    const draftNumbers = new Set<number>();
+    for (let i = 0; i < draftCount; i++) {
+      const draftText = await draftElements.nth(i).textContent();
+      const match = draftText?.match(/Draft (\d+)/);
+      if (match) {
+        const draftNum = parseInt(match[1], 10);
+        // Check for duplicates
+        if (draftNumbers.has(draftNum)) {
+          throw new Error(`Duplicate draft number found: Draft ${draftNum}`);
         }
+        draftNumbers.add(draftNum);
       }
-      expect(draftNumbers.size).toBeGreaterThanOrEqual(2);
-    } else {
-      // Verify each draft number appears only once
-      const draftNumbers = new Set<number>();
-      for (let i = 0; i < draftCount; i++) {
-        const draftText = await draftElements.nth(i).textContent();
-        const match = draftText?.match(/Draft (\d+)/);
-        if (match) {
-          const draftNum = parseInt(match[1], 10);
-          expect(draftNumbers.has(draftNum)).toBe(false); // Should not be duplicate
-          draftNumbers.add(draftNum);
-        }
-      }
-      // Verify we have at least 2 unique draft numbers
-      expect(draftNumbers.size).toBeGreaterThanOrEqual(2);
     }
+
+    // Verify we have at least 2 unique draft numbers
+    expect(draftNumbers.size).toBeGreaterThanOrEqual(2);
   });
 });
