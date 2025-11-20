@@ -33,6 +33,7 @@ Writeo supports two operational modes:
 - **Cost:** ~$65-80/month (100 submissions/day)
 - **Performance:** 2-5s first request, 1-3s warm
 
+See [MODES.md](MODES.md) for quick mode switching guide.  
 See [OPERATIONS.md](OPERATIONS.md) for detailed mode comparison and configuration.
 
 ## Quick Deployment

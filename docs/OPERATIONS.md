@@ -2,6 +2,8 @@
 
 Essential operations information for running Writeo in production.
 
+**Quick Mode Switching:** See [MODES.md](MODES.md) for easy mode switching guide.
+
 ## Environment Variables
 
 ### File Structure

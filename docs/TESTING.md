@@ -1,6 +1,6 @@
-# Test Suite
+# Testing Guide
 
-Quick reference for running and writing tests. For complete test plan, see [docs/TEST_PLAN.md](../docs/TEST_PLAN.md).
+Quick reference for running and writing tests. For complete test plan, see [TEST_PLAN.md](TEST_PLAN.md).
 
 ## Quick Start
 
@@ -12,8 +12,8 @@ npm run test:all      # Both
 
 ## Test Structure
 
-- **API Tests** (`api.test.ts`) - Integration tests for API endpoints
-- **E2E Tests** (`e2e/*.spec.ts`) - Browser tests for user flows
+- **API Tests** (`tests/api.test.ts`) - Integration tests for API endpoints
+- **E2E Tests** (`tests/e2e/*.spec.ts`) - Browser tests for user flows
 
 ## Configuration
 
@@ -25,21 +25,21 @@ API_BASE=http://localhost:8787
 PLAYWRIGHT_BASE_URL=http://localhost:3000
 ```
 
-## Cost Control: Groq API Mocking
+## Cost Control: LLM API Mocking
 
-**Tests automatically use mocked Groq API responses by default** to avoid API costs. The mocking system:
+**Tests automatically use mocked LLM API responses by default** to avoid API costs. The mocking system:
 
 - ✅ **No API costs** - Tests use deterministic mock responses
-- ✅ **Automatic detection** - Enabled when `GROQ_API_KEY=MOCK` or `MOCK_GROQ=true`
+- ✅ **Automatic detection** - Enabled when `OPENAI_API_KEY=MOCK` / `GROQ_API_KEY=MOCK` or `MOCK_OPENAI=true` / `MOCK_GROQ=true`
 - ✅ **Realistic responses** - Mocks return proper data structures for testing
 
 **To use real API (for integration tests only):**
 
 ```bash
-MOCK_GROQ=false npm test
+MOCK_OPENAI=false MOCK_GROQ=false npm test
 ```
 
-See [docs/GROQ_COST_CONTROL.md](../docs/GROQ_COST_CONTROL.md) for details on token usage and cost optimization.
+See [COST_REVIEW.md](COST_REVIEW.md) for cost optimization details.
 
 ## Writing Tests
 
@@ -65,12 +65,12 @@ test("description", async ({ writePage, page }) => {
 
 ## Test Data
 
-Standard test essays available via `helpers.ts`:
+Standard test essays available via `tests/helpers.ts`:
 
 - `getTestEssay("withErrors")` - Essay with grammar errors
 - `generateValidEssay()` - 250-500 word essay
 
 ## References
 
-- [docs/TEST_PLAN.md](../docs/TEST_PLAN.md) - Complete test plan
-- [scripts/README.md](../scripts/README.md) - Scripts documentation
+- [TEST_PLAN.md](TEST_PLAN.md) - Complete test plan
+- [SCRIPTS.md](SCRIPTS.md) - Scripts documentation

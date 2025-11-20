@@ -129,7 +129,8 @@ cp .env.example .env.local
 # Edit .env.local with your values
 ```
 
-See [docs/OPERATIONS.md](docs/OPERATIONS.md) for detailed environment variable documentation.
+See [docs/OPERATIONS.md](docs/OPERATIONS.md) for detailed environment variable documentation.  
+See [docs/MODES.md](docs/MODES.md) for quick mode switching guide.
 
 ### One-Command Deployment
 
@@ -404,6 +405,8 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for complete environment variable r
 - 🏗️ [Architecture](docs/ARCHITECTURE.md) - System architecture and design
 - 🔌 [API Specification](docs/SPEC.md) - Complete API reference
 - 💰 [Cost Review](docs/COST_REVIEW.md) - Cost analysis and optimization
+- 🧪 [Testing Guide](docs/TESTING.md) - Testing quick reference
+- 📜 [Scripts Reference](docs/SCRIPTS.md) - Utility scripts documentation
 - ⚖️ [Legal Compliance](docs/LEGAL_COMPLIANCE.md) - Compliance checklist
 - ✅ [Status](docs/STATUS.md) - Current status and roadmap
 
@@ -464,7 +467,7 @@ npm run test:e2e:ui   # Playwright UI mode
 - ✅ **Browser Verification** - Critical features verified
 - ✅ **Manual Testing** - All critical features tested
 
-See [docs/TEST_PLAN.md](docs/TEST_PLAN.md) for test plan and [tests/README.md](tests/README.md) for test suite documentation.
+See [docs/TESTING.md](docs/TESTING.md) for testing guide and [docs/TEST_PLAN.md](docs/TEST_PLAN.md) for test plan overview.
 
 ---
 
@@ -641,7 +644,7 @@ See [docs/STATUS.md](docs/STATUS.md) for detailed status information.
 
 ## 🗺️ Roadmap
 
-_No planned enhancements at this time._
+Currently focused on stability and performance optimization. Future enhancements will be added based on user feedback.
 
 ---
 
