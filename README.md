@@ -404,8 +404,9 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for complete environment variable r
 - 🚀 [Deployment Guide](docs/DEPLOYMENT.md) - Step-by-step deployment instructions
 - 🏗️ [Architecture](docs/ARCHITECTURE.md) - System architecture and design
 - 🔌 [API Specification](docs/SPEC.md) - Complete API reference
+- 💾 [State Management](docs/STATE_MANAGEMENT.md) - Frontend state management (Zustand, Immer)
 - 💰 [Cost Review](docs/COST_REVIEW.md) - Cost analysis and optimization
-- 🧪 [Testing Guide](docs/TESTING.md) - Testing quick reference
+- 🧪 [Testing Guide](docs/TESTING.md) - Complete testing guide
 - 📜 [Scripts Reference](docs/SCRIPTS.md) - Utility scripts documentation
 - ⚖️ [Legal Compliance](docs/LEGAL_COMPLIANCE.md) - Compliance checklist
 - ✅ [Status](docs/STATUS.md) - Current status and roadmap
@@ -467,7 +468,7 @@ npm run test:e2e:ui   # Playwright UI mode
 - ✅ **Browser Verification** - Critical features verified
 - ✅ **Manual Testing** - All critical features tested
 
-See [docs/TESTING.md](docs/TESTING.md) for testing guide and [docs/TEST_PLAN.md](docs/TEST_PLAN.md) for test plan overview.
+See [docs/TESTING.md](docs/TESTING.md) for complete testing guide.
 
 ---
 

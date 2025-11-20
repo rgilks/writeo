@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { submitEssay } from "@/app/lib/actions";
+import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 
 // Task data - matches tasks from home page
 const taskData: Record<string, { title: string; prompt: string }> = {
@@ -66,22 +67,13 @@ export default function WritePage() {
     supportedOpinion: false,
     variedStructure: false,
   });
-  const [storeResults, setStoreResults] = useState(false); // Default: false (no server storage)
 
-  // Load saved preference from localStorage on mount and when route changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("writeo-store-results");
-      setStoreResults(saved === "true");
-    }
-  }, [taskId]); // Re-read when task ID changes
+  // Use preferences store for storeResults (persists across sessions)
+  const storeResults = usePreferencesStore((state) => state.storeResults);
+  const setStoreResults = usePreferencesStore((state) => state.setStoreResults);
 
-  // Save preference to localStorage whenever it changes
   const handleStoreResultsChange = (checked: boolean) => {
     setStoreResults(checked);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("writeo-store-results", checked.toString());
-    }
   };
 
   // Handle textarea change with explicit state update

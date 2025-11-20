@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { AchievementList } from "./AchievementBadge";
@@ -191,40 +191,28 @@ export function ProgressDashboard() {
     setMounted(true);
   }, []);
 
-  // Only access store after mount to prevent hydration mismatch
-  const store = useDraftStore();
-  const { drafts, progress, getStreak, getAchievements } = mounted
-    ? store
-    : {
-        drafts: {},
-        progress: {},
-        getStreak: () => ({ currentStreak: 0, longestStreak: 0, lastActivityDate: "" }),
-        getAchievements: () => [],
-      };
-  const streak = mounted
-    ? getStreak()
-    : { currentStreak: 0, longestStreak: 0, lastActivityDate: "" };
-  const achievements = mounted ? getAchievements() : [];
+  // Use selectors to subscribe only to needed state slices
+  // This prevents re-renders when unrelated state changes
+  const drafts = useDraftStore((state) => state.drafts);
+  const progress = useDraftStore((state) => state.progress);
+  const streak = useDraftStore((state) => state.streak);
+  const achievements = useDraftStore((state) => state.achievements);
 
-  // Calculate overall statistics (only after mount to avoid hydration mismatch)
-  const allDrafts = mounted ? Object.values(drafts).flat() : [];
-  const totalWritings = mounted ? Object.keys(drafts).length : 0;
-  const totalDrafts = allDrafts.length;
-
-  // Calculate average improvement
-  const improvements = mounted
-    ? Object.values(progress)
-        .map((p) => p.scoreImprovement || 0)
-        .filter((i) => i > 0)
-    : [];
-  const averageImprovement =
-    improvements.length > 0 ? improvements.reduce((a, b) => a + b, 0) / improvements.length : 0;
+  // Use computed selectors from store for better performance
+  const totalDrafts = useDraftStore((state) => state.getTotalDrafts());
+  const totalWritings = useDraftStore((state) => state.getTotalWritings());
+  const averageImprovement = useDraftStore((state) => state.getAverageImprovement());
 
   // Calculate practice streak (simplified - based on drafts in last 7 days)
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const recentDrafts = allDrafts.filter((d) => new Date(d.timestamp) >= sevenDaysAgo);
-  const practiceStreak = recentDrafts.length > 0 ? Math.min(7, recentDrafts.length) : 0;
+  // Use memoization to avoid recalculating on every render
+  const practiceStreak = useMemo(() => {
+    if (!mounted) return 0;
+    const allDrafts = Object.values(drafts).flat();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentDrafts = allDrafts.filter((d) => new Date(d.timestamp) >= sevenDaysAgo);
+    return recentDrafts.length > 0 ? Math.min(7, recentDrafts.length) : 0;
+  }, [mounted, drafts]);
 
   return (
     <motion.div

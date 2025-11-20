@@ -19,6 +19,7 @@ This directory contains all documentation for the Writeo project.
 ### Architecture & API
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, components, data flow, and performance
+- **[STATE_MANAGEMENT.md](STATE_MANAGEMENT.md)** - Frontend state management (Zustand, Immer, patterns)
 - **[SPEC.md](SPEC.md)** - Complete API specification with request/response examples
 
 ### Operations
@@ -29,8 +30,7 @@ This directory contains all documentation for the Writeo project.
 - **[COST_REVIEW.md](COST_REVIEW.md)** - Comprehensive cost analysis, guardrails, and optimization strategies
 - **[SCRIPTS.md](SCRIPTS.md)** - Scripts reference and usage guide
 - **[SERVICES.md](SERVICES.md)** - Individual services documentation (Modal, Shared package)
-- **[TESTING.md](TESTING.md)** - Testing guide and quick reference
-- **[TEST_PLAN.md](TEST_PLAN.md)** - Comprehensive testing guide with test cases and verification steps
+- **[TESTING.md](TESTING.md)** - Complete testing guide with test structure, examples, and best practices
 - **[openapi.yaml](openapi.yaml)** - OpenAPI 3.0 specification
 
 ### CI/CD
@@ -48,7 +48,7 @@ This directory contains all documentation for the Writeo project.
 **API:** [SPEC.md](SPEC.md) | [Interactive Docs](https://your-api-worker.workers.dev/docs)  
 **Status & Roadmap:** [STATUS.md](STATUS.md)  
 **Cost Analysis:** [COST_REVIEW.md](COST_REVIEW.md)  
-**Testing:** [TEST_PLAN.md](TEST_PLAN.md)  
+**Testing:** [TESTING.md](TESTING.md)  
 **Deployment:** [DEPLOYMENT.md](DEPLOYMENT.md)  
 **Architecture:** [ARCHITECTURE.md](ARCHITECTURE.md)  
 **CI/CD:** [.github/README.md](../.github/README.md)

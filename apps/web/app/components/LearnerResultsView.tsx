@@ -11,6 +11,7 @@ import { CEFRInfo, CEFRBadge } from "./CEFRInfo";
 import { CelebrationMessage } from "./CelebrationMessage";
 import { submitEssay } from "@/app/lib/actions";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
+import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 import { extractErrorIds, getTopErrorTypes } from "@/app/lib/utils/progress";
 import type { AssessmentResults, LanguageToolError } from "@writeo/shared";
 
@@ -224,7 +225,12 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
   const router = useRouter();
   const [isResubmitting, setIsResubmitting] = useState(false);
   const [isFeedbackRevealed, setIsFeedbackRevealed] = useState(false);
-  const { addDraft, getDraftHistory, trackFixedErrors } = useDraftStore();
+
+  // Use selectors to get only the functions we need (functions are stable, so this is fine)
+  // But we could also use individual selectors if we wanted to be more explicit
+  const addDraft = useDraftStore((state) => state.addDraft);
+  const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
+  const trackFixedErrors = useDraftStore((state) => state.trackFixedErrors);
 
   const parts = data.results?.parts || [];
   const firstPart = parts[0];
@@ -327,7 +333,7 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
 
         const errorIds = extractErrorIds(grammarErrors, finalAnswerText);
 
-        // Create a fresh draft object to avoid Immer issues
+        // Create draft data object
         const draftData = {
           draftNumber,
           submissionId,
@@ -352,7 +358,7 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
           const previousDrafts = getDraftHistory(parentSubmissionId);
           if (previousDrafts.length > 0) {
             const previousDraft = previousDrafts[previousDrafts.length - 1];
-            // Ensure errorIds are arrays
+            // Ensure errorIds are arrays (defensive copy)
             const previousErrorIds = Array.isArray(previousDraft.errorIds)
               ? [...previousDraft.errorIds]
               : [];
@@ -364,6 +370,8 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
         console.error("Error storing draft:", error);
       }
     }
+    // Note: Zustand store functions (addDraft, getDraftHistory, trackFixedErrors) are stable
+    // and don't change between renders, so they're safe to exclude from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     submissionId,
@@ -372,8 +380,9 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
     grammarErrors.length,
     finalAnswerText,
     parentSubmissionId,
-    // Note: Zustand store functions are stable, but including them causes re-renders
-    // They're excluded from deps to prevent infinite loops
+    addDraft,
+    getDraftHistory,
+    trackFixedErrors,
   ]);
 
   // Get stored draft history and merge with metadata, deduplicating by draftNumber
@@ -451,10 +460,7 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
       const parentId = parentSubmissionId || submissionId;
 
       // Check if we're in local mode (not saving to server)
-      const storeResults =
-        typeof window !== "undefined"
-          ? localStorage.getItem("writeo-store-results") === "true"
-          : false;
+      const storeResults = usePreferencesStore.getState().storeResults;
 
       // Get parent results from localStorage if in local mode
       let parentResults: any = undefined;

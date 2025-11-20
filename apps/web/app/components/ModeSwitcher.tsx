@@ -1,9 +1,10 @@
 "use client";
 
-import { useMode } from "@/app/lib/mode-context";
+import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 
 export function ModeSwitcher() {
-  const { mode, setMode } = useMode();
+  const mode = usePreferencesStore((state) => state.viewMode);
+  const setMode = usePreferencesStore((state) => state.setViewMode);
   const isDeveloper = mode === "developer";
 
   const toggleMode = () => {

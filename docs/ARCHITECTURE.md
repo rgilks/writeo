@@ -154,6 +154,28 @@ graph TB
 | **KV Store**        | Cloudflare KV               | Assessment results cache (90-day TTL, opt-in only)                   | ❌ No (storage only) |
 | **Browser Storage** | localStorage/sessionStorage | Default storage location (client-side only)                          | ✅ Yes (client-side) |
 
+### 3.1.1 Frontend State Management
+
+**Technology Stack:**
+
+- **Zustand** - Global state management
+- **Immer** - Immutable state updates
+- **useState** - Component-specific UI state
+
+**Stores:**
+
+- **Draft Store** - Draft history, progress tracking, achievements, streaks
+- **Preferences Store** - User preferences (view mode, storage settings)
+
+**Key Features:**
+
+- Selective subscriptions prevent unnecessary re-renders
+- Computed selectors for expensive calculations
+- DevTools integration for debugging
+- Automatic localStorage persistence with migration
+
+See [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) for detailed documentation.
+
 ### 3.2 Modal Services
 
 | Service                   | Technology             | Responsibility                    | Scale-to-Zero |

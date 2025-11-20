@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSubmissionResults, getSubmissionResultsWithDraftTracking } from "@/app/lib/actions";
-import { useMode } from "@/app/lib/mode-context";
+import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 import { LearnerResultsView } from "@/app/components/LearnerResultsView";
 import { DeveloperResultsView } from "@/app/components/DeveloperResultsView";
 import { ModeSwitcher } from "@/app/components/ModeSwitcher";
@@ -16,7 +16,7 @@ export default function ResultsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const submissionId = params.id as string;
-  const { mode } = useMode();
+  const mode = usePreferencesStore((state) => state.viewMode);
   const [submissionStartTime] = useState<number>(Date.now());
   const [processingTime, setProcessingTime] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
@@ -81,10 +81,7 @@ export default function ResultsPage() {
       try {
         setStatus("pending");
         // Check if we're in local mode (not saving to server)
-        const storeResults =
-          typeof window !== "undefined"
-            ? localStorage.getItem("writeo-store-results") === "true"
-            : false;
+        const storeResults = usePreferencesStore.getState().storeResults;
 
         // Get parent results from localStorage if in local mode
         let parentResults: any = undefined;

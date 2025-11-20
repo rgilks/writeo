@@ -55,7 +55,7 @@ Currently focused on stability and performance optimization. Future enhancements
 - ✅ **Browser Verification** - Critical features verified
 - ✅ **Manual Testing** - Comprehensive test plan available
 
-See [TEST_PLAN.md](TEST_PLAN.md) for complete testing documentation.
+See [TESTING.md](TESTING.md) for complete testing documentation.
 
 ---
 
