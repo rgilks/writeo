@@ -351,9 +351,14 @@ sequenceDiagram
 
 **Access Patterns:**
 
-- **Write**: Automatic after submission processing
+- **Write**: Automatic after submission processing (including draft creation)
+  - Results are stored immediately in both `localStorage` and `sessionStorage` after creation
+  - This ensures immediate availability even when server storage is enabled (`storeResults: true`)
+  - Critical for draft tracking: draft results are available immediately after creation
 - **Read**: Immediate access from browser
-- **Privacy**: Data never leaves user's device
+  - Results page checks `localStorage`/`sessionStorage` first before attempting server fetch
+  - This prevents "Results Not Available" errors when creating drafts with server storage enabled
+- **Privacy**: Data never leaves user's device (when `storeResults: false`)
 
 **Benefits:**
 
@@ -409,8 +414,9 @@ sequenceDiagram
 - **Opt-in (`storeResults: true`):**
   - Processes submission
   - Returns results immediately in response body
-  - Stores results in browser localStorage (as always)
-  - Also stores on server (R2/KV) for 90 days
+  - Stores results in browser localStorage and sessionStorage immediately (critical for draft tracking)
+  - Also stores on server (R2/KV) for 90 days (may have slight delay)
+  - **Important**: Results are available immediately from localStorage even if server storage isn't ready yet
 
 **GET `/text/submissions/{id}`:**
 

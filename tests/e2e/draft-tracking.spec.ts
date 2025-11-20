@@ -308,4 +308,104 @@ test.describe("Draft Tracking", () => {
       expect(firstSubmissionId).toBeTruthy();
     }
   });
+
+  test("TC-DRAFT-023: Draft creation with server storage enabled (critical fix)", async ({
+    writePage,
+    resultsPage,
+    page,
+  }) => {
+    // Ensure we're in server storage mode
+    await page.goto("/");
+    await page.evaluate(() => {
+      localStorage.setItem("writeo-store-results", "true");
+    });
+
+    // Create first submission
+    const essay1 = generateValidEssay();
+    await writePage.goto("1");
+    await page.waitForTimeout(1000);
+    await writePage.typeEssay(essay1);
+    await page.waitForTimeout(1500);
+
+    const isDisabled1 = await writePage.isSubmitButtonDisabled();
+    expect(isDisabled1).toBe(false);
+    await writePage.clickSubmit();
+
+    // Check for errors
+    const error1 = page.locator('.error[role="alert"]');
+    if ((await error1.count()) > 0) {
+      const errorText = await error1.first().textContent();
+      if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
+        throw new Error(`First submission failed: ${errorText}`);
+      }
+    }
+
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    await resultsPage.waitForResults();
+    const firstSubmissionId = page.url().match(/\/results\/([a-f0-9-]+)/)?.[1];
+    expect(firstSubmissionId).toBeTruthy();
+
+    // Verify first submission is stored in localStorage (critical: even with server storage)
+    const firstStored = await page.evaluate((submissionId) => {
+      return localStorage.getItem(`results_${submissionId}`);
+    }, firstSubmissionId);
+    expect(firstStored).toBeTruthy();
+
+    // Create second draft via editable essay
+    await page.waitForTimeout(2000);
+    const editableEssay = await resultsPage.getEditableEssay();
+    const editableCount = await editableEssay.count();
+
+    if (editableCount > 0) {
+      // Type additional text to create a draft
+      await editableEssay.first().fill(essay1 + " Improved version with server storage.");
+
+      // Find and click submit/resubmit button
+      const submitButton = page.locator('button:has-text("Submit Improved Draft")');
+      const buttonCount = await submitButton.count();
+
+      if (buttonCount > 0) {
+        await submitButton.first().click();
+
+        // Check for actual errors (not checklist text)
+        const error = page.locator('.error[role="alert"]');
+        if ((await error.count()) > 0) {
+          const errorText = await error.first().textContent();
+          if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
+            throw new Error(`Draft creation failed with error: ${errorText}`);
+          }
+        }
+
+        // Wait for new results page - should load immediately from localStorage
+        await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+        await resultsPage.waitForResults();
+
+        // Verify no "Results Not Available" error (critical fix)
+        const errorMessages = await page
+          .locator("text=/Results Not Available|submission.*not.*found/i")
+          .count();
+        expect(errorMessages).toBe(0);
+
+        // Verify the new submission is stored in localStorage immediately
+        const newUrl = page.url();
+        const newSubmissionId = newUrl.match(/\/results\/([a-f0-9-]+)/)?.[1];
+        expect(newSubmissionId).toBeTruthy();
+        expect(newSubmissionId).not.toBe(firstSubmissionId);
+
+        const storedResults = await page.evaluate((submissionId) => {
+          return localStorage.getItem(`results_${submissionId}`);
+        }, newSubmissionId);
+        expect(storedResults).toBeTruthy(); // Critical: should be stored immediately
+
+        // Verify parent relationship is stored
+        const parentStored = await page.evaluate((submissionId) => {
+          return localStorage.getItem(`draft_parent_${submissionId}`);
+        }, newSubmissionId);
+        expect(parentStored).toBe(firstSubmissionId);
+      }
+    } else {
+      // If editable essay is not available, skip this part of the test
+      expect(firstSubmissionId).toBeTruthy();
+    }
+  });
 });
