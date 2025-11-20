@@ -204,7 +204,11 @@ async function linkDraftToParent(
 }
 
 // Calculate draft number and history from parent submission
-async function getDraftInfo(parentSubmissionId: string): Promise<{
+async function getDraftInfo(
+  parentSubmissionId: string,
+  storeResults: boolean = false,
+  parentResults?: any
+): Promise<{
   draftNumber: number;
   parentSubmissionId: string;
   draftHistory: Array<{
@@ -216,23 +220,36 @@ async function getDraftInfo(parentSubmissionId: string): Promise<{
   }>;
 }> {
   try {
-    const parentResults = await getSubmissionResults(parentSubmissionId);
+    let parentResultsData = parentResults;
+
+    // If parent results not provided, try to fetch them
+    if (!parentResultsData) {
+      // When storeResults is false, the parent submission might not be on the server
+      // In that case, we'll fall back to assuming this is draft 2
+      if (storeResults) {
+        parentResultsData = await getSubmissionResults(parentSubmissionId);
+      } else {
+        // For local mode, if parent results aren't provided, assume this is draft 2
+        // The caller should provide parentResults from localStorage when available
+        throw new Error("Parent results not available in local mode");
+      }
+    }
 
     // Get draft info from parent's metadata
-    const parentDraftNumber = (parentResults.meta?.draftNumber as number) || 1;
+    const parentDraftNumber = (parentResultsData.meta?.draftNumber as number) || 1;
     const rootSubmissionId =
-      (parentResults.meta?.parentSubmissionId as string) || parentSubmissionId;
-    const parentHistory = (parentResults.meta?.draftHistory as any[]) || [];
+      (parentResultsData.meta?.parentSubmissionId as string) || parentSubmissionId;
+    const parentHistory = (parentResultsData.meta?.draftHistory as any[]) || [];
 
     // Build draft history including parent
     const draftHistory = [
       ...parentHistory,
       {
         draftNumber: parentDraftNumber,
-        timestamp: (parentResults.meta?.timestamp as string) || new Date().toISOString(),
-        wordCount: (parentResults.meta?.wordCount as number) || 0,
-        errorCount: (parentResults.meta?.errorCount as number) || 0,
-        overallScore: parentResults.meta?.overallScore as number | undefined,
+        timestamp: (parentResultsData.meta?.timestamp as string) || new Date().toISOString(),
+        wordCount: (parentResultsData.meta?.wordCount as number) || 0,
+        errorCount: (parentResultsData.meta?.errorCount as number) || 0,
+        overallScore: parentResultsData.meta?.overallScore as number | undefined,
       },
     ];
 
@@ -264,7 +281,8 @@ export async function submitEssay(
   questionText: string,
   answerText: string,
   parentSubmissionId?: string,
-  storeResults: boolean = false // Default: false (no server storage)
+  storeResults: boolean = false, // Default: false (no server storage)
+  parentResults?: any // Optional parent results from localStorage (for local mode)
 ): Promise<{ submissionId: string; results: any }> {
   try {
     if (!questionText?.trim()) throw new Error("Question text is required");
@@ -299,7 +317,7 @@ export async function submitEssay(
     // Handle draft tracking if parent submission provided
     if (parentSubmissionId && results) {
       try {
-        const draftInfo = await getDraftInfo(parentSubmissionId);
+        const draftInfo = await getDraftInfo(parentSubmissionId, storeResults, parentResults);
         results.meta = {
           ...results.meta,
           draftNumber: draftInfo.draftNumber,
@@ -325,14 +343,16 @@ export async function submitEssay(
  */
 export async function getSubmissionResultsWithDraftTracking(
   submissionId: string,
-  parentSubmissionId?: string
+  parentSubmissionId?: string,
+  storeResults: boolean = false,
+  parentResults?: any
 ): Promise<any> {
   const results = await getSubmissionResults(submissionId);
 
   // If this is a draft, enhance results with draft tracking info
   if (parentSubmissionId && results.status === "success") {
     try {
-      const draftInfo = await getDraftInfo(parentSubmissionId);
+      const draftInfo = await getDraftInfo(parentSubmissionId, storeResults, parentResults);
 
       // Add draft tracking to metadata
       if (!results.meta) {

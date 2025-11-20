@@ -80,10 +80,29 @@ export default function ResultsPage() {
     async function fetchResults() {
       try {
         setStatus("pending");
+        // Check if we're in local mode (not saving to server)
+        const storeResults =
+          typeof window !== "undefined"
+            ? localStorage.getItem("writeo-store-results") === "true"
+            : false;
+        
+        // Get parent results from localStorage if in local mode
+        let parentResults: any = undefined;
+        if (!storeResults && typeof window !== "undefined" && parentId) {
+          const storedParentResults = localStorage.getItem(`results_${parentId}`);
+          if (storedParentResults) {
+            try {
+              parentResults = JSON.parse(storedParentResults);
+            } catch (e) {
+              console.warn("[fetchResults] Failed to parse parent results from localStorage:", e);
+            }
+          }
+        }
+        
         // Try to fetch from server (only works if user opted in to server storage)
         try {
           const results = parentId
-            ? await getSubmissionResultsWithDraftTracking(submissionId, parentId)
+            ? await getSubmissionResultsWithDraftTracking(submissionId, parentId, storeResults, parentResults)
             : await getSubmissionResults(submissionId);
           if (!cancelled) {
             setData(results);
