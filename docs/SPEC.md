@@ -285,7 +285,7 @@ Rate limits are applied per IP address:
 - **Questions/Answers**: 30 requests per minute (data writes)
 - **Other endpoints**: 30 requests per minute
 
-Contact support for higher limits.
+For higher limits, please contact the project maintainer via [GitHub](https://github.com/rgilks/writeo) or [Discord](https://discord.gg/9rtwCKp2).
 
 ## References
 

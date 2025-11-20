@@ -492,12 +492,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 💬 Support
 
-**Getting Help:**
+Writeo is a personal project by [Robert Gilks](https://tre.systems). For help:
 
 - 📖 **Documentation**: See [docs/README.md](docs/README.md) for complete documentation index
 - 🐛 **Issues**: Check [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for troubleshooting
 - 📊 **Status**: See [docs/STATUS.md](docs/STATUS.md) for current status and known issues
 - 🔍 **API Reference**: Available at `/docs` endpoint on your API server
+- 💬 **Discord**: Join our [Discord server](https://discord.gg/9rtwCKp2) for community support
+- 🔗 **Portfolio**: Visit [tre.systems](https://tre.systems) to learn more about the project creator
 
 ---
 

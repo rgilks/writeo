@@ -49,10 +49,11 @@ export default function PrivacyPage() {
               👶 Children's Privacy & Age Guidelines
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              <strong>Writeo is designed to be safe for users of all ages.</strong> Because we use
-              an opt-in server storage model where no data is stored on our servers by default, we
-              don't collect personal information from children. This means COPPA (Children's Online
-              Privacy Protection Act) requirements don't apply to Writeo's default usage.
+              <strong>Writeo is designed to be safe for users of all ages.</strong> Because Writeo
+              uses an opt-in server storage model where no data is stored on servers by default,
+              Writeo doesn't collect personal information from children. This means COPPA
+              (Children's Online Privacy Protection Act) requirements don't apply to Writeo's
+              default usage.
             </p>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               <strong>For children under 13:</strong> Writeo can be used safely by children under
@@ -101,8 +102,8 @@ export default function PrivacyPage() {
               📝 How We Store Your Writing
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              <strong>By default, we don't store your data on our servers.</strong> Your privacy is
-              our priority.
+              <strong>By default, Writeo doesn't store your data on servers.</strong> Your privacy
+              is a priority.
             </p>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               When you submit an essay for feedback:
@@ -215,8 +216,8 @@ export default function PrivacyPage() {
               🤖 AI & Third-Party Services
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              <strong>We do not use your writing to train or improve our AI models</strong> without
-              your explicit consent.
+              <strong>Writeo does not use your writing to train or improve AI models</strong>{" "}
+              without your explicit consent.
             </p>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               Your essays are used only to:
@@ -341,9 +342,9 @@ export default function PrivacyPage() {
             </p>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               Under the California Consumer Privacy Act (CCPA), California residents have the right
-              to opt out of the sale of personal information. Since we do not sell personal
+              to opt out of the sale of personal information. Since Writeo does not sell personal
               information, no opt-out is necessary. However, if you have concerns or questions,
-              please contact us through our{" "}
+              please contact the project maintainer via{" "}
               <a
                 href="https://discord.gg/9rtwCKp2"
                 target="_blank"
@@ -440,9 +441,9 @@ export default function PrivacyPage() {
             </ul>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               <strong>Note:</strong> Because Writeo uses an opt-in server storage model, most users
-              don't have data stored on our servers. This significantly reduces the risk of data
-              breaches. However, if you've opted in to server storage and a breach occurs, we will
-              notify you through the contact information you've provided or via our{" "}
+              don't have data stored on servers. This significantly reduces the risk of data
+              breaches. However, if you've opted in to server storage and a breach occurs, you will
+              be notified through the contact information you've provided or via the{" "}
               <a
                 href="https://discord.gg/9rtwCKp2"
                 target="_blank"
@@ -462,8 +463,8 @@ export default function PrivacyPage() {
               }}
               lang="en"
             >
-              If you believe your data may have been compromised, please contact us immediately
-              through our Discord server.
+              If you believe your data may have been compromised, please contact the project
+              maintainer immediately via the Discord server.
             </p>
           </div>
 
@@ -475,9 +476,9 @@ export default function PrivacyPage() {
               🗑️ Data Retention
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              <strong>By default, we don't store your data on our servers.</strong> Your results are
-              stored only in your browser and can be cleared at any time by clearing your browser
-              data.
+              <strong>By default, Writeo doesn't store your data on servers.</strong> Your results
+              are stored only in your browser and can be cleared at any time by clearing your
+              browser data.
             </p>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               If you opt in to server storage:
@@ -527,10 +528,11 @@ export default function PrivacyPage() {
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               If you have questions about your privacy or want to exercise your rights (access,
-              deletion, etc.), please contact us. We're committed to being transparent and helpful.
+              deletion, etc.), please contact the project maintainer. I'm committed to being
+              transparent and helpful.
             </p>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              <strong>Support:</strong> Join our{" "}
+              <strong>Support:</strong> Join the{" "}
               <a
                 href="https://discord.gg/9rtwCKp2"
                 target="_blank"
@@ -551,8 +553,8 @@ export default function PrivacyPage() {
               lang="en"
             >
               <strong>Privacy Requests:</strong> For formal privacy requests (data access, deletion,
-              etc.), please use the support channel in our Discord server or contact us directly
-              through Discord.
+              etc.), please use the support channel in the Discord server or contact the project
+              maintainer directly through Discord.
             </p>
             <p
               style={{

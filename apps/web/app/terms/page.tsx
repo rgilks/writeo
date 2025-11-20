@@ -58,7 +58,7 @@ export default function TermsPage() {
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               <strong>Writeo is designed to be safe for users of all ages.</strong> For detailed
               information about children's privacy, age guidelines, and parental guidance, please
-              see our{" "}
+              see the{" "}
               <Link href="/privacy" className="text-blue-600 hover:underline">
                 Privacy Policy
               </Link>
@@ -172,7 +172,7 @@ export default function TermsPage() {
               lang="en"
             >
               <strong>Note:</strong> Rate limits are applied per IP address. For API access with
-              higher limits, please contact us through our{" "}
+              higher limits, please contact the project maintainer via{" "}
               <a
                 href="https://discord.gg/9rtwCKp2"
                 target="_blank"
@@ -231,12 +231,13 @@ export default function TermsPage() {
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
               <strong>Your Content:</strong> You retain all rights to the essays and content you
-              submit to Writeo. We do not claim ownership of your writing.
+              submit to Writeo. Writeo does not claim ownership of your writing.
             </p>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              <strong>Writeo Service:</strong> The Writeo service, including its design, code, and
-              functionality, is protected by copyright and other intellectual property laws. You may
-              not copy, modify, or distribute the service without permission.
+              <strong>Writeo Service:</strong> Writeo is a personal project by Robert Gilks. The
+              source code is available under the Apache License 2.0 and may be copied, modified, and
+              distributed in accordance with that license. The Writeo name and branding are
+              protected by copyright.
             </p>
           </div>
 
@@ -303,7 +304,8 @@ export default function TermsPage() {
               📧 Contact
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              If you have questions about these Terms of Service, please contact us through our{" "}
+              If you have questions about these Terms of Service, please contact the project
+              maintainer via{" "}
               <a
                 href="https://discord.gg/9rtwCKp2"
                 target="_blank"
