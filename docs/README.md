@@ -61,7 +61,3 @@ This directory contains all documentation for the Writeo project.
 - Test reports are consolidated and maintained
 - Essential docs are reviewed regularly
 - New features are documented as they're implemented
-
----
-
-**Last Updated:** January 2025

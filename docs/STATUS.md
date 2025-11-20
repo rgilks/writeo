@@ -1,7 +1,5 @@
 # Writeo Status & Roadmap
 
-**Last Updated:** January 2025
-
 ---
 
 ## ✅ Production Status

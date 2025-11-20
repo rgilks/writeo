@@ -1,7 +1,6 @@
 # Writeo System Architecture
 
 **Version:** 2.0  
-**Last Updated:** 2025  
 **Architecture Pattern:** Serverless Edge Computing with ML-as-a-Service
 
 **Live Services:**
@@ -612,5 +611,4 @@ Each submission makes **2 required API calls** to OpenAI:
 
 ---
 
-**Document Status:** ✅ Current  
-**Last Updated:** 2025-01-16
+**Document Status:** ✅ Current

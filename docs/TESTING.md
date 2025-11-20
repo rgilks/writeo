@@ -1,6 +1,5 @@
 # Testing Guide
 
-**Last Updated:** January 2025  
 **Test Coverage:** ~85 tests (25 API + 60 E2E) covering critical functionality
 
 ---

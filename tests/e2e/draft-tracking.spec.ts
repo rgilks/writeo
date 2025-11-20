@@ -12,10 +12,11 @@ test.describe("Draft Tracking", () => {
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
 
-    // Wait for button to enable
-    await page.waitForTimeout(1500);
-    const isDisabled = await writePage.isSubmitButtonDisabled();
-    expect(isDisabled).toBe(false);
+    // Wait for button to actually be enabled (not arbitrary timeout)
+    await expect(async () => {
+      const isDisabled = await writePage.isSubmitButtonDisabled();
+      expect(isDisabled).toBe(false);
+    }).toPass({ timeout: 5000 });
 
     // Verify word count is valid (generateValidEssay should always produce valid essays)
     const wordCount = await writePage.getWordCount();
@@ -30,7 +31,7 @@ test.describe("Draft Tracking", () => {
 
     // If loading state appears, wait for it to disappear (submission processing)
     if (hasLoading) {
-      // Wait for loading to complete (max 25 seconds)
+      // Wait for loading to complete (max 20 seconds - should be faster)
       await page
         .waitForFunction(
           () => {
@@ -38,15 +39,20 @@ test.describe("Draft Tracking", () => {
             if (!button) return true; // Button gone means navigation happened
             return !button.disabled && !button.textContent?.includes("Analyzing");
           },
-          { timeout: 25000 }
+          { timeout: 20000 }
         )
         .catch(() => {
           // If loading doesn't complete, continue anyway
         });
     }
 
+    // Wait for navigation or error to appear (not arbitrary timeout)
+    await Promise.race([
+      page.waitForURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 }).catch(() => null),
+      page.waitForSelector('.error[role="alert"]', { timeout: 2000 }).catch(() => null),
+    ]);
+
     // Check for errors after submission attempt
-    await page.waitForTimeout(1000); // Wait for any error to appear
     const errorAfterClick = page.locator('.error[role="alert"]');
     if ((await errorAfterClick.count()) > 0) {
       const errorText = await errorAfterClick.first().textContent();
@@ -60,8 +66,8 @@ test.describe("Draft Tracking", () => {
       }
     }
 
-    // Wait for results (longer timeout for API call)
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    // Wait for results (reasonable timeout)
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
     await resultsPage.waitForResults();
 
     // Draft number should be 1 (check metadata or UI)
@@ -111,9 +117,6 @@ test.describe("Draft Tracking", () => {
     await resultsPage.goto(submissionId);
     await resultsPage.waitForResults();
 
-    // Wait for page to fully render
-    await page.waitForTimeout(1000);
-
     // For single draft, history should be hidden
     // For multiple drafts, verify positioning (manual visual check)
     const editableEssay = await resultsPage.getEditableEssay();
@@ -157,23 +160,20 @@ test.describe("Draft Tracking", () => {
     await writePage.goto("1");
 
     // Wait for component to mount and verify storeResults is false
-    await page.waitForTimeout(1000);
-
-    // Verify the checkbox is unchecked (storeResults = false)
     const checkbox = page.locator('input[type="checkbox"][name="storeResults"]');
     if ((await checkbox.count()) > 0) {
+      await expect(checkbox.first()).toBeVisible({ timeout: 5000 });
       const isChecked = await checkbox.first().isChecked();
       expect(isChecked).toBe(false);
     }
 
     await writePage.typeEssay(essay1);
 
-    // Wait for button to enable
-    await page.waitForTimeout(1500);
-
-    // Check button is enabled before clicking
-    const isDisabled = await writePage.isSubmitButtonDisabled();
-    expect(isDisabled).toBe(false);
+    // Wait for button to actually be enabled (not arbitrary timeout)
+    await expect(async () => {
+      const isDisabled = await writePage.isSubmitButtonDisabled();
+      expect(isDisabled).toBe(false);
+    }).toPass({ timeout: 5000 });
 
     await writePage.clickSubmit();
 
@@ -183,7 +183,7 @@ test.describe("Draft Tracking", () => {
 
     // If loading state appears, wait for it to disappear (submission processing)
     if (hasLoading) {
-      // Wait for loading to complete (max 50 seconds for production)
+      // Wait for loading to complete (max 20 seconds - should be much faster)
       await page
         .waitForFunction(
           () => {
@@ -191,15 +191,20 @@ test.describe("Draft Tracking", () => {
             if (!button) return true; // Button gone means navigation happened
             return !button.disabled && !button.textContent?.includes("Analyzing");
           },
-          { timeout: 50000 }
+          { timeout: 20000 }
         )
         .catch(() => {
           // If loading doesn't complete, continue anyway
         });
     }
 
+    // Wait for navigation or error to appear (not arbitrary timeout)
+    await Promise.race([
+      page.waitForURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 }).catch(() => null),
+      page.waitForSelector('.error[role="alert"]', { timeout: 2000 }).catch(() => null),
+    ]);
+
     // Check for actual errors after submission attempt (not checklist text)
-    await page.waitForTimeout(1000); // Wait for any error to appear
     const error = page.locator('.error[role="alert"]');
     if ((await error.count()) > 0) {
       const errorText = await error.first().textContent();
@@ -213,8 +218,8 @@ test.describe("Draft Tracking", () => {
       }
     }
 
-    // Wait for results - longer timeout for production API calls
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 });
+    // Wait for results - reasonable timeout
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
     await resultsPage.waitForResults();
 
     // Get the first submission ID from URL
@@ -229,8 +234,9 @@ test.describe("Draft Tracking", () => {
 
     // If not already stored, we need to get it from the page
     // For this test, we'll simulate creating a draft by editing and resubmitting
-    // Wait for editable essay to appear
-    await page.waitForTimeout(2000);
+    // Wait for editable essay to actually appear (not arbitrary timeout)
+    const editableEssay = await resultsPage.getEditableEssay();
+    await expect(editableEssay.first()).toBeVisible({ timeout: 10000 });
 
     // Find and click the edit/resubmit button if available
     // Or we can directly navigate to create a draft via the API
@@ -241,12 +247,11 @@ test.describe("Draft Tracking", () => {
     await writePage.goto("1");
     await writePage.typeEssay(essay2);
 
-    // Wait for button to enable
-    await page.waitForTimeout(1500);
-
-    // Check button is enabled before clicking
-    const isDisabled2 = await writePage.isSubmitButtonDisabled();
-    expect(isDisabled2).toBe(false);
+    // Wait for button to actually be enabled (not arbitrary timeout)
+    await expect(async () => {
+      const isDisabled = await writePage.isSubmitButtonDisabled();
+      expect(isDisabled).toBe(false);
+    }).toPass({ timeout: 5000 });
 
     await writePage.clickSubmit();
 
@@ -256,7 +261,7 @@ test.describe("Draft Tracking", () => {
 
     // If loading state appears, wait for it to disappear (submission processing)
     if (hasLoading2) {
-      // Wait for loading to complete (max 25 seconds)
+      // Wait for loading to complete (max 20 seconds - should be faster)
       await page
         .waitForFunction(
           () => {
@@ -264,15 +269,20 @@ test.describe("Draft Tracking", () => {
             if (!button) return true; // Button gone means navigation happened
             return !button.disabled && !button.textContent?.includes("Analyzing");
           },
-          { timeout: 25000 }
+          { timeout: 20000 }
         )
         .catch(() => {
           // If loading doesn't complete, continue anyway
         });
     }
 
+    // Wait for navigation or error to appear (not arbitrary timeout)
+    await Promise.race([
+      page.waitForURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 }).catch(() => null),
+      page.waitForSelector('.error[role="alert"]', { timeout: 2000 }).catch(() => null),
+    ]);
+
     // Check for errors after submission attempt
-    await page.waitForTimeout(1000); // Wait for any error to appear
     const error2 = page.locator('.error[role="alert"]');
     if ((await error2.count()) > 0) {
       const errorText = await error2.first().textContent();
@@ -287,7 +297,7 @@ test.describe("Draft Tracking", () => {
     }
 
     // Wait for second results - longer timeout for production API calls
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 });
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
     await resultsPage.waitForResults();
 
     // Verify that both submissions are stored in localStorage
@@ -340,11 +350,11 @@ test.describe("Draft Tracking", () => {
     // Navigate to first results page
     await resultsPage.goto(firstSubmissionId);
     await resultsPage.waitForResults();
-    await page.waitForTimeout(2000);
 
     // Now create a draft by editing and resubmitting
-    // Find the editable essay component
+    // Find the editable essay component (wait for it to actually appear)
     const editableEssay = await resultsPage.getEditableEssay();
+    await expect(editableEssay.first()).toBeVisible({ timeout: 10000 });
     const editableCount = await editableEssay.count();
 
     if (editableCount > 0) {
@@ -368,7 +378,7 @@ test.describe("Draft Tracking", () => {
         }
 
         // Wait for new results page
-        await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+        await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
         await resultsPage.waitForResults();
 
         // Verify no errors occurred
@@ -411,12 +421,19 @@ test.describe("Draft Tracking", () => {
     // Create first submission
     const essay1 = generateValidEssay();
     await writePage.goto("1");
-    await page.waitForTimeout(1000);
     await writePage.typeEssay(essay1);
-    await page.waitForTimeout(1500);
 
-    const isDisabled1 = await writePage.isSubmitButtonDisabled();
-    expect(isDisabled1).toBe(false);
+    // Wait for button to actually be enabled (not arbitrary timeout)
+    await expect(async () => {
+      const isDisabled = await writePage.isSubmitButtonDisabled();
+      expect(isDisabled).toBe(false);
+    }).toPass({ timeout: 5000 });
+
+    // Wait for button to actually be enabled (not arbitrary timeout)
+    await expect(async () => {
+      const isDisabled = await writePage.isSubmitButtonDisabled();
+      expect(isDisabled).toBe(false);
+    }).toPass({ timeout: 5000 });
     await writePage.clickSubmit();
 
     // Check for errors
@@ -428,7 +445,7 @@ test.describe("Draft Tracking", () => {
       }
     }
 
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
     await resultsPage.waitForResults();
     const firstSubmissionId = page.url().match(/\/results\/([a-f0-9-]+)/)?.[1];
     expect(firstSubmissionId).toBeTruthy();
@@ -440,7 +457,6 @@ test.describe("Draft Tracking", () => {
     expect(firstStored).toBeTruthy();
 
     // Create second draft via editable essay
-    await page.waitForTimeout(2000);
     const editableEssay = await resultsPage.getEditableEssay();
     await expect(editableEssay.first()).toBeVisible({ timeout: 10000 });
 
@@ -464,8 +480,7 @@ test.describe("Draft Tracking", () => {
       }
 
       // Wait for new results page - should load immediately from localStorage
-      // Longer timeout for production API calls
-      await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 });
+      await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
       await resultsPage.waitForResults();
 
       // Verify no "Results Not Available" error (critical fix)
@@ -509,11 +524,13 @@ test.describe("Draft Tracking", () => {
     // Create first submission
     const essay1 = generateValidEssay();
     await writePage.goto("1");
-    await page.waitForTimeout(1000); // Allow component to mount
-
     await writePage.typeEssay(essay1);
-    await page.waitForTimeout(1500);
-    expect(await writePage.isSubmitButtonDisabled()).toBe(false);
+
+    // Wait for button to actually be enabled (not arbitrary timeout)
+    await expect(async () => {
+      const isDisabled = await writePage.isSubmitButtonDisabled();
+      expect(isDisabled).toBe(false);
+    }).toPass({ timeout: 5000 });
     await writePage.clickSubmit();
 
     // Wait for loading state
@@ -532,8 +549,7 @@ test.describe("Draft Tracking", () => {
         .catch(() => {});
     }
 
-    await page.waitForTimeout(1000);
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
     await resultsPage.waitForResults();
 
     const firstUrl = page.url();
@@ -567,14 +583,10 @@ test.describe("Draft Tracking", () => {
         .catch(() => {});
     }
 
-    await page.waitForTimeout(1000);
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 }); // Longer timeout for production
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
     await resultsPage.waitForResults();
 
-    // Wait for page to fully render
-    await page.waitForTimeout(3000);
-
-    // Verify draft history is visible and shows unique drafts
+    // Verify draft history is visible and shows unique drafts (wait for it to actually appear)
     // Draft history only appears when there are 2+ drafts
     // Try multiple selectors to find draft history
     const draftHistorySelectors = [
@@ -599,7 +611,8 @@ test.describe("Draft Tracking", () => {
       // Get all draft elements - look in the draft history section
       const draftHistorySection = page.locator('text="Draft History"').locator("..").locator("..");
       const draftElements = draftHistorySection.locator("div").filter({ hasText: /Draft \d+/ });
-      await page.waitForTimeout(1000);
+      // Wait for draft elements to actually appear
+      await expect(draftElements.first()).toBeVisible({ timeout: 5000 });
       const draftCount = await draftElements.count();
 
       // Should have at least 2 drafts
