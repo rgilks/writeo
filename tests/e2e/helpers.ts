@@ -343,12 +343,17 @@ export class ResultsPage {
   }
 
   async clickTeacherAnalysis() {
-    await this.getTeacherAnalysisButton().click();
+    const button = await this.getTeacherAnalysisButton();
+    await button.click();
   }
 
   async getEditableEssay() {
-    return this.page
-      .locator("text=Improve Your Writing")
+    // Find the textarea within the "Improve Your Writing" section
+    // The main editing textarea is the first textarea in that section
+    const improveSection = this.page.locator("text=Improve Your Writing").locator("..");
+    return improveSection
+      .locator("textarea")
+      .first()
       .or(
         this.page
           .locator("text=Question text is not available for editing")

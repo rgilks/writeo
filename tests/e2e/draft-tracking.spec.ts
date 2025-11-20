@@ -221,7 +221,7 @@ test.describe("Draft Tracking", () => {
       await editableEssay.first().fill(essay1 + " Additional improvements here.");
 
       // Find and click submit/resubmit button
-      const submitButton = page.locator('button:has-text("Submit"), button:has-text("Resubmit")');
+      const submitButton = page.locator('button:has-text("Submit Improved Draft")');
       const buttonCount = await submitButton.count();
 
       if (buttonCount > 0) {
