@@ -100,6 +100,45 @@ export default function ResultsPage() {
         }
 
         // Try to fetch from server (only works if user opted in to server storage)
+        // But first check if we have results in localStorage/sessionStorage (from draft creation)
+        if (typeof window !== "undefined") {
+          const localStored = localStorage.getItem(`results_${submissionId}`);
+          const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
+          const storedResults = sessionStored || localStored;
+
+          if (storedResults) {
+            try {
+              const parsed = JSON.parse(storedResults);
+              if (!cancelled) {
+                // Use stored results immediately, but still try to fetch from server in background
+                setData(parsed);
+                setStatus("success");
+
+                // Try to fetch from server to get latest version (but don't wait)
+                // This ensures we have the latest data if available
+                getSubmissionResults(submissionId)
+                  .then((serverResults) => {
+                    if (!cancelled && serverResults) {
+                      // Update with server results if available
+                      setData(serverResults);
+                      localStorage.setItem(
+                        `results_${submissionId}`,
+                        JSON.stringify(serverResults)
+                      );
+                    }
+                  })
+                  .catch(() => {
+                    // Server fetch failed, but we already have local results, so that's OK
+                  });
+
+                return;
+              }
+            } catch {
+              // Fall through to server fetch
+            }
+          }
+        }
+
         try {
           const results = parentId
             ? await getSubmissionResultsWithDraftTracking(
@@ -113,12 +152,21 @@ export default function ResultsPage() {
             setData(results);
             setStatus("success");
             // Also save to localStorage for future access
+            // Ensure questionTexts are preserved if they exist in initialResults
             if (typeof window !== "undefined") {
-              localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
+              const resultsToStore = { ...results };
+              // Preserve questionTexts from initialResults if they exist and aren't in fetched results
+              if (initialResults?.meta?.questionTexts && !resultsToStore.meta?.questionTexts) {
+                if (!resultsToStore.meta) {
+                  resultsToStore.meta = {};
+                }
+                resultsToStore.meta.questionTexts = initialResults.meta.questionTexts;
+              }
+              localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
             }
           }
         } catch (serverError) {
-          // If server fetch fails, try localStorage as fallback
+          // If server fetch fails, try localStorage as fallback (double-check)
           if (typeof window !== "undefined") {
             const localStored = localStorage.getItem(`results_${submissionId}`);
             if (localStored) {

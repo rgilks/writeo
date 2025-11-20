@@ -142,12 +142,52 @@ export default function WritePage() {
         throw new Error("No submission ID or results returned");
       }
 
+      // Ensure questionTexts are in metadata for draft tracking
+      // The API should include questionTexts, but ensure they're present
+      let resultsToStore = results;
+      if (results && typeof window !== "undefined") {
+        // Get answerId from answerTexts
+        const answerTexts = results.meta?.answerTexts as Record<string, string> | undefined;
+        const answerId = answerTexts ? Object.keys(answerTexts)[0] : undefined;
+
+        // If questionTexts are missing but we have answerId and task prompt, add them
+        if (!results.meta?.questionTexts && answerId && task.prompt) {
+          // Create a new results object to avoid mutation
+          resultsToStore = {
+            ...results,
+            meta: {
+              ...results.meta,
+              questionTexts: {
+                [answerId]: task.prompt,
+              },
+            },
+          };
+        }
+        // If questionTexts exist but don't have this answerId, add it
+        else if (results.meta?.questionTexts && answerId && task.prompt) {
+          const existingQuestionTexts = results.meta.questionTexts as Record<string, string>;
+          if (!existingQuestionTexts[answerId]) {
+            // Create a new results object to avoid mutation
+            resultsToStore = {
+              ...results,
+              meta: {
+                ...results.meta,
+                questionTexts: {
+                  ...existingQuestionTexts,
+                  [answerId]: task.prompt,
+                },
+              },
+            };
+          }
+        }
+      }
+
       // Always store results in localStorage (client-side only)
       if (typeof window !== "undefined") {
         // Store in localStorage for persistence across sessions
-        localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
+        localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
         // Also store in sessionStorage for immediate display
-        sessionStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
+        sessionStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
       }
       // Redirect to results page - results will be available immediately
       router.push(`/results/${submissionId}`);

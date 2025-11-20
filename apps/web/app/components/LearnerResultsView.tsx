@@ -454,12 +454,24 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
       if (!newSubmissionId || !results) {
         throw new Error("No submission ID or results returned");
       }
-      // Store parent relationship for draft tracking (in URL param and localStorage)
-      const parentToUse = parentId || submissionId;
-      if (typeof window !== "undefined" && parentToUse) {
-        localStorage.setItem(`draft_parent_${newSubmissionId}`, parentToUse);
+
+      // Store results immediately in sessionStorage and localStorage for immediate access
+      // This is critical for server storage mode - results may not be immediately available on server
+      if (typeof window !== "undefined") {
+        // Store in sessionStorage for immediate display (cleaned up after page load)
+        sessionStorage.setItem(`results_${newSubmissionId}`, JSON.stringify(results));
+        // Also store in localStorage for persistence
+        localStorage.setItem(`results_${newSubmissionId}`, JSON.stringify(results));
+
+        // Store parent relationship for draft tracking (in URL param and localStorage)
+        const parentToUse = parentId || submissionId;
+        if (parentToUse) {
+          localStorage.setItem(`draft_parent_${newSubmissionId}`, parentToUse);
+        }
       }
+
       // Redirect to new results page with parent param
+      const parentToUse = parentId || submissionId;
       if (parentToUse) {
         router.push(`/results/${newSubmissionId}?parent=${parentToUse}`);
       } else {

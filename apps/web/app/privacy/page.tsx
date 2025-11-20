@@ -250,9 +250,32 @@ export default function PrivacyPage() {
               lang="en"
             >
               <li lang="en">
+                <strong>OpenAI API</strong> (GPT-4o-mini model) - Used for generating AI feedback
+                and teacher-style comments. OpenAI processes your text but does not retain it for
+                training purposes. See OpenAI's{" "}
+                <a
+                  href="https://openai.com/policies/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--link-color)", textDecoration: "underline" }}
+                >
+                  privacy policy
+                </a>{" "}
+                for details.
+              </li>
+              <li lang="en">
                 <strong>Groq API</strong> (Llama 3.3 70B model) - Used for generating AI feedback
-                and teacher-style comments. Groq processes your text but does not retain it for
-                training purposes.
+                and teacher-style comments when Groq is selected as the provider. Groq processes
+                your text but does not retain it for training purposes. See Groq's{" "}
+                <a
+                  href="https://groq.com/legal/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--link-color)", textDecoration: "underline" }}
+                >
+                  privacy policy
+                </a>{" "}
+                for details.
               </li>
               <li lang="en">
                 <strong>Cloudflare Workers AI</strong> - Used for relevance checking via embeddings

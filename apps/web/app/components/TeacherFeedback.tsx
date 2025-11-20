@@ -254,104 +254,132 @@ export function TeacherFeedback({
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             style={{ marginBottom: "var(--spacing-md)" }}
           >
-            <ReactMarkdown
-              components={{
-                p: ({ children }) => (
-                  <p
-                    style={{
-                      marginBottom: "var(--spacing-md)",
-                      fontSize: "16px",
-                      lineHeight: "1.6",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {children}
-                  </p>
-                ),
-                strong: ({ children }) => (
-                  <strong style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-                    {children}
-                  </strong>
-                ),
-                ul: ({ children }) => (
-                  <ul
-                    style={{
-                      marginBottom: "var(--spacing-md)",
-                      paddingLeft: "var(--spacing-lg)",
-                      fontSize: "16px",
-                      lineHeight: "1.6",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {children}
-                  </ul>
-                ),
-                ol: ({ children }) => (
-                  <ol
-                    style={{
-                      marginBottom: "var(--spacing-md)",
-                      paddingLeft: "var(--spacing-lg)",
-                      fontSize: "16px",
-                      lineHeight: "1.6",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {children}
-                  </ol>
-                ),
-                li: ({ children }) => (
-                  <li
-                    style={{
-                      marginBottom: "var(--spacing-xs)",
-                      lineHeight: "1.6",
-                    }}
-                  >
-                    {children}
-                  </li>
-                ),
-                h1: ({ children }) => (
-                  <h1
-                    style={{
-                      fontSize: "20px",
-                      fontWeight: 700,
-                      marginBottom: "var(--spacing-md)",
-                      marginTop: "var(--spacing-md)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {children}
-                  </h1>
-                ),
-                h2: ({ children }) => (
-                  <h2
-                    style={{
-                      fontSize: "18px",
-                      fontWeight: 600,
-                      marginBottom: "var(--spacing-sm)",
-                      marginTop: "var(--spacing-md)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {children}
-                  </h2>
-                ),
-                h3: ({ children }) => (
-                  <h3
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: 600,
-                      marginBottom: "var(--spacing-sm)",
-                      marginTop: "var(--spacing-md)",
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {children}
-                  </h3>
-                ),
-              }}
-            >
-              {feedbackText}
-            </ReactMarkdown>
+            {loading ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--spacing-md)",
+                  padding: "var(--spacing-lg)",
+                  justifyContent: "center",
+                }}
+              >
+                <span
+                  className="spinner"
+                  style={{
+                    display: "inline-block",
+                    width: "20px",
+                    height: "20px",
+                    border: "3px solid rgba(139, 69, 19, 0.2)",
+                    borderTopColor: "rgba(139, 69, 19, 0.8)",
+                    borderRadius: "50%",
+                    animation: "spin 0.6s linear infinite",
+                  }}
+                />
+                <span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
+                  Generating detailed analysis...
+                </span>
+              </div>
+            ) : (
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => (
+                    <p
+                      style={{
+                        marginBottom: "var(--spacing-md)",
+                        fontSize: "16px",
+                        lineHeight: "1.6",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {children}
+                    </p>
+                  ),
+                  strong: ({ children }) => (
+                    <strong style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                      {children}
+                    </strong>
+                  ),
+                  ul: ({ children }) => (
+                    <ul
+                      style={{
+                        marginBottom: "var(--spacing-md)",
+                        paddingLeft: "var(--spacing-lg)",
+                        fontSize: "16px",
+                        lineHeight: "1.6",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {children}
+                    </ul>
+                  ),
+                  ol: ({ children }) => (
+                    <ol
+                      style={{
+                        marginBottom: "var(--spacing-md)",
+                        paddingLeft: "var(--spacing-lg)",
+                        fontSize: "16px",
+                        lineHeight: "1.6",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {children}
+                    </ol>
+                  ),
+                  li: ({ children }) => (
+                    <li
+                      style={{
+                        marginBottom: "var(--spacing-xs)",
+                        lineHeight: "1.6",
+                      }}
+                    >
+                      {children}
+                    </li>
+                  ),
+                  h1: ({ children }) => (
+                    <h1
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        marginBottom: "var(--spacing-md)",
+                        marginTop: "var(--spacing-md)",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {children}
+                    </h1>
+                  ),
+                  h2: ({ children }) => (
+                    <h2
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 600,
+                        marginBottom: "var(--spacing-sm)",
+                        marginTop: "var(--spacing-md)",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {children}
+                    </h2>
+                  ),
+                  h3: ({ children }) => (
+                    <h3
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: 600,
+                        marginBottom: "var(--spacing-sm)",
+                        marginTop: "var(--spacing-md)",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {children}
+                    </h3>
+                  ),
+                }}
+              >
+                {feedbackText}
+              </ReactMarkdown>
+            )}
           </motion.div>
         </AnimatePresence>
 
@@ -413,25 +441,40 @@ export function TeacherFeedback({
           ) : (
             <motion.button
               onClick={handleTryAgain}
-              disabled={loading}
+              disabled={loading || initialLoading}
               className="btn btn-secondary"
               lang="en"
               style={{
                 fontSize: "14px",
                 padding: "var(--spacing-sm) var(--spacing-md)",
                 minHeight: "44px",
+                opacity: loading || initialLoading ? 0.6 : 1,
+                cursor: loading || initialLoading ? "not-allowed" : "pointer",
               }}
-              whileHover={!loading ? { scale: 1.02 } : {}}
-              whileTap={!loading ? { scale: 0.98 } : {}}
+              whileHover={!loading && !initialLoading ? { scale: 1.02 } : {}}
+              whileTap={!loading && !initialLoading ? { scale: 0.98 } : {}}
               transition={{ duration: 0.2 }}
             >
-              {loading ? (
+              {loading || initialLoading ? (
                 <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.2 }}
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
                 >
-                  Generating detailed analysis...
+                  <span
+                    className="spinner"
+                    style={{
+                      display: "inline-block",
+                      width: "14px",
+                      height: "14px",
+                      border: "2px solid rgba(0, 0, 0, 0.2)",
+                      borderTopColor: "currentColor",
+                      borderRadius: "50%",
+                      animation: "spin 0.6s linear infinite",
+                    }}
+                  />
+                  {loading ? "Generating detailed analysis..." : "Loading feedback..."}
                 </motion.span>
               ) : (
                 "View Detailed Analysis"
