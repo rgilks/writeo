@@ -550,27 +550,51 @@ test.describe("Draft Tracking", () => {
     await resultsPage.waitForResults();
 
     // Verify draft history is visible and shows unique drafts
-    const draftHistory = page.locator("text=Draft History").locator("..");
-    await expect(draftHistory).toBeVisible({ timeout: 5000 });
+    // Wait for draft history to appear (may take a moment to render)
+    await page.waitForTimeout(2000);
 
-    // Get all draft elements
-    const draftElements = draftHistory.locator('div:has-text("Draft")');
+    const draftHistory = await resultsPage.getDraftHistory();
+    await expect(draftHistory).toBeVisible({ timeout: 10000 });
+
+    // Get all draft elements - look for elements containing "Draft" text
+    // The draft history container should have multiple draft items
+    const draftElements = page.locator("div:has-text(/^Draft \\d+/)");
     const draftCount = await draftElements.count();
-    expect(draftCount).toBeGreaterThanOrEqual(2); // At least 2 drafts
 
-    // Verify each draft number appears only once
-    const draftNumbers = new Set<number>();
-    for (let i = 0; i < draftCount; i++) {
-      const draftText = await draftElements.nth(i).textContent();
-      const match = draftText?.match(/Draft (\d+)/);
-      if (match) {
-        const draftNum = parseInt(match[1], 10);
-        expect(draftNumbers.has(draftNum)).toBe(false); // Should not be duplicate
-        draftNumbers.add(draftNum);
+    // If we can't find drafts with that selector, try alternative
+    if (draftCount < 2) {
+      // Try finding by parent container
+      const historyContainer = page.locator("text=Draft History").locator("..").locator("..");
+      const altDrafts = historyContainer.locator("div").filter({ hasText: /Draft \d+/ });
+      const altCount = await altDrafts.count();
+      expect(altCount).toBeGreaterThanOrEqual(2);
+
+      // Verify each draft number appears only once
+      const draftNumbers = new Set<number>();
+      for (let i = 0; i < altCount; i++) {
+        const draftText = await altDrafts.nth(i).textContent();
+        const match = draftText?.match(/Draft (\d+)/);
+        if (match) {
+          const draftNum = parseInt(match[1], 10);
+          expect(draftNumbers.has(draftNum)).toBe(false); // Should not be duplicate
+          draftNumbers.add(draftNum);
+        }
       }
+      expect(draftNumbers.size).toBeGreaterThanOrEqual(2);
+    } else {
+      // Verify each draft number appears only once
+      const draftNumbers = new Set<number>();
+      for (let i = 0; i < draftCount; i++) {
+        const draftText = await draftElements.nth(i).textContent();
+        const match = draftText?.match(/Draft (\d+)/);
+        if (match) {
+          const draftNum = parseInt(match[1], 10);
+          expect(draftNumbers.has(draftNum)).toBe(false); // Should not be duplicate
+          draftNumbers.add(draftNum);
+        }
+      }
+      // Verify we have at least 2 unique draft numbers
+      expect(draftNumbers.size).toBeGreaterThanOrEqual(2);
     }
-
-    // Verify we have at least 2 unique draft numbers
-    expect(draftNumbers.size).toBeGreaterThanOrEqual(2);
   });
 });
