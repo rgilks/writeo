@@ -303,7 +303,7 @@ test.describe("Interactive Learning Flow", () => {
     await writePage.clickSubmit();
 
     // Step 2: Wait for results (longer timeout for API call)
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 }); // Longer timeout for production
     const url = page.url();
     const submissionId = url.match(/\/results\/([a-f0-9-]+)/)?.[1];
 
