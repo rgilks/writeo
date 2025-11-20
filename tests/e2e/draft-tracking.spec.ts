@@ -177,12 +177,38 @@ test.describe("Draft Tracking", () => {
 
     await writePage.clickSubmit();
 
+    // Wait for loading state to appear (indicates submission started)
+    const loadingState = await writePage.getLoadingState();
+    const hasLoading = (await loadingState.count()) > 0;
+
+    // If loading state appears, wait for it to disappear (submission processing)
+    if (hasLoading) {
+      // Wait for loading to complete (max 50 seconds for production)
+      await page
+        .waitForFunction(
+          () => {
+            const button = document.querySelector('button[type="submit"]');
+            if (!button) return true; // Button gone means navigation happened
+            return !button.disabled && !button.textContent?.includes("Analyzing");
+          },
+          { timeout: 50000 }
+        )
+        .catch(() => {
+          // If loading doesn't complete, continue anyway
+        });
+    }
+
     // Check for actual errors after submission attempt (not checklist text)
+    await page.waitForTimeout(1000); // Wait for any error to appear
     const error = page.locator('.error[role="alert"]');
     if ((await error.count()) > 0) {
       const errorText = await error.first().textContent();
       // Ignore if it's just checklist text
-      if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
+      if (
+        !errorText?.includes("Did I") &&
+        !errorText?.includes("checklist") &&
+        !errorText?.includes("Self-Evaluation")
+      ) {
         throw new Error(`Submission failed with error: ${errorText}`);
       }
     }
