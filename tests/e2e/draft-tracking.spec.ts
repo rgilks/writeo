@@ -24,6 +24,42 @@ test.describe("Draft Tracking", () => {
 
     await writePage.clickSubmit();
 
+    // Wait for loading state to appear (indicates submission started)
+    const loadingState = await writePage.getLoadingState();
+    const hasLoading = (await loadingState.count()) > 0;
+
+    // If loading state appears, wait for it to disappear (submission processing)
+    if (hasLoading) {
+      // Wait for loading to complete (max 25 seconds)
+      await page
+        .waitForFunction(
+          () => {
+            const button = document.querySelector('button[type="submit"]');
+            if (!button) return true; // Button gone means navigation happened
+            return !button.disabled && !button.textContent?.includes("Analyzing");
+          },
+          { timeout: 25000 }
+        )
+        .catch(() => {
+          // If loading doesn't complete, continue anyway
+        });
+    }
+
+    // Check for errors after submission attempt
+    await page.waitForTimeout(1000); // Wait for any error to appear
+    const errorAfterClick = page.locator('.error[role="alert"]');
+    if ((await errorAfterClick.count()) > 0) {
+      const errorText = await errorAfterClick.first().textContent();
+      // Ignore checklist text, but throw on real errors
+      if (
+        !errorText?.includes("Did I") &&
+        !errorText?.includes("checklist") &&
+        !errorText?.includes("Self-Evaluation")
+      ) {
+        throw new Error(`Submission failed with error: ${errorText}`);
+      }
+    }
+
     // Wait for results (longer timeout for API call)
     await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
     await resultsPage.waitForResults();
@@ -188,12 +224,38 @@ test.describe("Draft Tracking", () => {
 
     await writePage.clickSubmit();
 
-    // Check for actual errors after submission attempt (not checklist text)
+    // Wait for loading state to appear (indicates submission started)
+    const loadingState2 = await writePage.getLoadingState();
+    const hasLoading2 = (await loadingState2.count()) > 0;
+
+    // If loading state appears, wait for it to disappear (submission processing)
+    if (hasLoading2) {
+      // Wait for loading to complete (max 25 seconds)
+      await page
+        .waitForFunction(
+          () => {
+            const button = document.querySelector('button[type="submit"]');
+            if (!button) return true; // Button gone means navigation happened
+            return !button.disabled && !button.textContent?.includes("Analyzing");
+          },
+          { timeout: 25000 }
+        )
+        .catch(() => {
+          // If loading doesn't complete, continue anyway
+        });
+    }
+
+    // Check for errors after submission attempt
+    await page.waitForTimeout(1000); // Wait for any error to appear
     const error2 = page.locator('.error[role="alert"]');
     if ((await error2.count()) > 0) {
       const errorText = await error2.first().textContent();
       // Ignore if it's just checklist text
-      if (!errorText?.includes("Did I") && !errorText?.includes("checklist")) {
+      if (
+        !errorText?.includes("Did I") &&
+        !errorText?.includes("checklist") &&
+        !errorText?.includes("Self-Evaluation")
+      ) {
         throw new Error(`Second submission failed with error: ${errorText}`);
       }
     }
