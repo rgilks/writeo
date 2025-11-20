@@ -149,6 +149,69 @@ export default function PrivacyPage() {
               style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
               lang="en"
             >
+              🍪 Cookies & Browser Storage
+            </h2>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>Writeo does not use HTTP cookies.</strong> We do not set, read, or store any
+              cookies on your device. This means you do not need to accept or manage cookie preferences
+              when using Writeo. There is no cookie consent banner because there are no cookies to
+              consent to.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              While we don't use cookies, Writeo does use browser storage APIs to provide
+              functionality:
+            </p>
+            <ul
+              style={{
+                marginLeft: "var(--spacing-lg)",
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                paddingLeft: "var(--spacing-lg)",
+              }}
+              lang="en"
+            >
+              <li lang="en">
+                <strong>localStorage:</strong> Used to store your essay results and progress data
+                locally on your device. This data never leaves your device and is not sent to our
+                servers unless you explicitly opt in to server storage.
+              </li>
+              <li lang="en">
+                <strong>sessionStorage:</strong> Used temporarily during your session to maintain
+                application state. This data is cleared when you close your browser tab.
+              </li>
+            </ul>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              These storage mechanisms are different from cookies and do not require consent under
+              GDPR, CCPA, or other privacy regulations. They are essential for the service to
+              function and allow you to save your essay results locally, track your progress across
+              sessions, maintain your draft history, and remember your preferences.
+            </p>
+            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+              <strong>Your Control:</strong> You have full control over browser storage. You can
+              clear localStorage and sessionStorage at any time through your browser settings.
+              Clearing browser data will remove all locally stored results and progress. You can use
+              browser privacy/incognito modes if you don't want any data stored.
+            </p>
+            <p
+              style={{
+                marginBottom: "var(--spacing-md)",
+                lineHeight: "1.5",
+                fontSize: "16px",
+                color: "var(--text-secondary)",
+              }}
+              lang="en"
+            >
+              <strong>Note:</strong> If you clear browser storage, you will lose access to locally
+              stored results. If you've opted in to server storage, your results will still be
+              accessible via the submission ID for 90 days.
+            </p>
+          </div>
+
+          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
+            <h2
+              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
+              lang="en"
+            >
               🤖 AI & Third-Party Services
             </h2>
             <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
