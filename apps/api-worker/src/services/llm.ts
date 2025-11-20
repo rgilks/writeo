@@ -87,3 +87,43 @@ export function parseLLMProvider(provider?: string): LLMProvider {
   if (normalized === "google") return "google";
   return "openai"; // Default to OpenAI for unknown values
 }
+
+/**
+ * Stream LLM API responses based on provider
+ * This is a provider-agnostic wrapper that routes to the correct streaming API
+ */
+export async function* streamLLMAPI(
+  provider: LLMProvider,
+  apiKey: string,
+  modelName: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number
+): AsyncGenerator<string, void, unknown> {
+  switch (provider) {
+    case "openai": {
+      const { streamOpenAIAPI } = await import("./openai");
+      yield* streamOpenAIAPI(apiKey, modelName, messages, maxTokens);
+      return;
+    }
+    case "groq":
+      // Groq streaming not yet implemented, fall back to non-streaming
+      const { callGroqAPI } = await import("./groq");
+      const response = await callGroqAPI(apiKey, modelName, messages, maxTokens);
+      // Simulate streaming by yielding word by word
+      const words = response.match(/\S+|\s+/g) || [];
+      for (const word of words) {
+        yield word;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      return;
+    case "anthropic":
+      throw new Error("Anthropic provider streaming not yet implemented");
+    case "google":
+      throw new Error("Google provider streaming not yet implemented");
+    default:
+      // Default to OpenAI if provider is unknown
+      const { streamOpenAIAPI: defaultStreamOpenAIAPI } = await import("./openai");
+      yield* defaultStreamOpenAIAPI(apiKey, modelName, messages, maxTokens);
+      return;
+  }
+}

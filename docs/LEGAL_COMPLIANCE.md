@@ -140,8 +140,10 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 
 **Required:**
 
-- [ ] Review Groq Terms: https://groq.com/legal/terms
-- [ ] Review Groq Privacy: https://groq.com/legal/privacy
+- [ ] Review OpenAI Terms: https://openai.com/policies/terms-of-use
+- [ ] Review OpenAI Privacy: https://openai.com/policies/privacy-policy
+- [ ] Review Groq Terms (if using Groq): https://groq.com/legal/terms
+- [ ] Review Groq Privacy (if using Groq): https://groq.com/legal/privacy
 - [ ] Review Cloudflare Terms: https://www.cloudflare.com/terms/
 - [ ] Review Cloudflare Privacy: https://www.cloudflare.com/privacy/
 - [ ] Verify HuggingFace model licenses
@@ -330,13 +332,13 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 **Priority:** MEDIUM  
 **Status:** ✅ COMPLETED
 
-**Issue:** Privacy policy mentions third-party services (Groq, Cloudflare, Modal, LanguageTool) but doesn't clarify data processor relationships or provide DPA information for enterprise users.
+**Issue:** Privacy policy mentions third-party services (OpenAI, Cloudflare, Modal, LanguageTool) but doesn't clarify data processor relationships or provide DPA information for enterprise users.
 
 **Resolution:**
 
 - ✅ Expanded third-party services section with DPA information
 - ✅ Clarified data controller vs. data processor relationships (Writeo = controller, third parties = processors)
-- ✅ Listed all data processors (Groq, Cloudflare, Modal)
+- ✅ Listed all data processors (OpenAI, Cloudflare, Modal)
 - ✅ Stated that processors are bound by data processing agreements
 - ✅ Listed processor obligations (process only for feedback, no retention, security, compliance)
 
@@ -420,7 +422,8 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 
 ### Third-Party Terms to Review
 
-- Groq: https://groq.com/legal/terms
+- OpenAI: https://openai.com/policies/terms-of-use
+- Groq (if used): https://groq.com/legal/terms
 - Cloudflare: https://www.cloudflare.com/terms/
 - LanguageTool: https://languagetool.org/legal/
 - HuggingFace: https://huggingface.co/terms

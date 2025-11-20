@@ -39,7 +39,7 @@ All critical features have been verified through comprehensive browser testing:
 ## ⚠️ Known Limitations
 
 - **Modal Cold Starts**: 8-15s (Essay Scoring), 2-5s (LanguageTool) - only affects first request after inactivity
-- **Groq API**: Pay-per-use (~$0.02 per submission) - no free tier, rate limited to 10/min (max ~$8,640/month)
+- **OpenAI API**: Pay-per-use (~$0.0025 per submission) - rate limited to 10/min (max ~$1,080/month)
 
 ---
 
@@ -56,13 +56,6 @@ _No planned enhancements at this time._
 - ✅ **Manual Testing** - Comprehensive test plan available
 
 See [TEST_PLAN.md](TEST_PLAN.md) for complete testing documentation.
-
----
-
-## 🐛 Known Limitations
-
-- **Modal Cold Starts**: 8-15s (Essay Scoring), 2-5s (LanguageTool) - only affects first request after inactivity
-- **Groq API**: Pay-per-use (~$0.02 per submission) - no free tier, rate limited to 10/min (max ~$8,640/month)
 
 ---
 

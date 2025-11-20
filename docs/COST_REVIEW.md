@@ -7,14 +7,25 @@
 
 ## Executive Summary
 
-Writeo's cost structure is dominated by **Groq API usage** for AI-powered feedback. This document provides:
+Writeo supports multiple LLM providers for AI-powered feedback. This document provides:
 
-- Current cost breakdown per submission
+- Cost breakdown per submission for each provider
 - Monthly cost estimates at different usage levels
 - Cost guardrails and prevention strategies
 - Optimization recommendations
+- Provider comparison
 
-**Key Cost Driver:** Groq API calls (~$0.02-0.03 per submission)
+**Supported Providers:**
+
+- **OpenAI (GPT-4o-mini)**: ~$0.0025 per submission - Cost-effective, excellent quality
+- **Groq (Llama 3.3 70B)**: ~$0.02 per submission - Ultra-fast, excellent quality
+
+**Operational Modes:**
+
+- **🪙 Cheap Mode**: GPT-4o-mini + Modal scale-to-zero → ~$7.60-8.50/month (100 submissions/day)
+- **⚡ Turbo Mode**: Llama 3.3 70B + Modal keep-warm → ~$65-80/month (100 submissions/day)
+
+**Key Cost Driver:** LLM API calls (varies by provider and mode)
 
 ---
 
@@ -22,14 +33,14 @@ Writeo's cost structure is dominated by **Groq API usage** for AI-powered feedba
 
 ### API Calls Per Submission
 
-Each essay submission triggers **2 required API calls** to Groq:
+Each essay submission triggers **2 required API calls** to your chosen LLM provider (OpenAI or Groq):
 
 1. **Grammar Error Detection** (`getLLMAssessment`)
    - **Purpose:** Identify grammar, spelling, and language errors
    - **Input tokens:** ~2,000-3,000 (question + answer text + prompt)
    - **Output tokens:** ~500-1,000 (JSON error list)
    - **Max tokens:** 2,500 (reduced from 4,000 to save costs)
-   - **Cost:** ~$0.005-0.01 per call
+   - **Cost:** ~$0.001 per call
    - **Frequency:** Once per answer submission
 
 2. **Detailed Feedback** (`getCombinedFeedback`)
@@ -37,7 +48,7 @@ Each essay submission triggers **2 required API calls** to Groq:
    - **Input tokens:** ~3,000-5,000 (question + answer + assessment context + grammar errors)
    - **Output tokens:** ~400-500 (structured JSON feedback)
    - **Max tokens:** 500
-   - **Cost:** ~$0.01 per call
+   - **Cost:** ~$0.0015 per call
    - **Frequency:** Once per answer submission
    - **Optimizations:**
      - Essay text truncated to 15,000 chars (~2,500 words) to limit input tokens
@@ -49,7 +60,7 @@ Each essay submission triggers **2 required API calls** to Groq:
    - **Input tokens:** ~2,000-4,000 (varies by mode)
    - **Output tokens:** ~100-200 (initial/clues) or ~400-800 (explanation)
    - **Max tokens:** 150 (initial/clues) or 800 (explanation)
-   - **Cost:** ~$0.005-0.01 per call
+   - **Cost:** ~$0.001 per call
    - **Frequency:** On-demand (user requests teacher feedback)
    - **Modes:**
      - **Initial:** Brief 2-3 sentence feedback
@@ -58,15 +69,15 @@ Each essay submission triggers **2 required API calls** to Groq:
 
 ### Total Cost Per Submission
 
-- **Base submission (required):** ~$0.015-0.02
-- **With teacher feedback (optional):** ~$0.02-0.03
-- **Average (assuming 20% request teacher feedback):** ~$0.016-0.022
+- **Base submission (required):** ~$0.0025
+- **With teacher feedback (optional):** ~$0.003-0.004
+- **Average (assuming 20% request teacher feedback):** ~$0.0027
 
 **Note:** Costs vary based on:
 
 - Essay length (affects input tokens)
 - Number of errors found (affects output tokens)
-- Groq API pricing (subject to change)
+- OpenAI API pricing (subject to change)
 
 ---
 
@@ -75,6 +86,17 @@ Each essay submission triggers **2 required API calls** to Groq:
 ### Submission Volume Scenarios
 
 Based on **rate limit of 10 submissions/minute** (14,400 submissions/day maximum):
+
+**OpenAI (GPT-4o-mini) Cost Scenarios:**
+
+| Scenario                   | Submissions/Day | Submissions/Month | Cost/Submission | Monthly Cost      |
+| -------------------------- | --------------- | ----------------- | --------------- | ----------------- |
+| **Low Usage**              | 10              | ~300              | $0.0025         | **~$0.75/month**  |
+| **Moderate Usage**         | 100             | ~3,000            | $0.0025         | **~$7.50/month**  |
+| **High Usage**             | 1,000           | ~30,000           | $0.0025         | **~$75/month**    |
+| **Maximum (rate limited)** | 14,400          | ~432,000          | $0.0025         | **~$1,080/month** |
+
+**Groq (Llama 3.3 70B) Cost Scenarios:**
 
 | Scenario                   | Submissions/Day | Submissions/Month | Cost/Submission | Monthly Cost      |
 | -------------------------- | --------------- | ----------------- | --------------- | ----------------- |
@@ -85,21 +107,27 @@ Based on **rate limit of 10 submissions/minute** (14,400 submissions/day maximum
 
 ### Realistic Usage Estimates
 
-**Educational Context:**
+**Educational Context (OpenAI):**
+
+- Small class (20 students): ~20-40 submissions/day = **~$1.50-3/month**
+- Medium class (100 students): ~100-200 submissions/day = **~$7.50-15/month**
+- Large institution (1,000 students): ~1,000-2,000 submissions/day = **~$75-150/month**
+
+**Educational Context (Groq):**
 
 - Small class (20 students): ~20-40 submissions/day = **~$12-24/month**
 - Medium class (100 students): ~100-200 submissions/day = **~$60-120/month**
 - Large institution (1,000 students): ~1,000-2,000 submissions/day = **~$600-1,200/month**
 
-**Note:** Rate limiting (10/min) prevents runaway costs. Maximum theoretical cost is **~$8,640/month** if running at full capacity 24/7.
+**Note:** Rate limiting (10/min) prevents runaway costs. Maximum theoretical cost is **~$1,080/month (OpenAI)** or **~$8,640/month (Groq)** if running at full capacity 24/7.
 
 ---
 
-## Costs Without Groq API (If Disabled)
+## Costs Without LLM API (If Disabled)
 
-If Groq API is disabled, Writeo can still function with reduced features. Here's the cost breakdown:
+If LLM API is disabled (both OpenAI and Groq), Writeo can still function with reduced features. Here's the cost breakdown:
 
-### What Works Without Groq
+### What Works Without LLM API
 
 ✅ **Still Available:**
 
@@ -117,7 +145,7 @@ If Groq API is disabled, Writeo can still function with reduced features. Here's
 - Teacher feedback (`getTeacherFeedback`)
 - Context-aware feedback and suggestions
 
-### Cost Breakdown (Without Groq)
+### Cost Breakdown (Without LLM API)
 
 **Infrastructure Costs Only:**
 
@@ -131,7 +159,7 @@ If Groq API is disabled, Writeo can still function with reduced features. Here's
 | **Modal LanguageTool**          | Pay-per-use       | ~$0.01-0.10/month     |
 | **Total Infrastructure**        | -                 | **~$0.11-1.10/month** |
 
-**Monthly Cost Examples (Without Groq):**
+**Monthly Cost Examples (Without LLM API):**
 
 | Usage Level | Submissions/Day | Monthly Cost      |
 | ----------- | --------------- | ----------------- |
@@ -147,7 +175,7 @@ If Groq API is disabled, Writeo can still function with reduced features. Here's
 - **Total cost: ~$0.11-1.10/month** (essentially free tier)
 - No variable costs based on submission volume
 
-### How to Disable Groq
+### How to Disable LLM API
 
 **Option 1: Environment Variable (Recommended)**
 
@@ -166,29 +194,29 @@ if (c.env.DISABLE_AI_FEEDBACK === "true") {
 }
 ```
 
-**Option 2: Remove API Key**
+**Option 2: Remove API Keys**
 
-Simply don't set `GROQ_API_KEY` secret. The system will fail gracefully (or you can add error handling to skip AI features).
+Simply don't set `OPENAI_API_KEY` or `GROQ_API_KEY` secrets. The system will fail gracefully (or you can add error handling to skip AI features).
 
 **Option 3: Set Empty/Mock Key**
 
-Set `GROQ_API_KEY=MOCK` to use mock responses (no real API calls, but also no real AI feedback).
+Set `OPENAI_API_KEY=MOCK` or `GROQ_API_KEY=MOCK` to use mock responses (no real API calls, but also no real AI feedback).
 
 ### Feature Comparison
 
-| Feature                         | With Groq | Without Groq   |
-| ------------------------------- | --------- | -------------- |
-| Essay Scoring                   | ✅        | ✅             |
-| Grammar Checking (LanguageTool) | ✅        | ✅             |
-| Relevance Checking              | ✅        | ✅             |
-| AI Grammar Detection            | ✅        | ❌             |
-| Detailed AI Feedback            | ✅        | ❌             |
-| Teacher Feedback                | ✅        | ❌             |
-| Context-aware Suggestions       | ✅        | ❌             |
-| **Cost per submission**         | ~$0.02    | ~$0.0001-0.001 |
-| **Monthly cost (100/day)**      | ~$60      | ~$0.11-1.10    |
+| Feature                         | With LLM API (OpenAI or Groq) | Without LLM API |
+| ------------------------------- | ----------------------------- | --------------- |
+| Essay Scoring                   | ✅                            | ✅              |
+| Grammar Checking (LanguageTool) | ✅                            | ✅              |
+| Relevance Checking              | ✅                            | ✅              |
+| AI Grammar Detection            | ✅                            | ❌              |
+| Detailed AI Feedback            | ✅                            | ❌              |
+| Teacher Feedback                | ✅                            | ❌              |
+| Context-aware Suggestions       | ✅                            | ❌              |
+| **Cost per submission**         | ~$0.02                        | ~$0.0001-0.001  |
+| **Monthly cost (100/day)**      | ~$60                          | ~$0.11-1.10     |
 
-**Recommendation:** For production use, Groq provides significant value (~$0.02/submission) for comprehensive AI feedback. However, if cost is a concern, the system can operate without Groq using only LanguageTool for grammar checking.
+**Recommendation:** For production use, both OpenAI and Groq provide excellent value for comprehensive AI feedback. Choose OpenAI for cost efficiency (~$0.0025/submission) or Groq for ultra-fast responses (~$0.02/submission). If cost is a concern, the system can operate without LLM API using only LanguageTool for grammar checking.
 
 ---
 
@@ -224,7 +252,7 @@ Set `GROQ_API_KEY=MOCK` to use mock responses (no real API calls, but also no re
 
 ### 3. Token Limits ✅
 
-**Implementation:** `apps/api-worker/src/services/groq.ts`
+**Implementation:** `apps/api-worker/src/services/openai.ts` and `apps/api-worker/src/services/llm.ts`
 
 - Grammar check: Max 2,500 tokens (reduced from 4,000)
 - Detailed feedback: Max 500 tokens
@@ -250,7 +278,7 @@ Set `GROQ_API_KEY=MOCK` to use mock responses (no real API calls, but also no re
 
 ### 5. Mocking System ✅
 
-**Implementation:** `apps/api-worker/src/services/groq.ts` + `groq.mock.ts`
+**Implementation:** `apps/api-worker/src/services/openai.ts` + `openai.mock.ts`
 
 - Tests automatically use mocks (no real API calls)
 - Development can use mocks to avoid costs
@@ -349,7 +377,7 @@ const COST_PER_SUBMISSION = 0.02;
 
 **Idea:** Batch multiple submissions together
 
-**Potential Savings:** Minimal (Groq doesn't offer batch discounts)  
+**Potential Savings:** Minimal (OpenAI doesn't offer batch discounts)  
 **Implementation Effort:** High  
 **Trade-off:** Delayed responses, complexity
 
@@ -374,7 +402,7 @@ The mocking system automatically detects test environments and returns determini
 
 **Detection Methods:**
 
-1. **Environment variable:** `MOCK_GROQ=true` (for Node.js/test environments)
+1. **Environment variable:** `MOCK_OPENAI=true` (for Node.js/test environments)
 2. **API key pattern:** API key is `"MOCK"` or starts with `"test_"` (for worker environments)
 
 ### Mock Responses
@@ -390,42 +418,42 @@ Mock responses are designed to:
 
 **Automatic (Default):**
 
-- Pre-push hook sets `GROQ_API_KEY=MOCK` when starting the worker
-- Vitest config sets `MOCK_GROQ=true` by default
+- Pre-push hook sets `OPENAI_API_KEY=MOCK` when starting the worker
+- Vitest config sets `MOCK_OPENAI=true` by default
 - Tests automatically use mocks unless explicitly disabled
 
 **Manual Control:**
 
 ```bash
 # Use mocks (default)
-MOCK_GROQ=true npm test
+MOCK_OPENAI=true npm test
 
 # Use real API (for integration tests)
-MOCK_GROQ=false npm test
+MOCK_OPENAI=false npm test
 ```
 
 **Worker Environment:**
 
 ```bash
 # Start worker with mock API key
-GROQ_API_KEY=MOCK npm run dev
+OPENAI_API_KEY=MOCK npm run dev
 
 # Or use test_ prefix
-GROQ_API_KEY=test_anything npm run dev
+OPENAI_API_KEY=test_anything npm run dev
 ```
 
 ### Troubleshooting Mock Issues
 
 **Tests Making Real API Calls:**
 
-- Verify `MOCK_GROQ=true` is set in test environment
-- Check that worker is started with `GROQ_API_KEY=MOCK`
+- Verify `MOCK_OPENAI=true` is set in test environment
+- Check that worker is started with `OPENAI_API_KEY=MOCK`
 - Ensure `.dev.vars` doesn't override with real API key during tests
 
 **Mock Responses Not Working:**
 
-- Check `groq.mock.ts` for correct response format
-- Verify mock detection logic in `groq.ts`
+- Check `openai.mock.ts` for correct response format
+- Verify mock detection logic in `openai.ts`
 - Ensure mock module is imported correctly
 
 ---
@@ -436,10 +464,10 @@ GROQ_API_KEY=test_anything npm run dev
 
 - **Development:** Token usage logged to console (if `NODE_ENV=development`)
   ```
-  [Groq API] Tokens used: 3245 prompt + 487 completion = 3732 total
+  [OpenAI API] Tokens used: 3245 prompt + 487 completion = 3732 total
   ```
 - **Production:** No automatic cost tracking
-- **Groq Dashboard:** Manual checking at https://console.groq.com/
+- **OpenAI Dashboard:** Manual checking at https://platform.openai.com/usage
 - **Cloudflare Logs:** Review Worker logs for error patterns and usage
 
 ### Recommended Monitoring
@@ -460,7 +488,7 @@ If costs spike unexpectedly:
 1. **Reduce Rate Limits** - Lower from 10/min to 5/min or 1/min
 2. **Enable Maintenance Mode** - Return 503 for all submissions
 3. **Disable AI Feedback** - Return results without AI feedback (fallback mode)
-4. **Revoke API Key** - Temporarily disable Groq API key
+4. **Revoke API Key** - Temporarily disable OpenAI API key
 
 ### Code Changes Required
 
@@ -493,7 +521,7 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 
 ## Cost Comparison: Scenarios
 
-### Scenario 1: Current Implementation (With Groq, Optimized)
+### Scenario 1: Current Implementation (With OpenAI, Optimized)
 
 - Token limits reduced
 - Text truncation enabled
@@ -511,7 +539,7 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 
 **Savings:** ~60-80% reduction through optimizations
 
-### Scenario 3: Without Groq API
+### Scenario 3: Without OpenAI API
 
 - No AI feedback features
 - Only LanguageTool + Essay Scoring
@@ -526,14 +554,14 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 
 ### Quick Wins - No Code Changes Required
 
-1. **Monitor Groq Dashboard Daily**
-   - Check https://console.groq.com/ daily for unexpected usage
-   - Set up email alerts if Groq supports them
+1. **Monitor OpenAI Dashboard Daily**
+   - Check https://platform.openai.com/usage daily for unexpected usage
+   - Set up email alerts if OpenAI supports them
    - **Time:** 2 minutes/day
    - **Protection:** Early detection of cost spikes
 
-2. **Set Groq API Budget Alert**
-   - Configure spending limits in Groq dashboard (if available)
+2. **Set OpenAI API Budget Alert**
+   - Configure spending limits in OpenAI dashboard (if available)
    - Set alert threshold (e.g., $50/day or $500/month)
    - **Time:** 5 minutes one-time setup
    - **Protection:** Automatic alerts on cost spikes
@@ -579,7 +607,7 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
    Log costs to Cloudflare Workers logs for monitoring:
 
    ```typescript
-   // After each Groq API call, log cost:
+   // After each OpenAI API call, log cost:
    const cost = estimateCostFromTokens(usage);
    console.log(`[Cost] Submission ${submissionId}: $${cost.toFixed(4)}`);
    ```
@@ -635,8 +663,8 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 
 **Immediate (No Code):**
 
-- ✅ Monitor Groq dashboard daily
-- ✅ Set Groq API budget alerts
+- ✅ Monitor OpenAI dashboard daily
+- ✅ Set OpenAI API budget alerts
 - ✅ Review rate limit logs weekly
 
 **Quick Wins (1-2 hours total):**
@@ -666,13 +694,13 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 ### Medium Priority
 
 1. **Consider caching** - If submission patterns show similarity
-2. **Monitor Groq pricing** - Prices may change
+2. **Monitor OpenAI pricing** - Prices may change
 3. **Review token usage** - Periodically check if limits can be further reduced
 
 ### Low Priority
 
 1. **Smaller model for grammar** - Only if quality acceptable
-2. **Batch processing** - Only if Groq adds batch discounts
+2. **Batch processing** - Only if OpenAI adds batch discounts
 
 ---
 
@@ -686,7 +714,7 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 
 ### For Operators
 
-- **Cost tracking** - Manual via Groq dashboard
+- **Cost tracking** - Manual via OpenAI dashboard
 - **Rate limit monitoring** - Via Cloudflare Workers logs
 - **Usage patterns** - Via Cloudflare Analytics
 
@@ -698,14 +726,14 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 2. **Monitor token usage** - Check logs regularly for unexpected spikes
 3. **Review prompts** - Keep prompts concise but effective
 4. **Test locally first** - Use mocks during development, test with real API only when needed
-5. **Set budgets** - Configure spending limits in Groq dashboard
-6. **Track daily costs** - Monitor Groq dashboard daily for unexpected usage
+5. **Set budgets** - Configure spending limits in OpenAI dashboard
+6. **Track daily costs** - Monitor OpenAI dashboard daily for unexpected usage
 
 ## References
 
-- [Groq API Documentation](https://console.groq.com/docs)
-- [Groq API Pricing](https://groq.com/pricing) - Check for current pricing
-- [Token Usage Guide](https://console.groq.com/docs/token-usage)
+- [OpenAI API Documentation](https://platform.openai.com/docs)
+- [OpenAI API Pricing](https://openai.com/pricing) - Check for current pricing
+- [Token Usage Guide](https://platform.openai.com/docs/guides/tokens)
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and cost estimates
 - [OPERATIONS.md](OPERATIONS.md) - Operations guide with cost information
 

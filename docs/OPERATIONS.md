@@ -20,10 +20,12 @@ You need **different files for different parts**:
 
 - `MODAL_GRADE_URL` - Essay Scoring Modal endpoint
 - `API_KEY` - API authentication key (must match web app)
-- `GROQ_API_KEY` - Groq API key for AI feedback
+- **LLM Provider** (choose one):
+  - `LLM_PROVIDER=openai` + `OPENAI_API_KEY` - Cost-effective option (GPT-4o-mini)
+  - `LLM_PROVIDER=groq` + `GROQ_API_KEY` - Ultra-fast option (Llama 3.3 70B)
 - `MODAL_LT_URL` (optional) - LanguageTool Modal endpoint
 - `LT_LANGUAGE` (optional) - Default language code (default: `"en-GB"`)
-- `AI_MODEL` (optional) - Groq model (default: `"llama-3.3-70b-versatile"`)
+- `AI_MODEL` (optional) - Model name (default: `"gpt-4o-mini"` for OpenAI, `"llama-3.3-70b-versatile"` for Groq)
 - `TEST_API_KEY` (optional) - Test key with higher rate limits
 - `ALLOWED_ORIGINS` (optional) - CORS origins (default: all)
 
@@ -39,7 +41,10 @@ Example `.dev.vars`:
 ```bash
 API_KEY=your-key
 MODAL_GRADE_URL=https://your-endpoint.modal.run
-GROQ_API_KEY=your-groq-key
+# Choose your LLM provider:
+LLM_PROVIDER=openai  # or "groq"
+OPENAI_API_KEY=your-openai-key  # Required if LLM_PROVIDER=openai
+GROQ_API_KEY=your-groq-key  # Required if LLM_PROVIDER=groq
 MODAL_LT_URL=https://your-lt-endpoint.modal.run  # optional
 ```
 
@@ -160,6 +165,84 @@ modal app logs writeo-lt
 - Verify Modal service accessible
 - Check KV permissions
 
+## Operational Modes
+
+Writeo supports two operational modes optimized for different use cases:
+
+### 🪙 Cheap Mode (Cost-Optimized)
+
+**Configuration:**
+
+- **LLM Provider:** OpenAI (GPT-4o-mini)
+- **Modal Services:** Scale-to-zero (30-second scaledown window)
+- **Best For:** Cost-conscious deployments, variable traffic, development/testing
+
+**Performance:**
+
+- **First request after inactivity:** 8-15s (Modal cold start)
+- **Subsequent requests:** 3-10s (warm)
+- **LLM latency:** ~1-3s per request
+
+**Cost Breakdown:**
+
+- **LLM API:** ~$0.0025 per submission
+- **Modal Services:** Pay-per-use, scales to zero when idle
+- **Monthly cost (100 submissions/day):** ~$7.50/month (LLM) + ~$0.10-1.00/month (Modal) = **~$7.60-8.50/month**
+
+**Setup:**
+
+```bash
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your-key
+# Modal services automatically scale to zero (default behavior)
+```
+
+### ⚡ Turbo Mode (Performance-Optimized)
+
+**Configuration:**
+
+- **LLM Provider:** Groq (Llama 3.3 70B Versatile)
+- **Modal Services:** Keep warm (reduced scaledown window or always-on)
+- **Best For:** Production deployments requiring low latency, consistent performance
+
+**Performance:**
+
+- **First request:** 2-5s (Modal warm, Groq ultra-fast)
+- **Subsequent requests:** 1-3s (all services warm)
+- **LLM latency:** ~100-500ms per request (ultra-fast)
+
+**Cost Breakdown:**
+
+- **LLM API:** ~$0.02 per submission
+- **Modal Services:** ~$5-20/month (keeping services warm, varies by traffic)
+- **Monthly cost (100 submissions/day):** ~$60/month (LLM) + ~$5-20/month (Modal) = **~$65-80/month**
+
+**Setup:**
+
+```bash
+LLM_PROVIDER=groq
+GROQ_API_KEY=your-key
+# Configure Modal services with reduced scaledown_window or keep warm
+# See services/modal-essay/app.py and services/modal-lt/app.py
+```
+
+### Mode Comparison
+
+| Feature                    | Cheap Mode            | Turbo Mode               |
+| -------------------------- | --------------------- | ------------------------ |
+| **LLM Provider**           | OpenAI (GPT-4o-mini)  | Groq (Llama 3.3 70B)     |
+| **LLM Cost/Submission**    | ~$0.0025              | ~$0.02                   |
+| **Modal Scaling**          | Scale-to-zero (30s)   | Keep warm                |
+| **Cold Start**             | 8-15s (first request) | 2-5s (first request)     |
+| **Warm Latency**           | 3-10s                 | 1-3s                     |
+| **Monthly Cost (100/day)** | ~$7.60-8.50           | ~$65-80                  |
+| **Best For**               | Cost optimization     | Performance optimization |
+
+**Recommendation:**
+
+- Use **Cheap Mode** for development, testing, or cost-sensitive production deployments
+- Use **Turbo Mode** for production deployments requiring consistent low latency
+
 ## Cost Optimization
 
 **Free Tier Limits:**
@@ -170,7 +253,15 @@ modal app logs writeo-lt
 
 **Cost Per Submission:**
 
-- **Base:** ~$0.015-0.02 (2 required Groq API calls)
+**OpenAI (GPT-4o-mini)** - Cost-effective:
+
+- **Base:** ~$0.0025 (2 required API calls)
+- **With teacher feedback:** ~$0.003-0.004
+- **Average:** ~$0.0027
+
+**Groq (Llama 3.3 70B)** - Ultra-fast:
+
+- **Base:** ~$0.015-0.02 (2 required API calls)
 - **With teacher feedback:** ~$0.02-0.03
 - **Average:** ~$0.016-0.022
 
@@ -182,7 +273,14 @@ modal app logs writeo-lt
 - Modal: ~$0.10-1.00/month
 - **Total Infrastructure**: ~$0.12-1.15/month
 
-**Groq API (Pay-Per-Use):**
+**LLM API (Pay-Per-Use) - OpenAI:**
+
+- Low usage (10/day): ~$0.75/month
+- Moderate (100/day): ~$7.50/month
+- High (1,000/day): ~$75/month
+- Maximum (14,400/day, rate limited): ~$1,080/month
+
+**LLM API (Pay-Per-Use) - Groq:**
 
 - Low usage (10/day): ~$6/month
 - Moderate (100/day): ~$60/month

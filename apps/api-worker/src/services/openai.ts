@@ -90,3 +90,107 @@ export async function callOpenAIAPI(
 
   return data.choices[0].message.content || "";
 }
+
+/**
+ * Stream OpenAI API responses using native streaming
+ * Yields text chunks as they arrive from the API
+ */
+export async function* streamOpenAIAPI(
+  apiKey: string,
+  modelName: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number
+): AsyncGenerator<string, void, unknown> {
+  // Use mock if enabled (for tests)
+  if (shouldUseMock(apiKey)) {
+    const { mockStreamOpenAIAPI } = await import("./openai.mock");
+    yield* mockStreamOpenAIAPI(apiKey, modelName, messages, maxTokens);
+    return;
+  }
+
+  // Real OpenAI streaming API call
+  const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages: messages,
+      max_tokens: maxTokens,
+      temperature: 0.3,
+      stream: true, // Enable streaming
+    }),
+    timeout: 30000, // 30 seconds
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  if (!response.body) {
+    throw new Error("OpenAI API response body is null");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      // Decode chunk and add to buffer
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete SSE messages (events are separated by \n\n)
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || ""; // Keep incomplete event in buffer
+
+      for (const event of events) {
+        if (!event.trim()) continue;
+
+        // Process each line in the event
+        const lines = event.split("\n");
+        let dataLine = "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            dataLine = line.slice(6).trim();
+            break;
+          }
+        }
+
+        if (!dataLine) continue;
+
+        if (dataLine === "[DONE]") {
+          return;
+        }
+
+        try {
+          const data = JSON.parse(dataLine) as {
+            choices?: Array<{
+              delta?: {
+                content?: string;
+              };
+            }>;
+          };
+
+          if (data.choices && data.choices[0]?.delta?.content) {
+            yield data.choices[0].delta.content;
+          }
+        } catch (parseError) {
+          // Skip malformed JSON lines
+          console.error("[OpenAI Stream] Failed to parse chunk:", dataLine);
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

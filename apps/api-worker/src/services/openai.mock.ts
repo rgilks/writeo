@@ -126,3 +126,24 @@ The student's essay shows good effort but needs improvement in grammar accuracy 
   // Default mock response
   return "Mock OpenAI API response";
 }
+
+/**
+ * Mock OpenAI streaming API - yields text chunks asynchronously
+ */
+export async function* mockStreamOpenAIAPI(
+  apiKey: string,
+  modelName: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number
+): AsyncGenerator<string, void, unknown> {
+  // Get the full response using the non-streaming mock
+  const fullResponse = await mockCallOpenAIAPI(apiKey, modelName, messages, maxTokens);
+
+  // Simulate streaming by yielding word by word with small delays
+  const words = fullResponse.match(/\S+|\s+/g) || [];
+  for (const word of words) {
+    yield word;
+    // Small delay to simulate network streaming (5-15ms per word)
+    await new Promise((resolve) => setTimeout(resolve, Math.random() * 10 + 5));
+  }
+}

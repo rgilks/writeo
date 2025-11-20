@@ -8,6 +8,7 @@ import { StorageService } from "../services/storage";
 import { getTeacherFeedback } from "../services/feedback";
 import {
   callLLMAPI,
+  streamLLMAPI,
   parseLLMProvider,
   getDefaultModel,
   getAPIKey,
@@ -207,41 +208,72 @@ Respond in a clear, professional manner. Don't mention technical terms like "CEF
             )
           );
 
-          const responseText = await callLLMAPI(
-            llmProvider,
-            apiKey,
-            aiModel,
-            [
-              {
-                role: "system",
-                content:
-                  "You are a professional writing tutor specializing in academic argumentative writing. Provide clear, direct feedback focused on actionable improvements. Never mention technical terms like , CEFR, or band scores.",
-              },
-              { role: "user", content: prompt },
-            ],
-            1000
-          );
+          // Use streaming API for real-time feedback
+          let hasContent = false;
+          try {
+            for await (const chunk of streamLLMAPI(
+              llmProvider,
+              apiKey,
+              aiModel,
+              [
+                {
+                  role: "system",
+                  content:
+                    "You are a professional writing tutor specializing in academic argumentative writing. Provide clear, direct feedback focused on actionable improvements. Never mention technical terms like , CEFR, or band scores.",
+                },
+                { role: "user", content: prompt },
+              ],
+              1000
+            )) {
+              hasContent = true;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: chunk })}\n\n`)
+              );
+            }
+          } catch (streamError) {
+            // If streaming fails, fall back to non-streaming API
+            console.error("[Stream] Streaming failed, falling back to non-streaming:", streamError);
+            const responseText = await callLLMAPI(
+              llmProvider,
+              apiKey,
+              aiModel,
+              [
+                {
+                  role: "system",
+                  content:
+                    "You are a professional writing tutor specializing in academic argumentative writing. Provide clear, direct feedback focused on actionable improvements. Never mention technical terms like , CEFR, or band scores.",
+                },
+                { role: "user", content: prompt },
+              ],
+              1000
+            );
 
-          if (!responseText || responseText.trim().length === 0) {
+            if (responseText && responseText.trim().length > 0) {
+              hasContent = true;
+              const words = responseText.match(/\S+|\s+/g) || [];
+              if (words.length === 0) {
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ type: "chunk", text: responseText })}\n\n`
+                  )
+                );
+              } else {
+                for (const word of words) {
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: word })}\n\n`)
+                  );
+                  await new Promise((resolve) => setTimeout(resolve, 20));
+                }
+              }
+            }
+          }
+
+          if (!hasContent) {
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify({ type: "chunk", text: "Unable to generate feedback at this time. Please try again." })}\n\n`
               )
             );
-          } else {
-            const words = responseText.match(/\S+|\s+/g) || [];
-            if (words.length === 0) {
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: responseText })}\n\n`)
-              );
-            } else {
-              for (const word of words) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: word })}\n\n`)
-                );
-                await new Promise((resolve) => setTimeout(resolve, 20));
-              }
-            }
           }
 
           controller.enqueue(

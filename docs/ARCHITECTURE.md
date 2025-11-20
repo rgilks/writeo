@@ -27,28 +27,67 @@
 Writeo provides comprehensive essay assessment:
 
 - **Essay Scoring** - Multi-dimensional analysis (TA, CC, Vocab, Grammar, Overall) using ML models
-- **AI Feedback** - Context-aware feedback using Groq (Llama 3.3 70B Versatile)
+- **AI Feedback** - Context-aware feedback using OpenAI (GPT-4o-mini) or Groq (Llama 3.3 70B) - switchable providers
 - **Grammar Checking** - LanguageTool integration with inline error annotations
 - **Relevance Validation** - Fast embeddings-based answer relevance checking
 - **CEFR Mapping** - Automatic conversion to A2-C2 proficiency levels
 - **Scale-to-Zero** - Cost-effective serverless architecture
 
-### Current Implementation (Free Tier)
+### Operational Modes
 
-The system uses **synchronous processing** - all assessment is completed before returning results:
+Writeo supports two operational modes optimized for different use cases:
+
+#### 🪙 Cheap Mode (Cost-Optimized)
+
+**Configuration:**
+
+- **LLM:** OpenAI GPT-4o-mini
+- **Modal Services:** Scale-to-zero after 30 seconds
+- **Cost:** ~$7.60-8.50/month (100 submissions/day)
 
 **Processing Flow:**
 
 ```
-Client → API Worker → [Essay Scoring + LanguageTool + Relevance Check (parallel)] → AI Feedback (with context) → KV Storage → Client (3-20s)
+Client → API Worker → [Essay Scoring + LanguageTool + Relevance Check (parallel)] → OpenAI Feedback → KV Storage → Client
 ```
+
+**Performance:**
+
+- **Cold Start:** 8-15s (first request after inactivity - Modal cold start)
+- **Warm:** 3-10s (subsequent requests)
+- **Best For:** Cost-conscious deployments, variable traffic
+
+#### ⚡ Turbo Mode (Performance-Optimized)
+
+**Configuration:**
+
+- **LLM:** Groq Llama 3.3 70B Versatile
+- **Modal Services:** Keep warm (reduced scaledown window)
+- **Cost:** ~$65-80/month (100 submissions/day)
+
+**Processing Flow:**
+
+```
+Client → API Worker → [Essay Scoring + LanguageTool + Relevance Check (parallel, warm)] → Groq Feedback (ultra-fast) → KV Storage → Client
+```
+
+**Performance:**
+
+- **First Request:** 2-5s (Modal warm, Groq ultra-fast)
+- **Warm:** 1-3s (all services warm)
+- **Best For:** Production deployments requiring low latency
+
+### Current Implementation
+
+The system uses **synchronous processing** - all assessment is completed before returning results:
 
 **Key Features:**
 
-- Synchronous processing: Results returned immediately in PUT response body (typically 3-10s, max <20s)
+- Synchronous processing: Results returned immediately in PUT response body
 - Parallel processing: All services run concurrently
 - Streaming: Real-time AI feedback generation via Server-Sent Events (separate endpoint)
 - Optimized: Combined LLM calls, parallelized R2 operations, model caching
+- Flexible scaling: Choose scale-to-zero (Cheap Mode) or keep-warm (Turbo Mode)
 
 ---
 
@@ -70,7 +109,7 @@ graph TB
     Essay -->|Essay Scores| API
     LT -->|Grammar Errors| API
     RELEVANCE -->|Similarity Score| API
-    API -->|With Context| AI[💬 AI Feedback<br/>Groq - Llama 3.3 70B]
+    API -->|With Context| AI[💬 AI Feedback<br/>OpenAI - GPT-4o-mini]
     AI -->|Contextual Feedback| API
 
     style User fill:#e1f5ff
@@ -93,7 +132,7 @@ graph TB
    - LanguageTool Service (`modal-lt`) for grammar checking
    - Relevance Check (Cloudflare AI embeddings) for fast relevance validation
 5. API Worker merges results from parallel services
-6. API Worker calls **AI Feedback** (Groq) with full context from Essay Scoring and LanguageTool results
+6. API Worker calls **AI Feedback** (OpenAI) with full context from Essay Scoring and LanguageTool results
 7. API Worker merges results from all services (including AI feedback)
 8. **If `storeResults: true` (opt-in):** Results stored in KV (90-day TTL)
 9. Results returned to client immediately in PUT response body (typically 3-10s, max <20s)
@@ -122,17 +161,19 @@ graph TB
 
 ### 3.3 Cloudflare Workers AI
 
-| Service             | Technology            | Responsibility                                         | Scale-to-Zero |
-| ------------------- | --------------------- | ------------------------------------------------------ | ------------- |
-| **AI Feedback**     | Groq API              | Context-aware essay feedback (Llama 3.3 70B Versatile) | ✅ Yes        |
-| **Relevance Check** | Cloudflare Workers AI | Fast embeddings-based relevance validation             | ✅ Yes        |
+| Service             | Technology            | Responsibility                             | Scale-to-Zero |
+| ------------------- | --------------------- | ------------------------------------------ | ------------- |
+| **AI Feedback**     | OpenAI API            | Context-aware essay feedback (GPT-4o-mini) | ✅ Yes        |
+| **Relevance Check** | Cloudflare Workers AI | Fast embeddings-based relevance validation | ✅ Yes        |
 
 **AI Feedback:**
 
-- Uses Groq with Llama 3.3 70B Versatile model (optimal for essay feedback)
+- **Multi-Provider Support**: Choose between OpenAI (GPT-4o-mini) or Groq (Llama 3.3 70B Versatile)
+- **OpenAI (GPT-4o-mini)**: Cost-effective (~$0.0025/submission), excellent quality, ~1-3s inference
+- **Groq (Llama 3.3 70B)**: Ultra-fast (~100-500ms inference), excellent quality, ~$0.02/submission
 - Receives full context from essay scores and LanguageTool errors
 - Provides contextual, actionable feedback tailored to student's level
-- Ultra-fast inference (~100-500ms) via Groq's LPU
+- Switch providers via `LLM_PROVIDER` environment variable
 
 **Relevance Check:**
 
@@ -448,34 +489,34 @@ See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for detailed compliance informati
 
 **Cost Per Submission:**
 
-Each submission makes **2 required API calls** to Groq:
+Each submission makes **2 required API calls** to OpenAI:
 
-- Grammar check (`getLLMAssessment`): ~$0.005-0.01
-- Detailed feedback (`getCombinedFeedback`): ~$0.01
-- **Total:** ~$0.015-0.02 per submission (base)
-- **With teacher feedback (optional):** ~$0.02-0.03
+- Grammar check (`getLLMAssessment`): ~$0.001
+- Detailed feedback (`getCombinedFeedback`): ~$0.0015
+- **Total:** ~$0.0025 per submission (base)
+- **With teacher feedback (optional):** ~$0.003-0.004
 
 **Infrastructure Costs (Free Tier):**
 
-| Service                         | Free Tier         | Monthly Cost          |
-| ------------------------------- | ----------------- | --------------------- |
-| **Cloudflare Workers**          | 100k requests/day | $0.00                 |
-| **Cloudflare Workers AI**       | 10k requests/day  | $0.00                 |
-| **Cloudflare R2 Storage**       | 10 GB free        | $0.00                 |
-| **Cloudflare KV Storage**       | 100 MB free       | $0.00                 |
-| **Groq API**                    | Pay-per-use       | ~$0.02 per submission |
-| **Modal Essay Scoring Service** | Pay-per-use       | ~$0.10-1.00/month     |
-| **Modal LanguageTool**          | Pay-per-use       | ~$0.01-0.10/month     |
-| **Total Infrastructure**        | -                 | **~$0.12-1.15/month** |
+| Service                         | Free Tier         | Monthly Cost            |
+| ------------------------------- | ----------------- | ----------------------- |
+| **Cloudflare Workers**          | 100k requests/day | $0.00                   |
+| **Cloudflare Workers AI**       | 10k requests/day  | $0.00                   |
+| **Cloudflare R2 Storage**       | 10 GB free        | $0.00                   |
+| **Cloudflare KV Storage**       | 100 MB free       | $0.00                   |
+| **OpenAI API (GPT-4o-mini)**    | Pay-per-use       | ~$0.0025 per submission |
+| **Modal Essay Scoring Service** | Pay-per-use       | ~$0.10-1.00/month       |
+| **Modal LanguageTool**          | Pay-per-use       | ~$0.01-0.10/month       |
+| **Total Infrastructure**        | -                 | **~$0.12-1.15/month**   |
 
-**Monthly Cost Examples (Including Groq API):**
+**Monthly Cost Examples (Including OpenAI API):**
 
 | Usage Level | Submissions/Day | Monthly Cost  |
 | ----------- | --------------- | ------------- |
-| Low         | 10              | ~$6/month     |
-| Moderate    | 100             | ~$60/month    |
-| High        | 1,000           | ~$600/month   |
-| Maximum\*   | 14,400          | ~$8,640/month |
+| Low         | 10              | ~$0.75/month  |
+| Moderate    | 100             | ~$7.50/month  |
+| High        | 1,000           | ~$75/month    |
+| Maximum\*   | 14,400          | ~$1,080/month |
 
 \*Maximum limited by rate limit: 10 submissions/minute per IP
 
@@ -491,8 +532,8 @@ Each submission makes **2 required API calls** to Groq:
 
 - Scale-to-zero: No idle costs for Workers or Modal services
 - Storage: Only charged for data stored (generous free tiers)
-- Groq API: Dominant cost driver (~$0.02 per submission)
-- Rate limiting provides cost protection (max ~$8,640/month theoretical)
+- OpenAI API: Cost-effective LLM (~$0.0025 per submission)
+- Rate limiting provides cost protection (max ~$1,080/month theoretical)
 - See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis
 - See [OPERATIONS.md](OPERATIONS.md) for operations cost breakdown
 

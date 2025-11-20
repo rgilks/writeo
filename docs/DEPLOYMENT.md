@@ -5,10 +5,35 @@ Complete guide for deploying Writeo to production.
 ## Pre-Deployment Checklist
 
 - [ ] Test locally: `wrangler dev` and `npm run dev`
+- [ ] Choose operational mode: **Cheap Mode** (cost-optimized) or **Turbo Mode** (performance-optimized)
 - [ ] Verify all secrets are set (see Step 3)
 - [ ] Run tests: `npm run test:all` (or let pre-push hook handle it)
 - [ ] Code is formatted: `npm run format:check`
 - [ ] Type checking passes: `npm run type-check`
+
+## Operational Modes
+
+Writeo supports two operational modes:
+
+### 🪙 Cheap Mode (Cost-Optimized)
+
+**Setup:**
+
+- Set `LLM_PROVIDER=openai` and `OPENAI_API_KEY`
+- Modal services automatically scale-to-zero (default 30-second scaledown)
+- **Cost:** ~$7.60-8.50/month (100 submissions/day)
+- **Performance:** 8-15s cold start, 3-10s warm
+
+### ⚡ Turbo Mode (Performance-Optimized)
+
+**Setup:**
+
+- Set `LLM_PROVIDER=groq` and `GROQ_API_KEY`
+- Configure Modal services with reduced `scaledown_window` or keep warm
+- **Cost:** ~$65-80/month (100 submissions/day)
+- **Performance:** 2-5s first request, 1-3s warm
+
+See [OPERATIONS.md](OPERATIONS.md) for detailed mode comparison and configuration.
 
 ## Quick Deployment
 
@@ -89,8 +114,17 @@ wrangler secret put LT_LANGUAGE
 wrangler secret put API_KEY
 # Paste your API key when prompted (generate a secure random string or JWT)
 
-# Set Groq API key (required for AI feedback)
-wrangler secret put GROQ_API_KEY
+# Choose your LLM provider (set one):
+# Option 1: OpenAI (GPT-4o-mini) - Recommended for cost efficiency
+wrangler secret put LLM_PROVIDER
+# Enter "openai"
+wrangler secret put OPENAI_API_KEY
+# Paste your OpenAI API key from https://platform.openai.com/api-keys
+
+# Option 2: Groq (Llama 3.3 70B) - Recommended for speed
+# wrangler secret put LLM_PROVIDER
+# Enter "groq"
+# wrangler secret put GROQ_API_KEY
 # Paste your Groq API key from https://console.groq.com
 
 # Verify secrets are set
@@ -218,7 +252,7 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for detailed logging and monitoring
 
 **Modal service errors:**
 
-- Verify `MODAL_GRADE_URL`, `API_KEY`, and `GROQ_API_KEY` secrets are set correctly
+- Verify `MODAL_GRADE_URL`, `API_KEY`, and `OPENAI_API_KEY` secrets are set correctly
 - Verify `MODAL_LT_URL` is set if grammar checking is needed (optional)
 - Check Modal service logs in dashboard: `modal app logs writeo-essay` or `modal app logs writeo-lt`
 - Test Modal endpoints directly:
