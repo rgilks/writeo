@@ -329,6 +329,10 @@ html {
 .question-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
+  position: sticky;
+  top: var(--spacing-md); /* 16px from top */
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
 }
 
 .answer-card {
@@ -806,8 +810,8 @@ html {
 }
 
 .writing-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-lg); /* 24px */
   margin-top: var(--spacing-lg); /* 24px */
 }
@@ -913,8 +917,12 @@ html {
   }
 
   .writing-container {
-    grid-template-columns: 1fr;
     gap: var(--spacing-md); /* 16px */
+  }
+  
+  .question-card {
+    position: relative; /* Don't stick on mobile */
+    top: 0;
   }
   
   .score-display {
