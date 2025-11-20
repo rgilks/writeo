@@ -12,7 +12,26 @@ interface UseAIFeedbackStreamReturn {
   feedback: string;
   isStreaming: boolean;
   error: string | null;
-  startStream: (submissionId: string, answerId: string, answerText: string) => Promise<void>;
+  startStream: (
+    submissionId: string,
+    answerId: string,
+    answerText: string,
+    questionText?: string,
+    assessmentData?: {
+      essayScores?: {
+        overall?: number;
+        dimensions?: {
+          TA?: number;
+          CC?: number;
+          Vocab?: number;
+          Grammar?: number;
+          Overall?: number;
+        };
+      };
+      ltErrors?: any[];
+      llmErrors?: any[];
+    }
+  ) => Promise<void>;
   stopStream: () => void;
 }
 
@@ -26,7 +45,26 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const startStream = useCallback(
-    async (submissionId: string, answerId: string, answerText: string) => {
+    async (
+      submissionId: string,
+      answerId: string,
+      answerText: string,
+      questionText?: string,
+      assessmentData?: {
+        essayScores?: {
+          overall?: number;
+          dimensions?: {
+            TA?: number;
+            CC?: number;
+            Vocab?: number;
+            Grammar?: number;
+            Overall?: number;
+          };
+        };
+        ltErrors?: any[];
+        llmErrors?: any[];
+      }
+    ) => {
       // Stop any existing stream
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
@@ -42,16 +80,26 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
       abortControllerRef.current = abortController;
 
       try {
+        const requestBody: any = {
+          submissionId,
+          answerId,
+          answerText,
+        };
+
+        if (questionText) {
+          requestBody.questionText = questionText;
+        }
+
+        if (assessmentData) {
+          requestBody.assessmentData = assessmentData;
+        }
+
         const response = await fetch("/api/ai-feedback/stream", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            submissionId,
-            answerId,
-            answerText,
-          }),
+          body: JSON.stringify(requestBody),
           signal: abortController.signal,
         });
 

@@ -470,4 +470,107 @@ test.describe("Draft Tracking", () => {
       expect(firstSubmissionId).toBeTruthy();
     }
   });
+
+  test("TC-DRAFT-024: Draft history shows unique drafts (no duplicates)", async ({
+    writePage,
+    resultsPage,
+    page,
+  }) => {
+    // Navigate to a page first to enable localStorage access
+    await page.goto("/");
+
+    // Ensure we're in local storage mode
+    await page.evaluate(() => {
+      localStorage.setItem("writeo-store-results", "false");
+    });
+
+    // Create first submission
+    const essay1 = generateValidEssay();
+    await writePage.goto("1");
+    await page.waitForTimeout(1000); // Allow component to mount
+
+    await writePage.typeEssay(essay1);
+    await page.waitForTimeout(1500);
+    expect(await writePage.isSubmitButtonDisabled()).toBe(false);
+    await writePage.clickSubmit();
+
+    // Wait for loading state
+    const loadingState1 = await writePage.getLoadingState();
+    const hasLoading1 = (await loadingState1.count()) > 0;
+    if (hasLoading1) {
+      await page
+        .waitForFunction(
+          () => {
+            const button = document.querySelector('button[type="submit"]');
+            if (!button) return true;
+            return !button.disabled && !button.textContent?.includes("Analyzing");
+          },
+          { timeout: 25000 }
+        )
+        .catch(() => {});
+    }
+
+    await page.waitForTimeout(1000);
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    await resultsPage.waitForResults();
+
+    const firstUrl = page.url();
+    const firstSubmissionId = firstUrl.match(/\/results\/([a-f0-9-]+)/)?.[1];
+    expect(firstSubmissionId).toBeTruthy();
+
+    // Create second draft
+    const editableEssay = await resultsPage.getEditableEssay();
+    await expect(editableEssay.first()).toBeVisible({ timeout: 10000 });
+
+    const essay2 = essay1 + " This is an improved version.";
+    await editableEssay.first().fill(essay2);
+
+    const submitButton = page.locator('button:has-text("Submit Improved Draft")');
+    await expect(submitButton).toBeEnabled();
+    await submitButton.first().click();
+
+    // Wait for second submission
+    const loadingState2 = await writePage.getLoadingState();
+    const hasLoading2 = (await loadingState2.count()) > 0;
+    if (hasLoading2) {
+      await page
+        .waitForFunction(
+          () => {
+            const button = document.querySelector('button[type="submit"]');
+            if (!button) return true;
+            return !button.disabled && !button.textContent?.includes("Analyzing");
+          },
+          { timeout: 25000 }
+        )
+        .catch(() => {});
+    }
+
+    await page.waitForTimeout(1000);
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    await resultsPage.waitForResults();
+
+    // Verify draft history is visible and shows unique drafts
+    const draftHistory = page.locator("text=Draft History").locator("..");
+    await expect(draftHistory).toBeVisible({ timeout: 5000 });
+
+    // Get all draft elements
+    const draftElements = draftHistory.locator('div:has-text("Draft")');
+    const draftCount = await draftElements.count();
+    expect(draftCount).toBeGreaterThanOrEqual(2); // At least 2 drafts
+
+    // Verify each draft number appears only once
+    const draftNumbers = new Set<number>();
+    for (let i = 0; i < draftCount; i++) {
+      const draftText = await draftElements.nth(i).textContent();
+      const match = draftText?.match(/Draft (\d+)/);
+      if (match) {
+        const draftNum = parseInt(match[1], 10);
+        expect(draftNumbers.has(draftNum)).toBe(false); // Should not be duplicate
+        draftNumbers.add(draftNum);
+      }
+    }
+
+    // Verify we have at least 2 unique draft numbers
+    expect(draftNumbers.size).toBeGreaterThanOrEqual(2);
+  });
 });

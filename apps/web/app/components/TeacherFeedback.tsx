@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { getTeacherFeedback } from "@/app/lib/actions";
+import { useAIFeedbackStream } from "@/app/hooks/useAIFeedbackStream";
 
 interface TeacherFeedbackProps {
   overall: number;
@@ -63,7 +64,19 @@ export function TeacherFeedback({
   const [loading, setLoading] = useState(false);
   const [showTryAgain, setShowTryAgain] = useState(true);
 
+  // Use streaming hook for teacher feedback
+  const {
+    feedback: streamedFeedback,
+    isStreaming,
+    startStream,
+    stopStream,
+  } = useAIFeedbackStream();
+
   const getFeedbackText = () => {
+    // If streaming, show streamed feedback
+    if (feedbackMode === "explanation" && streamedFeedback) {
+      return streamedFeedback;
+    }
     if (feedbackMode === "explanation" && explanation) {
       return explanation;
     }
@@ -112,14 +125,14 @@ export function TeacherFeedback({
       llmErrors,
       relevanceCheck,
     })
-      .then((data) => {
+      .then((data: { message: string; focusArea?: string }) => {
         if (cancelled) {
           return;
         }
         setInitialMessage(data.message || null);
         setHasRequestedClues(true);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (cancelled) {
           return;
         }
@@ -156,49 +169,62 @@ export function TeacherFeedback({
     }
 
     setLoading(true);
+    setExplanation(""); // Clear previous explanation
+    setFeedbackMode("explanation");
+    setShowTryAgain(false);
+
     try {
-      console.log("Requesting detailed teacher feedback", {
+      console.log("Starting streaming teacher feedback", {
         submissionId,
         answerId,
         answerTextLength: answerText.length,
       });
 
-      // Use Server Action instead of API route
-      const data = await getTeacherFeedback(
-        submissionId,
-        answerId,
-        "explanation",
-        answerText,
-        questionText,
-        {
-          essayScores: {
-            overall,
-            dimensions,
-          },
-          ltErrors,
-          llmErrors,
-          relevanceCheck,
-        }
-      );
-      console.log("Received feedback data:", data);
+      // Prepare assessment data for streaming
+      const assessmentData = {
+        essayScores: {
+          overall,
+          dimensions,
+        },
+        ltErrors: ltErrors || [],
+        llmErrors: llmErrors || [],
+      };
 
-      const explanationText = data.message || "Let me explain the issues in your essay...";
-      // Small delay to allow smooth transition
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      setExplanation(explanationText);
-      setFeedbackMode("explanation");
-      setShowTryAgain(false);
+      // Start streaming
+      await startStream(submissionId, answerId, answerText, questionText, assessmentData);
     } catch (error) {
-      console.error("Error getting teacher feedback:", error);
+      console.error("Error starting teacher feedback stream:", error);
       // Show error to user with more details
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       alert(
         `Failed to get feedback: ${errorMessage}\n\nPlease check the browser console for more details.`
       );
-    } finally {
       setLoading(false);
+      setShowTryAgain(true);
     }
   };
+
+  // Update explanation when streamed feedback arrives
+  useEffect(() => {
+    if (streamedFeedback) {
+      setExplanation(streamedFeedback);
+      setLoading(false);
+    }
+  }, [streamedFeedback]);
+
+  // Handle streaming completion
+  useEffect(() => {
+    if (!isStreaming && streamedFeedback) {
+      setLoading(false);
+    }
+  }, [isStreaming, streamedFeedback]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopStream();
+    };
+  }, [stopStream]);
 
   return (
     <div
@@ -254,7 +280,7 @@ export function TeacherFeedback({
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             style={{ marginBottom: "var(--spacing-md)" }}
           >
-            {loading ? (
+            {(loading || isStreaming) && !streamedFeedback ? (
               <div
                 style={{
                   display: "flex",
@@ -441,21 +467,21 @@ export function TeacherFeedback({
           ) : (
             <motion.button
               onClick={handleTryAgain}
-              disabled={loading || initialLoading}
+              disabled={loading || initialLoading || isStreaming}
               className="btn btn-secondary"
               lang="en"
               style={{
                 fontSize: "14px",
                 padding: "var(--spacing-sm) var(--spacing-md)",
                 minHeight: "44px",
-                opacity: loading || initialLoading ? 0.6 : 1,
-                cursor: loading || initialLoading ? "not-allowed" : "pointer",
+                opacity: loading || initialLoading || isStreaming ? 0.6 : 1,
+                cursor: loading || initialLoading || isStreaming ? "not-allowed" : "pointer",
               }}
-              whileHover={!loading && !initialLoading ? { scale: 1.02 } : {}}
-              whileTap={!loading && !initialLoading ? { scale: 0.98 } : {}}
+              whileHover={!loading && !initialLoading && !isStreaming ? { scale: 1.02 } : {}}
+              whileTap={!loading && !initialLoading && !isStreaming ? { scale: 0.98 } : {}}
               transition={{ duration: 0.2 }}
             >
-              {loading || initialLoading ? (
+              {loading || initialLoading || isStreaming ? (
                 <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -474,7 +500,9 @@ export function TeacherFeedback({
                       animation: "spin 0.6s linear infinite",
                     }}
                   />
-                  {loading ? "Generating detailed analysis..." : "Loading feedback..."}
+                  {loading || isStreaming
+                    ? "Generating detailed analysis..."
+                    : "Loading feedback..."}
                 </motion.span>
               ) : (
                 "View Detailed Analysis"

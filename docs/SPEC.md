@@ -233,6 +233,8 @@ Retrieves assessment results for a submission. **Note:** This endpoint only work
 
 **Note**: Draft tracking metadata (`draftNumber`, `parentSubmissionId`, `draftHistory`) is stored in the `meta` field. These fields are populated by Server Actions when retrieving results, not by the API itself.
 
+**Draft History UI**: The frontend displays draft history with improved styling and deduplication logic. Each draft number appears only once, with scores displayed below the draft number. The UI uses flexbox layout for better responsiveness and visual hierarchy.
+
 **Response Codes:**
 
 - `200 OK` - Results returned (pending or success)

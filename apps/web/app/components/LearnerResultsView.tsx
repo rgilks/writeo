@@ -376,26 +376,33 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
     // They're excluded from deps to prevent infinite loops
   ]);
 
-  // Get stored draft history and merge with metadata, deduplicating by submissionId
+  // Get stored draft history and merge with metadata, deduplicating by draftNumber
   const storedDraftHistory = submissionId ? getDraftHistory(submissionId) : [];
 
-  // Create a map to deduplicate by submissionId (prefer stored over metadata)
-  const draftMap = new Map<string, (typeof storedDraftHistory)[0]>();
+  // Create a map to deduplicate by draftNumber (prefer stored over metadata)
+  const draftMap = new Map<number, (typeof storedDraftHistory)[0]>();
 
-  // First, add all stored drafts
+  // First, add all stored drafts (keyed by draftNumber)
   storedDraftHistory.forEach((draft) => {
-    if (draft.submissionId) {
-      draftMap.set(draft.submissionId, draft);
+    if (draft.draftNumber) {
+      // If we already have this draft number, prefer the one with a valid submissionId
+      const existing = draftMap.get(draft.draftNumber);
+      if (!existing || (!existing.submissionId && draft.submissionId)) {
+        draftMap.set(draft.draftNumber, draft);
+      }
     }
   });
 
-  // Then add metadata drafts only if not already present
+  // Then add metadata drafts only if not already present (by draftNumber)
   draftHistory.forEach((d, idx) => {
-    const metaSubmissionId = submissionId || "";
-    if (metaSubmissionId && !draftMap.has(metaSubmissionId)) {
-      draftMap.set(metaSubmissionId, {
-        draftNumber: d.draftNumber || idx + 1,
-        submissionId: metaSubmissionId,
+    const draftNum = d.draftNumber || idx + 1;
+    if (!draftMap.has(draftNum)) {
+      // Use current submissionId only for the current draft, otherwise use a placeholder
+      // The current draft should match the current submissionId
+      const isCurrentDraft = draftNum === draftNumber;
+      draftMap.set(draftNum, {
+        draftNumber: draftNum,
+        submissionId: isCurrentDraft ? submissionId || "" : "",
         timestamp: d.timestamp,
         wordCount: d.wordCount,
         errorCount: d.errorCount,
@@ -406,10 +413,28 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
     }
   });
 
-  // Sort by draft number
-  const displayDraftHistory = Array.from(draftMap.values()).sort(
+  // Sort by draft number and ensure current draft is included
+  let displayDraftHistory = Array.from(draftMap.values()).sort(
     (a, b) => a.draftNumber - b.draftNumber
   );
+
+  // Ensure current draft is included if not already present
+  const hasCurrentDraft = displayDraftHistory.some((d) => d.draftNumber === draftNumber);
+  if (!hasCurrentDraft && submissionId && overall > 0) {
+    const wordCount = finalAnswerText.split(/\s+/).filter((w) => w.length > 0).length;
+    displayDraftHistory.push({
+      draftNumber,
+      submissionId,
+      timestamp: new Date().toISOString(),
+      wordCount,
+      errorCount: grammarErrors.length,
+      overallScore: overall,
+      cefrLevel: mapScoreToCEFR(overall),
+      errorIds: [],
+    });
+    // Re-sort after adding
+    displayDraftHistory.sort((a, b) => a.draftNumber - b.draftNumber);
+  }
 
   // Handle resubmission of edited essay (with draft tracking)
   const handleResubmit = async (editedText: string, parentSubmissionId?: string) => {
@@ -824,10 +849,10 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
             </h2>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))",
-                gap: "var(--spacing-xs)",
-                marginBottom: "var(--spacing-sm)",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "var(--spacing-sm)",
+                marginBottom: "var(--spacing-md)",
               }}
               lang="en"
             >
@@ -846,21 +871,26 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
 
                 return (
                   <div
-                    key={draft.submissionId || draft.draftNumber}
+                    key={`draft-${draft.draftNumber}-${draft.submissionId || draft.timestamp}`}
                     style={{
-                      padding: "var(--spacing-xs) var(--spacing-sm)",
+                      padding: "var(--spacing-sm) var(--spacing-md)",
                       backgroundColor:
                         draft.draftNumber === draftNumber
                           ? "var(--primary-color)"
                           : "var(--bg-secondary)",
                       color: draft.draftNumber === draftNumber ? "white" : "var(--text-primary)",
                       borderRadius: "var(--border-radius)",
-                      fontSize: "12px",
-                      fontWeight: draft.draftNumber === draftNumber ? 600 : 400,
+                      fontSize: "14px",
+                      fontWeight: draft.draftNumber === draftNumber ? 600 : 500,
                       cursor: hasValidSubmissionId ? "pointer" : "default",
                       transition: "all 0.2s ease",
                       opacity: hasValidSubmissionId ? 1 : 0.6,
                       textAlign: "center",
+                      minWidth: "100px",
+                      border:
+                        draft.draftNumber === draftNumber
+                          ? "2px solid var(--primary-color)"
+                          : "1px solid var(--border-color)",
                     }}
                     onClick={() => {
                       if (hasValidSubmissionId) {
@@ -871,21 +901,26 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                       if (draft.draftNumber !== draftNumber && hasValidSubmissionId) {
                         e.currentTarget.style.backgroundColor = "var(--bg-primary)";
                         e.currentTarget.style.transform = "scale(1.05)";
+                        e.currentTarget.style.boxShadow = "var(--shadow-sm)";
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (draft.draftNumber !== draftNumber) {
-                        e.currentTarget.style.backgroundColor =
-                          draft.draftNumber === draftNumber
-                            ? "var(--primary-color)"
-                            : "var(--bg-secondary)";
+                        e.currentTarget.style.backgroundColor = "var(--bg-secondary)";
                         e.currentTarget.style.transform = "scale(1)";
+                        e.currentTarget.style.boxShadow = "none";
                       }
                     }}
                     lang="en"
                   >
-                    Draft {draft.draftNumber}
-                    {draft.overallScore && ` (${draft.overallScore.toFixed(1)})`}
+                    <div style={{ fontWeight: 600, marginBottom: "2px" }}>
+                      Draft {draft.draftNumber}
+                    </div>
+                    {draft.overallScore && (
+                      <div style={{ fontSize: "12px", opacity: 0.9 }}>
+                        {draft.overallScore.toFixed(1)}
+                      </div>
+                    )}
                   </div>
                 );
               })}

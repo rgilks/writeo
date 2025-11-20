@@ -55,17 +55,21 @@ Each essay submission triggers **2 required API calls** to your chosen LLM provi
      - Question text truncated to 500 chars (safety measure)
      - Error context limited to top 10 errors
 
-3. **Teacher Feedback** (`getTeacherFeedback`) - **OPTIONAL**
+3. **Teacher Feedback** (`getTeacherFeedback` / streaming endpoint) - **OPTIONAL**
    - **Purpose:** Provide concise, teacher-style feedback (initial, clues, or detailed explanation)
    - **Input tokens:** ~2,000-4,000 (varies by mode)
    - **Output tokens:** ~100-200 (initial/clues) or ~400-800 (explanation)
    - **Max tokens:** 150 (initial/clues) or 800 (explanation)
    - **Cost:** ~$0.001 per call
    - **Frequency:** On-demand (user requests teacher feedback)
+   - **Streaming:** The UI uses Server-Sent Events (SSE) streaming for real-time feedback display
+     - Feedback appears incrementally as it's generated
+     - Provides better user experience with immediate visual feedback
+     - Uses `/text/submissions/{id}/ai-feedback/stream` endpoint
    - **Modes:**
      - **Initial:** Brief 2-3 sentence feedback
      - **Clues:** Hints to guide student improvement
-     - **Explanation:** Detailed markdown analysis for teachers
+     - **Explanation:** Detailed markdown analysis for teachers (streamed in UI)
 
 ### Total Cost Per Submission
 

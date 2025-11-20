@@ -86,6 +86,8 @@ The system uses **synchronous processing** - all assessment is completed before 
 - Synchronous processing: Results returned immediately in PUT response body
 - Parallel processing: All services run concurrently
 - Streaming: Real-time AI feedback generation via Server-Sent Events (separate endpoint)
+  - Teacher feedback uses streaming by default in the UI for better user experience
+  - Feedback appears incrementally as it's generated, providing immediate visual feedback
 - Optimized: Combined LLM calls, parallelized R2 operations, model caching
 - Flexible scaling: Choose scale-to-zero (Cheap Mode) or keep-warm (Turbo Mode)
 

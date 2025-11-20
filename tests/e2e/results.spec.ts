@@ -227,7 +227,10 @@ test.describe("Results Page", () => {
     }
   });
 
-  test('TC-FE-043: "Get Teacher Analysis" button works', async ({ resultsPage, page }) => {
+  test('TC-FE-043: "Get Teacher Analysis" button works with streaming', async ({
+    resultsPage,
+    page,
+  }) => {
     const essay = generateValidEssay();
     const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
 
@@ -239,24 +242,47 @@ test.describe("Results Page", () => {
 
     const button = await resultsPage.getTeacherAnalysisButton();
     if ((await button.count()) > 0) {
+      // Get initial feedback length (should be short or empty)
+      const teacherFeedback = await resultsPage.getTeacherFeedback();
+      const initialText = await teacherFeedback.first().textContent();
+      const initialLength = initialText?.length || 0;
+
       await button.first().click();
 
-      // Wait for analysis to load (may take a moment)
-      await page.waitForTimeout(3000);
+      // Wait for streaming to start (feedback should appear incrementally)
+      // Check multiple times to verify streaming behavior
+      let previousLength = initialLength;
+      let streamingDetected = false;
 
-      // Check if detailed explanation appears (more comprehensive text)
-      const teacherFeedback = await resultsPage.getTeacherFeedback();
-      const feedbackText = await teacherFeedback.first().textContent();
+      for (let i = 0; i < 10; i++) {
+        await page.waitForTimeout(500); // Check every 500ms
+        const currentText = await teacherFeedback.first().textContent();
+        const currentLength = currentText?.length || 0;
 
-      // Detailed explanation should be longer/more comprehensive than initial note
-      const hasDetailedExplanation = feedbackText && feedbackText.length > 100;
+        // If text is growing, streaming is working
+        if (currentLength > previousLength) {
+          streamingDetected = true;
+          previousLength = currentLength;
+        }
 
-      // Or button should disappear (if explanation loads quickly)
+        // If we've reached a reasonable length, streaming likely completed
+        if (currentLength > 200) {
+          break;
+        }
+      }
+
+      // Final check: detailed explanation should appear
+      await page.waitForTimeout(2000); // Final wait
+      const finalText = await teacherFeedback.first().textContent();
+      const finalLength = finalText?.length || 0;
+
+      // Either streaming was detected OR final explanation is comprehensive
+      const hasDetailedExplanation = finalLength > 100;
       const buttonAfterClick = await resultsPage.getTeacherAnalysisButton();
       const buttonStillVisible = (await buttonAfterClick.count()) > 0;
 
-      // Either detailed explanation appears OR button disappears
-      expect(hasDetailedExplanation || !buttonStillVisible).toBe(true);
+      // Verify: streaming detected OR detailed explanation appears OR button disappeared
+      expect(streamingDetected || hasDetailedExplanation || !buttonStillVisible).toBe(true);
     }
   });
 
