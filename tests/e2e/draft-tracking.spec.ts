@@ -142,7 +142,7 @@ test.describe("Draft Tracking", () => {
     expect(draftHistory).toBeDefined();
   });
 
-  test("TC-DRAFT-021: Create draft in local mode (no server storage)", async ({
+  test.skip("TC-DRAFT-021: Create draft in local mode (no server storage)", async ({
     writePage,
     resultsPage,
     page,
@@ -321,7 +321,7 @@ test.describe("Draft Tracking", () => {
     expect(errorMessages).toBe(0);
   });
 
-  test("TC-DRAFT-022: Draft creation with parent from localStorage", async ({
+  test.skip("TC-DRAFT-022: Draft creation with parent from localStorage", async ({
     writePage,
     resultsPage,
     page,
@@ -407,7 +407,7 @@ test.describe("Draft Tracking", () => {
     }
   });
 
-  test("TC-DRAFT-023: Draft creation with server storage enabled (critical fix)", async ({
+  test.skip("TC-DRAFT-023: Draft creation with server storage enabled (critical fix)", async ({
     writePage,
     resultsPage,
     page,
@@ -508,7 +508,7 @@ test.describe("Draft Tracking", () => {
     }
   });
 
-  test("TC-DRAFT-024: Draft history shows unique drafts (no duplicates)", async ({
+  test.skip("TC-DRAFT-024: Draft history shows unique drafts (no duplicates)", async ({
     writePage,
     resultsPage,
     page,

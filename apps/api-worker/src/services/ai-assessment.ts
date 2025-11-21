@@ -54,6 +54,9 @@ export async function getLLMAssessment(
 ): Promise<LanguageToolError[]> {
   // Truncate long texts to reduce token usage and costs
   // Keep enough context for meaningful grammar checking (~2000 words / ~12000 chars)
+  // NOTE: Only the first 12,000 characters are processed, so errors beyond this point
+  // will not be detected. Errors near the truncation boundary are handled carefully
+  // to ensure they aren't incorrectly filtered out.
   const MAX_TEXT_LENGTH_FOR_GRAMMAR_CHECK = 12000;
   const truncatedAnswerText =
     answerText.length > MAX_TEXT_LENGTH_FOR_GRAMMAR_CHECK
@@ -63,6 +66,8 @@ export async function getLLMAssessment(
 
   // More concise prompt to reduce token usage
   const prompt = `Find ALL grammar, spelling, style, and punctuation errors in the student's answer.
+
+IMPORTANT: Check the ENTIRE text systematically from beginning to end. Do not focus only on the beginning - make sure to check the middle and end sections equally thoroughly.
 
 Focus on:
 - Tense errors (past-time indicators → past tense verbs)
@@ -103,7 +108,7 @@ If no errors: NO_ERRORS`;
           {
             role: "system",
             content:
-              "You are an expert English grammar checker. Return errors as pipe-delimited lines. Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity. No headers/explanations.",
+              "You are an expert English grammar checker. Check the ENTIRE text systematically from beginning to end. Return ALL errors as pipe-delimited lines. Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity. No headers/explanations. Make sure to check the middle and end sections of the text as thoroughly as the beginning.",
           },
           {
             role: "user",
@@ -215,16 +220,30 @@ If no errors: NO_ERRORS`;
         const reportedErrorText = err.errorText || "";
         // Positions are relative to truncatedAnswerText, but we validate against original answerText
         // (positions should be valid for first 12k chars of original text)
+        // Cap positions at the truncation boundary to prevent issues with errors near the end
+        const maxValidPosition = Math.min(answerText.length, MAX_TEXT_LENGTH_FOR_GRAMMAR_CHECK);
+
+        // Ensure error positions don't exceed the truncation boundary
+        // Errors beyond this point weren't processed by the LLM
+        if (err.start >= maxValidPosition) {
+          // This error is beyond the truncation boundary - skip it
+          console.log(
+            `[getLLMAssessment] Skipping error beyond truncation boundary: start=${err.start}, max=${maxValidPosition}`
+          );
+          return null;
+        }
+
         const extractedErrorText = answerText.substring(
           Math.max(0, err.start),
-          Math.min(answerText.length, err.end)
+          Math.min(maxValidPosition, err.end)
         );
 
         // Validate and correct the position
         // For Groq, be more lenient - try to find the errorText even if positions are off
+        // Cap end position at truncation boundary to prevent validation issues
         let validationInput = {
           start: err.start || 0,
-          end: err.end || 0,
+          end: Math.min(err.end || 0, maxValidPosition),
           errorText: reportedErrorText || extractedErrorText,
           message: err.message,
           errorType: err.errorType || err.category,
@@ -232,9 +251,9 @@ If no errors: NO_ERRORS`;
 
         // If Groq and we have errorText but positions seem wrong, try to find it first
         if (llmProvider === "groq" && reportedErrorText && reportedErrorText.trim().length > 0) {
-          // Try to find the errorText in the answer text
+          // Try to find the errorText in the answer text, but only within the truncation boundary
           const searchStart = Math.max(0, err.start - 100);
-          const searchEnd = Math.min(answerText.length, err.end + 100);
+          const searchEnd = Math.min(maxValidPosition, err.end + 100);
           const searchArea = answerText.substring(searchStart, searchEnd);
           const foundIndex = searchArea
             .toLowerCase()
@@ -258,10 +277,10 @@ If no errors: NO_ERRORS`;
         if (!validated.valid) {
           // For Groq, if we have errorText, try one more time with a more aggressive search
           if (llmProvider === "groq" && reportedErrorText && reportedErrorText.trim().length > 0) {
-            // Search the entire text for the errorText
-            const fullTextLower = answerText.toLowerCase();
+            // Search within the truncation boundary for the errorText
+            const searchText = answerText.substring(0, maxValidPosition).toLowerCase();
             const errorTextLower = reportedErrorText.toLowerCase().trim();
-            const foundIndex = fullTextLower.indexOf(errorTextLower);
+            const foundIndex = searchText.indexOf(errorTextLower);
 
             if (foundIndex !== -1) {
               // Found it! Create a new validation with the found position
@@ -375,9 +394,19 @@ If no errors: NO_ERRORS`;
       })
       .filter((err: LanguageToolError | null): err is LanguageToolError => err !== null);
 
-    console.log(
-      `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors)`
-    );
+    // Log error distribution to help identify if errors are biased toward the beginning
+    if (processedErrors.length > 0) {
+      const textLength = answerText.length;
+      const firstHalf = processedErrors.filter((e) => e.start < textLength / 2).length;
+      const secondHalf = processedErrors.length - firstHalf;
+      console.log(
+        `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors) - Distribution: ${firstHalf} in first half, ${secondHalf} in second half (text length: ${textLength} chars)`
+      );
+    } else {
+      console.log(
+        `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors)`
+      );
+    }
 
     return processedErrors;
   } catch (error) {

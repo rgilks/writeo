@@ -697,41 +697,35 @@ function ErrorSpan({
       requestAnimationFrame(positionPopup);
     });
 
-    // Handle window resize
+    // Handle window resize and scroll
     window.addEventListener("resize", positionPopup);
-    return () => window.removeEventListener("resize", positionPopup);
+    window.addEventListener("scroll", positionPopup, true);
+    return () => {
+      window.removeEventListener("resize", positionPopup);
+      window.removeEventListener("scroll", positionPopup, true);
+    };
   }, [isActive]);
 
-  // Close popup when clicking outside
+  // Keep popup open - only close when clicking another error or the close button
+  // The popup will stay visible until explicitly closed or another error is activated
+  // This ensures suggestions remain visible on screen near where the user clicked
+
+  // Scroll error into view when activated
   useEffect(() => {
-    if (!isActive) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popupRef.current &&
-        errorRef.current &&
-        !popupRef.current.contains(event.target as Node) &&
-        !errorRef.current.contains(event.target as Node)
-      ) {
-        onDeactivate();
-      }
-    };
-
-    // Use a small delay to avoid closing immediately when opening
-    const timeoutId = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isActive, onDeactivate]);
+    if (isActive && errorRef.current) {
+      errorRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [isActive]);
 
   return (
     <>
       <span
         ref={errorRef}
+        data-error-span
         className="relative"
         translate="no"
         lang="en"
@@ -757,11 +751,15 @@ function ErrorSpan({
             textDecorationColor: errorColor,
             textDecorationThickness: "3px",
             textUnderlineOffset: "3px",
-            backgroundColor: `${errorColor}15`,
+            backgroundColor: isActive ? `${errorColor}30` : `${errorColor}15`,
             padding: "2px 2px",
             borderRadius: "3px",
-            fontWeight: 500,
+            fontWeight: isActive ? 600 : 500,
             cursor: "pointer",
+            boxShadow: isActive ? `0 0 0 2px ${errorColor}40` : "none",
+            transition: "all 0.2s ease",
+            outline: isActive ? `2px solid ${errorColor}` : "none",
+            outlineOffset: "2px",
           }}
         >
           {errorText}
@@ -776,9 +774,9 @@ function ErrorSpan({
               position: "fixed",
               padding: "var(--spacing-sm)",
               backgroundColor: "var(--bg-primary)",
-              border: `1px solid ${errorColor}`,
+              border: `2px solid ${errorColor}`,
               borderRadius: "var(--border-radius)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              boxShadow: `0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px ${errorColor}20`,
               minWidth: "250px",
               maxWidth: "min(400px, calc(100vw - 16px))",
               width: "max-content",
