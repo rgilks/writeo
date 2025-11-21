@@ -390,11 +390,14 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
 
   // Also try to get draft history using parentSubmissionId if available
   const parentDraftHistory = parentSubmissionId ? getDraftHistory(parentSubmissionId) : [];
-  
+
   // Combine both histories, preferring stored over parent
-  const allStoredDrafts = [...storedDraftHistory, ...parentDraftHistory.filter(
-    (d) => !storedDraftHistory.some((sd) => sd.submissionId === d.submissionId)
-  )];
+  const allStoredDrafts = [
+    ...storedDraftHistory,
+    ...parentDraftHistory.filter(
+      (d) => !storedDraftHistory.some((sd) => sd.submissionId === d.submissionId)
+    ),
+  ];
 
   // Create a map to deduplicate by draftNumber (prefer stored over metadata)
   const draftMap = new Map<number, (typeof allStoredDrafts)[0]>();
@@ -458,9 +461,9 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
     // Re-sort after adding
     displayDraftHistory.sort((a, b) => a.draftNumber - b.draftNumber);
   }
-  
+
   // Final deduplication: remove any duplicates by draftNumber, keeping the one with the best submissionId
-  const finalDraftMap = new Map<number, typeof displayDraftHistory[0]>();
+  const finalDraftMap = new Map<number, (typeof displayDraftHistory)[0]>();
   displayDraftHistory.forEach((draft) => {
     const existing = finalDraftMap.get(draft.draftNumber);
     if (!existing || (!existing.submissionId && draft.submissionId)) {
@@ -895,14 +898,17 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                 // Find the root parent submission ID (draft 1's submissionId)
                 // This should be the parentSubmissionId when viewing draft 2+
                 const rootDraft = displayDraftHistory.find((d) => d.draftNumber === 1);
-                
+
                 // For Draft 1, use parentSubmissionId if available (it's the root), otherwise try to find it
                 // For Draft 2+, the parentSubmissionId IS Draft 1's submissionId
                 let draftSubmissionId = draft.submissionId;
-                
+
                 // If this is Draft 1 and we don't have a submissionId, try parentSubmissionId
                 // (which would be the case if we're viewing from Draft 2's perspective)
-                if (draft.draftNumber === 1 && (!draftSubmissionId || draftSubmissionId.length === 0)) {
+                if (
+                  draft.draftNumber === 1 &&
+                  (!draftSubmissionId || draftSubmissionId.length === 0)
+                ) {
                   // When viewing Draft 2, parentSubmissionId IS Draft 1's submissionId
                   if (parentSubmissionId && draftNumber > 1) {
                     draftSubmissionId = parentSubmissionId;
@@ -913,18 +919,24 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                     draftSubmissionId = storedDraft?.submissionId || "";
                   }
                 }
-                
+
                 // For other drafts, try to find submissionId from store if missing
-                if ((!draftSubmissionId || draftSubmissionId.length === 0) && draft.draftNumber !== 1) {
+                if (
+                  (!draftSubmissionId || draftSubmissionId.length === 0) &&
+                  draft.draftNumber !== 1
+                ) {
                   const storedHistory = submissionId ? getDraftHistory(submissionId) : [];
-                  const storedDraft = storedHistory.find((d) => d.draftNumber === draft.draftNumber);
+                  const storedDraft = storedHistory.find(
+                    (d) => d.draftNumber === draft.draftNumber
+                  );
                   draftSubmissionId = storedDraft?.submissionId || "";
                 }
-                
+
                 const hasValidSubmissionId = draftSubmissionId && draftSubmissionId.length > 0;
                 const isFirstDraft = draft.draftNumber === 1;
-                const rootSubmissionId = rootDraft?.submissionId || parentSubmissionId || draftSubmissionId;
-                
+                const rootSubmissionId =
+                  rootDraft?.submissionId || parentSubmissionId || draftSubmissionId;
+
                 // Build navigation URL
                 // For Draft 1, just go to its results page
                 // For Draft 2+, include parent param pointing to Draft 1
@@ -949,7 +961,10 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                       borderRadius: "var(--border-radius)",
                       fontSize: "14px",
                       fontWeight: draft.draftNumber === draftNumber ? 600 : 500,
-                      cursor: hasValidSubmissionId && draft.draftNumber !== draftNumber ? "pointer" : "default",
+                      cursor:
+                        hasValidSubmissionId && draft.draftNumber !== draftNumber
+                          ? "pointer"
+                          : "default",
                       transition: "all 0.2s ease",
                       opacity: hasValidSubmissionId ? 1 : 0.6,
                       textAlign: "center",
@@ -1109,7 +1124,9 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                           ? draft.wordCount - prevDraft.wordCount
                           : null;
                       const errorChange =
-                        prevDraft && draft.errorCount !== undefined && prevDraft.errorCount !== undefined
+                        prevDraft &&
+                        draft.errorCount !== undefined &&
+                        prevDraft.errorCount !== undefined
                           ? draft.errorCount - prevDraft.errorCount
                           : null;
                       const isCurrent = draft.draftNumber === draftNumber;
@@ -1223,9 +1240,9 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                                     {errorChange} errors
                                   </span>
                                 )}
-                                {scoreChange === 0 &&
-                                  wordChange === 0 &&
-                                  errorChange === 0 && <span>No change</span>}
+                                {scoreChange === 0 && wordChange === 0 && errorChange === 0 && (
+                                  <span>No change</span>
+                                )}
                               </div>
                             )}
                           </td>

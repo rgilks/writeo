@@ -127,7 +127,6 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                 gap: "var(--spacing-xs)",
               }}
             >
-
               {/* Bars with scores */}
               {scoresWithTrends.map(({ draft, score, diff, index }) => {
                 const height = score > 0 ? ((score - chartMin) / chartRange) * 100 : 0;

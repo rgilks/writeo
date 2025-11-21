@@ -92,7 +92,19 @@ cd services/modal-lt
 modal deploy app.py  # Copy endpoint URL from output
 ```
 
-**Test endpoints:** `curl https://your-endpoint/health`
+#### 2.3 Set Modal API Key Secret
+
+**Important:** Both Modal services require API key authentication. Set the same API key that you'll use for your Cloudflare Worker:
+
+```bash
+# Set Modal API key (use the same value as your Cloudflare Worker API_KEY)
+modal secret create MODAL_API_KEY <your-api-key>
+
+# Verify it's set
+modal secret list | grep MODAL_API_KEY
+```
+
+**Test endpoints:** `curl https://your-endpoint/health` (no auth required for health check)
 
 ### Step 3: Configure Secrets
 

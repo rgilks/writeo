@@ -176,10 +176,13 @@ modal token new
 # Deploy Modal service
 ./scripts/deploy-modal.sh
 
+# Set Modal API key (use same value as Cloudflare Worker API_KEY)
+modal secret create MODAL_API_KEY <your-api-key>
+
 # Configure secrets
 cd apps/api-worker
 wrangler secret put MODAL_GRADE_URL  # Paste Modal endpoint URL
-wrangler secret put API_KEY          # Generate secure API key
+wrangler secret put API_KEY          # Generate secure API key (use same value as MODAL_API_KEY)
 # Choose your LLM provider (set one or both):
 wrangler secret put LLM_PROVIDER     # Set to "openai" (default) or "groq"
 wrangler secret put OPENAI_API_KEY   # Required if LLM_PROVIDER=openai

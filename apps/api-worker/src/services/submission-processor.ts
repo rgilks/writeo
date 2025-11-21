@@ -283,7 +283,10 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
             answerId: answer.id,
             request: fetchWithTimeout(`${c.env.MODAL_LT_URL}/check`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Token ${c.env.API_KEY}`,
+              },
               body: JSON.stringify({
                 language,
                 text: answer.answer_text,
@@ -357,7 +360,10 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
         const result = await fetchWithTimeout(`${c.env.MODAL_GRADE_URL}/grade`, {
           timeout: 60000, // 60 seconds for essay scoring (longer operation)
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${c.env.API_KEY}`,
+          },
           body: JSON.stringify(modalRequest),
         });
         timings["5a_essay_fetch"] = performance.now() - start;

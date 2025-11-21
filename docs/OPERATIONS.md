@@ -21,7 +21,7 @@ You need **different files for different parts**:
 **Production:** Set via `wrangler secret put`:
 
 - `MODAL_GRADE_URL` - Essay Scoring Modal endpoint
-- `API_KEY` - API authentication key (must match web app)
+- `API_KEY` - API authentication key (must match web app and Modal services)
 - **LLM Provider** (choose one):
   - `LLM_PROVIDER=openai` + `OPENAI_API_KEY` - Cost-effective option (GPT-4o-mini)
   - `LLM_PROVIDER=groq` + `GROQ_API_KEY` - Ultra-fast option (Llama 3.3 70B)
@@ -30,6 +30,10 @@ You need **different files for different parts**:
 - `AI_MODEL` (optional) - Model name (default: `"gpt-4o-mini"` for OpenAI, `"llama-3.3-70b-versatile"` for Groq)
 - `TEST_API_KEY` (optional) - Test key with higher rate limits
 - `ALLOWED_ORIGINS` (optional) - CORS origins (default: all)
+
+**Modal Services:** Set via `modal secret create`:
+
+- `MODAL_API_KEY` - API key for Modal services (should match Cloudflare Worker `API_KEY`)
 
 **Local Development:** Copy `apps/api-worker/.dev.vars.example` to `.dev.vars` and fill in your values:
 

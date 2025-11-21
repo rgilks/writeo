@@ -252,12 +252,12 @@ test.describe("Writing Page", () => {
 
     // Wait a moment for navigation or errors to appear
     await page.waitForTimeout(1000);
-    
+
     // Check if we've already navigated to results page
     // If so, skip error checking (results page content might be mistaken for errors)
     const currentUrl = page.url();
     const isOnResultsPage = /\/results\/[a-f0-9-]+/.test(currentUrl);
-    
+
     // Only check for errors if we're still on the write page
     if (!isOnResultsPage) {
       const errorAfterSubmit = await writePage.getError();

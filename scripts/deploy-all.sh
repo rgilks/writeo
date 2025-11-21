@@ -62,19 +62,26 @@ echo "$MODAL_URL" | $WRANGLER_CMD secret put MODAL_GRADE_URL
 cd ../..
 
 echo ""
-echo "Setting API_KEY secret for API worker..."
-echo -e "${YELLOW}Note: You need to set API_KEY manually if not already set.${NC}"
+echo "Setting API_KEY secrets..."
+echo -e "${YELLOW}Note: API_KEY must be set for both Cloudflare Worker and Modal services.${NC}"
 read -p "Do you want to set API_KEY now? (y/N): " SET_API_KEY
 if [[ $SET_API_KEY =~ ^[Yy]$ ]]; then
     read -sp "Enter API_KEY (input will be hidden): " API_KEY_VALUE
     echo ""
+    
+    # Set Cloudflare Worker API_KEY
     cd apps/api-worker
     echo "$API_KEY_VALUE" | $WRANGLER_CMD secret put API_KEY
     cd ../..
-    echo -e "${GREEN}✓ API_KEY configured${NC}"
+    echo -e "${GREEN}✓ Cloudflare Worker API_KEY configured${NC}"
+    
+    # Set Modal API_KEY
+    echo "$API_KEY_VALUE" | modal secret create MODAL_API_KEY
+    echo -e "${GREEN}✓ Modal API_KEY configured${NC}"
 else
     echo -e "${YELLOW}⚠ Skipping API_KEY setup. Make sure to set it manually:${NC}"
     echo "  cd apps/api-worker && wrangler secret put API_KEY"
+    echo "  modal secret create MODAL_API_KEY <same-value-as-api-key>"
 fi
 
 echo -e "${GREEN}✓ Secrets configured${NC}"
