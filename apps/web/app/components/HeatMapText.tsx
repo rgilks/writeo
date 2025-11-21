@@ -832,15 +832,17 @@ function AnnotatedTextRevealed({
         style={{
           position: "sticky",
           top: 0,
-          zIndex: 100,
+          zIndex: 1000,
           backgroundColor: "var(--bg-primary)",
           borderBottom: "2px solid var(--border-color)",
           padding: "var(--spacing-md)",
           marginBottom: "var(--spacing-md)",
-          borderRadius: "var(--border-radius) var(--border-radius) 0 0",
-          boxShadow: activeError ? "0 4px 12px rgba(0,0,0,0.1)" : "none",
+          borderRadius: "var(--border-radius)",
+          boxShadow: activeError ? "0 4px 12px rgba(0,0,0,0.15)" : "0 2px 8px rgba(0,0,0,0.05)",
           minHeight: activeError ? "auto" : "60px",
           transition: "all 0.2s ease",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
         }}
         lang="en"
       >
