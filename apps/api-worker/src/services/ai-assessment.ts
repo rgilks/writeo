@@ -1,10 +1,49 @@
 import type { LanguageToolError } from "@writeo/shared";
 import { callLLMAPI, type LLMProvider } from "./llm";
-import { validateAndCorrectErrorPosition } from "../utils/text-processing";
+import {
+  validateAndCorrectErrorPosition,
+  truncateEssayText,
+  truncateQuestionText,
+} from "../utils/text-processing";
 import { MAX_TOKENS_GRAMMAR_CHECK } from "../utils/constants";
 
 // Note: With pipe-delimited format, we don't need JSON repair anymore
 // Each line is independent, so truncation only affects incomplete lines at the end
+
+/**
+ * Retry helper with exponential backoff for LLM calls
+ */
+async function retryLLMCall<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number = 3,
+  baseDelayMs: number = 500
+): Promise<T> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Don't retry on client errors (4xx) - these are not transient
+      if (error instanceof Error && error.message.includes("4")) {
+        throw error;
+      }
+
+      // Don't retry on last attempt
+      if (attempt === maxAttempts - 1) {
+        break;
+      }
+
+      // Exponential backoff: 500ms, 1000ms, 2000ms
+      const delay = baseDelayMs * Math.pow(2, attempt);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError || new Error("LLM call failed after retries");
+}
 
 export async function getLLMAssessment(
   llmProvider: LLMProvider,
@@ -13,84 +52,66 @@ export async function getLLMAssessment(
   answerText: string,
   modelName: string
 ): Promise<LanguageToolError[]> {
-  try {
-    const prompt = `You are an expert English grammar and language checker. Your task is to identify ALL grammar, spelling, style, and punctuation errors in the student's answer.
+  // Truncate long texts to reduce token usage and costs
+  // Keep enough context for meaningful grammar checking (~2000 words / ~12000 chars)
+  const MAX_TEXT_LENGTH_FOR_GRAMMAR_CHECK = 12000;
+  const truncatedAnswerText =
+    answerText.length > MAX_TEXT_LENGTH_FOR_GRAMMAR_CHECK
+      ? answerText.slice(0, MAX_TEXT_LENGTH_FOR_GRAMMAR_CHECK) + "\n\n[... text continues ...]"
+      : answerText;
+  const truncatedQuestionText = truncateQuestionText(questionText);
 
-CRITICAL: You MUST find and report errors. This text contains multiple errors that need to be identified. Be thorough and check every sentence carefully.
+  // More concise prompt to reduce token usage
+  const prompt = `Find ALL grammar, spelling, style, and punctuation errors in the student's answer.
 
-Analyze the following text and identify ALL errors, with special attention to:
-- TENSE ERRORS: Look for inconsistent verb tenses, especially when past-time indicators are present (yesterday, last week, ago, etc.). If the text mentions past events, ALL verbs should be in past tense.
-- Grammar errors (subject-verb agreement, articles, prepositions, word order, modal verbs)
-- Spelling mistakes
-- Style issues (redundancy, word choice)
-- Punctuation errors
-- Confused words (their/there, its/it's, lose/loose, etc.)
+Focus on:
+- Tense errors (past-time indicators → past tense verbs)
+- Grammar (subject-verb agreement, articles, prepositions, word order)
+- Spelling, style, punctuation, confused words
 
-Question: ${questionText}
+Question: ${truncatedQuestionText}
+Answer: ${truncatedAnswerText}
 
-Answer to check: ${answerText}
-
-IMPORTANT: Pay special attention to tense consistency. If the text describes past events (uses words like "yesterday", "last week", "ago", "was", "were"), check that ALL verbs are in past tense. Common errors:
-- "I go" should be "I went" when describing past events
-- "I have" should be "I had" when describing past events
-- "I enjoy" should be "I enjoyed" when describing past events
-- "We was" should be "We were"
-- "can to speak" should be "can speak"
-
-For each error you find, provide:
-1. The exact character positions (start and end) where the error occurs in the answer text - these must be accurate character indices counting from the start of the answer text
-2. The exact text snippet that contains the error (the text between start and end positions) - this is CRITICAL for validation
-3. The error category (GRAMMAR, SPELLING, STYLE, PUNCTUATION, TYPOS, CONFUSED_WORDS)
-4. A clear error message that describes what's wrong
-5. Suggested corrections (array of strings) - these should be complete replacements for the errorText, not just the corrected word
-6. The error type (e.g., "Subject-verb agreement", "Verb tense", "Article use", "Spelling")
-7. A brief explanation that matches the actual error in the text
-8. Severity ("error" or "warning")
-
-CRITICAL REQUIREMENTS FOR POSITIONS:
-- Count characters carefully from the start of the answer text (position 0 is the first character)
-- The errorText MUST contain the exact text that appears between start and end positions
-- Positions must align with word boundaries - do NOT split words in the middle
-- If an error spans multiple words, include the complete words
-- Double-check your positions by verifying the errorText matches what's actually at those positions
-
-Return format: ONE ERROR PER LINE, pipe-delimited (|). Each line represents one error.
+Return format: ONE ERROR PER LINE, pipe-delimited.
 Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity
 
 Where:
-- start: character position (number)
-- end: character position (number)
+- start/end: character positions (0-based from start of answer)
 - errorText: exact text at that position
 - category: GRAMMAR, SPELLING, STYLE, PUNCTUATION, TYPOS, or CONFUSED_WORDS
-- message: clear error description
-- suggestions: comma-separated list of corrections (e.g., "went,goes")
+- message: error description
+- suggestions: comma-separated corrections (e.g., "went,goes")
 - errorType: error type (e.g., "Verb tense", "Subject-verb agreement")
 - explanation: brief explanation
 - severity: "error" or "warning"
 
 Example:
-15|20|go to|GRAMMAR|Verb tense error|went|Verb tense|Use past tense for past events|error
-34|37|was|GRAMMAR|Subject-verb agreement|were|Subject-verb agreement|We requires were not was|error
+15|20|go to|GRAMMAR|Verb tense error|went|Verb tense|Use past tense|error
+34|37|was|GRAMMAR|Subject-verb agreement|were|Subject-verb agreement|We requires were|error
 
-Return ONLY the error lines (one per line), no headers, no explanations, no other text.
-If no errors found, return a single line: NO_ERRORS`;
+Return ONLY error lines (one per line), no headers/explanations.
+If no errors: NO_ERRORS`;
 
-    const text = await callLLMAPI(
-      llmProvider,
-      apiKey,
-      modelName,
-      [
-        {
-          role: "system",
-          content:
-            "You are an expert English grammar and language checker. Return errors as pipe-delimited lines (one error per line). Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity. No headers, no explanations, just the error lines.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      MAX_TOKENS_GRAMMAR_CHECK
+  try {
+    // Use retry logic for reliability
+    const text = await retryLLMCall(() =>
+      callLLMAPI(
+        llmProvider,
+        apiKey,
+        modelName,
+        [
+          {
+            role: "system",
+            content:
+              "You are an expert English grammar checker. Return errors as pipe-delimited lines. Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity. No headers/explanations.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        MAX_TOKENS_GRAMMAR_CHECK
+      )
     );
 
     if (!text) {
@@ -192,6 +213,8 @@ If no errors found, return a single line: NO_ERRORS`;
 
         // Get the error text from the response or extract it from the answer text
         const reportedErrorText = err.errorText || "";
+        // Positions are relative to truncatedAnswerText, but we validate against original answerText
+        // (positions should be valid for first 12k chars of original text)
         const extractedErrorText = answerText.substring(
           Math.max(0, err.start),
           Math.min(answerText.length, err.end)
@@ -229,6 +252,7 @@ If no errors found, return a single line: NO_ERRORS`;
           }
         }
 
+        // Validate against original answerText (positions should be valid for first part)
         const validated = validateAndCorrectErrorPosition(validationInput, answerText);
 
         if (!validated.valid) {
