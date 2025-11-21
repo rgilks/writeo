@@ -4,6 +4,7 @@ import {
   validateAndCorrectErrorPosition,
   truncateEssayText,
   truncateQuestionText,
+  findTextWithContext,
 } from "../utils/text-processing";
 import { MAX_TOKENS_GRAMMAR_CHECK } from "../utils/constants";
 
@@ -78,11 +79,12 @@ Question: ${truncatedQuestionText}
 Answer: ${truncatedAnswerText}
 
 Return format: ONE ERROR PER LINE, pipe-delimited.
-Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity
+Format: errorText|wordBefore|wordAfter|category|message|suggestions|errorType|explanation|severity
 
 Where:
-- start/end: character positions (0-based from start of answer)
-- errorText: exact text at that position
+- errorText: the exact text that contains the error (the word or phrase that's wrong)
+- wordBefore: the word immediately before the error (or empty if at start of sentence)
+- wordAfter: the word immediately after the error (or empty if at end of sentence)
 - category: GRAMMAR, SPELLING, STYLE, PUNCTUATION, TYPOS, or CONFUSED_WORDS
 - message: error description
 - suggestions: comma-separated corrections (e.g., "went,goes")
@@ -91,8 +93,8 @@ Where:
 - severity: "error" or "warning"
 
 Example:
-15|20|go to|GRAMMAR|Verb tense error|went|Verb tense|Use past tense|error
-34|37|was|GRAMMAR|Subject-verb agreement|were|Subject-verb agreement|We requires were|error
+go to|I|the|GRAMMAR|Verb tense error|went|Verb tense|Use past tense|error
+was|they|happy|GRAMMAR|Subject-verb agreement|were|Subject-verb agreement|They requires were|error
 
 Return ONLY error lines (one per line), no headers/explanations.
 If no errors: NO_ERRORS`;
@@ -108,7 +110,7 @@ If no errors: NO_ERRORS`;
           {
             role: "system",
             content:
-              "You are an expert English grammar checker. Check the ENTIRE text systematically from beginning to end. Return ALL errors as pipe-delimited lines. Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity. No headers/explanations. Make sure to check the middle and end sections of the text as thoroughly as the beginning.",
+              "You are an expert English grammar checker. Check the ENTIRE text systematically from beginning to end. Return ALL errors as pipe-delimited lines. Format: errorText|wordBefore|wordAfter|category|message|suggestions|errorType|explanation|severity. Include the word before and after the error for context (or empty if at sentence boundaries). No headers/explanations. Make sure to check the middle and end sections of the text as thoroughly as the beginning.",
           },
           {
             role: "user",
@@ -131,7 +133,7 @@ If no errors: NO_ERRORS`;
       return [];
     }
 
-    // Parse pipe-delimited format: start|end|errorText|category|message|suggestions|errorType|explanation|severity
+    // Parse pipe-delimited format: errorText|wordBefore|wordAfter|category|message|suggestions|errorType|explanation|severity
     const lines = trimmedText.split("\n").filter((line) => line.trim().length > 0);
     const errors: any[] = [];
 
@@ -149,7 +151,7 @@ If no errors: NO_ERRORS`;
 
       const parts = trimmedLine.split("|").map((p) => p.trim());
 
-      // Need at least 9 parts (start|end|errorText|category|message|suggestions|errorType|explanation|severity)
+      // Need at least 9 parts (errorText|wordBefore|wordAfter|category|message|suggestions|errorType|explanation|severity)
       if (parts.length < 9) {
         console.warn(
           `[getLLMAssessment] Skipping malformed line (expected 9 parts, got ${parts.length}):`,
@@ -159,9 +161,9 @@ If no errors: NO_ERRORS`;
       }
 
       const [
-        startStr,
-        endStr,
         errorText,
+        wordBefore,
+        wordAfter,
         category,
         message,
         suggestionsStr,
@@ -170,12 +172,11 @@ If no errors: NO_ERRORS`;
         severity,
       ] = parts;
 
-      const start = parseInt(startStr, 10);
-      const end = parseInt(endStr, 10);
-
-      if (isNaN(start) || isNaN(end)) {
+      // Validate errorText is not empty
+      if (!errorText || errorText.trim().length === 0) {
         console.warn(
-          `[getLLMAssessment] Skipping line with invalid positions: start=${startStr}, end=${endStr}`
+          `[getLLMAssessment] Skipping line with empty errorText:`,
+          trimmedLine.substring(0, 100)
         );
         continue;
       }
@@ -187,9 +188,9 @@ If no errors: NO_ERRORS`;
         .filter((s) => s.length > 0);
 
       errors.push({
-        start,
-        end,
-        errorText,
+        errorText: errorText.trim(),
+        wordBefore: wordBefore && wordBefore.trim().length > 0 ? wordBefore.trim() : null,
+        wordAfter: wordAfter && wordAfter.trim().length > 0 ? wordAfter.trim() : null,
         category: category || "GRAMMAR",
         message: message || "Error detected",
         suggestions,
@@ -212,145 +213,73 @@ If no errors: NO_ERRORS`;
 
     const processedErrors = errors
       .map((err: any): LanguageToolError | null => {
-        if (typeof err.start !== "number" || typeof err.end !== "number") {
+        // Validate required fields
+        if (!err.errorText || err.errorText.trim().length === 0) {
+          console.warn(`[getLLMAssessment] Skipping error with empty errorText`);
           return null;
         }
 
-        // Get the error text from the response or extract it from the answer text
-        const reportedErrorText = err.errorText || "";
-        // Positions are relative to truncatedAnswerText, but we validate against original answerText
-        // (positions should be valid for first 12k chars of original text)
-        // Cap positions at the truncation boundary to prevent issues with errors near the end
+        const reportedErrorText = err.errorText.trim();
+        const wordBefore = err.wordBefore || null;
+        const wordAfter = err.wordAfter || null;
+
+        // Cap search at truncation boundary - errors beyond this weren't processed by LLM
         const maxValidPosition = Math.min(answerText.length, MAX_TEXT_LENGTH_FOR_GRAMMAR_CHECK);
+        const searchText = answerText.substring(0, maxValidPosition);
 
-        // Ensure error positions don't exceed the truncation boundary
-        // Errors beyond this point weren't processed by the LLM
-        if (err.start >= maxValidPosition) {
-          // This error is beyond the truncation boundary - skip it
-          console.log(
-            `[getLLMAssessment] Skipping error beyond truncation boundary: start=${err.start}, max=${maxValidPosition}`
-          );
-          return null;
-        }
-
-        const extractedErrorText = answerText.substring(
-          Math.max(0, err.start),
-          Math.min(maxValidPosition, err.end)
+        // Use context-aware text matching to find the position
+        let foundPosition = findTextWithContext(
+          reportedErrorText,
+          wordBefore,
+          wordAfter,
+          searchText
         );
 
-        // Validate and correct the position
-        // For Groq, be more lenient - try to find the errorText even if positions are off
-        // Cap end position at truncation boundary to prevent validation issues
-        let validationInput = {
-          start: err.start || 0,
-          end: Math.min(err.end || 0, maxValidPosition),
-          errorText: reportedErrorText || extractedErrorText,
+        if (!foundPosition) {
+          // Try fallback: simple search without context
+          const errorTextLower = reportedErrorText.toLowerCase();
+          const searchTextLower = searchText.toLowerCase();
+          const foundIndex = searchTextLower.indexOf(errorTextLower);
+
+          if (foundIndex === -1) {
+            console.warn(
+              `[getLLMAssessment] Could not find error text "${reportedErrorText}" in answer text`,
+              {
+                wordBefore,
+                wordAfter,
+                category: err.category,
+              }
+            );
+            return null;
+          }
+
+          // Use simple found position
+          foundPosition = {
+            start: foundIndex,
+            end: foundIndex + reportedErrorText.length,
+          };
+        }
+
+        // Validate and correct the position to align with word boundaries
+        const validationInput = {
+          start: foundPosition.start,
+          end: foundPosition.end,
+          errorText: reportedErrorText,
           message: err.message,
           errorType: err.errorType || err.category,
         };
 
-        // If Groq and we have errorText but positions seem wrong, try to find it first
-        if (llmProvider === "groq" && reportedErrorText && reportedErrorText.trim().length > 0) {
-          // Try to find the errorText in the answer text, but only within the truncation boundary
-          const searchStart = Math.max(0, err.start - 100);
-          const searchEnd = Math.min(maxValidPosition, err.end + 100);
-          const searchArea = answerText.substring(searchStart, searchEnd);
-          const foundIndex = searchArea
-            .toLowerCase()
-            .indexOf(reportedErrorText.toLowerCase().trim());
-
-          if (foundIndex !== -1) {
-            // Found it! Use the found position
-            const correctedStart = searchStart + foundIndex;
-            const correctedEnd = correctedStart + reportedErrorText.trim().length;
-            validationInput.start = correctedStart;
-            validationInput.end = correctedEnd;
-            console.log(
-              `[getLLMAssessment] Groq: Found errorText "${reportedErrorText}" at corrected position ${correctedStart}-${correctedEnd} (original: ${err.start}-${err.end})`
-            );
-          }
-        }
-
-        // Validate against original answerText (positions should be valid for first part)
         const validated = validateAndCorrectErrorPosition(validationInput, answerText);
 
         if (!validated.valid) {
-          // For Groq, if we have errorText, try one more time with a more aggressive search
-          if (llmProvider === "groq" && reportedErrorText && reportedErrorText.trim().length > 0) {
-            // Search within the truncation boundary for the errorText
-            const searchText = answerText.substring(0, maxValidPosition).toLowerCase();
-            const errorTextLower = reportedErrorText.toLowerCase().trim();
-            const foundIndex = searchText.indexOf(errorTextLower);
-
-            if (foundIndex !== -1) {
-              // Found it! Create a new validation with the found position
-              const retryValidated = validateAndCorrectErrorPosition(
-                {
-                  start: foundIndex,
-                  end: foundIndex + errorTextLower.length,
-                  errorText: reportedErrorText,
-                  message: err.message,
-                  errorType: err.errorType || err.category,
-                },
-                answerText
-              );
-
-              if (retryValidated.valid) {
-                console.log(
-                  `[getLLMAssessment] Groq: Retry validation succeeded for "${reportedErrorText}" at ${retryValidated.start}-${retryValidated.end}`
-                );
-                // Use the retry validated position
-                const actualErrorText = answerText.substring(
-                  retryValidated.start,
-                  retryValidated.end
-                );
-                let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
-                suggestions = suggestions.filter(
-                  (s: string) => s && s.trim() !== actualErrorText.trim()
-                );
-
-                return {
-                  start: retryValidated.start,
-                  end: retryValidated.end,
-                  length: retryValidated.end - retryValidated.start,
-                  category: (err.category || "GRAMMAR").toUpperCase(),
-                  rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
-                  message: err.message || "Error detected",
-                  suggestions: suggestions.slice(0, 5),
-                  source: "LLM" as const,
-                  severity: (err.severity || "error") as "warning" | "error",
-                  confidenceScore: 0.75,
-                  highConfidence: false,
-                  mediumConfidence: true,
-                  errorType: err.errorType || "Grammar error",
-                  explanation: err.explanation || err.message || "Error detected",
-                  example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
-                };
-              }
-            }
-          }
-
-          // Skip invalid positions
-          console.warn(`[getLLMAssessment] Rejected error for ${llmProvider}:`, {
-            originalStart: err.start,
-            originalEnd: err.end,
+          console.warn(`[getLLMAssessment] Rejected error after validation:`, {
             errorText: reportedErrorText,
-            extractedText: extractedErrorText,
+            wordBefore,
+            wordAfter,
+            foundPosition,
             category: err.category,
-            validationInput: validationInput,
           });
           return null;
-        }
-
-        if (
-          llmProvider === "groq" &&
-          (validated.start !== err.start || validated.end !== err.end)
-        ) {
-          console.log(`[getLLMAssessment] Groq position corrected:`, {
-            original: `${err.start}-${err.end}`,
-            corrected: `${validated.start}-${validated.end}`,
-            errorText: reportedErrorText,
-          });
         }
 
         // Get the actual text at the validated position

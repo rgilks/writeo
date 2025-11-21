@@ -420,6 +420,74 @@ function findTextSnippet(
 }
 
 /**
+ * Finds text in fullText using the error text and context words (before/after)
+ * This is more reliable than trusting LLM-calculated positions
+ */
+export function findTextWithContext(
+  errorText: string,
+  wordBefore: string | null,
+  wordAfter: string | null,
+  fullText: string
+): { start: number; end: number } | null {
+  if (!errorText || errorText.trim().length === 0) return null;
+
+  const normalizedErrorText = errorText.trim();
+  const normalizedFullText = fullText.toLowerCase();
+  const normalizedErrorLower = normalizedErrorText.toLowerCase();
+
+  // First, try to find error text with context (wordBefore and wordAfter)
+  if (wordBefore || wordAfter) {
+    // Build a search pattern: [wordBefore] errorText [wordAfter]
+    const beforeLower = wordBefore ? wordBefore.trim().toLowerCase() : null;
+    const afterLower = wordAfter ? wordAfter.trim().toLowerCase() : null;
+
+    // Search for error text, then verify context
+    let searchStart = 0;
+    while (true) {
+      const foundIndex = normalizedFullText.indexOf(normalizedErrorLower, searchStart);
+      if (foundIndex === -1) break;
+
+      // Check wordBefore context
+      let beforeMatches = true;
+      if (beforeLower) {
+        const beforeArea = normalizedFullText.substring(Math.max(0, foundIndex - 50), foundIndex);
+        beforeMatches = beforeArea.includes(beforeLower);
+      }
+
+      // Check wordAfter context
+      let afterMatches = true;
+      if (afterLower && beforeMatches) {
+        const afterStart = foundIndex + normalizedErrorLower.length;
+        const afterArea = normalizedFullText.substring(afterStart, afterStart + 50);
+        afterMatches = afterArea.includes(afterLower);
+      }
+
+      if (beforeMatches && afterMatches) {
+        // Found with matching context!
+        return {
+          start: foundIndex,
+          end: foundIndex + normalizedErrorText.length,
+        };
+      }
+
+      // Continue searching from after this match
+      searchStart = foundIndex + 1;
+    }
+  }
+
+  // Fallback: find error text without context (or if context matching failed)
+  const simpleIndex = normalizedFullText.indexOf(normalizedErrorLower);
+  if (simpleIndex !== -1) {
+    return {
+      start: simpleIndex,
+      end: simpleIndex + normalizedErrorText.length,
+    };
+  }
+
+  return null;
+}
+
+/**
  * Validates and corrects error positions to align with word boundaries
  * and ensure they match the actual text
  */

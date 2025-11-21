@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import type { LanguageToolError } from "@writeo/shared";
 
 // Error detail component - simplified to show explanations directly
@@ -559,39 +558,38 @@ export function HeatMapText({
           </button>
         </div>
       )}
-      <div
-        className="prose max-w-none notranslate"
-        translate="no"
-        lang="en"
-        style={{
-          padding: "var(--spacing-lg)",
-          backgroundColor: revealed ? "var(--bg-secondary)" : "transparent",
-          borderRadius: "var(--border-radius)",
-          lineHeight: "1.5",
-          fontSize: "16px",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {revealed ? (
-          // Show annotated text with errors when revealed
-          <AnnotatedTextRevealed
-            text={text}
-            errors={highConfidenceErrors}
-            showMediumConfidence={showMediumConfidenceErrors}
-            showExperimental={showExperimentalSuggestions}
-            mediumConfidenceErrors={mediumConfidenceErrors}
-            experimentalErrors={lowConfidenceErrors}
-          />
-        ) : (
-          // Show heat map
-          elements
-        )}
-      </div>
+      {revealed && (
+        <AnnotatedTextRevealed
+          text={text}
+          errors={highConfidenceErrors}
+          showMediumConfidence={showMediumConfidenceErrors}
+          showExperimental={showExperimentalSuggestions}
+          mediumConfidenceErrors={mediumConfidenceErrors}
+          experimentalErrors={lowConfidenceErrors}
+        />
+      )}
+      {!revealed && (
+        <div
+          className="prose max-w-none notranslate"
+          translate="no"
+          lang="en"
+          style={{
+            padding: "var(--spacing-lg)",
+            backgroundColor: "transparent",
+            borderRadius: "var(--border-radius)",
+            lineHeight: "1.5",
+            fontSize: "16px",
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {elements}
+        </div>
+      )}
     </div>
   );
 }
 
-// Individual error span component with popup
+// Individual error span component - highlights text and triggers suggestion display in top panel
 function ErrorSpan({
   errorKey,
   errorText,
@@ -610,190 +608,61 @@ function ErrorSpan({
   error: LanguageToolError;
 }) {
   const errorRef = useRef<HTMLSpanElement>(null);
-  const popupRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isActive || !popupRef.current || !errorRef.current) return;
-
-    const positionPopup = () => {
-      const popup = popupRef.current;
-      const trigger = errorRef.current;
-      if (!popup || !trigger) return;
-
-      const rect = trigger.getBoundingClientRect();
-      const popupRect = popup.getBoundingClientRect();
-
-      // Get viewport dimensions
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const padding = 8; // Padding from viewport edges
-      const isMobile = viewportWidth < 640; // Mobile breakpoint
-
-      let top: number;
-      let left: number;
-
-      if (isMobile) {
-        // On mobile, center horizontally and position below text
-        left = Math.max(padding, (viewportWidth - popupRect.width) / 2);
-        top = rect.bottom + 8; // 8px gap below the text
-
-        // If popup would go off bottom, try above
-        if (top + popupRect.height > viewportHeight - padding) {
-          const topAbove = rect.top - popupRect.height - 8;
-          if (topAbove >= padding) {
-            top = topAbove;
-          } else {
-            // If can't fit above, center vertically
-            top = Math.max(padding, (viewportHeight - popupRect.height) / 2);
-          }
-        }
-      } else {
-        // On desktop, try to position to the right of the text first
-        top = rect.top;
-        left = rect.right + 8; // 8px gap from the text
-
-        // If popup would go off right edge, try left side
-        if (left + popupRect.width > viewportWidth - padding) {
-          const leftSide = rect.left - popupRect.width - 8;
-          if (leftSide >= padding) {
-            left = leftSide;
-          } else {
-            // If can't fit on left either, align to right edge
-            left = viewportWidth - popupRect.width - padding;
-          }
-        }
-
-        // Adjust horizontal position if popup would go off left edge
-        if (left < padding) {
-          left = padding;
-        }
-
-        // Adjust vertical position to keep popup aligned with text
-        if (top + popupRect.height > viewportHeight - padding) {
-          // Try above the error instead
-          const topAbove = rect.top - popupRect.height - 8;
-          if (topAbove >= padding) {
-            top = topAbove;
-          } else {
-            // If can't fit above either, position at bottom of viewport
-            top = viewportHeight - popupRect.height - padding;
-          }
-        }
-      }
-
-      // Ensure popup doesn't go above viewport
-      if (top < padding) {
-        top = padding;
-      }
-
-      // Apply calculated position
-      popup.style.top = `${top}px`;
-      popup.style.left = `${left}px`;
-      popup.style.position = "fixed";
-    };
-
-    // Use requestAnimationFrame to ensure popup is rendered before positioning
-    requestAnimationFrame(() => {
-      requestAnimationFrame(positionPopup);
-    });
-
-    // Handle window resize and scroll
-    window.addEventListener("resize", positionPopup);
-    window.addEventListener("scroll", positionPopup, true);
-    return () => {
-      window.removeEventListener("resize", positionPopup);
-      window.removeEventListener("scroll", positionPopup, true);
-    };
-  }, [isActive]);
-
-  // Keep popup open - only close when clicking another error or the close button
-  // The popup will stay visible until explicitly closed or another error is activated
-  // This ensures suggestions remain visible on screen near where the user clicked
 
   // Scroll error into view when activated
   useEffect(() => {
     if (isActive && errorRef.current) {
       errorRef.current.scrollIntoView({
         behavior: "smooth",
-        block: "nearest",
+        block: "center",
         inline: "nearest",
       });
     }
   }, [isActive]);
 
   return (
-    <>
+    <span
+      ref={errorRef}
+      data-error-span
+      className="relative"
+      translate="no"
+      lang="en"
+      style={{
+        position: "relative",
+        display: "inline",
+        marginBottom: 0,
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isActive) {
+          onDeactivate();
+        } else {
+          onActivate();
+        }
+      }}
+    >
       <span
-        ref={errorRef}
-        data-error-span
-        className="relative"
+        className="underline decoration-wavy cursor-pointer"
         translate="no"
         lang="en"
         style={{
-          position: "relative",
-          display: "inline",
-          marginBottom: 0,
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (isActive) {
-            onDeactivate();
-          } else {
-            onActivate();
-          }
+          textDecorationColor: errorColor,
+          textDecorationThickness: "3px",
+          textUnderlineOffset: "3px",
+          backgroundColor: isActive ? `${errorColor}30` : `${errorColor}15`,
+          padding: "2px 2px",
+          borderRadius: "3px",
+          fontWeight: isActive ? 600 : 500,
+          cursor: "pointer",
+          boxShadow: isActive ? `0 0 0 2px ${errorColor}40` : "none",
+          transition: "all 0.2s ease",
+          outline: isActive ? `2px solid ${errorColor}` : "none",
+          outlineOffset: "2px",
         }}
       >
-        <span
-          className="underline decoration-wavy cursor-pointer"
-          translate="no"
-          lang="en"
-          style={{
-            textDecorationColor: errorColor,
-            textDecorationThickness: "3px",
-            textUnderlineOffset: "3px",
-            backgroundColor: isActive ? `${errorColor}30` : `${errorColor}15`,
-            padding: "2px 2px",
-            borderRadius: "3px",
-            fontWeight: isActive ? 600 : 500,
-            cursor: "pointer",
-            boxShadow: isActive ? `0 0 0 2px ${errorColor}40` : "none",
-            transition: "all 0.2s ease",
-            outline: isActive ? `2px solid ${errorColor}` : "none",
-            outlineOffset: "2px",
-          }}
-        >
-          {errorText}
-        </span>
+        {errorText}
       </span>
-      {/* Error detail popup */}
-      <AnimatePresence>
-        {isActive && (
-          <motion.div
-            ref={popupRef}
-            style={{
-              position: "fixed",
-              padding: "var(--spacing-sm)",
-              backgroundColor: "var(--bg-primary)",
-              border: `2px solid ${errorColor}`,
-              borderRadius: "var(--border-radius)",
-              boxShadow: `0 4px 12px rgba(0,0,0,0.15), 0 0 0 1px ${errorColor}20`,
-              minWidth: "250px",
-              maxWidth: "min(400px, calc(100vw - 16px))",
-              width: "max-content",
-              zIndex: 1000,
-            }}
-            lang="en"
-            onClick={(e) => e.stopPropagation()}
-            initial={{ opacity: 0, y: -5, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -5, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-          >
-            <ErrorDetail error={error} errorText={errorText} onClose={onDeactivate} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    </span>
   );
 }
 
@@ -813,6 +682,7 @@ function AnnotatedTextRevealed({
   experimentalErrors?: LanguageToolError[];
 }) {
   const [activeErrorKey, setActiveErrorKey] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Combine errors based on toggles
   let allErrors = [...errors];
@@ -950,9 +820,69 @@ function AnnotatedTextRevealed({
     );
   }
 
+  // Find the active error object
+  const activeError = activeErrorKey
+    ? sorted.find((_, i) => `error-${sorted[i].start}-${sorted[i].end}-${i}` === activeErrorKey)
+    : null;
+
   return (
-    <div translate="no" lang="en">
-      {elements}
+    <div ref={containerRef} translate="no" lang="en" style={{ position: "relative" }}>
+      {/* Sticky suggestion panel at the top */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          backgroundColor: "var(--bg-primary)",
+          borderBottom: "2px solid var(--border-color)",
+          padding: "var(--spacing-md)",
+          marginBottom: "var(--spacing-md)",
+          borderRadius: "var(--border-radius) var(--border-radius) 0 0",
+          boxShadow: activeError ? "0 4px 12px rgba(0,0,0,0.1)" : "none",
+          minHeight: activeError ? "auto" : "60px",
+          transition: "all 0.2s ease",
+        }}
+        lang="en"
+      >
+        {activeError ? (
+          <ErrorDetail
+            error={activeError}
+            errorText={text.slice(activeError.start, activeError.end)}
+            onClose={() => setActiveErrorKey(null)}
+          />
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--text-secondary)",
+              fontSize: "14px",
+              padding: "var(--spacing-sm)",
+            }}
+            lang="en"
+          >
+            Click on highlighted text to see suggestions for improvement.
+          </div>
+        )}
+      </div>
+
+      {/* Text content */}
+      <div
+        className="prose max-w-none notranslate"
+        translate="no"
+        lang="en"
+        style={{
+          padding: "var(--spacing-lg)",
+          backgroundColor: "var(--bg-secondary)",
+          borderRadius: "var(--border-radius)",
+          lineHeight: "1.5",
+          fontSize: "16px",
+          whiteSpace: "pre-wrap",
+        }}
+      >
+        {elements}
+      </div>
     </div>
   );
 }
