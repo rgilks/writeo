@@ -148,18 +148,99 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
           );
 
           // Validate and correct the position
-          const validated = validateAndCorrectErrorPosition(
-            {
-              start: err.start || 0,
-              end: err.end || 0,
-              errorText: reportedErrorText || extractedErrorText,
-              message: err.message,
-              errorType: err.errorType || err.category,
-            },
-            answerText
-          );
+          // For Groq, be more lenient - try to find the errorText even if positions are off
+          let validationInput = {
+            start: err.start || 0,
+            end: err.end || 0,
+            errorText: reportedErrorText || extractedErrorText,
+            message: err.message,
+            errorType: err.errorType || err.category,
+          };
+
+          // If Groq and we have errorText but positions seem wrong, try to find it first
+          if (llmProvider === "groq" && reportedErrorText && reportedErrorText.trim().length > 0) {
+            // Try to find the errorText in the answer text
+            const searchStart = Math.max(0, err.start - 100);
+            const searchEnd = Math.min(answerText.length, err.end + 100);
+            const searchArea = answerText.substring(searchStart, searchEnd);
+            const foundIndex = searchArea
+              .toLowerCase()
+              .indexOf(reportedErrorText.toLowerCase().trim());
+
+            if (foundIndex !== -1) {
+              // Found it! Use the found position
+              const correctedStart = searchStart + foundIndex;
+              const correctedEnd = correctedStart + reportedErrorText.trim().length;
+              validationInput.start = correctedStart;
+              validationInput.end = correctedEnd;
+              console.log(
+                `[getLLMAssessment] Groq: Found errorText "${reportedErrorText}" at corrected position ${correctedStart}-${correctedEnd} (original: ${err.start}-${err.end})`
+              );
+            }
+          }
+
+          const validated = validateAndCorrectErrorPosition(validationInput, answerText);
 
           if (!validated.valid) {
+            // For Groq, if we have errorText, try one more time with a more aggressive search
+            if (
+              llmProvider === "groq" &&
+              reportedErrorText &&
+              reportedErrorText.trim().length > 0
+            ) {
+              // Search the entire text for the errorText
+              const fullTextLower = answerText.toLowerCase();
+              const errorTextLower = reportedErrorText.toLowerCase().trim();
+              const foundIndex = fullTextLower.indexOf(errorTextLower);
+
+              if (foundIndex !== -1) {
+                // Found it! Create a new validation with the found position
+                const retryValidated = validateAndCorrectErrorPosition(
+                  {
+                    start: foundIndex,
+                    end: foundIndex + errorTextLower.length,
+                    errorText: reportedErrorText,
+                    message: err.message,
+                    errorType: err.errorType || err.category,
+                  },
+                  answerText
+                );
+
+                if (retryValidated.valid) {
+                  console.log(
+                    `[getLLMAssessment] Groq: Retry validation succeeded for "${reportedErrorText}" at ${retryValidated.start}-${retryValidated.end}`
+                  );
+                  // Use the retry validated position
+                  const actualErrorText = answerText.substring(
+                    retryValidated.start,
+                    retryValidated.end
+                  );
+                  let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
+                  suggestions = suggestions.filter(
+                    (s: string) => s && s.trim() !== actualErrorText.trim()
+                  );
+
+                  return {
+                    start: retryValidated.start,
+                    end: retryValidated.end,
+                    length: retryValidated.end - retryValidated.start,
+                    category: (err.category || "GRAMMAR").toUpperCase(),
+                    rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
+                    message: err.message || "Error detected",
+                    suggestions: suggestions.slice(0, 5),
+                    source: "LLM" as const,
+                    severity: (err.severity || "error") as "warning" | "error",
+                    confidenceScore: 0.75,
+                    highConfidence: false,
+                    mediumConfidence: true,
+                    errorType: err.errorType || "Grammar error",
+                    explanation: err.explanation || err.message || "Error detected",
+                    example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
+                  };
+                }
+              }
+            }
+
             // Skip invalid positions
             console.warn(`[getLLMAssessment] Rejected error for ${llmProvider}:`, {
               originalStart: err.start,
@@ -167,6 +248,7 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
               errorText: reportedErrorText,
               extractedText: extractedErrorText,
               category: err.category,
+              validationInput: validationInput,
             });
             return null;
           }
