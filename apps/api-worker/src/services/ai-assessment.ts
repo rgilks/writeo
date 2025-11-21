@@ -3,79 +3,8 @@ import { callLLMAPI, type LLMProvider } from "./llm";
 import { validateAndCorrectErrorPosition } from "../utils/text-processing";
 import { MAX_TOKENS_GRAMMAR_CHECK } from "../utils/constants";
 
-/**
- * Attempts to repair incomplete/malformed JSON from LLM responses
- * Tries to extract valid error objects even if the JSON array is incomplete
- */
-function repairIncompleteJSON(jsonText: string): { errors: any[]; wasRepaired: boolean } {
-  // First, try to find all complete error objects using regex
-  // Look for error objects that have all required fields
-  const errorPattern =
-    /\{\s*"start"\s*:\s*\d+\s*,\s*"end"\s*:\s*\d+[\s\S]*?"severity"\s*:\s*"[^"]+"\s*\}/g;
-  const matches = jsonText.match(errorPattern);
-
-  if (matches && matches.length > 0) {
-    const errors: any[] = [];
-    for (const match of matches) {
-      try {
-        const parsed = JSON.parse(match);
-        // Validate it has required fields
-        if (
-          typeof parsed.start === "number" &&
-          typeof parsed.end === "number" &&
-          parsed.category &&
-          parsed.message
-        ) {
-          errors.push(parsed);
-        }
-      } catch {
-        // Skip invalid error objects
-      }
-    }
-
-    if (errors.length > 0) {
-      console.log(
-        `[getLLMAssessment] Repaired incomplete JSON: extracted ${errors.length} valid errors from malformed response`
-      );
-      return { errors, wasRepaired: true };
-    }
-  }
-
-  // If regex didn't work, try to fix common JSON issues
-  // 1. Close unclosed arrays/objects
-  let repaired = jsonText.trim();
-
-  // Count open/close braces and brackets
-  const openBraces = (repaired.match(/\{/g) || []).length;
-  const closeBraces = (repaired.match(/\}/g) || []).length;
-  const openBrackets = (repaired.match(/\[/g) || []).length;
-  const closeBrackets = (repaired.match(/\]/g) || []).length;
-
-  // Try to close incomplete structures
-  if (openBraces > closeBraces) {
-    repaired += "\n" + "}".repeat(openBraces - closeBraces);
-  }
-  if (openBrackets > closeBrackets) {
-    repaired += "\n" + "]".repeat(openBrackets - closeBrackets);
-  }
-
-  // Try to remove trailing commas before closing brackets/braces
-  repaired = repaired.replace(/,\s*([}\]])/g, "$1");
-
-  try {
-    const parsed = JSON.parse(repaired);
-    if (parsed && typeof parsed === "object" && Array.isArray(parsed.errors)) {
-      console.log(
-        `[getLLMAssessment] Repaired JSON by closing structures: found ${parsed.errors.length} errors`
-      );
-      return { errors: parsed.errors, wasRepaired: true };
-    }
-  } catch {
-    // Repair failed, return empty
-  }
-
-  return { errors: [], wasRepaired: false };
-}
+// Note: With pipe-delimited format, we don't need JSON repair anymore
+// Each line is independent, so truncation only affects incomplete lines at the end
 
 export async function getLLMAssessment(
   llmProvider: LLMProvider,
@@ -120,29 +49,31 @@ For each error you find, provide:
 
 CRITICAL REQUIREMENTS FOR POSITIONS:
 - Count characters carefully from the start of the answer text (position 0 is the first character)
-- The "errorText" field MUST contain the exact text that appears between start and end positions
+- The errorText MUST contain the exact text that appears between start and end positions
 - Positions must align with word boundaries - do NOT split words in the middle
 - If an error spans multiple words, include the complete words
 - Double-check your positions by verifying the errorText matches what's actually at those positions
 
-You MUST return a JSON object with an "errors" array. If you find no errors, return {"errors": []}, but be very thorough - this text likely contains errors.
+Return format: ONE ERROR PER LINE, pipe-delimited (|). Each line represents one error.
+Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity
 
-Return ONLY valid JSON (no markdown code blocks, no explanations, no text before or after):
-{
-  "errors": [
-    {
-      "start": 0,
-      "end": 5,
-      "errorText": "I be",
-      "category": "GRAMMAR",
-      "message": "Error description",
-      "suggestions": ["I am", "I was"],
-      "errorType": "Verb tense",
-      "explanation": "Brief explanation of why this is an error",
-      "severity": "error"
-    }
-  ]
-}`;
+Where:
+- start: character position (number)
+- end: character position (number)
+- errorText: exact text at that position
+- category: GRAMMAR, SPELLING, STYLE, PUNCTUATION, TYPOS, or CONFUSED_WORDS
+- message: clear error description
+- suggestions: comma-separated list of corrections (e.g., "went,goes")
+- errorType: error type (e.g., "Verb tense", "Subject-verb agreement")
+- explanation: brief explanation
+- severity: "error" or "warning"
+
+Example:
+15|20|go to|GRAMMAR|Verb tense error|went|Verb tense|Use past tense for past events|error
+34|37|was|GRAMMAR|Subject-verb agreement|were|Subject-verb agreement|We requires were not was|error
+
+Return ONLY the error lines (one per line), no headers, no explanations, no other text.
+If no errors found, return a single line: NO_ERRORS`;
 
     const text = await callLLMAPI(
       llmProvider,
@@ -152,7 +83,7 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
         {
           role: "system",
           content:
-            "You are an expert English grammar and language checker. You MUST respond with valid JSON only. Do NOT use markdown code blocks. Do NOT include any text before or after the JSON. Return only the raw JSON object.",
+            "You are an expert English grammar and language checker. Return errors as pipe-delimited lines (one error per line). Format: start|end|errorText|category|message|suggestions|errorType|explanation|severity. No headers, no explanations, just the error lines.",
         },
         {
           role: "user",
@@ -167,329 +98,264 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
     }
 
     const trimmedText = text.trim();
-    let jsonText = trimmedText;
 
-    const markdownJsonMatch = trimmedText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-    if (markdownJsonMatch) {
-      jsonText = markdownJsonMatch[1];
-    } else {
-      const jsonMatch = trimmedText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonText = jsonMatch[0];
-      } else {
-        console.warn(
-          `[getLLMAssessment] Could not extract JSON from ${llmProvider} response. First 500 chars:`,
-          trimmedText.substring(0, 500)
-        );
-        return [];
-      }
-    }
-
-    try {
-      const parsed = JSON.parse(jsonText);
-      if (!parsed || typeof parsed !== "object") {
-        console.warn(
-          `[getLLMAssessment] Parsed JSON is not an object for ${llmProvider}. Type:`,
-          typeof parsed
-        );
-        return [];
-      }
-
-      const errors = Array.isArray(parsed.errors) ? parsed.errors : [];
-
-      console.log(
-        `[getLLMAssessment] ${llmProvider} returned ${errors.length} errors from JSON parsing`
-      );
-
-      if (errors.length === 0 && llmProvider === "groq") {
-        console.log(
-          `[getLLMAssessment] Groq returned empty errors array. Parsed object keys:`,
-          Object.keys(parsed)
-        );
-        console.log(
-          `[getLLMAssessment] Full parsed object:`,
-          JSON.stringify(parsed).substring(0, 500)
-        );
-      }
-
-      const processedErrors = errors
-        .map((err: any): LanguageToolError | null => {
-          if (typeof err.start !== "number" || typeof err.end !== "number") {
-            return null;
-          }
-
-          // Get the error text from the response or extract it from the answer text
-          const reportedErrorText = err.errorText || "";
-          const extractedErrorText = answerText.substring(
-            Math.max(0, err.start),
-            Math.min(answerText.length, err.end)
-          );
-
-          // Validate and correct the position
-          // For Groq, be more lenient - try to find the errorText even if positions are off
-          let validationInput = {
-            start: err.start || 0,
-            end: err.end || 0,
-            errorText: reportedErrorText || extractedErrorText,
-            message: err.message,
-            errorType: err.errorType || err.category,
-          };
-
-          // If Groq and we have errorText but positions seem wrong, try to find it first
-          if (llmProvider === "groq" && reportedErrorText && reportedErrorText.trim().length > 0) {
-            // Try to find the errorText in the answer text
-            const searchStart = Math.max(0, err.start - 100);
-            const searchEnd = Math.min(answerText.length, err.end + 100);
-            const searchArea = answerText.substring(searchStart, searchEnd);
-            const foundIndex = searchArea
-              .toLowerCase()
-              .indexOf(reportedErrorText.toLowerCase().trim());
-
-            if (foundIndex !== -1) {
-              // Found it! Use the found position
-              const correctedStart = searchStart + foundIndex;
-              const correctedEnd = correctedStart + reportedErrorText.trim().length;
-              validationInput.start = correctedStart;
-              validationInput.end = correctedEnd;
-              console.log(
-                `[getLLMAssessment] Groq: Found errorText "${reportedErrorText}" at corrected position ${correctedStart}-${correctedEnd} (original: ${err.start}-${err.end})`
-              );
-            }
-          }
-
-          const validated = validateAndCorrectErrorPosition(validationInput, answerText);
-
-          if (!validated.valid) {
-            // For Groq, if we have errorText, try one more time with a more aggressive search
-            if (
-              llmProvider === "groq" &&
-              reportedErrorText &&
-              reportedErrorText.trim().length > 0
-            ) {
-              // Search the entire text for the errorText
-              const fullTextLower = answerText.toLowerCase();
-              const errorTextLower = reportedErrorText.toLowerCase().trim();
-              const foundIndex = fullTextLower.indexOf(errorTextLower);
-
-              if (foundIndex !== -1) {
-                // Found it! Create a new validation with the found position
-                const retryValidated = validateAndCorrectErrorPosition(
-                  {
-                    start: foundIndex,
-                    end: foundIndex + errorTextLower.length,
-                    errorText: reportedErrorText,
-                    message: err.message,
-                    errorType: err.errorType || err.category,
-                  },
-                  answerText
-                );
-
-                if (retryValidated.valid) {
-                  console.log(
-                    `[getLLMAssessment] Groq: Retry validation succeeded for "${reportedErrorText}" at ${retryValidated.start}-${retryValidated.end}`
-                  );
-                  // Use the retry validated position
-                  const actualErrorText = answerText.substring(
-                    retryValidated.start,
-                    retryValidated.end
-                  );
-                  let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
-                  suggestions = suggestions.filter(
-                    (s: string) => s && s.trim() !== actualErrorText.trim()
-                  );
-
-                  return {
-                    start: retryValidated.start,
-                    end: retryValidated.end,
-                    length: retryValidated.end - retryValidated.start,
-                    category: (err.category || "GRAMMAR").toUpperCase(),
-                    rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
-                    message: err.message || "Error detected",
-                    suggestions: suggestions.slice(0, 5),
-                    source: "LLM" as const,
-                    severity: (err.severity || "error") as "warning" | "error",
-                    confidenceScore: 0.75,
-                    highConfidence: false,
-                    mediumConfidence: true,
-                    errorType: err.errorType || "Grammar error",
-                    explanation: err.explanation || err.message || "Error detected",
-                    example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
-                  };
-                }
-              }
-            }
-
-            // Skip invalid positions
-            console.warn(`[getLLMAssessment] Rejected error for ${llmProvider}:`, {
-              originalStart: err.start,
-              originalEnd: err.end,
-              errorText: reportedErrorText,
-              extractedText: extractedErrorText,
-              category: err.category,
-              validationInput: validationInput,
-            });
-            return null;
-          }
-
-          if (
-            llmProvider === "groq" &&
-            (validated.start !== err.start || validated.end !== err.end)
-          ) {
-            console.log(`[getLLMAssessment] Groq position corrected:`, {
-              original: `${err.start}-${err.end}`,
-              corrected: `${validated.start}-${validated.end}`,
-              errorText: reportedErrorText,
-            });
-          }
-
-          // Get the actual text at the validated position
-          const actualErrorText = answerText.substring(validated.start, validated.end);
-
-          // Validate that suggestions make sense for the actual text
-          // Filter out suggestions that don't match the error type or are clearly wrong
-          let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
-
-          // If we have suggestions, ensure they're reasonable
-          // Remove suggestions that are identical to the error text (no change)
-          suggestions = suggestions.filter((s: string) => s && s.trim() !== actualErrorText.trim());
-
-          // Ensure error message and explanation match the actual error
-          let message = err.message || "Error detected";
-          let explanation = err.explanation || err.message || "Error detected";
-
-          // If the explanation doesn't mention the actual error text, try to improve it
-          if (!explanation.toLowerCase().includes(actualErrorText.toLowerCase().substring(0, 5))) {
-            // The explanation might be generic, but we'll keep it if it's reasonable
-            // The frontend will show the actual highlighted text anyway
-          }
-
-          return {
-            start: validated.start,
-            end: validated.end,
-            length: validated.end - validated.start,
-            category: (err.category || "GRAMMAR").toUpperCase(),
-            rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
-            message: message,
-            suggestions: suggestions.slice(0, 5), // Limit to 5 suggestions
-            source: "LLM" as const,
-            severity: (err.severity || "error") as "warning" | "error",
-            confidenceScore: 0.75,
-            highConfidence: false,
-            mediumConfidence: true,
-            errorType: err.errorType || "Grammar error",
-            explanation: explanation,
-            example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
-          };
-        })
-        .filter((err: LanguageToolError | null): err is LanguageToolError => err !== null);
-
-      console.log(
-        `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors)`
-      );
-
-      return processedErrors;
-    } catch (parseError) {
-      console.error(`[getLLMAssessment] JSON parse error for ${llmProvider}:`, parseError);
-      console.error(
-        `[getLLMAssessment] Attempted to parse (first 500 chars):`,
-        jsonText.substring(0, 500)
-      );
-      console.error(
-        `[getLLMAssessment] Full response (first 1000 chars):`,
-        text.substring(0, 1000)
-      );
-
-      // Try to repair incomplete/malformed JSON
-      console.log(`[getLLMAssessment] Attempting to repair incomplete JSON for ${llmProvider}...`);
-      const repaired = repairIncompleteJSON(jsonText);
-
-      if (repaired.wasRepaired && repaired.errors.length > 0) {
-        console.log(
-          `[getLLMAssessment] Successfully repaired JSON: extracted ${repaired.errors.length} errors`
-        );
-
-        // Process the repaired errors
-        const processedErrors = repaired.errors
-          .map((err: any): LanguageToolError | null => {
-            if (typeof err.start !== "number" || typeof err.end !== "number") {
-              return null;
-            }
-
-            const reportedErrorText = err.errorText || "";
-            const extractedErrorText = answerText.substring(
-              Math.max(0, err.start),
-              Math.min(answerText.length, err.end)
-            );
-
-            const validationInput = {
-              start: err.start || 0,
-              end: err.end || 0,
-              errorText: reportedErrorText || extractedErrorText,
-              message: err.message,
-              errorType: err.errorType || err.category,
-            };
-
-            // Pre-correct Groq positions using errorText if available
-            let currentStart = err.start || 0;
-            let currentEnd = err.end || 0;
-            if (llmProvider === "groq" && err.errorText && err.errorText.trim().length > 0) {
-              const searchStart = Math.max(0, err.start - 100);
-              const searchEnd = Math.min(answerText.length, err.end + 100);
-              const searchArea = answerText.substring(searchStart, searchEnd);
-              const foundIndex = searchArea
-                .toLowerCase()
-                .indexOf(err.errorText.toLowerCase().trim());
-
-              if (foundIndex !== -1) {
-                currentStart = searchStart + foundIndex;
-                currentEnd = currentStart + err.errorText.trim().length;
-              }
-            }
-
-            const validated = validateAndCorrectErrorPosition(validationInput, answerText);
-
-            if (!validated.valid) {
-              return null;
-            }
-
-            const actualErrorText = answerText.substring(validated.start, validated.end);
-            let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
-            suggestions = suggestions.filter(
-              (s: string) => s && s.trim() !== actualErrorText.trim()
-            );
-
-            return {
-              start: validated.start,
-              end: validated.end,
-              length: validated.end - validated.start,
-              category: (err.category || "GRAMMAR").toUpperCase(),
-              rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
-              message: err.message || "Error detected",
-              suggestions: suggestions.slice(0, 5),
-              source: "LLM" as const,
-              severity: (err.severity || "error") as "warning" | "error",
-              confidenceScore: 0.75,
-              highConfidence: false,
-              mediumConfidence: true,
-              errorType: err.errorType || "Grammar error",
-              explanation: err.explanation || err.message || "Error detected",
-              example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
-            };
-          })
-          .filter((err: LanguageToolError | null): err is LanguageToolError => err !== null);
-
-        console.log(
-          `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors from repaired JSON (from ${repaired.errors.length} raw errors)`
-        );
-
-        return processedErrors;
-      }
-
-      console.warn(
-        `[getLLMAssessment] Could not repair JSON for ${llmProvider}, returning empty array`
-      );
+    // Handle "NO_ERRORS" response
+    if (trimmedText === "NO_ERRORS" || trimmedText.toLowerCase().includes("no errors")) {
+      console.log(`[getLLMAssessment] ${llmProvider} reported no errors`);
       return [];
     }
+
+    // Parse pipe-delimited format: start|end|errorText|category|message|suggestions|errorType|explanation|severity
+    const lines = trimmedText.split("\n").filter((line) => line.trim().length > 0);
+    const errors: any[] = [];
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      // Skip empty lines or lines that look like headers/explanations
+      if (
+        !trimmedLine ||
+        trimmedLine.startsWith("#") ||
+        trimmedLine.toLowerCase().includes("format:") ||
+        trimmedLine.toLowerCase().includes("example:")
+      ) {
+        continue;
+      }
+
+      const parts = trimmedLine.split("|").map((p) => p.trim());
+
+      // Need at least 9 parts (start|end|errorText|category|message|suggestions|errorType|explanation|severity)
+      if (parts.length < 9) {
+        console.warn(
+          `[getLLMAssessment] Skipping malformed line (expected 9 parts, got ${parts.length}):`,
+          trimmedLine.substring(0, 100)
+        );
+        continue;
+      }
+
+      const [
+        startStr,
+        endStr,
+        errorText,
+        category,
+        message,
+        suggestionsStr,
+        errorType,
+        explanation,
+        severity,
+      ] = parts;
+
+      const start = parseInt(startStr, 10);
+      const end = parseInt(endStr, 10);
+
+      if (isNaN(start) || isNaN(end)) {
+        console.warn(
+          `[getLLMAssessment] Skipping line with invalid positions: start=${startStr}, end=${endStr}`
+        );
+        continue;
+      }
+
+      // Parse suggestions (comma-separated)
+      const suggestions = suggestionsStr
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      errors.push({
+        start,
+        end,
+        errorText,
+        category: category || "GRAMMAR",
+        message: message || "Error detected",
+        suggestions,
+        errorType: errorType || "Grammar error",
+        explanation: explanation || message || "Error detected",
+        severity: severity || "error",
+      });
+    }
+
+    console.log(
+      `[getLLMAssessment] ${llmProvider} returned ${errors.length} errors from pipe-delimited parsing`
+    );
+
+    if (errors.length === 0 && llmProvider === "groq") {
+      console.log(
+        `[getLLMAssessment] Groq returned empty errors array. Response preview:`,
+        trimmedText.substring(0, 200)
+      );
+    }
+
+    const processedErrors = errors
+      .map((err: any): LanguageToolError | null => {
+        if (typeof err.start !== "number" || typeof err.end !== "number") {
+          return null;
+        }
+
+        // Get the error text from the response or extract it from the answer text
+        const reportedErrorText = err.errorText || "";
+        const extractedErrorText = answerText.substring(
+          Math.max(0, err.start),
+          Math.min(answerText.length, err.end)
+        );
+
+        // Validate and correct the position
+        // For Groq, be more lenient - try to find the errorText even if positions are off
+        let validationInput = {
+          start: err.start || 0,
+          end: err.end || 0,
+          errorText: reportedErrorText || extractedErrorText,
+          message: err.message,
+          errorType: err.errorType || err.category,
+        };
+
+        // If Groq and we have errorText but positions seem wrong, try to find it first
+        if (llmProvider === "groq" && reportedErrorText && reportedErrorText.trim().length > 0) {
+          // Try to find the errorText in the answer text
+          const searchStart = Math.max(0, err.start - 100);
+          const searchEnd = Math.min(answerText.length, err.end + 100);
+          const searchArea = answerText.substring(searchStart, searchEnd);
+          const foundIndex = searchArea
+            .toLowerCase()
+            .indexOf(reportedErrorText.toLowerCase().trim());
+
+          if (foundIndex !== -1) {
+            // Found it! Use the found position
+            const correctedStart = searchStart + foundIndex;
+            const correctedEnd = correctedStart + reportedErrorText.trim().length;
+            validationInput.start = correctedStart;
+            validationInput.end = correctedEnd;
+            console.log(
+              `[getLLMAssessment] Groq: Found errorText "${reportedErrorText}" at corrected position ${correctedStart}-${correctedEnd} (original: ${err.start}-${err.end})`
+            );
+          }
+        }
+
+        const validated = validateAndCorrectErrorPosition(validationInput, answerText);
+
+        if (!validated.valid) {
+          // For Groq, if we have errorText, try one more time with a more aggressive search
+          if (llmProvider === "groq" && reportedErrorText && reportedErrorText.trim().length > 0) {
+            // Search the entire text for the errorText
+            const fullTextLower = answerText.toLowerCase();
+            const errorTextLower = reportedErrorText.toLowerCase().trim();
+            const foundIndex = fullTextLower.indexOf(errorTextLower);
+
+            if (foundIndex !== -1) {
+              // Found it! Create a new validation with the found position
+              const retryValidated = validateAndCorrectErrorPosition(
+                {
+                  start: foundIndex,
+                  end: foundIndex + errorTextLower.length,
+                  errorText: reportedErrorText,
+                  message: err.message,
+                  errorType: err.errorType || err.category,
+                },
+                answerText
+              );
+
+              if (retryValidated.valid) {
+                console.log(
+                  `[getLLMAssessment] Groq: Retry validation succeeded for "${reportedErrorText}" at ${retryValidated.start}-${retryValidated.end}`
+                );
+                // Use the retry validated position
+                const actualErrorText = answerText.substring(
+                  retryValidated.start,
+                  retryValidated.end
+                );
+                let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
+                suggestions = suggestions.filter(
+                  (s: string) => s && s.trim() !== actualErrorText.trim()
+                );
+
+                return {
+                  start: retryValidated.start,
+                  end: retryValidated.end,
+                  length: retryValidated.end - retryValidated.start,
+                  category: (err.category || "GRAMMAR").toUpperCase(),
+                  rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
+                  message: err.message || "Error detected",
+                  suggestions: suggestions.slice(0, 5),
+                  source: "LLM" as const,
+                  severity: (err.severity || "error") as "warning" | "error",
+                  confidenceScore: 0.75,
+                  highConfidence: false,
+                  mediumConfidence: true,
+                  errorType: err.errorType || "Grammar error",
+                  explanation: err.explanation || err.message || "Error detected",
+                  example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
+                };
+              }
+            }
+          }
+
+          // Skip invalid positions
+          console.warn(`[getLLMAssessment] Rejected error for ${llmProvider}:`, {
+            originalStart: err.start,
+            originalEnd: err.end,
+            errorText: reportedErrorText,
+            extractedText: extractedErrorText,
+            category: err.category,
+            validationInput: validationInput,
+          });
+          return null;
+        }
+
+        if (
+          llmProvider === "groq" &&
+          (validated.start !== err.start || validated.end !== err.end)
+        ) {
+          console.log(`[getLLMAssessment] Groq position corrected:`, {
+            original: `${err.start}-${err.end}`,
+            corrected: `${validated.start}-${validated.end}`,
+            errorText: reportedErrorText,
+          });
+        }
+
+        // Get the actual text at the validated position
+        const actualErrorText = answerText.substring(validated.start, validated.end);
+
+        // Validate that suggestions make sense for the actual text
+        // Filter out suggestions that don't match the error type or are clearly wrong
+        let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
+
+        // If we have suggestions, ensure they're reasonable
+        // Remove suggestions that are identical to the error text (no change)
+        suggestions = suggestions.filter((s: string) => s && s.trim() !== actualErrorText.trim());
+
+        // Ensure error message and explanation match the actual error
+        let message = err.message || "Error detected";
+        let explanation = err.explanation || err.message || "Error detected";
+
+        // If the explanation doesn't mention the actual error text, try to improve it
+        if (!explanation.toLowerCase().includes(actualErrorText.toLowerCase().substring(0, 5))) {
+          // The explanation might be generic, but we'll keep it if it's reasonable
+          // The frontend will show the actual highlighted text anyway
+        }
+
+        return {
+          start: validated.start,
+          end: validated.end,
+          length: validated.end - validated.start,
+          category: (err.category || "GRAMMAR").toUpperCase(),
+          rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
+          message: message,
+          suggestions: suggestions.slice(0, 5), // Limit to 5 suggestions
+          source: "LLM" as const,
+          severity: (err.severity || "error") as "warning" | "error",
+          confidenceScore: 0.75,
+          highConfidence: false,
+          mediumConfidence: true,
+          errorType: err.errorType || "Grammar error",
+          explanation: explanation,
+          example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
+        };
+      })
+      .filter((err: LanguageToolError | null): err is LanguageToolError => err !== null);
+
+    console.log(
+      `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors)`
+    );
+
+    return processedErrors;
   } catch (error) {
     console.error(`[getLLMAssessment] Error in getLLMAssessment for ${llmProvider}:`, error);
     return [];

@@ -24,32 +24,9 @@ export async function mockCallLLMAPI(
     userMessage.includes("Give clear, direct feedback");
 
   if (isGrammarCheck) {
-    return JSON.stringify({
-      errors: [
-        {
-          start: 0,
-          end: 5,
-          errorText: "I go",
-          category: "GRAMMAR",
-          message: "Verb tense error: Use past tense for past events",
-          suggestions: ["I went"],
-          errorType: "Verb tense",
-          explanation: "The verb 'go' should be in past tense 'went' when describing past events",
-          severity: "error",
-        },
-        {
-          start: 20,
-          end: 27,
-          errorText: "We was",
-          category: "GRAMMAR",
-          message: "Subject-verb agreement error",
-          suggestions: ["We were"],
-          errorType: "Subject-verb agreement",
-          explanation: "'We' requires 'were', not 'was'",
-          severity: "error",
-        },
-      ],
-    });
+    // Return pipe-delimited format: start|end|errorText|category|message|suggestions|errorType|explanation|severity
+    return `0|5|I go|GRAMMAR|Verb tense error: Use past tense for past events|I went|Verb tense|The verb 'go' should be in past tense 'went' when describing past events|error
+20|27|We was|GRAMMAR|Subject-verb agreement error|We were|Subject-verb agreement|'We' requires 'were', not 'was'|error`;
   }
 
   if (isTeacherFeedback) {
