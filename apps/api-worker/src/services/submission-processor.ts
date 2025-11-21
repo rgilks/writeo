@@ -504,6 +504,9 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     const llmErrorsByAnswerId = new Map<string, LanguageToolError[]>();
     if (llmResults.status === "fulfilled" && Array.isArray(llmResults.value)) {
       const llmResponses = llmResults.value;
+      console.log(
+        `[LLM Assessment] Processing ${llmResponses.length} responses for ${llmAssessmentRequests.length} requests`
+      );
       for (let i = 0; i < llmAssessmentRequests.length; i++) {
         const { answerId } = llmAssessmentRequests[i];
         const llmErrors = llmResponses[i] || [];
@@ -511,6 +514,10 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
         if (llmErrors.length === 0) {
           console.log(
             `[LLM Assessment] No errors found for answer ${answerId} (provider: ${llmProvider}, model: ${aiModel})`
+          );
+        } else {
+          console.log(
+            `[LLM Assessment] Found ${llmErrors.length} errors for answer ${answerId} (provider: ${llmProvider}, model: ${aiModel})`
           );
         }
       }
@@ -522,6 +529,13 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
             ? llmResults.reason.message
             : String(llmResults.reason)
           : "Invalid response format";
+      console.error(`[LLM Assessment] Failed:`, {
+        status: llmResults.status,
+        error: errorMsg,
+        provider: llmProvider,
+        model: aiModel,
+        hasRequests: llmAssessmentRequests.length > 0,
+      });
       safeLogError("LLM assessment failed", {
         status: llmResults.status,
         error: errorMsg,

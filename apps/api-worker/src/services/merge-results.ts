@@ -77,6 +77,11 @@ export function mergeAssessmentResults(
             errorCount: answerLlmErrors.length,
           },
         });
+      } else {
+        // Log when LLM assessor is not added due to empty errors
+        console.log(
+          `[merge-results] LLM assessor not added for answer ${answer.id}: no errors found (provider: ${llmProvider})`
+        );
       }
 
       // Add LLM feedback for this answer

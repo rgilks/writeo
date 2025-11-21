@@ -163,19 +163,41 @@ export default function ResultsPage() {
             }
           }
         } catch (serverError) {
-          // If server fetch fails, try localStorage as fallback (double-check)
+          // If server fetch fails (especially 404), try localStorage as fallback
           if (typeof window !== "undefined") {
             const localStored = localStorage.getItem(`results_${submissionId}`);
             if (localStored) {
               try {
                 const parsed = JSON.parse(localStored);
                 if (!cancelled) {
+                  console.log(
+                    `[ResultsPage] Using localStorage data for submission ${submissionId}`
+                  );
                   setData(parsed);
                   setStatus("success");
                   return;
                 }
-              } catch {
+              } catch (parseError) {
+                console.warn(`[ResultsPage] Failed to parse localStorage data:`, parseError);
                 // Fall through to error handling
+              }
+            } else {
+              // Check sessionStorage as well
+              const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
+              if (sessionStored) {
+                try {
+                  const parsed = JSON.parse(sessionStored);
+                  if (!cancelled) {
+                    console.log(
+                      `[ResultsPage] Using sessionStorage data for submission ${submissionId}`
+                    );
+                    setData(parsed);
+                    setStatus("success");
+                    return;
+                  }
+                } catch {
+                  // Fall through to error handling
+                }
               }
             }
           }

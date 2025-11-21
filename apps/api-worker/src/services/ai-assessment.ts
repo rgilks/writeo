@@ -123,6 +123,10 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
 
       const errors = Array.isArray(parsed.errors) ? parsed.errors : [];
 
+      console.log(
+        `[getLLMAssessment] ${llmProvider} returned ${errors.length} errors from JSON parsing`
+      );
+
       if (errors.length === 0 && llmProvider === "groq") {
         console.log(
           `[getLLMAssessment] Groq returned empty errors array. Parsed object keys:`,
@@ -134,7 +138,7 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
         );
       }
 
-      return errors
+      const processedErrors = errors
         .map((err: any): LanguageToolError | null => {
           if (typeof err.start !== "number" || typeof err.end !== "number") {
             return null;
@@ -304,6 +308,12 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
           };
         })
         .filter((err: LanguageToolError | null): err is LanguageToolError => err !== null);
+
+      console.log(
+        `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors)`
+      );
+
+      return processedErrors;
     } catch (parseError) {
       console.error(`[getLLMAssessment] JSON parse error for ${llmProvider}:`, parseError);
       console.error(

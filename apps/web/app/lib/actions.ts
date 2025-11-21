@@ -407,6 +407,12 @@ export async function getSubmissionResults(submissionId: string) {
       headers: { Authorization: `Token ${apiKey}` },
     });
 
+    // Don't retry on 404 - submission not found on server (may be in localStorage)
+    // Return the response so we can handle it below
+    if (res.status === 404) {
+      return res;
+    }
+
     if (!res.ok && res.status >= 500) {
       throw new Error(`Server error: HTTP ${res.status}. Please try again.`);
     }
@@ -415,6 +421,12 @@ export async function getSubmissionResults(submissionId: string) {
   });
 
   if (!response.ok) {
+    // For 404, throw a specific error that the frontend can handle gracefully
+    if (response.status === 404) {
+      const error = new Error("Submission not found on server");
+      (error as any).status = 404;
+      throw error;
+    }
     const errorText = await response.text();
     let errorMessage = `Failed to fetch results: HTTP ${response.status}`;
     try {
