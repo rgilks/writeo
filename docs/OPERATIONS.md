@@ -95,15 +95,39 @@ PLAYWRIGHT_BASE_URL=http://localhost:3000
 
 ## Logging
 
-**Cloudflare Workers:**
+**Cloudflare Workers Logging:**
 
-```bash
-# Use helper script (recommended)
-./scripts/check-logs.sh api-worker "error" 20
+Logging is **enabled by default** for all Workers. All `console.log()`, `console.error()`, and `console.warn()` statements are automatically captured.
 
-# Or Cloudflare Dashboard (best for production)
-# https://dash.cloudflare.com → Workers & Pages → Logs
-```
+**View Logs:**
+
+1. **Cloudflare Dashboard (Recommended for Production):**
+   - Go to: https://dash.cloudflare.com → Workers & Pages → Your Worker → Logs
+   - Real-time logs with filtering and search
+   - No timeout issues, best for production monitoring
+
+2. **Command Line (for quick checks):**
+
+   ```bash
+   # Use helper script (safe, with timeout)
+   ./scripts/check-logs.sh api-worker "error" 20
+   ./scripts/check-logs.sh api-worker "LLM Assessment" 50
+   ./scripts/check-logs.sh api-worker "" 30  # Recent logs
+   ```
+
+3. **Direct wrangler command (with timeout):**
+   ```bash
+   timeout 10s npx wrangler tail --format json --search "error" | head -20
+   ```
+
+**Log Levels:**
+
+- `console.log()` - Info/debug messages
+- `console.warn()` - Warnings (via `safeLogWarn()`)
+- `console.error()` - Errors (via `safeLogError()`)
+
+**Log Format:**
+All logs are automatically sanitized to remove sensitive data (API keys, tokens, etc.) via `safeLogError()`, `safeLogWarn()`, and `safeLogInfo()` utilities.
 
 **Modal Services:**
 
@@ -112,7 +136,7 @@ modal app logs writeo-essay
 modal app logs writeo-lt
 ```
 
-⚠️ **Never use `wrangler tail` without timeout** - it blocks indefinitely.
+⚠️ **Never use `wrangler tail` without timeout** - it blocks indefinitely. Always use the helper script or add `timeout 10s`.
 
 ## Performance
 

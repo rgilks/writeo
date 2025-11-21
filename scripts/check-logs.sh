@@ -24,11 +24,11 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}/apps/${WORKER}"
 
 if [ -n "$SEARCH_TERM" ]; then
-    echo "Checking logs for '${WORKER}' (search: '${SEARCH_TERM}', limit: ${LIMIT})..."
-    wrangler tail --format json --search "$SEARCH_TERM" 2>&1 | head -$LIMIT
+    echo "Checking logs for '${WORKER}' (search: '${SEARCH_TERM}', limit: ${LIMIT}, timeout: 10s)..."
+    timeout 10s npx wrangler tail --format json --search "$SEARCH_TERM" 2>&1 | head -$LIMIT || true
 else
-    echo "Checking recent logs for '${WORKER}' (limit: ${LIMIT})..."
-    wrangler tail --format json 2>&1 | head -$LIMIT
+    echo "Checking recent logs for '${WORKER}' (limit: ${LIMIT}, timeout: 10s)..."
+    timeout 10s npx wrangler tail --format json 2>&1 | head -$LIMIT || true
 fi
 
 echo ""
