@@ -250,19 +250,30 @@ test.describe("Writing Page", () => {
         });
     }
 
-    // Check for errors after submission attempt
-    await page.waitForTimeout(1000); // Wait for any error to appear
-    const errorAfterSubmit = await writePage.getError();
-    const errorCountAfterSubmit = await errorAfterSubmit.count();
-    if (errorCountAfterSubmit > 0) {
-      const errorText = await errorAfterSubmit.first().textContent();
-      // Checklist items are not blocking errors
-      if (
-        !errorText?.includes("Did I") &&
-        !errorText?.includes("checklist") &&
-        !errorText?.includes("Self-Evaluation")
-      ) {
-        throw new Error(`Submission failed with error: ${errorText}`);
+    // Wait a moment for navigation or errors to appear
+    await page.waitForTimeout(1000);
+    
+    // Check if we've already navigated to results page
+    // If so, skip error checking (results page content might be mistaken for errors)
+    const currentUrl = page.url();
+    const isOnResultsPage = /\/results\/[a-f0-9-]+/.test(currentUrl);
+    
+    // Only check for errors if we're still on the write page
+    if (!isOnResultsPage) {
+      const errorAfterSubmit = await writePage.getError();
+      const errorCountAfterSubmit = await errorAfterSubmit.count();
+      if (errorCountAfterSubmit > 0) {
+        const errorText = await errorAfterSubmit.first().textContent();
+        // Checklist items are not blocking errors
+        // "Improve Your Writing" is results page content, not an error
+        if (
+          !errorText?.includes("Did I") &&
+          !errorText?.includes("checklist") &&
+          !errorText?.includes("Self-Evaluation") &&
+          !errorText?.includes("Improve Your Writing")
+        ) {
+          throw new Error(`Submission failed with error: ${errorText}`);
+        }
       }
     }
 

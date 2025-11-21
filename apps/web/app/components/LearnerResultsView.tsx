@@ -388,15 +388,29 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
   // Get stored draft history and merge with metadata, deduplicating by draftNumber
   const storedDraftHistory = submissionId ? getDraftHistory(submissionId) : [];
 
+  // Also try to get draft history using parentSubmissionId if available
+  const parentDraftHistory = parentSubmissionId ? getDraftHistory(parentSubmissionId) : [];
+  
+  // Combine both histories, preferring stored over parent
+  const allStoredDrafts = [...storedDraftHistory, ...parentDraftHistory.filter(
+    (d) => !storedDraftHistory.some((sd) => sd.submissionId === d.submissionId)
+  )];
+
   // Create a map to deduplicate by draftNumber (prefer stored over metadata)
-  const draftMap = new Map<number, (typeof storedDraftHistory)[0]>();
+  const draftMap = new Map<number, (typeof allStoredDrafts)[0]>();
 
   // First, add all stored drafts (keyed by draftNumber)
-  storedDraftHistory.forEach((draft) => {
+  // Prefer drafts with valid submissionIds
+  allStoredDrafts.forEach((draft) => {
     if (draft.draftNumber) {
-      // If we already have this draft number, prefer the one with a valid submissionId
       const existing = draftMap.get(draft.draftNumber);
-      if (!existing || (!existing.submissionId && draft.submissionId)) {
+      // Prefer draft with valid submissionId, or newer timestamp
+      if (!existing) {
+        draftMap.set(draft.draftNumber, draft);
+      } else if (
+        (!existing.submissionId && draft.submissionId) ||
+        (existing.timestamp < draft.timestamp && draft.submissionId)
+      ) {
         draftMap.set(draft.draftNumber, draft);
       }
     }
@@ -444,6 +458,18 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
     // Re-sort after adding
     displayDraftHistory.sort((a, b) => a.draftNumber - b.draftNumber);
   }
+  
+  // Final deduplication: remove any duplicates by draftNumber, keeping the one with the best submissionId
+  const finalDraftMap = new Map<number, typeof displayDraftHistory[0]>();
+  displayDraftHistory.forEach((draft) => {
+    const existing = finalDraftMap.get(draft.draftNumber);
+    if (!existing || (!existing.submissionId && draft.submissionId)) {
+      finalDraftMap.set(draft.draftNumber, draft);
+    }
+  });
+  displayDraftHistory = Array.from(finalDraftMap.values()).sort(
+    (a, b) => a.draftNumber - b.draftNumber
+  );
 
   // Handle resubmission of edited essay (with draft tracking)
   const handleResubmit = async (editedText: string, parentSubmissionId?: string) => {
@@ -711,6 +737,7 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                   display: "flex",
                   alignItems: "center",
                   gap: "var(--spacing-sm)",
+                  flexWrap: "wrap",
                 }}
                 lang="en"
               >
@@ -719,6 +746,8 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                   style={{
                     fontSize: "14px",
                     color: "var(--text-secondary)",
+                    flex: "1 1 auto",
+                    minWidth: "200px",
                   }}
                   lang="en"
                 >
@@ -863,21 +892,35 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
               lang="en"
             >
               {displayDraftHistory.map((draft) => {
-                const firstDraft = displayDraftHistory[0];
-                const parentId = firstDraft?.submissionId;
+                // Find the root parent submission ID (draft 1's submissionId)
+                const rootDraft = displayDraftHistory.find((d) => d.draftNumber === 1);
+                const rootSubmissionId = rootDraft?.submissionId || parentSubmissionId;
+                
+                // For navigation, we need to find the actual submissionId for each draft
+                // If this draft doesn't have a submissionId, try to find it from the store
+                let draftSubmissionId = draft.submissionId;
+                if (!draftSubmissionId || draftSubmissionId.length === 0) {
+                  // Try to find it from stored history
+                  const storedHistory = submissionId ? getDraftHistory(submissionId) : [];
+                  const storedDraft = storedHistory.find((d) => d.draftNumber === draft.draftNumber);
+                  draftSubmissionId = storedDraft?.submissionId || "";
+                }
+                
+                const hasValidSubmissionId = draftSubmissionId && draftSubmissionId.length > 0;
                 const isFirstDraft = draft.draftNumber === 1;
-                const hasValidSubmissionId = draft.submissionId && draft.submissionId.length > 0;
+                
+                // Build navigation URL
                 const navigateUrl = hasValidSubmissionId
                   ? isFirstDraft
-                    ? `/results/${draft.submissionId}`
-                    : parentId
-                      ? `/results/${draft.submissionId}?parent=${parentId}`
-                      : `/results/${draft.submissionId}`
+                    ? `/results/${draftSubmissionId}`
+                    : rootSubmissionId
+                      ? `/results/${draftSubmissionId}?parent=${rootSubmissionId}`
+                      : `/results/${draftSubmissionId}`
                   : "#";
 
                 return (
                   <div
-                    key={`draft-${draft.draftNumber}-${draft.submissionId || draft.timestamp}`}
+                    key={`draft-${draft.draftNumber}-${draftSubmissionId || draft.timestamp}`}
                     style={{
                       padding: "var(--spacing-sm) var(--spacing-md)",
                       backgroundColor:
@@ -936,81 +979,243 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
             )}
           </>
 
-          {displayDraftHistory.length > 1 && previousDraft && (
+          {/* Draft Comparison Table */}
+          {displayDraftHistory.length > 1 && (
             <div
               style={{
-                padding: "var(--spacing-sm)",
-                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                marginTop: "var(--spacing-md)",
+                padding: "var(--spacing-md)",
+                backgroundColor: "var(--bg-primary)",
                 borderRadius: "var(--border-radius)",
-                marginTop: "var(--spacing-sm)",
+                border: "1px solid var(--border-color)",
               }}
               lang="en"
             >
-              {errorCountDiff !== null && errorCountDiff < 0 && (
-                <p
+              <h3
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  marginBottom: "var(--spacing-md)",
+                  color: "var(--text-primary)",
+                }}
+                lang="en"
+              >
+                Draft Comparison
+              </h3>
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+                <table
                   style={{
-                    marginBottom: "var(--spacing-xs)",
-                    fontWeight: 600,
-                    color: "var(--secondary-accent)",
-                    fontSize: "13px",
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "14px",
                   }}
                   lang="en"
                 >
-                  Great! You fixed {Math.abs(errorCountDiff)}{" "}
-                  {Math.abs(errorCountDiff) === 1 ? "error" : "errors"} 🎉
-                </p>
-              )}
-              <p
-                style={{ marginBottom: "var(--spacing-xs)", fontWeight: 600, fontSize: "13px" }}
-                lang="en"
-              >
-                Progress since Draft {previousDraft.draftNumber || draftNumber - 1}:
-              </p>
-              <ul
-                style={{ margin: 0, paddingLeft: "var(--spacing-md)", fontSize: "13px" }}
-                lang="en"
-              >
-                {wordCountDiff !== null && (
-                  <li lang="en">
-                    {wordCountDiff > 0 ? "+" : ""}
-                    {wordCountDiff} {wordCountDiff === 1 ? "word" : "words"}
-                  </li>
-                )}
-                {errorCountDiff !== null && (
-                  <li
-                    lang="en"
-                    style={{
-                      color:
-                        errorCountDiff < 0
-                          ? "var(--secondary-accent)"
-                          : errorCountDiff > 0
-                            ? "var(--error-color)"
-                            : "inherit",
-                    }}
-                  >
-                    {errorCountDiff > 0 ? "+" : ""}
-                    {errorCountDiff} {errorCountDiff === 1 ? "error" : "errors"}
-                  </li>
-                )}
-                {scoreDiff !== null && (
-                  <li
-                    lang="en"
-                    style={{
-                      color:
-                        scoreDiff > 0
-                          ? "var(--secondary-accent)"
-                          : scoreDiff < 0
-                            ? "var(--error-color)"
-                            : "inherit",
-                    }}
-                  >
-                    {scoreDiff > 0 ? "+" : ""}
-                    {scoreDiff.toFixed(1)} point
-                    {scoreDiff !== 1 && scoreDiff !== -1 ? "s" : ""}{" "}
-                    {scoreDiff > 0 ? "improvement" : scoreDiff < 0 ? "decrease" : "change"}
-                  </li>
-                )}
-              </ul>
+                  <thead>
+                    <tr
+                      style={{
+                        borderBottom: "2px solid var(--border-color)",
+                      }}
+                    >
+                      <th
+                        style={{
+                          textAlign: "left",
+                          padding: "var(--spacing-sm)",
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
+                        }}
+                        lang="en"
+                      >
+                        Draft
+                      </th>
+                      <th
+                        style={{
+                          textAlign: "right",
+                          padding: "var(--spacing-sm)",
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
+                        }}
+                        lang="en"
+                      >
+                        Score
+                      </th>
+                      <th
+                        style={{
+                          textAlign: "right",
+                          padding: "var(--spacing-sm)",
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
+                        }}
+                        lang="en"
+                      >
+                        Words
+                      </th>
+                      <th
+                        style={{
+                          textAlign: "right",
+                          padding: "var(--spacing-sm)",
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
+                        }}
+                        lang="en"
+                      >
+                        Errors
+                      </th>
+                      <th
+                        style={{
+                          textAlign: "left",
+                          padding: "var(--spacing-sm)",
+                          fontWeight: 600,
+                          color: "var(--text-primary)",
+                        }}
+                        lang="en"
+                      >
+                        Change
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayDraftHistory.map((draft, index) => {
+                      const prevDraft = index > 0 ? displayDraftHistory[index - 1] : null;
+                      const scoreChange =
+                        prevDraft && draft.overallScore && prevDraft.overallScore
+                          ? draft.overallScore - prevDraft.overallScore
+                          : null;
+                      const wordChange =
+                        prevDraft && draft.wordCount && prevDraft.wordCount
+                          ? draft.wordCount - prevDraft.wordCount
+                          : null;
+                      const errorChange =
+                        prevDraft && draft.errorCount !== undefined && prevDraft.errorCount !== undefined
+                          ? draft.errorCount - prevDraft.errorCount
+                          : null;
+                      const isCurrent = draft.draftNumber === draftNumber;
+
+                      return (
+                        <tr
+                          key={`draft-row-${draft.draftNumber}-${draft.submissionId || draft.timestamp}`}
+                          style={{
+                            borderBottom: "1px solid var(--border-color)",
+                            backgroundColor: isCurrent ? "rgba(59, 130, 246, 0.05)" : "transparent",
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: "var(--spacing-sm)",
+                              fontWeight: isCurrent ? 600 : 500,
+                              color: isCurrent ? "var(--primary-color)" : "var(--text-primary)",
+                            }}
+                            lang="en"
+                          >
+                            Draft {draft.draftNumber}
+                            {isCurrent && (
+                              <span
+                                style={{
+                                  marginLeft: "var(--spacing-xs)",
+                                  fontSize: "12px",
+                                  color: "var(--text-secondary)",
+                                }}
+                                lang="en"
+                              >
+                                (current)
+                              </span>
+                            )}
+                          </td>
+                          <td
+                            style={{
+                              textAlign: "right",
+                              padding: "var(--spacing-sm)",
+                              fontWeight: 600,
+                              color: draft.overallScore
+                                ? getScoreColor(draft.overallScore)
+                                : "var(--text-secondary)",
+                            }}
+                            lang="en"
+                          >
+                            {draft.overallScore ? draft.overallScore.toFixed(1) : "-"}
+                          </td>
+                          <td
+                            style={{
+                              textAlign: "right",
+                              padding: "var(--spacing-sm)",
+                              color: "var(--text-primary)",
+                            }}
+                            lang="en"
+                          >
+                            {draft.wordCount || "-"}
+                          </td>
+                          <td
+                            style={{
+                              textAlign: "right",
+                              padding: "var(--spacing-sm)",
+                              color: "var(--text-primary)",
+                            }}
+                            lang="en"
+                          >
+                            {draft.errorCount !== undefined ? draft.errorCount : "-"}
+                          </td>
+                          <td
+                            style={{
+                              padding: "var(--spacing-sm)",
+                              color: "var(--text-secondary)",
+                              fontSize: "12px",
+                            }}
+                            lang="en"
+                          >
+                            {index === 0 ? (
+                              <span style={{ fontStyle: "italic" }}>Baseline</span>
+                            ) : (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                {scoreChange !== null && scoreChange !== 0 && (
+                                  <span
+                                    style={{
+                                      color:
+                                        scoreChange > 0
+                                          ? "var(--secondary-accent)"
+                                          : "var(--error-color)",
+                                    }}
+                                  >
+                                    {scoreChange > 0 ? "+" : ""}
+                                    {scoreChange.toFixed(1)} score
+                                  </span>
+                                )}
+                                {wordChange !== null && wordChange !== 0 && (
+                                  <span>
+                                    {wordChange > 0 ? "+" : ""}
+                                    {wordChange} words
+                                  </span>
+                                )}
+                                {errorChange !== null && errorChange !== 0 && (
+                                  <span
+                                    style={{
+                                      color:
+                                        errorChange < 0
+                                          ? "var(--secondary-accent)"
+                                          : errorChange > 0
+                                            ? "var(--error-color)"
+                                            : "inherit",
+                                    }}
+                                  >
+                                    {errorChange > 0 ? "+" : ""}
+                                    {errorChange} errors
+                                  </span>
+                                )}
+                                {scoreChange === 0 &&
+                                  wordChange === 0 &&
+                                  errorChange === 0 && <span>No change</span>}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
