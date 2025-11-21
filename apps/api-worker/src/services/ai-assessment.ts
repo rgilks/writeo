@@ -3,6 +3,80 @@ import { callLLMAPI, type LLMProvider } from "./llm";
 import { validateAndCorrectErrorPosition } from "../utils/text-processing";
 import { MAX_TOKENS_GRAMMAR_CHECK } from "../utils/constants";
 
+/**
+ * Attempts to repair incomplete/malformed JSON from LLM responses
+ * Tries to extract valid error objects even if the JSON array is incomplete
+ */
+function repairIncompleteJSON(jsonText: string): { errors: any[]; wasRepaired: boolean } {
+  // First, try to find all complete error objects using regex
+  // Look for error objects that have all required fields
+  const errorPattern =
+    /\{\s*"start"\s*:\s*\d+\s*,\s*"end"\s*:\s*\d+[\s\S]*?"severity"\s*:\s*"[^"]+"\s*\}/g;
+  const matches = jsonText.match(errorPattern);
+
+  if (matches && matches.length > 0) {
+    const errors: any[] = [];
+    for (const match of matches) {
+      try {
+        const parsed = JSON.parse(match);
+        // Validate it has required fields
+        if (
+          typeof parsed.start === "number" &&
+          typeof parsed.end === "number" &&
+          parsed.category &&
+          parsed.message
+        ) {
+          errors.push(parsed);
+        }
+      } catch {
+        // Skip invalid error objects
+      }
+    }
+
+    if (errors.length > 0) {
+      console.log(
+        `[getLLMAssessment] Repaired incomplete JSON: extracted ${errors.length} valid errors from malformed response`
+      );
+      return { errors, wasRepaired: true };
+    }
+  }
+
+  // If regex didn't work, try to fix common JSON issues
+  // 1. Close unclosed arrays/objects
+  let repaired = jsonText.trim();
+
+  // Count open/close braces and brackets
+  const openBraces = (repaired.match(/\{/g) || []).length;
+  const closeBraces = (repaired.match(/\}/g) || []).length;
+  const openBrackets = (repaired.match(/\[/g) || []).length;
+  const closeBrackets = (repaired.match(/\]/g) || []).length;
+
+  // Try to close incomplete structures
+  if (openBraces > closeBraces) {
+    repaired += "\n" + "}".repeat(openBraces - closeBraces);
+  }
+  if (openBrackets > closeBrackets) {
+    repaired += "\n" + "]".repeat(openBrackets - closeBrackets);
+  }
+
+  // Try to remove trailing commas before closing brackets/braces
+  repaired = repaired.replace(/,\s*([}\]])/g, "$1");
+
+  try {
+    const parsed = JSON.parse(repaired);
+    if (parsed && typeof parsed === "object" && Array.isArray(parsed.errors)) {
+      console.log(
+        `[getLLMAssessment] Repaired JSON by closing structures: found ${parsed.errors.length} errors`
+      );
+      return { errors: parsed.errors, wasRepaired: true };
+    }
+  } catch {
+    // Repair failed, return empty
+  }
+
+  return { errors: [], wasRepaired: false };
+}
+
 export async function getLLMAssessment(
   llmProvider: LLMProvider,
   apiKey: string,
@@ -323,6 +397,96 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
       console.error(
         `[getLLMAssessment] Full response (first 1000 chars):`,
         text.substring(0, 1000)
+      );
+
+      // Try to repair incomplete/malformed JSON
+      console.log(`[getLLMAssessment] Attempting to repair incomplete JSON for ${llmProvider}...`);
+      const repaired = repairIncompleteJSON(jsonText);
+
+      if (repaired.wasRepaired && repaired.errors.length > 0) {
+        console.log(
+          `[getLLMAssessment] Successfully repaired JSON: extracted ${repaired.errors.length} errors`
+        );
+
+        // Process the repaired errors
+        const processedErrors = repaired.errors
+          .map((err: any): LanguageToolError | null => {
+            if (typeof err.start !== "number" || typeof err.end !== "number") {
+              return null;
+            }
+
+            const reportedErrorText = err.errorText || "";
+            const extractedErrorText = answerText.substring(
+              Math.max(0, err.start),
+              Math.min(answerText.length, err.end)
+            );
+
+            const validationInput = {
+              start: err.start || 0,
+              end: err.end || 0,
+              errorText: reportedErrorText || extractedErrorText,
+              message: err.message,
+              errorType: err.errorType || err.category,
+            };
+
+            // Pre-correct Groq positions using errorText if available
+            let currentStart = err.start || 0;
+            let currentEnd = err.end || 0;
+            if (llmProvider === "groq" && err.errorText && err.errorText.trim().length > 0) {
+              const searchStart = Math.max(0, err.start - 100);
+              const searchEnd = Math.min(answerText.length, err.end + 100);
+              const searchArea = answerText.substring(searchStart, searchEnd);
+              const foundIndex = searchArea
+                .toLowerCase()
+                .indexOf(err.errorText.toLowerCase().trim());
+
+              if (foundIndex !== -1) {
+                currentStart = searchStart + foundIndex;
+                currentEnd = currentStart + err.errorText.trim().length;
+              }
+            }
+
+            const validated = validateAndCorrectErrorPosition(validationInput, answerText);
+
+            if (!validated.valid) {
+              return null;
+            }
+
+            const actualErrorText = answerText.substring(validated.start, validated.end);
+            let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
+            suggestions = suggestions.filter(
+              (s: string) => s && s.trim() !== actualErrorText.trim()
+            );
+
+            return {
+              start: validated.start,
+              end: validated.end,
+              length: validated.end - validated.start,
+              category: (err.category || "GRAMMAR").toUpperCase(),
+              rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
+              message: err.message || "Error detected",
+              suggestions: suggestions.slice(0, 5),
+              source: "LLM" as const,
+              severity: (err.severity || "error") as "warning" | "error",
+              confidenceScore: 0.75,
+              highConfidence: false,
+              mediumConfidence: true,
+              errorType: err.errorType || "Grammar error",
+              explanation: err.explanation || err.message || "Error detected",
+              example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
+            };
+          })
+          .filter((err: LanguageToolError | null): err is LanguageToolError => err !== null);
+
+        console.log(
+          `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors from repaired JSON (from ${repaired.errors.length} raw errors)`
+        );
+
+        return processedErrors;
+      }
+
+      console.warn(
+        `[getLLMAssessment] Could not repair JSON for ${llmProvider}, returning empty array`
       );
       return [];
     }
