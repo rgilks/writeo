@@ -893,14 +893,29 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
             >
               {displayDraftHistory.map((draft) => {
                 // Find the root parent submission ID (draft 1's submissionId)
+                // This should be the parentSubmissionId when viewing draft 2+
                 const rootDraft = displayDraftHistory.find((d) => d.draftNumber === 1);
-                const rootSubmissionId = rootDraft?.submissionId || parentSubmissionId;
                 
-                // For navigation, we need to find the actual submissionId for each draft
-                // If this draft doesn't have a submissionId, try to find it from the store
+                // For Draft 1, use parentSubmissionId if available (it's the root), otherwise try to find it
+                // For Draft 2+, the parentSubmissionId IS Draft 1's submissionId
                 let draftSubmissionId = draft.submissionId;
-                if (!draftSubmissionId || draftSubmissionId.length === 0) {
-                  // Try to find it from stored history
+                
+                // If this is Draft 1 and we don't have a submissionId, try parentSubmissionId
+                // (which would be the case if we're viewing from Draft 2's perspective)
+                if (draft.draftNumber === 1 && (!draftSubmissionId || draftSubmissionId.length === 0)) {
+                  // When viewing Draft 2, parentSubmissionId IS Draft 1's submissionId
+                  if (parentSubmissionId && draftNumber > 1) {
+                    draftSubmissionId = parentSubmissionId;
+                  } else {
+                    // Try to find it from stored history
+                    const storedHistory = submissionId ? getDraftHistory(submissionId) : [];
+                    const storedDraft = storedHistory.find((d) => d.draftNumber === 1);
+                    draftSubmissionId = storedDraft?.submissionId || "";
+                  }
+                }
+                
+                // For other drafts, try to find submissionId from store if missing
+                if ((!draftSubmissionId || draftSubmissionId.length === 0) && draft.draftNumber !== 1) {
                   const storedHistory = submissionId ? getDraftHistory(submissionId) : [];
                   const storedDraft = storedHistory.find((d) => d.draftNumber === draft.draftNumber);
                   draftSubmissionId = storedDraft?.submissionId || "";
@@ -908,12 +923,15 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                 
                 const hasValidSubmissionId = draftSubmissionId && draftSubmissionId.length > 0;
                 const isFirstDraft = draft.draftNumber === 1;
+                const rootSubmissionId = rootDraft?.submissionId || parentSubmissionId || draftSubmissionId;
                 
                 // Build navigation URL
+                // For Draft 1, just go to its results page
+                // For Draft 2+, include parent param pointing to Draft 1
                 const navigateUrl = hasValidSubmissionId
                   ? isFirstDraft
                     ? `/results/${draftSubmissionId}`
-                    : rootSubmissionId
+                    : rootSubmissionId && rootSubmissionId !== draftSubmissionId
                       ? `/results/${draftSubmissionId}?parent=${rootSubmissionId}`
                       : `/results/${draftSubmissionId}`
                   : "#";
@@ -931,7 +949,7 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                       borderRadius: "var(--border-radius)",
                       fontSize: "14px",
                       fontWeight: draft.draftNumber === draftNumber ? 600 : 500,
-                      cursor: hasValidSubmissionId ? "pointer" : "default",
+                      cursor: hasValidSubmissionId && draft.draftNumber !== draftNumber ? "pointer" : "default",
                       transition: "all 0.2s ease",
                       opacity: hasValidSubmissionId ? 1 : 0.6,
                       textAlign: "center",
@@ -942,7 +960,8 @@ export function LearnerResultsView({ data, answerText, processingTime }: Learner
                           : "1px solid var(--border-color)",
                     }}
                     onClick={() => {
-                      if (hasValidSubmissionId) {
+                      // Don't navigate if this is the current draft (would just reload)
+                      if (hasValidSubmissionId && draft.draftNumber !== draftNumber) {
                         router.push(navigateUrl);
                       }
                     }}
