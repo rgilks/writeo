@@ -103,6 +103,10 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
       if (jsonMatch) {
         jsonText = jsonMatch[0];
       } else {
+        console.warn(
+          `[getLLMAssessment] Could not extract JSON from ${llmProvider} response. First 500 chars:`,
+          trimmedText.substring(0, 500)
+        );
         return [];
       }
     }
@@ -110,10 +114,25 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
     try {
       const parsed = JSON.parse(jsonText);
       if (!parsed || typeof parsed !== "object") {
+        console.warn(
+          `[getLLMAssessment] Parsed JSON is not an object for ${llmProvider}. Type:`,
+          typeof parsed
+        );
         return [];
       }
 
       const errors = Array.isArray(parsed.errors) ? parsed.errors : [];
+
+      if (errors.length === 0 && llmProvider === "groq") {
+        console.log(
+          `[getLLMAssessment] Groq returned empty errors array. Parsed object keys:`,
+          Object.keys(parsed)
+        );
+        console.log(
+          `[getLLMAssessment] Full parsed object:`,
+          JSON.stringify(parsed).substring(0, 500)
+        );
+      }
 
       return errors
         .map((err: any): LanguageToolError | null => {
@@ -142,7 +161,25 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
 
           if (!validated.valid) {
             // Skip invalid positions
+            console.warn(`[getLLMAssessment] Rejected error for ${llmProvider}:`, {
+              originalStart: err.start,
+              originalEnd: err.end,
+              errorText: reportedErrorText,
+              extractedText: extractedErrorText,
+              category: err.category,
+            });
             return null;
+          }
+
+          if (
+            llmProvider === "groq" &&
+            (validated.start !== err.start || validated.end !== err.end)
+          ) {
+            console.log(`[getLLMAssessment] Groq position corrected:`, {
+              original: `${err.start}-${err.end}`,
+              corrected: `${validated.start}-${validated.end}`,
+              errorText: reportedErrorText,
+            });
           }
 
           // Get the actual text at the validated position
@@ -186,9 +223,19 @@ Return ONLY valid JSON (no markdown code blocks, no explanations, no text before
         })
         .filter((err: LanguageToolError | null): err is LanguageToolError => err !== null);
     } catch (parseError) {
+      console.error(`[getLLMAssessment] JSON parse error for ${llmProvider}:`, parseError);
+      console.error(
+        `[getLLMAssessment] Attempted to parse (first 500 chars):`,
+        jsonText.substring(0, 500)
+      );
+      console.error(
+        `[getLLMAssessment] Full response (first 1000 chars):`,
+        text.substring(0, 1000)
+      );
       return [];
     }
   } catch (error) {
+    console.error(`[getLLMAssessment] Error in getLLMAssessment for ${llmProvider}:`, error);
     return [];
   }
 }

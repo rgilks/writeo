@@ -508,7 +508,26 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
         const { answerId } = llmAssessmentRequests[i];
         const llmErrors = llmResponses[i] || [];
         llmErrorsByAnswerId.set(answerId, llmErrors);
+        if (llmErrors.length === 0) {
+          console.log(
+            `[LLM Assessment] No errors found for answer ${answerId} (provider: ${llmProvider}, model: ${aiModel})`
+          );
+        }
       }
+    } else {
+      // Log if LLM assessment failed
+      const errorMsg =
+        llmResults.status === "rejected"
+          ? llmResults.reason instanceof Error
+            ? llmResults.reason.message
+            : String(llmResults.reason)
+          : "Invalid response format";
+      safeLogError("LLM assessment failed", {
+        status: llmResults.status,
+        error: errorMsg,
+        provider: llmProvider,
+        model: aiModel,
+      });
     }
     timings["7b_process_ai_assessment"] = performance.now() - processLLMStartTime;
 
