@@ -15,3 +15,4 @@ export {
   type LanguageToolRuleCategory,
   type LanguageToolMatchContext,
 } from "./types";
+export { retryWithBackoff, type RetryOptions } from "./retry";

@@ -19,6 +19,7 @@ import { processLLMResults } from "./submission/results-llm";
 import { extractEssayScores } from "./submission/results-scores";
 import { processRelevanceResults } from "./submission/results-relevance";
 import { buildMetadata, buildResponseHeaders } from "./submission/metadata";
+import { buildConfig } from "./config";
 import type { ModalRequest } from "@writeo/shared";
 
 /**
@@ -67,7 +68,8 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
 
     const storeResults = body.storeResults === true;
     const autoCreateStartTime = performance.now();
-    const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
+    const config = buildConfig(c.env);
+    const storage = new StorageService(config.storage.r2Bucket, config.storage.kvNamespace);
 
     if (storeResults) {
       const storageResult = await storeSubmissionEntities(
@@ -91,15 +93,11 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     const modalRequest = modalRequestResult as ModalRequest;
     timings["4_load_data_from_r2"] = performance.now() - loadDataStartTime;
 
-    if (!c.env.MODAL_GRADE_URL) {
-      return errorResponse(500, "MODAL_GRADE_URL is not configured", c);
-    }
-
-    const serviceRequests = prepareServiceRequests(modalRequest.parts, c.env);
+    const serviceRequests = prepareServiceRequests(modalRequest.parts, config, c.env.AI);
     const { essayResult, ltResults, llmResults, relevanceResults } = await executeServiceRequests(
       modalRequest,
       serviceRequests,
-      c.env,
+      config,
       timings
     );
 
@@ -112,7 +110,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       ltResults,
       serviceRequests.ltRequests,
       modalRequest.parts,
-      c.env
+      config.features.languageTool.enabled
     );
     timings["7_process_languagetool"] = performance.now() - processLTStartTime;
 
@@ -200,7 +198,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       llmErrorsByAnswerId,
       answerTextsByAnswerId,
       modalRequest,
-      c.env.LT_LANGUAGE ?? "en-GB",
+      config.features.languageTool.language,
       serviceRequests.aiModel,
       serviceRequests.llmProvider,
       llmFeedbackByAnswerId,

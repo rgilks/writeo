@@ -5,7 +5,7 @@
 import type { LanguageToolError } from "@writeo/shared";
 import { callLLMAPI, type LLMProvider } from "./llm";
 import { MAX_TOKENS_GRAMMAR_CHECK } from "../utils/constants";
-import { retryWithBackoff } from "../utils/retry";
+import { retryWithBackoff } from "@writeo/shared";
 import { buildAssessmentPrompt } from "./ai-assessment/prompts";
 import { parsePipeDelimitedResponse } from "./ai-assessment/parser";
 import { validateAndProcessError } from "./ai-assessment/validation";

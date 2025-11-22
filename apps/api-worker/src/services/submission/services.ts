@@ -6,8 +6,8 @@ import type { ModalRequest } from "@writeo/shared";
 import { fetchWithTimeout } from "../../utils/fetch-with-timeout";
 import { getLLMAssessment } from "../ai-assessment";
 import { checkAnswerRelevance, type RelevanceCheck } from "../relevance";
-import { parseLLMProvider, getDefaultModel, getAPIKey, type LLMProvider } from "../llm";
-import type { Env } from "../../types/env";
+import type { AppConfig } from "../config";
+import type { LLMProvider } from "../llm";
 
 export interface ServiceRequests {
   ltRequests: Array<{ answerId: string; request: Promise<Response> }>;
@@ -30,34 +30,22 @@ export interface ServiceRequests {
 
 export function prepareServiceRequests(
   modalParts: ModalRequest["parts"],
-  env: Env
+  config: AppConfig,
+  ai: Ai
 ): ServiceRequests {
-  const language = env.LT_LANGUAGE ?? "en-GB";
-  const llmProvider = parseLLMProvider(env.LLM_PROVIDER);
-  const defaultModel = getDefaultModel(llmProvider);
-  const aiModel = env.AI_MODEL || defaultModel;
-  const apiKey = getAPIKey(llmProvider, {
-    GROQ_API_KEY: env.GROQ_API_KEY,
-    OPENAI_API_KEY: env.OPENAI_API_KEY,
-  });
-
-  if (!apiKey) {
-    throw new Error(
-      `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`
-    );
-  }
+  const language = config.features.languageTool.language;
 
   const ltRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
-  if (env.MODAL_LT_URL) {
+  if (config.features.languageTool.enabled && config.modal.ltUrl) {
     for (const part of modalParts) {
       for (const answer of part.answers) {
         ltRequests.push({
           answerId: answer.id,
-          request: fetchWithTimeout(`${env.MODAL_LT_URL}/check`, {
+          request: fetchWithTimeout(`${config.modal.ltUrl}/check`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Token ${env.API_KEY}`,
+              Authorization: `Token ${config.api.key}`,
             },
             body: JSON.stringify({
               language,
@@ -83,7 +71,7 @@ export function prepareServiceRequests(
         answerId: answer.id,
         questionText: answer.question_text,
         answerText: answer.answer_text,
-        request: checkAnswerRelevance(env.AI, answer.question_text, answer.answer_text, 0.5),
+        request: checkAnswerRelevance(ai, answer.question_text, answer.answer_text, 0.5),
       });
     }
   }
@@ -101,11 +89,11 @@ export function prepareServiceRequests(
         questionText: answer.question_text,
         answerText: answer.answer_text,
         request: getLLMAssessment(
-          llmProvider,
-          apiKey,
+          config.llm.provider,
+          config.llm.apiKey,
           answer.question_text,
           answer.answer_text,
-          aiModel
+          config.llm.model
         ),
       });
     }
@@ -115,16 +103,16 @@ export function prepareServiceRequests(
     ltRequests,
     relevanceRequests,
     llmAssessmentRequests,
-    llmProvider,
-    apiKey,
-    aiModel,
+    llmProvider: config.llm.provider,
+    apiKey: config.llm.apiKey,
+    aiModel: config.llm.model,
   };
 }
 
 export async function executeServiceRequests(
   modalRequest: ModalRequest,
   serviceRequests: ServiceRequests,
-  env: Env,
+  config: AppConfig,
   timings: Record<string, number>
 ): Promise<{
   essayResult: PromiseSettledResult<Response>;
@@ -138,12 +126,12 @@ export async function executeServiceRequests(
   const [essayResult, ltResults, llmResults, relevanceResults] = await Promise.allSettled([
     (async () => {
       const start = performance.now();
-      const result = await fetchWithTimeout(`${env.MODAL_GRADE_URL}/grade`, {
+      const result = await fetchWithTimeout(`${config.modal.gradeUrl}/grade`, {
         timeout: 60000,
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Token ${env.API_KEY}`,
+          Authorization: `Token ${config.api.key}`,
         },
         body: JSON.stringify(modalRequest),
       });

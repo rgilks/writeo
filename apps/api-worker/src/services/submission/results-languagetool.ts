@@ -11,7 +11,7 @@ export async function processLanguageToolResults(
   ltResults: PromiseSettledResult<Response[]>,
   ltRequests: Array<{ answerId: string; request: Promise<Response> }>,
   modalParts: ModalRequest["parts"],
-  env: { MODAL_LT_URL?: string }
+  languageToolEnabled: boolean
 ): Promise<{
   ltErrorsByAnswerId: Map<string, LanguageToolError[]>;
   answerTextsByAnswerId: Map<string, string>;
@@ -19,7 +19,7 @@ export async function processLanguageToolResults(
   const ltErrorsByAnswerId = new Map<string, LanguageToolError[]>();
   const answerTextsByAnswerId = new Map<string, string>();
 
-  if (env.MODAL_LT_URL) {
+  if (languageToolEnabled) {
     if (ltResults.status !== "fulfilled" || !Array.isArray(ltResults.value)) {
       const errorMsg =
         ltResults.status === "rejected"

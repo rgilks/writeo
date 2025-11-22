@@ -6,8 +6,7 @@ import type { CombinedFeedback } from "./types";
 import { getCombinedFeedback } from "./combined";
 import type { LLMProvider } from "../llm";
 import type { LanguageToolError } from "@writeo/shared";
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+import { retryWithBackoff } from "@writeo/shared";
 
 export interface FeedbackRetryParams {
   llmProvider: LLMProvider;
@@ -29,14 +28,8 @@ export async function getCombinedFeedbackWithRetry(
   params: FeedbackRetryParams,
   options?: { maxAttempts?: number; baseDelayMs?: number }
 ): Promise<CombinedFeedback> {
-  const maxAttempts = options?.maxAttempts ?? 3;
-  const baseDelayMs = options?.baseDelayMs ?? 300;
-  let attempt = 0;
-  let lastError: Error | undefined;
-
-  while (attempt < maxAttempts) {
-    attempt += 1;
-    try {
+  return retryWithBackoff(
+    async () => {
       const feedback = await getCombinedFeedback(
         params.llmProvider,
         params.apiKey,
@@ -54,16 +47,10 @@ export async function getCombinedFeedbackWithRetry(
       }
 
       return feedback;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      if (attempt < maxAttempts) {
-        const delay = baseDelayMs * attempt;
-        await sleep(delay);
-      }
+    },
+    {
+      maxAttempts: options?.maxAttempts ?? 3,
+      baseDelayMs: options?.baseDelayMs ?? 300,
     }
-  }
-
-  throw new Error(
-    `Failed after ${maxAttempts} attempts${lastError ? `: ${lastError.message}` : ""}`
   );
 }
