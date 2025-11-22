@@ -311,4 +311,126 @@ test.describe("Writing Page", () => {
     const wordCountText = page.locator("text=/\\d+ (word|words)/i");
     await expect(wordCountText.first()).toBeVisible({ timeout: 5000 });
   });
+
+  test("TC-FE-021: Custom question page loads correctly", async ({ writePage, page }) => {
+    await writePage.goto("custom");
+
+    // Check custom question textarea is visible
+    const questionTextarea = page.locator("textarea").first();
+    await expect(questionTextarea).toBeVisible();
+
+    // Check answer textarea is visible
+    const answerTextarea = await writePage.getTextarea();
+    await expect(answerTextarea).toBeVisible();
+
+    // Check title shows "Custom Question"
+    const title = page.locator("h1.page-title");
+    await expect(title).toContainText("Custom Question");
+  });
+
+  test("TC-FE-022: Custom question can be entered", async ({ writePage, page }) => {
+    await writePage.goto("custom");
+
+    const customQuestion = "What are the benefits of learning a second language?";
+    const questionTextarea = page.locator("textarea").first();
+
+    await questionTextarea.fill(customQuestion);
+
+    // Verify question was entered
+    const value = await questionTextarea.inputValue();
+    expect(value).toBe(customQuestion);
+  });
+
+  test("TC-FE-023: Free writing without question works", async ({ writePage, page }) => {
+    await writePage.goto("custom");
+
+    // Don't enter a question - leave it blank for free writing
+    const questionTextarea = page.locator("textarea").first();
+    const questionValue = await questionTextarea.inputValue();
+    expect(questionValue).toBe(""); // Should be empty
+
+    // Type essay
+    const essay = generateValidEssay();
+    await writePage.typeEssay(essay);
+
+    // Wait for word count to update
+    await page.waitForTimeout(1500);
+
+    // Verify button is enabled
+    const isDisabled = await writePage.isSubmitButtonDisabled();
+    expect(isDisabled).toBe(false);
+
+    // Verify word count is valid
+    const wordCount = await writePage.getWordCount();
+    expect(wordCount).toBeGreaterThanOrEqual(250);
+    expect(wordCount).toBeLessThanOrEqual(500);
+
+    // Submit should work (will send empty question text - no placeholder)
+    await writePage.clickSubmit();
+
+    // Should navigate to results page
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+  });
+
+  test("TC-FE-024: Custom question submission works", async ({ writePage, page }) => {
+    await writePage.goto("custom");
+
+    // Enter custom question
+    const customQuestion = "Describe your ideal vacation destination.";
+    const questionTextarea = page.locator("textarea").first();
+    await questionTextarea.fill(customQuestion);
+
+    // Type essay
+    const essay = generateValidEssay();
+    await writePage.typeEssay(essay);
+
+    // Wait for word count to update
+    await page.waitForTimeout(1500);
+
+    // Verify button is enabled
+    const isDisabled = await writePage.isSubmitButtonDisabled();
+    expect(isDisabled).toBe(false);
+
+    // Submit
+    await writePage.clickSubmit();
+
+    // Should navigate to results page
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+  });
+
+  test("TC-FE-025: Self-evaluation checklist adapts to custom question", async ({
+    writePage,
+    page,
+  }) => {
+    await writePage.goto("custom");
+
+    // Type essay without question
+    const essay = generateValidEssay();
+    await writePage.typeEssay(essay);
+
+    // Wait for checklist to appear
+    await page.waitForTimeout(500);
+
+    // When no question is entered, the "Did I answer all parts of the question?" should not appear
+    const answeredAllParts = page.locator("text=/Did I answer all parts of the question/i");
+    const answeredAllPartsCount = await answeredAllParts.count();
+    expect(answeredAllPartsCount).toBe(0);
+
+    // But other checklist items should still appear
+    const checklist = await writePage.getSelfEvalChecklist();
+    const checklistCount = await checklist.count();
+    expect(checklistCount).toBeGreaterThan(0);
+
+    // Now enter a question
+    const customQuestion = "What are the main causes of climate change?";
+    const questionTextarea = page.locator("textarea").first();
+    await questionTextarea.fill(customQuestion);
+
+    // Wait for UI to update
+    await page.waitForTimeout(500);
+
+    // Now "Did I answer all parts of the question?" should appear
+    const answeredAllPartsAfter = page.locator("text=/Did I answer all parts of the question/i");
+    await expect(answeredAllPartsAfter.first()).toBeVisible({ timeout: 2000 });
+  });
 });

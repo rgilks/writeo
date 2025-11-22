@@ -72,10 +72,12 @@ export function LearnerResultsView({ data, answerText }: LearnerResultsViewProps
   const { handleResubmit, isResubmitting } = useResubmit();
 
   const handleResubmitWrapper = async (editedText: string) => {
-    if (!questionText || !submissionId) {
-      throw new Error("Cannot resubmit: Missing required data");
+    if (!submissionId) {
+      throw new Error("Cannot resubmit: Missing submission ID");
     }
-    await handleResubmit(editedText, questionText, submissionId, parentSubmissionId);
+    // Use question text if available, otherwise use empty string for free writing
+    const finalQuestionText = questionText || "";
+    await handleResubmit(editedText, finalQuestionText, submissionId, parentSubmissionId);
   };
 
   return (

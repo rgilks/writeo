@@ -201,7 +201,12 @@ export class WritePage {
   }
 
   async getQuestionText() {
-    return this.page.locator(".prompt-box");
+    // For custom page, question might be in a textarea, otherwise in .prompt-box
+    return this.page.locator(".prompt-box").or(this.page.locator("textarea").first());
+  }
+
+  async getCustomQuestionTextarea() {
+    return this.page.locator("textarea").first();
   }
 
   async getTextarea() {

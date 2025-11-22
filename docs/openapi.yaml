@@ -147,7 +147,7 @@ paths:
 
         **Submission Format:**
         - **Answers**: Must always be sent inline with the submission (using the `text` field). Answers cannot be referenced by ID.
-        - **Questions**: Can be sent inline (with `question-text`) OR referenced by ID (using `question-id` only, question must already exist via PUT /text/questions/{question_id}).
+        - **Questions**: Can be sent inline (with `question-text`), referenced by ID (using `question-id` only, question must already exist via PUT /text/questions/{question_id}), or empty string `""` for free writing without a question.
 
         **Example with inline question:**
         ```json
@@ -175,6 +175,23 @@ paths:
               "id": "answer-uuid",
               "question-number": 1,
               "question-id": "question-uuid",
+              "text": "I went to the park..."
+            }]
+          }],
+          "template": {"name": "essay-task-2", "version": 1}
+        }
+        ```
+
+        **Example with free writing (empty question-text):**
+        ```json
+        {
+          "submission": [{
+            "part": 1,
+            "answers": [{
+              "id": "answer-uuid",
+              "question-number": 1,
+              "question-id": "question-uuid",
+              "question-text": "",
               "text": "I went to the park..."
             }]
           }],
@@ -236,10 +253,10 @@ paths:
                             question-id:
                               type: string
                               format: uuid
-                              description: Question ID (required - will auto-create question if question-text is provided, otherwise question must exist)
+                              description: Question ID (required - will auto-create question if question-text is provided and non-empty, otherwise question must exist; empty question-text "" allowed for free writing)
                             question-text:
                               type: string
-                              description: Question text (optional - if provided, will create/update question; if omitted, question must exist)
+                              description: Question text (optional - if provided, will create/update question; if omitted, question must exist; empty string "" allowed for free writing without a question)
                             text:
                               type: string
                               description: Answer text (required - answers must always be sent inline)

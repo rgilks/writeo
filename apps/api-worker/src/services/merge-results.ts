@@ -104,10 +104,10 @@ export function mergeAssessmentResults(
           // Finally, by position (earlier errors first)
           return a.start - b.start;
         });
-        
+
         // Limit to 10 most significant errors
         const topErrors = sortedErrors.slice(0, 10);
-        
+
         assessorResults.push({
           id: "T-GEC-LLM",
           name: "AI Assessment",

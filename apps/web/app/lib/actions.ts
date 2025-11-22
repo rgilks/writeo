@@ -22,7 +22,8 @@ export async function submitEssay(
   parentResults?: any
 ): Promise<{ submissionId: string; results: any }> {
   try {
-    if (!questionText?.trim()) throw new Error("Question text is required");
+    // Allow empty question text for free writing - send empty string to API
+    const finalQuestionText = questionText?.trim() || "";
     if (!answerText?.trim()) throw new Error("Answer text is required");
 
     const wordCount = answerText
@@ -43,7 +44,7 @@ export async function submitEssay(
     }
 
     const { submissionId, results } = await createSubmission(
-      questionText,
+      finalQuestionText,
       answerText,
       storeResults
     );

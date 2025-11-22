@@ -124,6 +124,22 @@ export default function HomePage() {
               </Link>
             </div>
           ))}
+          <div>
+            <Link href="/write/custom" style={{ textDecoration: "none" }}>
+              <div className="task-card">
+                <div className="task-header">
+                  <div className="task-title">Custom Question</div>
+                  <div className="task-icon">✍️</div>
+                </div>
+                <div className="task-description">
+                  Write your own question or practice free writing without a specific prompt.
+                </div>
+                <div className="btn btn-primary" style={{ width: "100%" }}>
+                  Start Writing →
+                </div>
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
     </>

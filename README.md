@@ -74,6 +74,7 @@ Writeo is a modern, scalable writing practice system with **AI-powered feedback*
 - 📈 **Progress Visualization** - Charts showing score, error count, and CEFR level improvements
 - 🎉 **Celebratory Feedback** - Positive reinforcement when learners improve between drafts
 - 👩‍🏫 **Interactive Teacher Feedback** - Short encouragement notes with optional detailed analysis
+- ✍️ **Custom Questions** - Enter your own question or practice free writing without a specific prompt
 
 ### Assessment Features
 
@@ -272,7 +273,7 @@ export API_BASE="https://your-api-worker.workers.dev"  # Or use API_BASE_URL
 export API_KEY="your-api-key"
 
 # Submit for assessment (answers must be sent inline)
-# Questions can be sent inline or referenced by ID
+# Questions can be sent inline, referenced by ID, or empty for free writing
 curl -X PUT "$API_BASE/text/submissions/$(uuidgen)" \
   -H "Authorization: Token $API_KEY" \
   -H "Content-Type: application/json" \
@@ -307,6 +308,24 @@ curl -X PUT "$API_BASE/text/submissions/$(uuidgen)" \
         "id": "answer-uuid",
         "question-number": 1,
         "question-id": "question-uuid",
+        "text": "Last weekend I went to the park."
+      }]
+    }],
+    "template": {"name": "generic", "version": 1}
+  }'
+
+# Or free writing without a question (use empty string for question-text):
+curl -X PUT "$API_BASE/text/submissions/$(uuidgen)" \
+  -H "Authorization: Token $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "submission": [{
+      "part": 1,
+      "answers": [{
+        "id": "answer-uuid",
+        "question-number": 1,
+        "question-id": "question-uuid",
+        "question-text": "",
         "text": "Last weekend I went to the park."
       }]
     }],

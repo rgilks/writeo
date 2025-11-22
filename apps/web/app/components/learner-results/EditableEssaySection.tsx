@@ -19,7 +19,8 @@ export function EditableEssaySection({
 }) {
   if (!finalAnswerText) return null;
 
-  if (!questionText) {
+  // Allow resubmission even if question text is empty (free writing)
+  if (!questionText || questionText.trim() === "") {
     return (
       <div
         lang="en"

@@ -31,8 +31,8 @@ test.describe("Homepage", () => {
     const taskCards = await homePage.getTaskCards();
     const count = await taskCards.count();
 
-    // Should have at least 4 task cards (from page.tsx)
-    expect(count).toBeGreaterThanOrEqual(4);
+    // Should have at least 9 task cards (8 predefined tasks + 1 custom question card)
+    expect(count).toBeGreaterThanOrEqual(9);
   });
 
   test("TC-FE-003: Click on task card navigates to write page", async ({ homePage, page }) => {
@@ -96,5 +96,22 @@ test.describe("Homepage", () => {
     const criticalErrors = errors.filter((e) => !e.includes("favicon") && !e.includes("analytics"));
 
     expect(criticalErrors.length).toBe(0);
+  });
+
+  test("TC-FE-008: Custom question card navigates to custom write page", async ({
+    homePage,
+    page,
+  }) => {
+    await homePage.goto();
+
+    // Find custom question card
+    const customCard = page.locator("text=Custom Question").locator("..").locator("..");
+    await expect(customCard).toBeVisible();
+
+    // Click on custom question card
+    await customCard.locator("a").first().click();
+
+    // Should navigate to custom write page
+    await expect(page).toHaveURL(/\/write\/custom/);
   });
 });

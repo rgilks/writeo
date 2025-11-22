@@ -61,7 +61,7 @@ Creates a submission and triggers assessment. The `submission_id` must be a vali
 
 **Note**: Answers must always be sent inline with the submission. The old reference format (answer ID only) is no longer supported. See examples below.
 
-**Inline Format** (answers must always be sent inline, questions can be inline or referenced):
+**Inline Format** (answers must always be sent inline, questions can be inline, referenced, or empty for free writing):
 
 ```json
 {
@@ -85,6 +85,29 @@ Creates a submission and triggers assessment. The `submission_id` must be a vali
 ```
 
 **Note:** The `storeResults` parameter is optional and defaults to `false`. When `false` (default), results are returned immediately but not stored on the server. Results are stored only in the user's browser (localStorage). Set `storeResults: true` to enable server storage for 90 days.
+
+**Free Writing** (no question - use empty string for `question-text`):
+
+```json
+{
+  "submission": [
+    {
+      "part": 1,
+      "answers": [
+        {
+          "id": "answer-uuid",
+          "question-number": 1,
+          "question-id": "question-uuid",
+          "question-text": "",
+          "text": "I went to the park..."
+        }
+      ]
+    }
+  ],
+  "template": { "name": "generic", "version": 1 },
+  "storeResults": false
+}
+```
 
 **With Referenced Question** (question must exist, omit question-text):
 

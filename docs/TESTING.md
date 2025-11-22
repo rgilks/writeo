@@ -46,8 +46,8 @@ npm run test:e2e:ui   # Playwright UI mode
 
 **Test Suites:**
 
-- `homepage.spec.ts` - Homepage and navigation
-- `writing.spec.ts` - Form submission and validation
+- `homepage.spec.ts` - Homepage and navigation (including custom question card)
+- `writing.spec.ts` - Form submission and validation (including custom questions and free writing)
 - `results.spec.ts` - Results display and feedback
 - `interactive-learning.spec.ts` - Interactive learning flow
 - `draft-tracking.spec.ts` - Draft tracking and navigation
@@ -55,7 +55,7 @@ npm run test:e2e:ui   # Playwright UI mode
 - `visual.spec.ts` - Visual design verification
 - `responsive.spec.ts` - Responsive layouts (mobile/tablet/desktop)
 
-**Total:** ~60 test cases covering critical user flows
+**Total:** ~65 test cases covering critical user flows (including custom question feature)
 
 ---
 

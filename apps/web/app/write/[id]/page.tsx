@@ -54,10 +54,18 @@ export default function WritePage() {
   const params = useParams();
   const router = useRouter();
   const taskId = params.id as string;
-  const task = taskData[taskId] || {
-    title: "Writing Practice",
-    prompt: "Write your essay here.",
-  };
+  const isCustom = taskId === "custom";
+
+  const [customQuestion, setCustomQuestion] = useState("");
+  const task = isCustom
+    ? {
+        title: "Custom Question",
+        prompt: customQuestion.trim() || "",
+      }
+    : taskData[taskId] || {
+        title: "Writing Practice",
+        prompt: "Write your essay here.",
+      };
 
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
@@ -80,6 +88,11 @@ export default function WritePage() {
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setAnswer(newValue);
+  };
+
+  // Handle custom question change
+  const handleCustomQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCustomQuestion(e.target.value);
   };
 
   // Return prompt as-is (no additional reminder text)
@@ -122,8 +135,11 @@ export default function WritePage() {
     setError(null);
 
     try {
+      // Use custom question if provided, otherwise use empty string for free writing
+      const questionText = task.prompt.trim() || "";
+
       // Wrap Server Action call with timeout to prevent hanging
-      const submitPromise = submitEssay(task.prompt, answer, undefined, storeResults);
+      const submitPromise = submitEssay(questionText, answer, undefined, storeResults);
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("Request timed out. Please try again.")), 60000);
       });
@@ -142,34 +158,34 @@ export default function WritePage() {
         const answerTexts = results.meta?.answerTexts as Record<string, string> | undefined;
         const answerId = answerTexts ? Object.keys(answerTexts)[0] : undefined;
 
-        // If questionTexts are missing but we have answerId and task prompt, add them
-        if (!results.meta?.questionTexts && answerId && task.prompt) {
-          // Create a new results object to avoid mutation
-          resultsToStore = {
-            ...results,
-            meta: {
-              ...results.meta,
-              questionTexts: {
-                [answerId]: task.prompt,
-              },
-            },
-          };
-        }
-        // If questionTexts exist but don't have this answerId, add it
-        else if (results.meta?.questionTexts && answerId && task.prompt) {
-          const existingQuestionTexts = results.meta.questionTexts as Record<string, string>;
-          if (!existingQuestionTexts[answerId]) {
+        // Store question text (including empty string for free writing) if we have answerId
+        if (answerId && questionText !== undefined) {
+          if (!results.meta?.questionTexts) {
             // Create a new results object to avoid mutation
             resultsToStore = {
               ...results,
               meta: {
                 ...results.meta,
                 questionTexts: {
-                  ...existingQuestionTexts,
-                  [answerId]: task.prompt,
+                  [answerId]: questionText,
                 },
               },
             };
+          } else {
+            const existingQuestionTexts = results.meta.questionTexts as Record<string, string>;
+            if (!existingQuestionTexts[answerId]) {
+              // Create a new results object to avoid mutation
+              resultsToStore = {
+                ...results,
+                meta: {
+                  ...results.meta,
+                  questionTexts: {
+                    ...existingQuestionTexts,
+                    [answerId]: questionText,
+                  },
+                },
+              };
+            }
           }
         }
       }
@@ -271,16 +287,47 @@ export default function WritePage() {
                 gap: "8px",
               }}
             >
-              <span>📝</span> Question
+              <span>📝</span> {isCustom ? "Your Question (Optional)" : "Question"}
             </h2>
-            <div
-              className="prompt-box notranslate"
-              style={{ whiteSpace: "pre-wrap" }}
-              translate="no"
-              lang="en"
-            >
-              {getPrompt(task.prompt)}
-            </div>
+            {isCustom ? (
+              <textarea
+                className="textarea notranslate"
+                value={customQuestion}
+                onChange={handleCustomQuestionChange}
+                placeholder="Enter your question here, or leave blank for free writing practice..."
+                rows={4}
+                disabled={loading}
+                translate="no"
+                lang="en"
+                style={{
+                  width: "100%",
+                  minHeight: "80px",
+                  resize: "vertical",
+                }}
+              />
+            ) : (
+              <div
+                className="prompt-box notranslate"
+                style={{ whiteSpace: "pre-wrap" }}
+                translate="no"
+                lang="en"
+              >
+                {getPrompt(task.prompt)}
+              </div>
+            )}
+            {isCustom && !customQuestion.trim() && (
+              <p
+                style={{
+                  marginTop: "12px",
+                  fontSize: "14px",
+                  color: "var(--text-secondary)",
+                  fontStyle: "italic",
+                }}
+                lang="en"
+              >
+                💡 Leave blank to practice free writing without answering a specific question.
+              </p>
+            )}
           </div>
 
           <div className="card answer-card">
@@ -320,7 +367,11 @@ export default function WritePage() {
                 value={answer}
                 onChange={handleAnswerChange}
                 onInput={handleAnswerChange}
-                placeholder="Write your essay here. Minimum 250 words required. Aim for 250-300 words and address all parts of the question."
+                placeholder={
+                  isCustom && !customQuestion.trim()
+                    ? "Write your essay here. Minimum 250 words required. This is free writing practice - write about any topic you choose."
+                    : "Write your essay here. Minimum 250 words required. Aim for 250-300 words and address all parts of the question."
+                }
                 rows={20}
                 disabled={loading}
                 autoFocus={false}
@@ -357,30 +408,32 @@ export default function WritePage() {
                     }}
                     lang="en"
                   >
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--spacing-sm)",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        lineHeight: "1.5",
-                      }}
-                      lang="en"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selfEval.answeredAllParts}
-                        onChange={(e) =>
-                          setSelfEval({
-                            ...selfEval,
-                            answeredAllParts: e.target.checked,
-                          })
-                        }
-                        style={{ cursor: "pointer" }}
-                      />
-                      Did I answer all parts of the question?
-                    </label>
+                    {(isCustom ? customQuestion.trim() : true) && (
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--spacing-sm)",
+                          fontSize: "14px",
+                          cursor: "pointer",
+                          lineHeight: "1.5",
+                        }}
+                        lang="en"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selfEval.answeredAllParts}
+                          onChange={(e) =>
+                            setSelfEval({
+                              ...selfEval,
+                              answeredAllParts: e.target.checked,
+                            })
+                          }
+                          style={{ cursor: "pointer" }}
+                        />
+                        Did I answer all parts of the question?
+                      </label>
+                    )}
                     <label
                       style={{
                         display: "flex",

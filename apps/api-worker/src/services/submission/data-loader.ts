@@ -24,12 +24,10 @@ export async function buildModalRequest(
         const question = await storage.getQuestion(answerRef["question-id"] || "");
         questionText = question?.text;
       }
-      if (!questionText) {
-        return errorResponse(
-          400,
-          `question-text is required for answer ${answerRef.id} (either inline or must exist in storage)`,
-          c
-        );
+      // Allow empty string for free writing (no question)
+      // If questionText is undefined or null, use empty string
+      if (questionText === undefined || questionText === null) {
+        questionText = "";
       }
 
       const answerText = answerRef.text;

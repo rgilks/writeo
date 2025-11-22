@@ -17,9 +17,6 @@ export function useResubmit() {
     submissionId: string,
     parentSubmissionId?: string
   ) => {
-    if (!questionText) {
-      throw new Error("Cannot resubmit: Question text not available");
-    }
     if (!submissionId) {
       throw new Error("Cannot resubmit: Submission ID not available");
     }
@@ -41,8 +38,11 @@ export function useResubmit() {
         }
       }
 
+      // Use question text if provided, otherwise use empty string for free writing
+      const finalQuestionText = questionText?.trim() || "";
+
       const { submissionId: newSubmissionId, results } = await submitEssay(
-        questionText,
+        finalQuestionText,
         editedText,
         parentId,
         storeResults,

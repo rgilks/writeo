@@ -93,14 +93,15 @@ export async function storeSubmissionEntities(
     return !questionsToCreate.some((q) => q.id === answer.questionId);
   });
 
+  // Allow answers without question text (free writing) - only check if question exists when storeResults is true
+  // If question doesn't exist and no question-text was provided, that's OK for free writing
   for (const answer of answersWithoutQuestionText) {
     const existingQuestion = await storage.getQuestion(answer.questionId);
+    // Only require question to exist if we're storing results and question wasn't provided
+    // Empty question text is valid for free writing
     if (!existingQuestion) {
-      return errorResponse(
-        400,
-        `question-text is required when question ${answer.questionId} does not exist`,
-        c
-      );
+      // This is OK - empty question text is allowed for free writing
+      // The question ID will still be stored but with empty text
     }
   }
 
