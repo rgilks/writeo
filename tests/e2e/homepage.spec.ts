@@ -104,12 +104,12 @@ test.describe("Homepage", () => {
   }) => {
     await homePage.goto();
 
-    // Find custom question card
-    const customCard = page.locator("text=Custom Question").locator("..").locator("..");
-    await expect(customCard).toBeVisible();
+    // Find custom question card by looking for the link with href="/write/custom"
+    const customCardLink = page.locator('a[href="/write/custom"]');
+    await expect(customCardLink).toBeVisible();
 
     // Click on custom question card
-    await customCard.locator("a").first().click();
+    await customCardLink.click();
 
     // Should navigate to custom write page
     await expect(page).toHaveURL(/\/write\/custom/);

@@ -315,17 +315,20 @@ test.describe("Writing Page", () => {
   test("TC-FE-021: Custom question page loads correctly", async ({ writePage, page }) => {
     await writePage.goto("custom");
 
-    // Check custom question textarea is visible
-    const questionTextarea = page.locator("textarea").first();
+    // Wait for page to load
+    await page.waitForTimeout(500);
+
+    // Check custom question textarea is visible (should be in question-card)
+    const questionTextarea = page.locator(".question-card textarea").first();
     await expect(questionTextarea).toBeVisible();
 
     // Check answer textarea is visible
     const answerTextarea = await writePage.getTextarea();
     await expect(answerTextarea).toBeVisible();
 
-    // Check title shows "Custom Question"
+    // Check title shows "Custom Question" (wait a bit for React to render)
     const title = page.locator("h1.page-title");
-    await expect(title).toContainText("Custom Question");
+    await expect(title).toContainText("Custom Question", { timeout: 2000 });
   });
 
   test("TC-FE-022: Custom question can be entered", async ({ writePage, page }) => {
@@ -404,12 +407,14 @@ test.describe("Writing Page", () => {
   }) => {
     await writePage.goto("custom");
 
+    await page.waitForTimeout(500);
+
     // Type essay without question
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
 
     // Wait for checklist to appear
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
 
     // When no question is entered, the "Did I answer all parts of the question?" should not appear
     const answeredAllParts = page.locator("text=/Did I answer all parts of the question/i");
@@ -423,11 +428,11 @@ test.describe("Writing Page", () => {
 
     // Now enter a question
     const customQuestion = "What are the main causes of climate change?";
-    const questionTextarea = page.locator("textarea").first();
+    const questionTextarea = page.locator(".question-card textarea").first();
     await questionTextarea.fill(customQuestion);
 
-    // Wait for UI to update
-    await page.waitForTimeout(500);
+    // Wait for React state update and UI to re-render
+    await page.waitForTimeout(1000);
 
     // Now "Did I answer all parts of the question?" should appear
     const answeredAllPartsAfter = page.locator("text=/Did I answer all parts of the question/i");
