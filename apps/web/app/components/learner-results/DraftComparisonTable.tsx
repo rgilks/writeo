@@ -4,21 +4,13 @@
 
 import { DraftTableHeader } from "./DraftTableHeader";
 import { DraftTableRow } from "./DraftTableRow";
-
-interface Draft {
-  draftNumber: number;
-  submissionId?: string;
-  timestamp: string;
-  wordCount: number;
-  errorCount: number;
-  overallScore?: number;
-}
+import type { DraftHistory } from "@/app/lib/stores/draft-store";
 
 export function DraftComparisonTable({
   draftHistory,
   currentDraftNumber,
 }: {
-  draftHistory: Draft[];
+  draftHistory: DraftHistory[];
   currentDraftNumber: number;
 }) {
   if (draftHistory.length <= 1) return null;

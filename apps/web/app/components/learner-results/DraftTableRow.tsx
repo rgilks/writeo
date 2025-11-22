@@ -4,15 +4,7 @@
 
 import { getScoreColor } from "./utils";
 import { ChangeCell } from "./ChangeCell";
-
-interface Draft {
-  draftNumber: number;
-  submissionId?: string;
-  timestamp: string;
-  wordCount: number;
-  errorCount: number;
-  overallScore?: number;
-}
+import type { DraftHistory } from "@/app/lib/stores/draft-store";
 
 export function DraftTableRow({
   draft,
@@ -20,9 +12,9 @@ export function DraftTableRow({
   prevDraft,
   currentDraftNumber,
 }: {
-  draft: Draft;
+  draft: DraftHistory;
   index: number;
-  prevDraft: Draft | null;
+  prevDraft: DraftHistory | null;
   currentDraftNumber: number;
 }) {
   const scoreChange =

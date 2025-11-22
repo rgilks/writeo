@@ -1,6 +1,6 @@
 """Pydantic schemas for Modal service request/response."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any, Literal
 
 
@@ -85,11 +85,16 @@ class AssessorResult(BaseModel):
 
 class AnswerResult(BaseModel):
     """Answer result with assessor results."""
-    id: str = Field(..., description="Answer ID (UUID)", example="550e8400-e29b-41d4-a716-446655440000")
-    assessor_results: List[AssessorResult] = Field(..., alias="assessor-results", description="List of assessor results for this answer", min_length=1)
+    model_config = ConfigDict(populate_by_name=True)  # Allow using field name (assessor_results) or alias (assessor-results)
     
-    class Config:
-        populate_by_name = True  # Allow using field name (assessor_results) or alias (assessor-results)
+    id: str = Field(..., description="Answer ID (UUID)", example="550e8400-e29b-41d4-a716-446655440000")
+    assessor_results: List[AssessorResult] = Field(
+        ..., 
+        alias="assessor-results",
+        serialization_alias="assessor-results",
+        description="List of assessor results for this answer", 
+        min_length=1
+    )
 
 
 class AssessmentPart(BaseModel):

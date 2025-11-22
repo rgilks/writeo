@@ -68,6 +68,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
       feedback: {
         message: cachedMessage,
         focusArea: existingMeta.focusArea as string | undefined,
+        ...(body.mode === "clues" && { clues: cachedMessage }),
       },
     };
   }
@@ -143,6 +144,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     feedback: {
       message: teacherFeedback.message,
       focusArea: teacherFeedback.focusArea,
+      ...(body.mode === "clues" && { clues: teacherFeedback.message }),
     },
   };
 }
