@@ -109,10 +109,10 @@ test.describe("Homepage", () => {
     await expect(customCardLink).toBeVisible();
 
     // Verify custom question card is first in the grid
-    const taskCards = await homePage.getTaskCards();
-    const firstCard = taskCards.first();
-    const firstCardLink = firstCard.locator("a");
-    await expect(firstCardLink).toHaveAttribute("href", "/write/custom");
+    // The link wraps the task-card, so we check the first link in the grid
+    const gridLinks = page.locator(".grid a");
+    const firstLink = gridLinks.first();
+    await expect(firstLink).toHaveAttribute("href", "/write/custom");
 
     // Click on custom question card
     await customCardLink.click();
