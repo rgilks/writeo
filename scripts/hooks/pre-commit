@@ -60,12 +60,86 @@ if ! npm run lint; then
   exit 1
 fi
 
-# Step 3: Run type checking
-echo "${YELLOW}Running type checker...${NC}"
+# Step 3: Run TypeScript type checking
+echo "${YELLOW}Running TypeScript type checker...${NC}"
 if ! npm run type-check; then
-  echo "${RED}Type checking failed. Please fix the errors above.${NC}"
+  echo "${RED}TypeScript type checking failed. Please fix the errors above.${NC}"
   echo "${YELLOW}To skip this check, use: git commit --no-verify${NC}"
   exit 1
+fi
+
+# Step 4: Check for Python files and run Python checks
+PYTHON_FILES=$(echo "$STAGED_FILES" | grep -E "\.py$" || true)
+if [ -n "$PYTHON_FILES" ]; then
+  echo "${YELLOW}Python files detected. Running Python checks...${NC}"
+  
+  # Install ruff if not available
+  if ! command -v ruff > /dev/null 2>&1; then
+    echo "${YELLOW}Installing ruff...${NC}"
+    if command -v uv > /dev/null 2>&1; then
+      uv pip install ruff > /dev/null 2>&1 || pip install ruff > /dev/null 2>&1
+    else
+      pip install ruff > /dev/null 2>&1 || {
+        echo "${RED}Failed to install ruff. Please install manually: pip install ruff${NC}"
+        exit 1
+      }
+    fi
+  fi
+  
+  # Install mypy if not available
+  if ! command -v mypy > /dev/null 2>&1; then
+    echo "${YELLOW}Installing mypy...${NC}"
+    if command -v uv > /dev/null 2>&1; then
+      uv pip install mypy > /dev/null 2>&1 || pip install mypy > /dev/null 2>&1
+    else
+      pip install mypy > /dev/null 2>&1 || {
+        echo "${RED}Failed to install mypy. Please install manually: pip install mypy${NC}"
+        exit 1
+      }
+    fi
+  fi
+  
+  # Format Python code
+  echo "${YELLOW}Formatting Python code with ruff...${NC}"
+  if ! ruff format --check . > /dev/null 2>&1; then
+    echo "${YELLOW}Python formatting issues detected. Auto-formatting...${NC}"
+    ruff format .
+    # Stage the formatted files
+    git add -u
+    echo "${GREEN}Python code formatted and staged.${NC}"
+  fi
+  
+  # Lint Python code (strict - fails on errors)
+  echo "${YELLOW}Linting Python code with ruff (strict)...${NC}"
+  if ! ruff check .; then
+    echo "${RED}Python linting failed. Please fix the errors above.${NC}"
+    echo "${YELLOW}To skip this check, use: git commit --no-verify${NC}"
+    exit 1
+  fi
+  
+  # Type check Python code (strict - fails on errors)
+  echo "${YELLOW}Running Python type checker (mypy - strict)...${NC}"
+  PYTHON_ERRORS=0
+  
+  # Check common Python directories that have staged files
+  for dir in services/modal-essay services/modal-lt packages/shared/py; do
+    if [ -d "$dir" ] && echo "$PYTHON_FILES" | grep -q "^$dir/"; then
+      if [ -f "$dir/pyproject.toml" ]; then
+        echo "${YELLOW}Checking $dir...${NC}"
+        if ! mypy "$dir" --config-file "$dir/pyproject.toml"; then
+          PYTHON_ERRORS=$((PYTHON_ERRORS + 1))
+        fi
+      fi
+    fi
+  done
+  
+  if [ $PYTHON_ERRORS -gt 0 ]; then
+    echo "${RED}Python type checking failed in $PYTHON_ERRORS directory(ies).${NC}"
+    echo "${YELLOW}To skip this check, use: git commit --no-verify${NC}"
+    exit 1
+  fi
+  
+  echo "${GREEN}Python checks passed.${NC}"
 fi
 
 echo "${GREEN}All pre-commit checks passed!${NC}"

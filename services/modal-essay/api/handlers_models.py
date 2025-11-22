@@ -1,13 +1,27 @@
 """Model management handlers."""
 
-from typing import Dict, Any
+from typing import Dict, Any, TypedDict
 from schemas import ModalRequest
 from config import DEFAULT_MODEL, MODEL_CONFIGS
 from model_loader import get_model
 from scoring import score_essay
 
 
-async def handle_list_models() -> Dict[str, Any]:
+class ModelStatusDict(TypedDict):
+    """Model status information."""
+    name: str
+    type: str
+    status: str
+    is_default: bool
+
+
+class ModelsResponseDict(TypedDict):
+    """Response for list models endpoint."""
+    models: Dict[str, ModelStatusDict]
+    default: str
+
+
+async def handle_list_models() -> ModelsResponseDict:
     """Handle list models endpoint."""
     models_status = {}
     for key, config in MODEL_CONFIGS.items():
@@ -34,9 +48,24 @@ async def handle_list_models() -> Dict[str, Any]:
     return {"models": models_status, "default": DEFAULT_MODEL}
 
 
-async def handle_compare_models(request: ModalRequest) -> Dict[str, Any]:
+class ComparisonResultDict(TypedDict, total=False):
+    """Comparison result for a single model."""
+    TA: float
+    CC: float
+    Vocab: float
+    Grammar: float
+    Overall: float
+    error: str
+
+
+class ComparisonResponseDict(TypedDict):
+    """Response for compare models endpoint."""
+    comparison: Dict[str, ComparisonResultDict]
+
+
+async def handle_compare_models(request: ModalRequest) -> ComparisonResponseDict:
     """Handle compare models endpoint."""
-    results: Dict[str, Any] = {}
+    results: Dict[str, ComparisonResultDict] = {}
     
     for model_key in MODEL_CONFIGS.keys():
         if model_key == "fallback":

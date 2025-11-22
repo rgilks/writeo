@@ -4,21 +4,29 @@
 
 import type { CombinedFeedback } from "./types";
 import { getCombinedFeedback } from "./combined";
+import type { LLMProvider } from "../llm";
+import type { LanguageToolError } from "@writeo/shared";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export interface FeedbackRetryParams {
+  llmProvider: LLMProvider;
+  apiKey: string;
+  questionText: string;
+  answerText: string;
+  modelName: string;
+  essayScores?: {
+    overall?: number;
+    dimensions?: { TA?: number; CC?: number; Vocab?: number; Grammar?: number; Overall?: number };
+    label?: string;
+  };
+  languageToolErrors?: LanguageToolError[];
+  llmErrors?: LanguageToolError[];
+  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number };
+}
+
 export async function getCombinedFeedbackWithRetry(
-  params: {
-    llmProvider: any;
-    apiKey: string;
-    questionText: string;
-    answerText: string;
-    modelName: string;
-    essayScores?: any;
-    languageToolErrors?: any[];
-    llmErrors?: any[];
-    relevanceCheck?: any;
-  },
+  params: FeedbackRetryParams,
   options?: { maxAttempts?: number; baseDelayMs?: number }
 ): Promise<CombinedFeedback> {
   const maxAttempts = options?.maxAttempts ?? 3;

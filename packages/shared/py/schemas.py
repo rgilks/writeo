@@ -1,7 +1,22 @@
 """Pydantic schemas for Modal service request/response."""
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal, TypedDict
+
+
+class TemplateDict(TypedDict):
+    """Template metadata structure."""
+    name: str
+    version: int
+
+
+class DimensionsDict(TypedDict, total=False):
+    """Essay scoring dimensions."""
+    TA: float
+    CC: float
+    Vocab: float
+    Grammar: float
+    Overall: float
 
 
 class ModalAnswer(BaseModel):
@@ -34,6 +49,10 @@ class ModalRequest(BaseModel):
     submission_id: str = Field(..., description="Unique identifier for the submission (UUID)", example="770e8400-e29b-41d4-a716-446655440000")
     template: Dict[str, Any] = Field(..., description="Template metadata with name and version", example={"name": "essay-task-2", "version": 1})
     parts: List[ModalPart] = Field(..., description="List of submission parts to be scored", min_length=1)
+    
+    def get_template_dict(self) -> TemplateDict:
+        """Get template as TypedDict for type safety."""
+        return TemplateDict(name=str(self.template.get("name", "unknown")), version=int(self.template.get("version", 1)))
     
     class Config:
         json_schema_extra = {
@@ -78,7 +97,7 @@ class AssessorResult(BaseModel):
     type: Literal["grader", "conf", "ard", "feedback"] = Field(..., description="Type of assessor: grader (scores essays), conf (confidence), ard (automated response detection), feedback (grammar errors)")
     overall: Optional[float] = Field(None, description="Overall band score (0-9, 0.5 increments)", example=7.5, ge=0.0, le=9.0)
     label: Optional[str] = Field(None, description="CEFR level label (A2, B1, B2, C1, C2)", example="C1")
-    dimensions: Optional[Dict[str, float]] = Field(None, description="Detailed scores by dimension (TA, CC, Vocab, Grammar, Overall)", example={"TA": 7.5, "CC": 7.0, "Vocab": 8.0, "Grammar": 7.5, "Overall": 7.5})
+    dimensions: Optional[DimensionsDict] = Field(None, description="Detailed scores by dimension (TA, CC, Vocab, Grammar, Overall)", example={"TA": 7.5, "CC": 7.0, "Vocab": 8.0, "Grammar": 7.5, "Overall": 7.5})
     errors: Optional[List[LanguageToolError]] = Field(None, description="LanguageTool errors (for type: 'feedback')")
     meta: Optional[Dict[str, Any]] = Field(None, description="Assessor metadata")
 
@@ -114,6 +133,10 @@ class AssessmentResults(BaseModel):
     template: Dict[str, Any] = Field(..., description="Template metadata (echoed from request)", example={"name": "essay-task-2", "version": 1})
     error_message: Optional[str] = Field(None, description="Error message if status is 'error'", example="RuntimeError: Failed to load model engessay")
     meta: Optional[Dict[str, Any]] = Field(None, description="Metadata (e.g., answer texts for frontend)")
+    
+    def get_template_dict(self) -> TemplateDict:
+        """Get template as TypedDict for type safety."""
+        return TemplateDict(name=str(self.template.get("name", "unknown")), version=int(self.template.get("version", 1)))
 
 
 def map_score_to_cefr(overall: float) -> str:

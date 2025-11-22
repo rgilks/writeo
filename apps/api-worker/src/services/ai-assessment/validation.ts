@@ -6,7 +6,22 @@ import type { LanguageToolError } from "@writeo/shared";
 import { validateAndCorrectErrorPosition, findTextWithContext } from "../../utils/text-processing";
 import { getMaxTextLength } from "./prompts";
 
-export function validateAndProcessError(err: any, answerText: string): LanguageToolError | null {
+export interface LLMErrorInput {
+  errorText: string;
+  wordBefore?: string | null;
+  wordAfter?: string | null;
+  category?: string;
+  message?: string;
+  errorType?: string;
+  suggestions?: string[];
+  severity?: "warning" | "error";
+  explanation?: string;
+}
+
+export function validateAndProcessError(
+  err: LLMErrorInput,
+  answerText: string
+): LanguageToolError | null {
   if (!err.errorText || err.errorText.trim().length === 0) {
     console.warn(`[getLLMAssessment] Skipping error with empty errorText`);
     return null;
@@ -68,7 +83,7 @@ export function validateAndProcessError(err: any, answerText: string): LanguageT
   const actualErrorText = answerText.substring(validated.start, validated.end);
 
   let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
-  suggestions = suggestions.filter((s: string) => s && s.trim() !== actualErrorText.trim());
+  suggestions = suggestions.filter((s) => s && s.trim() !== actualErrorText.trim());
 
   let message = err.message || "Error detected";
   let explanation = err.explanation || err.message || "Error detected";

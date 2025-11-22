@@ -1,11 +1,17 @@
 """Model inference utilities."""
 
-from typing import Dict, Any
+from typing import Dict, Any, TYPE_CHECKING, Union
 import torch  # type: ignore
 import numpy as np
 
+if TYPE_CHECKING:
+    from transformers import PreTrainedTokenizer  # type: ignore
+    TokenizerType = PreTrainedTokenizer
+else:
+    TokenizerType = Any
 
-def encode_input(question_text: str, answer_text: str, tokenizer: Any) -> Dict[str, Any]:
+
+def encode_input(question_text: str, answer_text: str, tokenizer: TokenizerType) -> Dict[str, torch.Tensor]:
     """Encode input text for model inference."""
     input_text = f"{question_text}\n\n{answer_text}"
     return tokenizer(
@@ -17,7 +23,10 @@ def encode_input(question_text: str, answer_text: str, tokenizer: Any) -> Dict[s
     )
 
 
-def run_model_inference(model: Any, encoded_input: Dict[str, Any]) -> np.ndarray:
+def run_model_inference(
+    model: Union[Any, "PreTrainedModel"],  # type: ignore
+    encoded_input: Dict[str, torch.Tensor]
+) -> np.ndarray:
     """Run model inference and return logits."""
     if next(model.parameters()).is_cuda:
         encoded_input = {k: v.cuda() for k, v in encoded_input.items()}

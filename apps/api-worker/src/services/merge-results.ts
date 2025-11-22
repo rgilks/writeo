@@ -193,8 +193,8 @@ export function mergeAssessmentResults(
   const questionTexts = new Map<string, string>();
   for (const part of request.parts) {
     for (const answer of part.answers) {
-      if ((answer as any).question_text) {
-        questionTexts.set(answer.id, (answer as any).question_text);
+      if (answer.question_text) {
+        questionTexts.set(answer.id, answer.question_text);
       }
     }
   }

@@ -4,10 +4,10 @@
  */
 
 export async function mockCallLLMAPI(
-  apiKey: string,
-  modelName: string,
+  _apiKey: string,
+  _modelName: string,
   messages: Array<{ role: string; content: string }>,
-  maxTokens: number
+  _maxTokens: number
 ): Promise<string> {
   await new Promise((resolve) => setTimeout(resolve, Math.random() * 40 + 10));
 

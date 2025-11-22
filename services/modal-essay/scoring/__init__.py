@@ -1,17 +1,25 @@
 """Essay scoring module."""
 
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, TYPE_CHECKING
 import numpy as np
 from config import DEFAULT_MODEL, MODEL_CONFIGS
-from schemas import map_score_to_cefr
+from schemas import map_score_to_cefr, DimensionsDict
 from .inference import encode_input, run_model_inference
 from .logits_processing import process_engessay_logits, process_distilbert_logits, normalize_distilbert_score
 from .quality_analysis import analyze_essay_quality
 from .calibration import calibrate_from_corpus
 from .dimension_mapping import map_engessay_to_assessment, map_distilbert_to_dimensions
 
+if TYPE_CHECKING:
+    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore
+    ModelType = PreTrainedModel
+    TokenizerType = PreTrainedTokenizer
+else:
+    ModelType = Any
+    TokenizerType = Any
 
-def process_engessay_scoring(logits_np: np.ndarray, answer_text: str) -> Dict[str, float]:
+
+def process_engessay_scoring(logits_np: np.ndarray, answer_text: str) -> DimensionsDict:
     """Process Engessay model scoring."""
     raw_scores = process_engessay_logits(logits_np)
     if len(raw_scores) != 6:
@@ -42,7 +50,7 @@ def process_engessay_scoring(logits_np: np.ndarray, answer_text: str) -> Dict[st
     return scores
 
 
-def process_distilbert_scoring(logits_np: np.ndarray) -> Dict[str, float]:
+def process_distilbert_scoring(logits_np: np.ndarray) -> DimensionsDict:
     """Process DistilBERT model scoring."""
     raw_score = process_distilbert_logits(logits_np)
     print(f"DistilBERT raw score: {raw_score}, logits shape: {logits_np.shape}")
@@ -51,7 +59,13 @@ def process_distilbert_scoring(logits_np: np.ndarray) -> Dict[str, float]:
     return map_distilbert_to_dimensions(overall_score)
 
 
-def score_essay(question_text: str, answer_text: str, model: Any, tokenizer: Any, model_key: Optional[str] = None) -> Dict[str, float]:
+def score_essay(
+    question_text: str,
+    answer_text: str,
+    model: ModelType,
+    tokenizer: TokenizerType,
+    model_key: Optional[str] = None
+) -> DimensionsDict:
     """Score essay using the scoring model."""
     if model is None or tokenizer is None:
         raise ValueError(f"Model or tokenizer is None. Model must be loaded before scoring. Model key: {model_key}")

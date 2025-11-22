@@ -364,7 +364,7 @@ npm run dev
 
 The project uses git hooks to ensure code quality:
 
-- **Pre-commit hook**: Automatically formats code, runs linting, and type checking
+- **Pre-commit hook**: Automatically formats code, runs linting, and type checking (TypeScript and Python)
 - **Pre-push hook**: Runs all tests against local servers before pushing
 
 **Git hooks must be installed manually** by running:
@@ -380,13 +380,39 @@ This is a one-time setup step that each developer should run after cloning the r
 **Available commands:**
 
 ```bash
+# TypeScript/JavaScript
 npm run format        # Format all code with Prettier
 npm run format:check  # Check formatting without changing files
 npm run lint          # Run linting across all workspaces
 npm run type-check    # Run TypeScript type checking
+
+# Python (requires ruff and mypy)
+npm run format:py        # Format Python code with ruff
+npm run format:py:check  # Check Python formatting
+npm run lint:py          # Lint Python code with ruff
+npm run type-check:py    # Type check Python code with mypy
+# Or use the helper script:
+./scripts/check-python.sh [format|lint|type-check|all]
+
+# Testing
 npm test              # Run API integration tests
 npm run test:e2e      # Run E2E browser tests
 npm run test:all      # Run all tests (API + E2E)
+```
+
+**Installing Python dev tools:**
+
+```bash
+# Using pip
+pip install ruff mypy
+
+# Using uv (recommended)
+uv pip install ruff mypy
+
+# Or install dev dependencies for each service
+cd services/modal-essay && pip install -e ".[dev]"
+cd services/modal-lt && pip install -e ".[dev]"
+cd packages/shared/py && pip install -e ".[dev]"
 ```
 
 **Bypassing hooks** (if needed):

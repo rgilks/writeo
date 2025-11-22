@@ -11,7 +11,9 @@ export function processRelevanceResults(
   const relevanceByAnswerId = new Map<string, RelevanceCheck>();
   if (relevanceResults.status === "fulfilled" && Array.isArray(relevanceResults.value)) {
     for (let i = 0; i < relevanceRequests.length; i++) {
-      const { answerId } = relevanceRequests[i];
+      const request = relevanceRequests[i];
+      if (!request) continue;
+      const { answerId } = request;
       const relevance = relevanceResults.value[i];
       if (relevance) {
         relevanceByAnswerId.set(answerId, relevance);

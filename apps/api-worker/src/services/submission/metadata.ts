@@ -3,6 +3,7 @@
  */
 
 import type { AssessmentResults, LanguageToolError } from "@writeo/shared";
+import { getEssayAssessorResult } from "@writeo/shared";
 
 export function buildMetadata(
   answerTextsByAnswerId: Map<string, string>,
@@ -33,9 +34,10 @@ export function buildMetadata(
   }
 
   const firstPart = essayAssessment?.results?.parts?.[0];
-  const overallScore = firstPart?.answers?.[0]?.["assessor-results"]?.find(
-    (a: any) => a.id === "T-AES-ESSAY"
-  )?.overall;
+  const firstAnswer = firstPart?.answers?.[0];
+  const assessorResults = firstAnswer?.["assessor-results"] ?? [];
+  const essayAssessor = getEssayAssessorResult(assessorResults);
+  const overallScore = essayAssessor?.overall;
 
   return {
     wordCount: totalWordCount,
@@ -49,7 +51,10 @@ export function buildResponseHeaders(timings: Record<string, number>): Record<st
   const responseHeaders = new Headers();
   responseHeaders.set("Content-Type", "application/json");
   responseHeaders.set("X-Timing-Data", JSON.stringify(timings));
-  responseHeaders.set("X-Timing-Total", timings["0_total"].toFixed(2));
+  const totalTime = timings["0_total"];
+  if (totalTime !== undefined) {
+    responseHeaders.set("X-Timing-Total", totalTime.toFixed(2));
+  }
 
   const sortedTimings = Object.entries(timings)
     .filter(([key]) => key !== "0_total")

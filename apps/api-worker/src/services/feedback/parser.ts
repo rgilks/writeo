@@ -10,7 +10,7 @@ export function parseFeedbackResponse(responseText: string): CombinedFeedback {
     trimmedResponseText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) ||
     trimmedResponseText.match(/(\{[\s\S]*\})/);
 
-  if (jsonMatch) {
+  if (jsonMatch && jsonMatch[1]) {
     try {
       const parsed = JSON.parse(jsonMatch[1]) as CombinedFeedback;
       if (!parsed.detailed || !parsed.teacher) {

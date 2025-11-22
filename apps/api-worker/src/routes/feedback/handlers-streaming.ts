@@ -34,7 +34,7 @@ export async function handleStreamingRequest(c: Context<{ Bindings: Env }>) {
     if (results) {
       const questionTexts = results.meta?.questionTexts as Record<string, string> | undefined;
       if (questionTexts && questionTexts[body.answerId]) {
-        questionText = questionTexts[body.answerId];
+        questionText = questionTexts[body.answerId] ?? "";
       } else {
         const answer = await storage.getAnswer(body.answerId);
         if (answer) {

@@ -7,7 +7,7 @@ import { safeLogError, sanitizeError } from "../utils/logging";
  * Test API keys get higher rate limits for automated testing
  */
 function isTestApiKey(c: Context): boolean {
-  const testApiKey = (c.env as any).TEST_API_KEY;
+  const testApiKey = c.env.TEST_API_KEY;
   if (!testApiKey) {
     return false;
   }

@@ -2,7 +2,7 @@
  * LanguageTool result processing
  */
 
-import type { LanguageToolError } from "@writeo/shared";
+import type { LanguageToolError, LanguageToolResponse } from "@writeo/shared";
 import type { ModalRequest } from "@writeo/shared";
 import { safeLogError } from "../../utils/logging";
 import { transformLanguageToolResponse } from "../../utils/text-processing";
@@ -43,6 +43,7 @@ export async function processLanguageToolResults(
 
       for (let i = 0; i < ltResponses.length; i++) {
         const result = ltResponses[i];
+        if (!result) continue;
         if (result.status === "fulfilled") {
           const answerId = ltRequests[i]?.answerId;
           if (answerId) {
@@ -61,11 +62,16 @@ export async function processLanguageToolResults(
                 break;
               }
             }
-            const errors = transformLanguageToolResponse(result.value, fullText);
+            const errors = transformLanguageToolResponse(
+              (result as PromiseFulfilledResult<LanguageToolResponse>).value,
+              fullText
+            );
             ltErrorsByAnswerId.set(answerId, errors);
           }
-        } else {
-          safeLogError(`LanguageTool request ${i} failed`, { reason: result.reason });
+        } else if (result.status === "rejected") {
+          safeLogError(`LanguageTool request ${i} failed`, {
+            reason: (result as PromiseRejectedResult).reason,
+          });
         }
       }
     }

@@ -36,11 +36,10 @@ app.use("*", securityHeaders);
 app.use("*", rateLimit);
 
 // Execution context middleware
-app.use("*", async (c, next) => {
-  const ctx = (c.env as any).__executionCtx as ExecutionContext | undefined;
-  if (ctx) {
-    c.set("executionCtx", ctx);
-  }
+// Note: Cloudflare Workers ExecutionContext is attached to env by the runtime
+app.use("*", async (_c, next) => {
+  // ExecutionContext is available via the fetch handler's third parameter
+  // This middleware is a no-op but kept for potential future use
   await next();
 });
 
@@ -91,8 +90,11 @@ app.get("/text/submissions/:submission_id", async (c) => {
 });
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    (env as any).__executionCtx = ctx;
-    return app.fetch(request, env, ctx as any);
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: import("@cloudflare/workers-types").ExecutionContext
+  ): Promise<Response> {
+    return app.fetch(request, env, ctx);
   },
 };

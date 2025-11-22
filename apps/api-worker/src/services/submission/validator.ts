@@ -2,7 +2,7 @@
  * Submission validation utilities
  */
 
-import type { CreateSubmissionRequest } from "@writeo/shared";
+import type { CreateSubmissionRequest, SubmissionPart } from "@writeo/shared";
 import { isValidUUID } from "@writeo/shared";
 import { validateText } from "../../utils/validation";
 import { errorResponse } from "../../utils/errors";
@@ -21,7 +21,7 @@ export interface ValidationResult {
 }
 
 function validateAnswer(
-  answer: any,
+  answer: SubmissionPart["answers"][number],
   answerIds: string[],
   questionsToCreate: Array<{ id: string; text: string }>,
   answersToCreate: Array<{ id: string; questionId: string; answerText: string }>,

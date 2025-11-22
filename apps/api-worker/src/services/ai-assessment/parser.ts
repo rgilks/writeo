@@ -2,9 +2,9 @@
  * Parsing utilities for AI assessment responses
  */
 
-import type { LanguageToolError } from "@writeo/shared";
+import type { LLMErrorInput } from "./validation";
 
-export function parsePipeDelimitedResponse(text: string): any[] {
+export function parsePipeDelimitedResponse(text: string): LLMErrorInput[] {
   const trimmedText = text.trim();
 
   if (trimmedText === "NO_ERRORS" || trimmedText.toLowerCase().includes("no errors")) {
@@ -12,7 +12,7 @@ export function parsePipeDelimitedResponse(text: string): any[] {
   }
 
   const lines = trimmedText.split("\n").filter((line) => line.trim().length > 0);
-  const errors: any[] = [];
+  const errors: LLMErrorInput[] = [];
 
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -55,7 +55,7 @@ export function parsePipeDelimitedResponse(text: string): any[] {
       continue;
     }
 
-    const suggestions = suggestionsStr
+    const suggestions = (suggestionsStr || "")
       .split(",")
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
@@ -69,7 +69,7 @@ export function parsePipeDelimitedResponse(text: string): any[] {
       suggestions,
       errorType: errorType || "Grammar error",
       explanation: explanation || message || "Error detected",
-      severity: severity || "error",
+      severity: (severity === "warning" ? "warning" : "error") as "warning" | "error",
     });
   }
 

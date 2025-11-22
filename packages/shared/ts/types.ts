@@ -52,6 +52,44 @@ export interface ModalRequest {
   }>;
 }
 
+// LanguageTool API response types
+export interface LanguageToolReplacement {
+  value: string;
+}
+
+export interface LanguageToolRuleCategory {
+  id?: string;
+  name?: string;
+}
+
+export interface LanguageToolRule {
+  id?: string;
+  description?: string;
+  category?: LanguageToolRuleCategory;
+  type?: string;
+}
+
+export interface LanguageToolMatchContext {
+  text?: string;
+  offset?: number;
+  length?: number;
+}
+
+export interface LanguageToolMatch {
+  offset?: number;
+  length?: number;
+  message?: string;
+  shortMessage?: string;
+  rule?: LanguageToolRule;
+  replacements?: LanguageToolReplacement[];
+  issueType?: "error" | "warning";
+  context?: LanguageToolMatchContext;
+}
+
+export interface LanguageToolResponse {
+  matches?: LanguageToolMatch[];
+}
+
 // LanguageTool error structure
 export interface LanguageToolError {
   start: number; // Character offset (0-based)
@@ -138,4 +176,162 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 
 export function isValidUUID(uuid: string): boolean {
   return UUID_REGEX.test(uuid);
+}
+
+// Utility types for AssessorResult lookups
+export type AssessorResultId =
+  | "T-AES-ESSAY"
+  | "T-GEC-LT"
+  | "T-GEC-LLM"
+  | "T-TEACHER-FEEDBACK"
+  | "T-RELEVANCE-CHECK";
+
+/**
+ * Type guard to check if an AssessorResult has a specific ID
+ */
+export function isAssessorResultWithId(
+  result: AssessorResult,
+  id: AssessorResultId
+): result is AssessorResult & { id: typeof id } {
+  return result.id === id;
+}
+
+/**
+ * Find an AssessorResult by ID from an array
+ */
+export function findAssessorResultById(
+  results: AssessorResult[],
+  id: AssessorResultId
+): AssessorResult | undefined {
+  return results.find((r) => r.id === id);
+}
+
+/**
+ * Type-safe helper to get essay assessor result from an array of assessor results.
+ *
+ * @param results - Array of assessor results to search
+ * @returns Essay assessor result with guaranteed overall score and dimensions, or undefined if not found
+ *
+ * @example
+ * ```typescript
+ * const essayAssessor = getEssayAssessorResult(assessorResults);
+ * const overall = essayAssessor?.overall ?? 0;
+ * ```
+ */
+export function getEssayAssessorResult(results: AssessorResult[]):
+  | (AssessorResult & {
+      id: "T-AES-ESSAY";
+      overall: number;
+      dimensions: NonNullable<AssessorResult["dimensions"]>;
+    })
+  | undefined {
+  const result = findAssessorResultById(results, "T-AES-ESSAY");
+  if (result && result.overall !== undefined && result.dimensions) {
+    return result as AssessorResult & {
+      id: "T-AES-ESSAY";
+      overall: number;
+      dimensions: NonNullable<AssessorResult["dimensions"]>;
+    };
+  }
+  return undefined;
+}
+
+/**
+ * Type-safe helper to get LanguageTool assessor result from an array of assessor results.
+ *
+ * @param results - Array of assessor results to search
+ * @returns LanguageTool assessor result with guaranteed errors array, or undefined if not found
+ */
+export function getLanguageToolAssessorResult(
+  results: AssessorResult[]
+): (AssessorResult & { id: "T-GEC-LT"; errors: LanguageToolError[] }) | undefined {
+  const result = findAssessorResultById(results, "T-GEC-LT");
+  if (result && Array.isArray(result.errors)) {
+    return result as AssessorResult & { id: "T-GEC-LT"; errors: LanguageToolError[] };
+  }
+  return undefined;
+}
+
+/**
+ * Type-safe helper to get LLM assessor result from an array of assessor results.
+ *
+ * @param results - Array of assessor results to search
+ * @returns LLM assessor result with guaranteed errors array, or undefined if not found
+ */
+export function getLLMAssessorResult(
+  results: AssessorResult[]
+): (AssessorResult & { id: "T-GEC-LLM"; errors: LanguageToolError[] }) | undefined {
+  const result = findAssessorResultById(results, "T-GEC-LLM");
+  if (result && Array.isArray(result.errors)) {
+    return result as AssessorResult & { id: "T-GEC-LLM"; errors: LanguageToolError[] };
+  }
+  return undefined;
+}
+
+/**
+ * Type-safe helper to get teacher feedback assessor result from an array of assessor results.
+ *
+ * @param results - Array of assessor results to search
+ * @returns Teacher feedback assessor result with guaranteed meta fields, or undefined if not found
+ */
+export function getTeacherFeedbackAssessorResult(results: AssessorResult[]):
+  | (AssessorResult & {
+      id: "T-TEACHER-FEEDBACK";
+      meta: {
+        message: string;
+        focusArea?: string;
+        cluesMessage?: string;
+        explanationMessage?: string;
+      };
+    })
+  | undefined {
+  const result = findAssessorResultById(results, "T-TEACHER-FEEDBACK");
+  if (result && result.meta && typeof result.meta === "object" && "message" in result.meta) {
+    return result as AssessorResult & {
+      id: "T-TEACHER-FEEDBACK";
+      meta: {
+        message: string;
+        focusArea?: string;
+        cluesMessage?: string;
+        explanationMessage?: string;
+      };
+    };
+  }
+  return undefined;
+}
+
+/**
+ * Type-safe helper to get relevance check assessor result from an array of assessor results.
+ *
+ * @param results - Array of assessor results to search
+ * @returns Relevance check assessor result with guaranteed meta fields, or undefined if not found
+ */
+export function getRelevanceCheckAssessorResult(results: AssessorResult[]):
+  | (AssessorResult & {
+      id: "T-RELEVANCE-CHECK";
+      meta: {
+        addressesQuestion: boolean;
+        similarityScore: number;
+        threshold: number;
+      };
+    })
+  | undefined {
+  const result = findAssessorResultById(results, "T-RELEVANCE-CHECK");
+  if (
+    result &&
+    result.meta &&
+    typeof result.meta === "object" &&
+    "addressesQuestion" in result.meta &&
+    "similarityScore" in result.meta
+  ) {
+    return result as AssessorResult & {
+      id: "T-RELEVANCE-CHECK";
+      meta: {
+        addressesQuestion: boolean;
+        similarityScore: number;
+        threshold: number;
+      };
+    };
+  }
+  return undefined;
 }

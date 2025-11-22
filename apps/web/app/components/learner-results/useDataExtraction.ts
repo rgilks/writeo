@@ -3,6 +3,13 @@
  */
 
 import type { AssessmentResults, LanguageToolError } from "@writeo/shared";
+import {
+  getEssayAssessorResult,
+  getLanguageToolAssessorResult,
+  getLLMAssessorResult,
+  getTeacherFeedbackAssessorResult,
+  getRelevanceCheckAssessorResult,
+} from "@writeo/shared";
 import { mapScoreToCEFR } from "./utils";
 
 export function useDataExtraction(data: AssessmentResults) {
@@ -11,7 +18,7 @@ export function useDataExtraction(data: AssessmentResults) {
   const firstAnswer = firstPart?.answers?.[0];
   const assessorResults = firstAnswer?.["assessor-results"] || [];
 
-  const essayAssessor = assessorResults.find((a: any) => a.id === "T-AES-ESSAY");
+  const essayAssessor = getEssayAssessorResult(assessorResults);
   const overall = essayAssessor?.overall || 0;
   const rawDimensions = essayAssessor?.dimensions || {};
   const dimensions = {
@@ -34,23 +41,21 @@ export function useDataExtraction(data: AssessmentResults) {
     .filter(([k]) => k !== "Overall" && (hasQuestion || k !== "TA"))
     .sort(([, a], [, b]) => (a ?? 0) - (b ?? 0))[0] as [string, number] | undefined;
 
-  const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
-  const ltErrors: LanguageToolError[] = Array.isArray(ltAssessor?.errors) ? ltAssessor.errors : [];
+  const ltAssessor = getLanguageToolAssessorResult(assessorResults);
+  const ltErrors: LanguageToolError[] = ltAssessor?.errors ?? [];
 
-  const llmAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LLM");
-  const llmErrors: LanguageToolError[] = Array.isArray(llmAssessor?.errors)
-    ? llmAssessor.errors
-    : [];
+  const llmAssessor = getLLMAssessorResult(assessorResults);
+  const llmErrors: LanguageToolError[] = llmAssessor?.errors ?? [];
 
   const grammarErrors: LanguageToolError[] = [...ltErrors, ...llmErrors];
 
-  const teacherAssessor = assessorResults.find((a: any) => a.id === "T-TEACHER-FEEDBACK");
+  const teacherAssessor = getTeacherFeedbackAssessorResult(assessorResults);
   const teacherFeedback = teacherAssessor?.meta
     ? {
-        message: teacherAssessor.meta.message as string,
-        focusArea: teacherAssessor.meta.focusArea as string | undefined,
-        cluesMessage: (teacherAssessor.meta as any).cluesMessage as string | undefined,
-        explanationMessage: (teacherAssessor.meta as any).explanationMessage as string | undefined,
+        message: teacherAssessor.meta.message,
+        focusArea: teacherAssessor.meta.focusArea,
+        cluesMessage: teacherAssessor.meta.cluesMessage,
+        explanationMessage: teacherAssessor.meta.explanationMessage,
       }
     : undefined;
 
@@ -82,12 +87,12 @@ export function useDataExtraction(data: AssessmentResults) {
       ? currentDraft.overallScore - previousDraft.overallScore
       : null;
 
-  const relevanceAssessor = assessorResults.find((a: any) => a.id === "T-RELEVANCE-CHECK");
+  const relevanceAssessor = getRelevanceCheckAssessorResult(assessorResults);
   const relevanceCheck = relevanceAssessor?.meta
     ? {
-        addressesQuestion: Boolean(relevanceAssessor.meta.addressesQuestion ?? false),
-        score: Number(relevanceAssessor.meta.similarityScore ?? 0),
-        threshold: Number(relevanceAssessor.meta.threshold ?? 0.5),
+        addressesQuestion: relevanceAssessor.meta.addressesQuestion,
+        score: relevanceAssessor.meta.similarityScore,
+        threshold: relevanceAssessor.meta.threshold,
       }
     : undefined;
 

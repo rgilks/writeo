@@ -1,20 +1,30 @@
 """Submission processing handler."""
 
-from typing import Dict, Any
+from typing import Dict, Any, TYPE_CHECKING, Optional
 from schemas import (
     ModalRequest,
+    ModalAnswer,
     AssessmentResults,
     AssessmentPart,
     AssessorResult,
     AnswerResult,
     map_score_to_cefr,
+    DimensionsDict,
 )
 from config import DEFAULT_MODEL, MODEL_CONFIGS
 from model_loader import get_model
 from scoring import score_essay
 
+if TYPE_CHECKING:
+    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore
+    ModelType = PreTrainedModel
+    TokenizerType = PreTrainedTokenizer
+else:
+    ModelType = Any
+    TokenizerType = Any
 
-def get_fallback_scores(answer_text: str) -> Dict[str, float]:
+
+def get_fallback_scores(answer_text: str) -> DimensionsDict:
     """Generate fallback heuristic scores."""
     answer_length = len(answer_text.split())
     base_score = min(9.0, max(4.0, answer_length / 50.0 * 2.0 + 5.0))
@@ -27,7 +37,7 @@ def get_fallback_scores(answer_text: str) -> Dict[str, float]:
     }
 
 
-def create_assessor_result(scores: Dict[str, float], model_name: str = "Essay scorer") -> AssessorResult:
+def create_assessor_result(scores: DimensionsDict, model_name: str = "Essay scorer") -> AssessorResult:
     """Create assessor result from scores."""
     overall = scores.get("Overall", scores.get("overall", 0.0))
     cefr_label = map_score_to_cefr(overall)
@@ -47,7 +57,13 @@ def create_assessor_result(scores: Dict[str, float], model_name: str = "Essay sc
     )
 
 
-def process_answer(answer: Any, model: Any, tokenizer: Any, model_key: str, config: Dict[str, Any]) -> AnswerResult:
+def process_answer(
+    answer: ModalAnswer,  # type: ignore
+    model: Optional[ModelType],
+    tokenizer: Optional[TokenizerType],
+    model_key: str,
+    config: Dict[str, Any]
+) -> AnswerResult:
     """Process a single answer and return result."""
     if model_key == "fallback":
         scores = get_fallback_scores(answer.answer_text)

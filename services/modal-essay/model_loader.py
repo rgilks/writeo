@@ -2,18 +2,26 @@
 
 import os
 import time
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, TYPE_CHECKING
 import torch  # type: ignore
 from transformers import AutoModelForSequenceClassification, AutoTokenizer  # type: ignore
 from huggingface_hub import snapshot_download, list_repo_files  # type: ignore
 
 from config import DEFAULT_MODEL, MODEL_CONFIGS, MODEL_PATH
 
+if TYPE_CHECKING:
+    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore
+    ModelType = PreTrainedModel
+    TokenizerType = PreTrainedTokenizer
+else:
+    ModelType = Any
+    TokenizerType = Any
+
 # Global model storage (loaded on first call, per model)
-_models: dict[str, Tuple[Any, Any]] = {}
+_models: dict[str, Tuple[ModelType, TokenizerType]] = {}
 
 
-def load_tokenizer(model_name: str, model_path: str) -> Any:
+def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
     """Load tokenizer from cache or HuggingFace."""
     tokenizer_start = time.time()
     try:
@@ -79,7 +87,7 @@ def download_model(model_name: str, model_path: str) -> None:
         print(f"Snapshot download warning: {download_error}")
 
 
-def load_model_from_hf(model_name: str) -> Any:
+def load_model_from_hf(model_name: str) -> ModelType:
     """Load model from HuggingFace, trying safetensors first."""
     model = None
     for use_safetensors in [True, False]:
@@ -104,7 +112,11 @@ def load_model_from_hf(model_name: str) -> Any:
     return model
 
 
-def save_model_to_cache(model: Any, tokenizer: Any, model_path: str) -> None:
+def save_model_to_cache(
+    model: ModelType,  # type: ignore
+    tokenizer: TokenizerType,  # type: ignore
+    model_path: str
+) -> None:
     """Save model and tokenizer to cache volume."""
     save_start = time.time()
     os.makedirs(model_path, exist_ok=True)
@@ -114,7 +126,7 @@ def save_model_to_cache(model: Any, tokenizer: Any, model_path: str) -> None:
     print(f"💾 Model saved to cache in {save_time:.2f}s")
 
 
-def setup_gpu(model: Any, model_name: str, load_start: float) -> None:
+def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:  # type: ignore
     """Move model to GPU and warm up if available."""
     gpu_start = time.time()
     if torch.cuda.is_available():
@@ -147,7 +159,7 @@ def setup_gpu(model: Any, model_name: str, load_start: float) -> None:
         )
 
 
-def load_model(model_key: Optional[str] = None) -> Tuple[Any, Any]:
+def load_model(model_key: Optional[str] = None) -> Tuple[ModelType, TokenizerType]:
     """Load model and tokenizer, caching on volume."""
     load_start = time.time()
     if model_key is None:
@@ -203,7 +215,7 @@ def load_model(model_key: Optional[str] = None) -> Tuple[Any, Any]:
     return model, tokenizer
 
 
-def get_model(model_key: Optional[str] = None) -> Tuple[Any, Any]:
+def get_model(model_key: Optional[str] = None) -> Tuple[ModelType, TokenizerType]:
     """Get or load model (lazy loading)."""
     if model_key is None:
         model_key = DEFAULT_MODEL

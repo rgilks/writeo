@@ -1,14 +1,17 @@
 """Grade endpoint handler."""
 
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Union
 from fastapi.responses import JSONResponse
 from schemas import ModalRequest, AssessmentResults
 from config import DEFAULT_MODEL
 from .handlers_submission import process_submission
 
 
-async def handle_grade(request: ModalRequest, model_key: Optional[str] = None) -> Dict[str, Any]:
+async def handle_grade(
+    request: ModalRequest,
+    model_key: Optional[str] = None
+) -> Union[dict, JSONResponse]:
     """Handle grade endpoint request."""
     request_start = time.time()
     print(f"\n{'='*60}")

@@ -54,7 +54,7 @@ export async function getLLMAssessment(
     }
 
     const processedErrors = errors
-      .map((err: any): LanguageToolError | null => validateAndProcessError(err, answerText))
+      .map((err): LanguageToolError | null => validateAndProcessError(err, answerText))
       .filter((err: LanguageToolError | null): err is LanguageToolError => err !== null);
 
     if (processedErrors.length > 0) {

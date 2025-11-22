@@ -1,9 +1,9 @@
 import type { Context } from "hono";
 import type { Env } from "../types/env";
-import type { CreateSubmissionRequest, AssessmentResults } from "@writeo/shared";
+import type { CreateSubmissionRequest } from "@writeo/shared";
 import { isValidUUID } from "@writeo/shared";
 import { StorageService } from "./storage";
-import { validateText, validateRequestBodySize } from "../utils/validation";
+import { validateRequestBodySize } from "../utils/validation";
 import { errorResponse } from "../utils/errors";
 import { safeLogError, safeLogWarn, sanitizeError } from "../utils/logging";
 import { getCombinedFeedbackWithRetry } from "./feedback";
@@ -21,6 +21,24 @@ import { processRelevanceResults } from "./submission/results-relevance";
 import { buildMetadata, buildResponseHeaders } from "./submission/metadata";
 import type { ModalRequest } from "@writeo/shared";
 
+/**
+ * Processes a submission request, orchestrating all assessment services.
+ *
+ * This is the main entry point for essay submission processing. It:
+ * 1. Validates the submission request
+ * 2. Stores entities (if storeResults is true)
+ * 3. Calls assessment services in parallel (Essay Scoring, LanguageTool, Relevance Check)
+ * 4. Generates AI feedback with context from all services
+ * 5. Merges all results and returns them synchronously
+ *
+ * @param c - Hono context with environment bindings
+ * @returns Response with assessment results or error
+ *
+ * @example
+ * ```typescript
+ * app.put("/text/submissions/:submission_id", processSubmission);
+ * ```
+ */
 export async function processSubmission(c: Context<{ Bindings: Env }>) {
   const submissionId = c.req.param("submission_id");
   if (!isValidUUID(submissionId)) {
@@ -120,7 +138,9 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     let teacherFeedbackByAnswerId = new Map<string, TeacherFeedback>();
 
     const aiFeedbackStartTime = performance.now();
-    const combinedFeedbackPromises: Array<Promise<{ answerId: string; feedback: any }>> = [];
+    const combinedFeedbackPromises: Array<
+      Promise<{ answerId: string; feedback: import("./feedback").CombinedFeedback }>
+    > = [];
 
     for (const part of modalRequest.parts) {
       for (const answer of part.answers) {

@@ -20,7 +20,7 @@ export async function authenticate(c: Context, next: () => Promise<void>) {
 
   const providedKey = match[1];
   const expectedKey = c.env.API_KEY;
-  const testApiKey = (c.env as any).TEST_API_KEY;
+  const testApiKey = c.env.TEST_API_KEY;
 
   if (!expectedKey) {
     safeLogError("API_KEY not configured in environment");

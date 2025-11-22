@@ -2,7 +2,7 @@
  * Essay result processing
  */
 
-import type { AssessmentResults } from "@writeo/shared";
+import type { AssessmentResults, AssessorResult } from "@writeo/shared";
 import { safeLogError } from "../../utils/logging";
 
 export async function processEssayResult(
@@ -28,12 +28,14 @@ export async function processEssayResult(
           for (const part of essayAssessment.results.parts) {
             if (part.answers && part.answers.length > 0) {
               const firstAnswer = part.answers[0];
-              const assessorResults = firstAnswer?.["assessor-results"];
+              const assessorResults = firstAnswer?.["assessor-results"] as
+                | AssessorResult[]
+                | undefined;
               console.log(
                 `[Essay Assessment] Part ${part.part} has ${assessorResults?.length ?? 0} assessor result(s)`,
                 {
-                  assessorIds: assessorResults?.map((ar: any) => ar.id) ?? [],
-                  assessorNames: assessorResults?.map((ar: any) => ar.name) ?? [],
+                  assessorIds: assessorResults?.map((ar) => ar.id) ?? [],
+                  assessorNames: assessorResults?.map((ar) => ar.name) ?? [],
                 }
               );
             }

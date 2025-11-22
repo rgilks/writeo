@@ -18,7 +18,9 @@ export function processLLMResults(
       `[LLM Assessment] Processing ${llmResponses.length} responses for ${llmAssessmentRequests.length} requests`
     );
     for (let i = 0; i < llmAssessmentRequests.length; i++) {
-      const { answerId } = llmAssessmentRequests[i];
+      const request = llmAssessmentRequests[i];
+      if (!request) continue;
+      const { answerId } = request;
       const llmErrors = llmResponses[i] || [];
       llmErrorsByAnswerId.set(answerId, llmErrors);
       if (llmErrors.length === 0) {

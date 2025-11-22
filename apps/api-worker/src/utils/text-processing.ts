@@ -1,8 +1,18 @@
-import type { LanguageToolError } from "@writeo/shared";
+import type {
+  LanguageToolError,
+  LanguageToolMatch,
+  LanguageToolResponse,
+  LanguageToolReplacement,
+} from "@writeo/shared";
 import { MAX_ESSAY_LENGTH, MAX_QUESTION_LENGTH } from "./constants";
 
 /**
- * Truncates essay text to the maximum allowed length for API processing
+ * Truncates essay text to the maximum allowed length for API processing.
+ *
+ * If the text exceeds the limit, it's truncated and a continuation notice is appended.
+ *
+ * @param text - The essay text to truncate
+ * @returns Truncated text with continuation notice if needed
  */
 export function truncateEssayText(text: string): string {
   return text.length > MAX_ESSAY_LENGTH
@@ -12,14 +22,17 @@ export function truncateEssayText(text: string): string {
 }
 
 /**
- * Truncates question text to the maximum allowed length
+ * Truncates question text to the maximum allowed length.
+ *
+ * @param text - The question text to truncate
+ * @returns Truncated text with ellipsis if needed
  */
 export function truncateQuestionText(text: string): string {
   return text.length > MAX_QUESTION_LENGTH ? text.slice(0, MAX_QUESTION_LENGTH) + "..." : text;
 }
 
 export function generateStructuredFeedback(
-  match: any,
+  match: LanguageToolMatch,
   errorText: string
 ): {
   errorType: string;
@@ -34,7 +47,8 @@ export function generateStructuredFeedback(
 
   const ruleId = match.rule?.id || "";
   const message = match.message || match.shortMessage || "";
-  const suggestions = match.replacements?.slice(0, 3).map((r: any) => r.value) || [];
+  const suggestions =
+    match.replacements?.slice(0, 3).map((r: LanguageToolReplacement) => r.value) || [];
   const firstSuggestion = suggestions[0];
 
   let errorType = "Grammar error";
@@ -89,7 +103,7 @@ export function generateStructuredFeedback(
   return { errorType, explanation, example };
 }
 
-export function isTenseConsistencyError(match: any, fullText: string): boolean {
+export function isTenseConsistencyError(match: LanguageToolMatch, fullText: string): boolean {
   const ruleId = (match.rule?.id || "").toUpperCase();
   const message = (match.message || "").toLowerCase();
   const category = (
@@ -202,7 +216,7 @@ export function isTenseConsistencyError(match: any, fullText: string): boolean {
   return false;
 }
 
-export function calculateErrorConfidence(match: any, fullText?: string): number {
+export function calculateErrorConfidence(match: LanguageToolMatch, fullText?: string): number {
   let confidence = 0.5;
 
   const category = (
@@ -281,10 +295,16 @@ function findWordStart(text: string, position: number): number {
   let pos = position;
 
   // If we're already at a word character, move to the start of that word
-  if (/\w/.test(text[pos])) {
+  const charAtPos = text[pos];
+  if (charAtPos !== undefined && /\w/.test(charAtPos)) {
     // Move backwards to find the start of the word
-    while (pos > 0 && /\w/.test(text[pos - 1])) {
-      pos--;
+    while (pos > 0) {
+      const prevChar = text[pos - 1];
+      if (prevChar !== undefined && /\w/.test(prevChar)) {
+        pos--;
+      } else {
+        break;
+      }
     }
     return pos;
   }
@@ -292,21 +312,39 @@ function findWordStart(text: string, position: number): number {
   // If we're at whitespace or punctuation, look for the nearest word
   // First, try moving backwards to find a word
   let backPos = pos;
-  while (backPos > 0 && !/\w/.test(text[backPos - 1])) {
-    backPos--;
-  }
-  if (backPos > 0 && /\w/.test(text[backPos - 1])) {
-    // Found a word character, move to its start
-    while (backPos > 0 && /\w/.test(text[backPos - 1])) {
+  while (backPos > 0) {
+    const prevChar = text[backPos - 1];
+    if (prevChar !== undefined && !/\w/.test(prevChar)) {
       backPos--;
+    } else {
+      break;
     }
-    return backPos;
+  }
+  if (backPos > 0) {
+    const prevChar = text[backPos - 1];
+    if (prevChar !== undefined && /\w/.test(prevChar)) {
+      // Found a word character, move to its start
+      while (backPos > 0) {
+        const charBefore = text[backPos - 1];
+        if (charBefore !== undefined && /\w/.test(charBefore)) {
+          backPos--;
+        } else {
+          break;
+        }
+      }
+      return backPos;
+    }
   }
 
   // If no word found backwards, try forwards
   let forwardPos = pos;
-  while (forwardPos < text.length && !/\w/.test(text[forwardPos])) {
-    forwardPos++;
+  while (forwardPos < text.length) {
+    const charAtForward = text[forwardPos];
+    if (charAtForward !== undefined && !/\w/.test(charAtForward)) {
+      forwardPos++;
+    } else {
+      break;
+    }
   }
   return forwardPos < text.length ? forwardPos : pos;
 }
@@ -320,10 +358,16 @@ function findWordEnd(text: string, position: number): number {
   let pos = position;
 
   // If we're already at a word character, move to the end of that word
-  if (/\w/.test(text[pos])) {
+  const charAtPos = text[pos];
+  if (charAtPos !== undefined && /\w/.test(charAtPos)) {
     // Move forwards to find the end of the word
-    while (pos < text.length && /\w/.test(text[pos])) {
-      pos++;
+    while (pos < text.length) {
+      const char = text[pos];
+      if (char !== undefined && /\w/.test(char)) {
+        pos++;
+      } else {
+        break;
+      }
     }
     return pos;
   }
@@ -331,28 +375,54 @@ function findWordEnd(text: string, position: number): number {
   // If we're at whitespace or punctuation, look for the nearest word
   // First, try moving forwards to find a word
   let forwardPos = pos;
-  while (forwardPos < text.length && !/\w/.test(text[forwardPos])) {
-    forwardPos++;
-  }
-  if (forwardPos < text.length && /\w/.test(text[forwardPos])) {
-    // Found a word character, move to its end
-    while (forwardPos < text.length && /\w/.test(text[forwardPos])) {
+  while (forwardPos < text.length) {
+    const char = text[forwardPos];
+    if (char !== undefined && !/\w/.test(char)) {
       forwardPos++;
+    } else {
+      break;
     }
-    return forwardPos;
+  }
+  if (forwardPos < text.length) {
+    const char = text[forwardPos];
+    if (char !== undefined && /\w/.test(char)) {
+      // Found a word character, move to its end
+      while (forwardPos < text.length) {
+        const charAtForward = text[forwardPos];
+        if (charAtForward !== undefined && /\w/.test(charAtForward)) {
+          forwardPos++;
+        } else {
+          break;
+        }
+      }
+      return forwardPos;
+    }
   }
 
   // If no word found forwards, try backwards
   let backPos = pos;
-  while (backPos > 0 && !/\w/.test(text[backPos - 1])) {
-    backPos--;
-  }
-  if (backPos > 0 && /\w/.test(text[backPos - 1])) {
-    // Found a word character, move to its end
-    while (backPos < text.length && /\w/.test(text[backPos])) {
-      backPos++;
+  while (backPos > 0) {
+    const prevChar = text[backPos - 1];
+    if (prevChar !== undefined && !/\w/.test(prevChar)) {
+      backPos--;
+    } else {
+      break;
     }
-    return backPos;
+  }
+  if (backPos > 0) {
+    const prevChar = text[backPos - 1];
+    if (prevChar !== undefined && /\w/.test(prevChar)) {
+      // Found a word character, move to its end
+      while (backPos < text.length) {
+        const charAtBack = text[backPos];
+        if (charAtBack !== undefined && /\w/.test(charAtBack)) {
+          backPos++;
+        } else {
+          break;
+        }
+      }
+      return backPos;
+    }
   }
 
   return pos;
@@ -390,6 +460,7 @@ function findTextSnippet(
 
   // Find the first word
   const firstWord = snippetWords[0];
+  if (!firstWord) return null;
   const firstWordIndex = searchArea.toLowerCase().indexOf(firstWord);
   if (firstWordIndex === -1) return null;
 
@@ -403,6 +474,7 @@ function findTextSnippet(
     let currentEnd = foundEnd;
     for (let i = 1; i < snippetWords.length; i++) {
       const nextWord = snippetWords[i];
+      if (!nextWord) break;
       const nextIndex = fullText
         .substring(currentEnd, currentEnd + 50)
         .toLowerCase()
@@ -525,10 +597,20 @@ export function validateAndCorrectErrorPosition(
   // A word is split if:
   // - The character before start is a word char AND start is a word char (we're in middle of word at start)
   // - The character at end-1 is a word char AND end is a word char (we're in middle of word at end)
+  const charBeforeStart = start > 0 ? fullText[start - 1] : undefined;
+  const charAtStart = fullText[start];
+  const charBeforeEnd = end > 0 ? fullText[end - 1] : undefined;
+  const charAtEnd = end < fullText.length ? fullText[end] : undefined;
   const splitsWordAtStart =
-    start > 0 && /\w/.test(fullText[start - 1]) && /\w/.test(fullText[start]);
+    charBeforeStart !== undefined &&
+    charAtStart !== undefined &&
+    /\w/.test(charBeforeStart) &&
+    /\w/.test(charAtStart);
   const splitsWordAtEnd =
-    end < fullText.length && /\w/.test(fullText[end - 1]) && /\w/.test(fullText[end]);
+    charBeforeEnd !== undefined &&
+    charAtEnd !== undefined &&
+    /\w/.test(charBeforeEnd) &&
+    /\w/.test(charAtEnd);
   const splitsWord = splitsWordAtStart || splitsWordAtEnd;
 
   // If the position splits a word or is very close to word boundaries, align to word boundaries
@@ -582,8 +664,18 @@ export function validateAndCorrectErrorPosition(
   return { start, end, valid: true };
 }
 
+/**
+ * Transforms a LanguageTool API response into our standardized error format.
+ *
+ * This function processes LanguageTool matches, calculates confidence scores,
+ * validates error positions, and enriches errors with structured feedback.
+ *
+ * @param ltResponse - The LanguageTool API response
+ * @param fullText - Optional full text for position validation and context-aware confidence calculation
+ * @returns Array of standardized LanguageToolError objects
+ */
 export function transformLanguageToolResponse(
-  ltResponse: any,
+  ltResponse: LanguageToolResponse,
   fullText?: string
 ): LanguageToolError[] {
   if (!ltResponse?.matches || !Array.isArray(ltResponse.matches)) {
@@ -594,82 +686,78 @@ export function transformLanguageToolResponse(
   const MEDIUM_CONFIDENCE_THRESHOLD = 0.6;
   const TENSE_ERROR_THRESHOLD = 0.7;
 
-  return ltResponse.matches
-    .map((match: any) => {
-      const start = match.offset || 0;
-      const length = match.length || 0;
-      const end = start + length;
+  const errors: LanguageToolError[] = [];
+  for (const match of ltResponse.matches) {
+    const start = match.offset || 0;
+    const length = match.length || 0;
+    const end = start + length;
 
-      // Validate and correct position if fullText is available
-      let validatedStart = start;
-      let validatedEnd = end;
-      if (fullText) {
-        const errorText =
-          match.context?.text?.substring(
-            match.context.offset || 0,
-            (match.context.offset || 0) + (match.context.length || 0)
-          ) || "";
-
-        const validated = validateAndCorrectErrorPosition(
-          {
-            start,
-            end,
-            errorText: errorText || fullText.substring(start, end),
-            errorType: match.rule?.category?.id || match.rule?.category?.name,
-          },
-          fullText
-        );
-
-        if (!validated.valid) {
-          // Skip invalid positions
-          return null;
-        }
-
-        validatedStart = validated.start;
-        validatedEnd = validated.end;
-      }
-
-      const confidenceScore = calculateErrorConfidence(match, fullText);
-
-      const isTenseError = fullText ? isTenseConsistencyError(match, fullText) : false;
-      const effectiveHighThreshold = isTenseError
-        ? TENSE_ERROR_THRESHOLD
-        : HIGH_CONFIDENCE_THRESHOLD;
-
-      const highConfidence = confidenceScore >= effectiveHighThreshold;
-      const mediumConfidence =
-        confidenceScore >= MEDIUM_CONFIDENCE_THRESHOLD && confidenceScore < effectiveHighThreshold;
-
+    // Validate and correct position if fullText is available
+    let validatedStart = start;
+    let validatedEnd = end;
+    if (fullText) {
       const errorText =
         match.context?.text?.substring(
           match.context.offset || 0,
           (match.context.offset || 0) + (match.context.length || 0)
         ) || "";
 
-      const structuredFeedback = generateStructuredFeedback(match, errorText);
+      const validated = validateAndCorrectErrorPosition(
+        {
+          start,
+          end,
+          errorText: errorText || fullText.substring(start, end),
+          errorType: match.rule?.category?.id || match.rule?.category?.name,
+        },
+        fullText
+      );
 
-      return {
-        start: validatedStart,
-        end: validatedEnd,
-        length: validatedEnd - validatedStart,
-        sentenceIndex: undefined,
-        category: (
-          match.rule?.category?.id ||
-          match.rule?.category?.name ||
-          "UNKNOWN"
-        ).toUpperCase(),
-        rule_id: match.rule?.id || "UNKNOWN",
-        message: match.message || match.shortMessage || match.rule?.description || "Error detected",
-        suggestions: match.replacements?.slice(0, 5).map((r: any) => r.value) || [],
-        source: "LT" as const,
-        severity: (match.issueType === "error" ? "error" : "warning") as "error" | "warning",
-        confidenceScore,
-        highConfidence,
-        mediumConfidence,
-        errorType: structuredFeedback.errorType,
-        explanation: structuredFeedback.explanation,
-        example: structuredFeedback.example,
-      };
-    })
-    .filter((err: any): err is LanguageToolError => err !== null);
+      if (!validated.valid) {
+        // Skip invalid positions
+        continue;
+      }
+
+      validatedStart = validated.start;
+      validatedEnd = validated.end;
+    }
+
+    const confidenceScore = calculateErrorConfidence(match, fullText);
+
+    const isTenseError = fullText ? isTenseConsistencyError(match, fullText) : false;
+    const effectiveHighThreshold = isTenseError ? TENSE_ERROR_THRESHOLD : HIGH_CONFIDENCE_THRESHOLD;
+
+    const highConfidence = confidenceScore >= effectiveHighThreshold;
+    const mediumConfidence =
+      confidenceScore >= MEDIUM_CONFIDENCE_THRESHOLD && confidenceScore < effectiveHighThreshold;
+
+    const errorText =
+      match.context?.text?.substring(
+        match.context.offset || 0,
+        (match.context.offset || 0) + (match.context.length || 0)
+      ) || "";
+
+    const structuredFeedback = generateStructuredFeedback(match, errorText);
+
+    const error: LanguageToolError = {
+      start: validatedStart,
+      end: validatedEnd,
+      length: validatedEnd - validatedStart,
+      sentenceIndex: undefined,
+      category: (match.rule?.category?.id || match.rule?.category?.name || "UNKNOWN").toUpperCase(),
+      rule_id: match.rule?.id || "UNKNOWN",
+      message: match.message || match.shortMessage || match.rule?.description || "Error detected",
+      suggestions:
+        match.replacements?.slice(0, 5).map((r: LanguageToolReplacement) => r.value) || [],
+      source: "LT" as const,
+      severity: (match.issueType === "error" ? "error" : "warning") as "error" | "warning",
+      confidenceScore,
+      highConfidence,
+      mediumConfidence,
+      errorType: structuredFeedback.errorType,
+      explanation: structuredFeedback.explanation,
+      example: structuredFeedback.example,
+    };
+    errors.push(error);
+  }
+  return errors;
 }
