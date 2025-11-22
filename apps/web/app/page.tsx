@@ -108,22 +108,6 @@ export default function HomePage() {
         </div>
 
         <div className="grid">
-          {tasks.map((task) => (
-            <div key={task.id}>
-              <Link href={`/write/${task.id}`} style={{ textDecoration: "none" }}>
-                <div className="task-card">
-                  <div className="task-header">
-                    <div className="task-title">{task.title}</div>
-                    <div className="task-icon">{task.icon}</div>
-                  </div>
-                  <div className="task-description">{task.description}</div>
-                  <div className="btn btn-primary" style={{ width: "100%" }}>
-                    Start Writing →
-                  </div>
-                </div>
-              </Link>
-            </div>
-          ))}
           <div>
             <Link href="/write/custom" style={{ textDecoration: "none" }}>
               <div className="task-card">
@@ -140,6 +124,22 @@ export default function HomePage() {
               </div>
             </Link>
           </div>
+          {tasks.map((task) => (
+            <div key={task.id}>
+              <Link href={`/write/${task.id}`} style={{ textDecoration: "none" }}>
+                <div className="task-card">
+                  <div className="task-header">
+                    <div className="task-title">{task.title}</div>
+                    <div className="task-icon">{task.icon}</div>
+                  </div>
+                  <div className="task-description">{task.description}</div>
+                  <div className="btn btn-primary" style={{ width: "100%" }}>
+                    Start Writing →
+                  </div>
+                </div>
+              </Link>
+            </div>
+          ))}
         </div>
       </div>
     </>

@@ -215,7 +215,8 @@ export class WritePage {
   }
 
   async getTextarea() {
-    return this.page.locator("textarea#answer").or(this.page.locator("textarea").first());
+    // Answer textarea has id="answer" or is the last textarea (answer comes after question)
+    return this.page.locator("textarea#answer").or(this.page.locator("textarea").last());
   }
 
   async typeEssay(text: string) {

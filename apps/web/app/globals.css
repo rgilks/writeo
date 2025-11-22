@@ -477,6 +477,13 @@ html {
   flex-direction: column;
 }
 
+.grid > div > a {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  text-decoration: none;
+}
+
 @media (max-width: 360px) {
   .grid {
     grid-template-columns: 1fr;

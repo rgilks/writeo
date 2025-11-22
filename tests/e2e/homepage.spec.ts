@@ -38,7 +38,7 @@ test.describe("Homepage", () => {
   test("TC-FE-003: Click on task card navigates to write page", async ({ homePage, page }) => {
     await homePage.goto();
 
-    // Click first task card
+    // Click on a predefined task card
     await homePage.clickTask("1");
 
     // Should navigate to write page
@@ -107,6 +107,12 @@ test.describe("Homepage", () => {
     // Find custom question card by looking for the link with href="/write/custom"
     const customCardLink = page.locator('a[href="/write/custom"]');
     await expect(customCardLink).toBeVisible();
+
+    // Verify custom question card is first in the grid
+    const taskCards = await homePage.getTaskCards();
+    const firstCard = taskCards.first();
+    const firstCardLink = firstCard.locator("a");
+    await expect(firstCardLink).toHaveAttribute("href", "/write/custom");
 
     // Click on custom question card
     await customCardLink.click();
