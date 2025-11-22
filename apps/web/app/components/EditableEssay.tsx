@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
 
 interface EditableEssayProps {
   initialText: string;
@@ -52,12 +53,9 @@ export function EditableEssay({
   };
 
   // Calculate word count
-  const wordCount = editedText
-    .trim()
-    .split(/\s+/)
-    .filter((w) => w.length > 0).length;
-  const MIN_WORDS = 250;
-  const MAX_WORDS = 500; // Soft cap - warn but allow
+  const wordCount = countWords(editedText);
+  const MIN_WORDS = MIN_ESSAY_WORDS;
+  const MAX_WORDS = MAX_ESSAY_WORDS; // Soft cap - warn but allow
 
   const handleSubmit = async () => {
     if (!hasChanges) {

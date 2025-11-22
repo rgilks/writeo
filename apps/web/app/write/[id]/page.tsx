@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
+import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
 
 // Task data - matches tasks from home page
 const taskData: Record<string, { title: string; prompt: string }> = {
@@ -101,12 +102,9 @@ export default function WritePage() {
   };
 
   // Calculate word count
-  const wordCount = answer
-    .trim()
-    .split(/\s+/)
-    .filter((w) => w.length > 0).length;
-  const MIN_WORDS = 250;
-  const MAX_WORDS = 500; // Soft cap - warn but allow
+  const wordCount = countWords(answer);
+  const MIN_WORDS = MIN_ESSAY_WORDS;
+  const MAX_WORDS = MAX_ESSAY_WORDS; // Soft cap - warn but allow
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

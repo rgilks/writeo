@@ -5,6 +5,7 @@
 "use server";
 
 import { makeSerializableError } from "./utils/error-handling";
+import { countWords, validateWordCount } from "@writeo/shared";
 import {
   createSubmission,
   getSubmissionResults,
@@ -26,21 +27,10 @@ export async function submitEssay(
     const finalQuestionText = questionText?.trim() || "";
     if (!answerText?.trim()) throw new Error("Answer text is required");
 
-    const wordCount = answerText
-      .trim()
-      .split(/\s+/)
-      .filter((w) => w.length > 0).length;
-    const MIN_WORDS = 250;
-    const MAX_WORDS = 500;
-    if (wordCount < MIN_WORDS) {
-      throw new Error(
-        `Essay is too short. Please write at least ${MIN_WORDS} words (currently ${wordCount} words).`
-      );
-    }
-    if (wordCount > MAX_WORDS) {
-      throw new Error(
-        `Essay is too long. Please keep it under ${MAX_WORDS} words (currently ${wordCount} words).`
-      );
+    const wordCount = countWords(answerText);
+    const validation = validateWordCount(wordCount);
+    if (!validation.valid) {
+      throw new Error(validation.error);
     }
 
     const { submissionId, results } = await createSubmission(

@@ -3,7 +3,7 @@
  */
 
 import type { AssessmentResults, LanguageToolError } from "@writeo/shared";
-import { getEssayAssessorResult } from "@writeo/shared";
+import { getEssayAssessorResult, countWords } from "@writeo/shared";
 
 export function buildMetadata(
   answerTextsByAnswerId: Map<string, string>,
@@ -20,10 +20,7 @@ export function buildMetadata(
   let totalErrorCount = 0;
 
   for (const text of answerTextsByAnswerId.values()) {
-    totalWordCount += text
-      .trim()
-      .split(/\s+/)
-      .filter((w) => w.length > 0).length;
+    totalWordCount += countWords(text);
   }
 
   for (const errors of ltErrorsByAnswerId.values()) {

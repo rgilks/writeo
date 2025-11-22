@@ -2,6 +2,8 @@
  * Context building utilities for feedback prompts
  */
 
+import { countWords } from "@writeo/shared";
+
 export function buildEssayContext(essayScores?: {
   overall?: number;
   dimensions?: { TA?: number; CC?: number; Vocab?: number; Grammar?: number; Overall?: number };
@@ -100,7 +102,7 @@ export function buildTeacherRelevanceContext(relevanceCheck?: {
 }
 
 export function buildWordCountContext(answerText: string): string {
-  const wordCount = answerText.split(/\s+/).filter((w) => w.length > 0).length;
+  const wordCount = countWords(answerText);
   return wordCount > 0 ? `\n\nEssay length: ${wordCount} word${wordCount !== 1 ? "s" : ""}.` : "";
 }
 

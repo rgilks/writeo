@@ -3,6 +3,7 @@
  */
 
 import { useEffect } from "react";
+import { countWords } from "@writeo/shared";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { extractErrorIds } from "@/app/lib/utils/progress";
 import { mapScoreToCEFR } from "./utils";
@@ -23,7 +24,7 @@ export function useDraftStorage(
     if (submissionId && overall > 0) {
       try {
         const cefrLevel = mapScoreToCEFR(overall);
-        const wordCount = finalAnswerText.split(/\s+/).filter((w) => w.length > 0).length;
+        const wordCount = countWords(finalAnswerText);
         const errorIds = extractErrorIds(grammarErrors, finalAnswerText);
 
         const draftData = {

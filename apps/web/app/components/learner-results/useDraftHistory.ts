@@ -3,6 +3,7 @@
  */
 
 import { useDraftStore } from "@/app/lib/stores/draft-store";
+import { countWords } from "@writeo/shared";
 import { mapScoreToCEFR } from "./utils";
 import type { AssessmentResults } from "@writeo/shared";
 
@@ -75,7 +76,7 @@ export function useDraftHistory(
 
   const hasCurrentDraft = displayDraftHistory.some((d) => d.draftNumber === draftNumber);
   if (!hasCurrentDraft && submissionId && overall > 0) {
-    const wordCount = finalAnswerText.split(/\s+/).filter((w) => w.length > 0).length;
+    const wordCount = countWords(finalAnswerText);
     displayDraftHistory.push({
       draftNumber,
       submissionId,
