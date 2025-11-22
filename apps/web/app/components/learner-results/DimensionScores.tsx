@@ -7,6 +7,7 @@ import { getScoreColor, getScoreLabel } from "./utils";
 export function DimensionScores({
   dimensions,
   lowestDim,
+  questionText,
 }: {
   dimensions: {
     TA: number;
@@ -15,7 +16,19 @@ export function DimensionScores({
     Grammar: number;
   };
   lowestDim?: [string, number];
+  questionText?: string;
 }) {
+  // Build dimensions array, excluding TA if there's no question
+  const hasQuestion = questionText && questionText.trim().length > 0;
+  const dimensionItems = [
+    ...(hasQuestion ? [{ key: "TA", label: "Answering the Question", score: dimensions.TA }] : []),
+    { key: "CC", label: "Organization", score: dimensions.CC },
+    { key: "Vocab", label: "Vocabulary", score: dimensions.Vocab },
+    { key: "Grammar", label: "Grammar", score: dimensions.Grammar },
+  ];
+
+  const columnCount = dimensionItems.length;
+
   return (
     <div
       style={{
@@ -37,13 +50,19 @@ export function DimensionScores({
       >
         How You Did
       </h3>
-      <div className="dimensions-grid-responsive" lang="en">
-        {[
-          { key: "TA", label: "Answering the Question", score: dimensions.TA },
-          { key: "CC", label: "Organization", score: dimensions.CC },
-          { key: "Vocab", label: "Vocabulary", score: dimensions.Vocab },
-          { key: "Grammar", label: "Grammar", score: dimensions.Grammar },
-        ].map(({ key, label, score }) => {
+      <div
+        className="dimensions-grid-responsive"
+        style={{
+          gridTemplateColumns:
+            columnCount === 3
+              ? "repeat(3, 1fr)"
+              : columnCount === 4
+                ? "repeat(4, 1fr)"
+                : `repeat(${columnCount}, 1fr)`,
+        }}
+        lang="en"
+      >
+        {dimensionItems.map(({ key, label, score }) => {
           const isWeakest = lowestDim && lowestDim[0] === key;
           const scoreLabel = getScoreLabel(score);
           const scoreColor = getScoreColor(score);

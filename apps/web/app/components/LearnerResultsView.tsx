@@ -111,7 +111,11 @@ export function LearnerResultsView({ data, answerText }: LearnerResultsViewProps
 
       <div className="card results-card">
         <ScoreDisplay overall={overall} />
-        <DimensionScores dimensions={dimensions} lowestDim={lowestDim} />
+        <DimensionScores
+          dimensions={dimensions}
+          lowestDim={lowestDim}
+          questionText={questionText}
+        />
       </div>
 
       <ErrorTypeList grammarErrors={grammarErrors} />

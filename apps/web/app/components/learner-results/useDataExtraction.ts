@@ -22,8 +22,16 @@ export function useDataExtraction(data: AssessmentResults) {
     Overall: rawDimensions.Overall ?? 0,
   };
 
+  // Extract questionText early to determine if TA should be included in lowestDim
+  const answerTexts = data.meta?.answerTexts as Record<string, string> | undefined;
+  const answerId = answerTexts ? Object.keys(answerTexts)[0] : undefined;
+  const questionTexts = data.meta?.questionTexts as Record<string, string> | undefined;
+  const questionText = questionTexts && answerId ? questionTexts[answerId] : "";
+  const hasQuestion = questionText && questionText.trim().length > 0;
+
+  // Calculate lowestDim excluding TA if there's no question
   const lowestDim = Object.entries(dimensions)
-    .filter(([k]) => k !== "Overall")
+    .filter(([k]) => k !== "Overall" && (hasQuestion || k !== "TA"))
     .sort(([, a], [, b]) => (a ?? 0) - (b ?? 0))[0] as [string, number] | undefined;
 
   const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
@@ -73,12 +81,6 @@ export function useDataExtraction(data: AssessmentResults) {
     previousDraft && currentDraft && previousDraft.overallScore && currentDraft.overallScore
       ? currentDraft.overallScore - previousDraft.overallScore
       : null;
-
-  const answerTexts = data.meta?.answerTexts as Record<string, string> | undefined;
-  const answerId = answerTexts ? Object.keys(answerTexts)[0] : undefined;
-
-  const questionTexts = data.meta?.questionTexts as Record<string, string> | undefined;
-  const questionText = questionTexts && answerId ? questionTexts[answerId] : "";
 
   const relevanceAssessor = assessorResults.find((a: any) => a.id === "T-RELEVANCE-CHECK");
   const relevanceCheck = relevanceAssessor?.meta

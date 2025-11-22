@@ -627,13 +627,13 @@ html {
 
 @media (max-width: 768px) {
   .dimensions-grid-responsive {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 
 @media (max-width: 480px) {
   .dimensions-grid-responsive {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 }
 
