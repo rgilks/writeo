@@ -44,8 +44,8 @@ image = image.add_local_dir(os.path.dirname(__file__), remote_path="/app", copy=
     gpu="T4",  # GPU acceleration for transformer models
     memory=4096,  # 4GB memory for GPU models
     scaledown_window=30,  # Keep warm for 30s
-    # Note: MODAL_API_KEY secret is optional - middleware handles missing key gracefully
-    # secrets=[modal.Secret.from_name("MODAL_API_KEY")],
+    # Note: Using api-key secret (middleware checks both MODAL_API_KEY and api-key env vars)
+    secrets=[modal.Secret.from_name("api-key")],
 )
 @modal.asgi_app()
 def fastapi_app():

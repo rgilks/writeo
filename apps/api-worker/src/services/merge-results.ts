@@ -27,13 +27,36 @@ export function mergeAssessmentResults(
   for (const part of request.parts) {
     // Get essay assessor results for this part (will be added to all answers)
     const essayAssessorResults: AssessorResult[] = [];
-    if (essay?.results?.parts) {
+    if (!essay) {
+      console.warn(
+        `[merge-results] Essay assessment is null for part ${part.part} - essay assessor results will be missing`
+      );
+    } else if (!essay.results?.parts) {
+      console.warn(
+        `[merge-results] Essay assessment has no results.parts for part ${part.part} - essay assessor results will be missing`
+      );
+    } else {
       const essayPart = essay.results.parts.find((p) => p.part === part.part);
-      if (essayPart?.answers && essayPart.answers.length > 0) {
+      if (!essayPart) {
+        console.warn(
+          `[merge-results] Essay part ${part.part} not found in essay assessment - essay assessor results will be missing`
+        );
+      } else if (!essayPart.answers || essayPart.answers.length === 0) {
+        console.warn(
+          `[merge-results] Essay part ${part.part} has no answers - essay assessor results will be missing`
+        );
+      } else {
         // Extract assessor-results from the first answer (scores are typically the same for all answers in a part)
         const firstAnswer = essayPart.answers[0];
         if (firstAnswer?.["assessor-results"]) {
           essayAssessorResults.push(...firstAnswer["assessor-results"]);
+          console.log(
+            `[merge-results] Extracted ${essayAssessorResults.length} essay assessor result(s) for part ${part.part}`
+          );
+        } else {
+          console.warn(
+            `[merge-results] Essay answer ${firstAnswer?.id} has no assessor-results - essay assessor results will be missing`
+          );
         }
       }
     }
@@ -66,15 +89,35 @@ export function mergeAssessmentResults(
       // Add LLM errors for this answer
       const answerLlmErrors = llmErrors.get(answer.id) ?? [];
       if (answerLlmErrors.length > 0) {
+        // Sort by significance: errors > warnings, then by confidence score (higher first), then by position (earlier first)
+        const sortedErrors = [...answerLlmErrors].sort((a, b) => {
+          // First, prioritize errors over warnings
+          if (a.severity !== b.severity) {
+            return a.severity === "error" ? -1 : 1;
+          }
+          // Then by confidence score (higher is better)
+          const aConfidence = a.confidenceScore ?? 0;
+          const bConfidence = b.confidenceScore ?? 0;
+          if (aConfidence !== bConfidence) {
+            return bConfidence - aConfidence;
+          }
+          // Finally, by position (earlier errors first)
+          return a.start - b.start;
+        });
+        
+        // Limit to 10 most significant errors
+        const topErrors = sortedErrors.slice(0, 10);
+        
         assessorResults.push({
           id: "T-GEC-LLM",
           name: "AI Assessment",
           type: "feedback",
-          errors: answerLlmErrors,
+          errors: topErrors,
           meta: {
             engine: llmProvider === "groq" ? "Groq" : "OpenAI",
             model: aiModel,
-            errorCount: answerLlmErrors.length,
+            errorCount: topErrors.length,
+            totalErrorsFound: answerLlmErrors.length,
           },
         });
       } else {

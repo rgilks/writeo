@@ -27,13 +27,13 @@ def get_fallback_scores(answer_text: str) -> Dict[str, float]:
     }
 
 
-def create_assessor_result(scores: Dict[str, float]) -> AssessorResult:
+def create_assessor_result(scores: Dict[str, float], model_name: str = "Essay scorer") -> AssessorResult:
     """Create assessor result from scores."""
     overall = scores.get("Overall", scores.get("overall", 0.0))
     cefr_label = map_score_to_cefr(overall)
     return AssessorResult(
         id="T-AES-ESSAY",
-        name="Essay scorer",
+        name=model_name,
         type="grader",
         overall=overall,
         label=cefr_label,
@@ -47,10 +47,11 @@ def create_assessor_result(scores: Dict[str, float]) -> AssessorResult:
     )
 
 
-def process_answer(answer: Any, model: Any, tokenizer: Any, model_key: str) -> AnswerResult:
+def process_answer(answer: Any, model: Any, tokenizer: Any, model_key: str, config: Dict[str, Any]) -> AnswerResult:
     """Process a single answer and return result."""
     if model_key == "fallback":
         scores = get_fallback_scores(answer.answer_text)
+        model_name = "Fallback heuristic scorer"
     else:
         scores = score_essay(
             answer.question_text,
@@ -59,8 +60,9 @@ def process_answer(answer: Any, model: Any, tokenizer: Any, model_key: str) -> A
             tokenizer,
             model_key=model_key
         )
+        model_name = config.get("name", "Essay scorer")
     
-    assessor_result = create_assessor_result(scores)
+    assessor_result = create_assessor_result(scores, model_name)
     return AnswerResult(
         id=answer.id,
         assessor_results=[assessor_result]
@@ -92,7 +94,7 @@ def process_submission(request: ModalRequest, model_key: str) -> AssessmentResul
     for part_data in request.parts:
         answer_results = []
         for answer in part_data.answers:
-            answer_result = process_answer(answer, model, tokenizer, model_key)
+            answer_result = process_answer(answer, model, tokenizer, model_key, config)
             answer_results.append(answer_result)
         
         assessment_part = AssessmentPart(
