@@ -408,7 +408,7 @@ export default function WritePage() {
                     }}
                     lang="en"
                   >
-                    {(isCustom ? customQuestion.trim() : true) && (
+                    {(!isCustom || customQuestion.trim()) && (
                       <label
                         style={{
                           display: "flex",

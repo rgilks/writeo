@@ -201,8 +201,13 @@ export class WritePage {
   }
 
   async getQuestionText() {
-    // For custom page, question might be in a textarea, otherwise in .prompt-box
-    return this.page.locator(".prompt-box").or(this.page.locator("textarea").first());
+    // For regular pages, use .prompt-box. For custom page, use the first textarea (question input)
+    // Use .first() to avoid strict mode violations when both exist
+    return this.page.locator(".prompt-box").first();
+  }
+
+  async getCustomQuestionTextarea() {
+    return this.page.locator(".question-card textarea").first();
   }
 
   async getCustomQuestionTextarea() {
