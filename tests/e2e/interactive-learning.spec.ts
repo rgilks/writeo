@@ -7,14 +7,13 @@ import { createTestSubmission, getTestEssay, generateValidEssay } from "./helper
  */
 
 test.describe("Interactive Learning Flow", () => {
+  // Tests that only read (don't modify) can share a submission
   test("TC-LEARN-001: Editable essay component appears on results page", async ({
     resultsPage,
     page,
+    sharedSubmission,
   }) => {
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for page to fully render and content to load
@@ -37,11 +36,9 @@ test.describe("Interactive Learning Flow", () => {
   test("TC-LEARN-002: Initial essay text is pre-filled in editor", async ({
     resultsPage,
     page,
+    sharedSubmission,
   }) => {
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for editable essay section

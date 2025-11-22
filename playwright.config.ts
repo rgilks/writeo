@@ -15,9 +15,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // Reduce workers for local testing to avoid rate limits (CI uses 1 worker)
-  // With 3 workers, max ~180 submissions/min if all run simultaneously, well under 500/min limit
-  workers: process.env.CI ? 1 : 3,
+  // Optimized worker count: more parallel execution for faster tests
+  // With 4 workers locally, max ~240 submissions/min if all run simultaneously, well under 500/min limit
+  // CI uses 2 workers for better parallelization while staying under limits
+  workers: process.env.CI ? 2 : 4,
   reporter: "html",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "https://writeo.tre.systems/",

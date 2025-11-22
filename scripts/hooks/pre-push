@@ -216,9 +216,10 @@ if ! npm test; then
 fi
 
 # Run e2e tests with list reporter (non-interactive)
+# Use more workers for faster execution (config defaults to 2 for CI, 4 for local)
 show_time
 echo "${CYAN}Running E2E tests...${NC}"
-if ! npm run test:e2e -- --reporter=list --workers=2; then
+if ! npm run test:e2e -- --reporter=list; then
   echo ""
   show_time
   echo "${RED}E2E tests failed!${NC}"

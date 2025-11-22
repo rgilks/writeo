@@ -7,19 +7,17 @@ import { createTestSubmission, getTestEssay, generateValidEssay } from "./helper
  */
 
 test.describe("Results Page", () => {
-  test("TC-FE-024: Results page loads correctly", async ({ resultsPage, page }) => {
-    // Create a test submission
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission(
-      "Describe your weekend. What did you do?",
-      essay
-    );
-
-    await resultsPage.goto(submissionId);
+  // Use shared submission fixture to reduce API calls - all these tests check the same submission
+  test("TC-FE-024: Results page loads correctly", async ({
+    resultsPage,
+    page,
+    sharedSubmission,
+  }) => {
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Page should load
-    await expect(page).toHaveURL(new RegExp(`/results/${submissionId}`));
+    await expect(page).toHaveURL(new RegExp(`/results/${sharedSubmission.submissionId}`));
   });
 
   test("TC-FE-025: Shows loading state while pending", async ({ resultsPage, page }) => {
@@ -39,11 +37,8 @@ test.describe("Results Page", () => {
     expect(hasLoading || hasError).toBe(true);
   });
 
-  test("TC-FE-026: Overall score displays", async ({ resultsPage, page }) => {
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+  test("TC-FE-026: Overall score displays", async ({ resultsPage, page, sharedSubmission }) => {
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for score section to render (try multiple selectors)
@@ -77,11 +72,8 @@ test.describe("Results Page", () => {
     }
   });
 
-  test("TC-FE-027: CEFR level displays", async ({ resultsPage, page }) => {
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+  test("TC-FE-027: CEFR level displays", async ({ resultsPage, page, sharedSubmission }) => {
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for CEFR badge to render (look for score section first)
@@ -103,11 +95,12 @@ test.describe("Results Page", () => {
     }
   });
 
-  test("TC-FE-028: All dimension scores display", async ({ resultsPage, page }) => {
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+  test("TC-FE-028: All dimension scores display", async ({
+    resultsPage,
+    page,
+    sharedSubmission,
+  }) => {
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for dimensions grid or score section to appear
@@ -150,12 +143,9 @@ test.describe("Results Page", () => {
   test("TC-FE-034: Grammar errors section displays when errors present", async ({
     resultsPage,
     page,
+    sharedSubmissionWithErrors,
   }) => {
-    // Use essay with errors
-    const essay = getTestEssay("withErrors");
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+    await resultsPage.goto(sharedSubmissionWithErrors.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for grammar section to render (if errors exist)
@@ -175,11 +165,11 @@ test.describe("Results Page", () => {
     }
   });
 
-  test("TC-FE-037: Error count displays correctly", async ({ resultsPage }) => {
-    const essay = getTestEssay("withErrors");
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+  test("TC-FE-037: Error count displays correctly", async ({
+    resultsPage,
+    sharedSubmissionWithErrors,
+  }) => {
+    await resultsPage.goto(sharedSubmissionWithErrors.submissionId);
     await resultsPage.waitForResults();
 
     // Error count should be visible
@@ -191,11 +181,12 @@ test.describe("Results Page", () => {
     }
   });
 
-  test("TC-FE-040: Teacher feedback shows short note on load", async ({ resultsPage, page }) => {
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+  test("TC-FE-040: Teacher feedback shows short note on load", async ({
+    resultsPage,
+    page,
+    sharedSubmission,
+  }) => {
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for teacher feedback container to appear (may take time to load)
@@ -230,11 +221,9 @@ test.describe("Results Page", () => {
   test('TC-FE-043: "Get Teacher Analysis" button works with streaming', async ({
     resultsPage,
     page,
+    sharedSubmission,
   }) => {
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for button to appear
@@ -286,11 +275,12 @@ test.describe("Results Page", () => {
     }
   });
 
-  test("TC-FE-044: Editable essay component appears", async ({ resultsPage, page }) => {
-    const essay = generateValidEssay();
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+  test("TC-FE-044: Editable essay component appears", async ({
+    resultsPage,
+    page,
+    sharedSubmission,
+  }) => {
+    await resultsPage.goto(sharedSubmission.submissionId);
     await resultsPage.waitForResults();
 
     // Wait for results to fully render
@@ -311,12 +301,12 @@ test.describe("Results Page", () => {
     }
   });
 
-  test("TC-FE-039: No grammar section when no errors", async ({ resultsPage, page }) => {
-    // Use corrected essay (no errors)
-    const essay = getTestEssay("corrected");
-    const { submissionId } = await createTestSubmission("Describe your weekend.", essay);
-
-    await resultsPage.goto(submissionId);
+  test("TC-FE-039: No grammar section when no errors", async ({
+    resultsPage,
+    page,
+    sharedSubmissionCorrected,
+  }) => {
+    await resultsPage.goto(sharedSubmissionCorrected.submissionId);
     await resultsPage.waitForResults();
 
     // When there are no errors, the grammar section might not be shown at all
