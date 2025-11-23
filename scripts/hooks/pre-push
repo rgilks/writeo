@@ -157,12 +157,13 @@ else
 fi
 
 # Step 3: Wait for servers to be ready (only if we started them)
+# Initialize ready status based on whether servers were already running
+API_READY=$API_RUNNING
+WEB_READY=$WEB_RUNNING
+
 if [ "$API_RUNNING" = false ] || [ "$WEB_RUNNING" = false ]; then
   show_time
   echo "${YELLOW}Waiting for servers to be ready...${NC}"
-  
-  API_READY=$API_RUNNING
-  WEB_READY=$WEB_RUNNING
   ELAPSED=0
   LAST_STATUS_UPDATE=0
   
