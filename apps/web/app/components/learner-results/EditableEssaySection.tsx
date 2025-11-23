@@ -19,39 +19,14 @@ export function EditableEssaySection({
 }) {
   if (!finalAnswerText) return null;
 
-  // Allow resubmission even if question text is empty (free writing)
-  if (!questionText || questionText.trim() === "") {
-    return (
-      <div
-        lang="en"
-        style={{
-          marginTop: "var(--spacing-lg)",
-          padding: "var(--spacing-lg)",
-          backgroundColor: "var(--bg-secondary)",
-          border: "2px solid rgba(139, 69, 19, 0.2)",
-          borderRadius: "var(--border-radius-lg)",
-        }}
-      >
-        <p
-          lang="en"
-          style={{
-            fontSize: "14px",
-            color: "var(--text-secondary)",
-            fontStyle: "italic",
-          }}
-        >
-          Note: Question text is not available for editing. You can still view your essay and
-          feedback above.
-        </p>
-      </div>
-    );
-  }
-
+  // Always render EditableEssay when finalAnswerText exists, even if questionText is empty
+  // This allows users to edit and resubmit in free writing mode
+  // EditableEssay component handles empty questionText gracefully
   return (
     <EditableEssay
       initialText={finalAnswerText}
       questionId={answerId}
-      questionText={questionText}
+      questionText={questionText || ""} // Pass empty string if questionText is not provided
       parentSubmissionId={submissionId}
       onSubmit={onSubmit}
     />

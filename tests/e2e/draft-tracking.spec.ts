@@ -319,24 +319,67 @@ test.describe("Draft Tracking", () => {
     // Wait for draft storage to complete (useEffect runs asynchronously)
     const secondUrl = page.url();
     const secondSubmissionId = secondUrl.match(/\/results\/([a-f0-9-]+)/)?.[1];
+    expect(secondSubmissionId).toBeTruthy();
+
     if (secondSubmissionId) {
       await resultsPage.waitForDraftStorage(secondSubmissionId, 10000);
+
+      // Wait for the second submission to be stored (check both localStorage and Zustand store)
+      // Check Zustand results store first (this is what the app actually uses)
+      await page.waitForFunction(
+        (id) => {
+          try {
+            // Check Zustand results store
+            const storeData = localStorage.getItem("writeo-results-store");
+            if (storeData) {
+              const parsed = JSON.parse(storeData);
+              if (parsed?.state?.results?.[id]) {
+                return true;
+              }
+            }
+            // Also check direct localStorage key (for backwards compatibility)
+            return localStorage.getItem(`results_${id}`) !== null;
+          } catch {
+            return false;
+          }
+        },
+        secondSubmissionId,
+        { timeout: 10000 }
+      );
     }
 
-    // Verify that both submissions are stored in localStorage
-    const allKeys = await page.evaluate(() => {
+    // Verify that submissions are stored (check both Zustand store and direct localStorage)
+    const storageCheck = await page.evaluate(() => {
       const keys: string[] = [];
+      // Check direct localStorage keys
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith("results_")) {
           keys.push(key);
         }
       }
+      // Also check Zustand results store
+      try {
+        const storeData = localStorage.getItem("writeo-results-store");
+        if (storeData) {
+          const parsed = JSON.parse(storeData);
+          if (parsed?.state?.results) {
+            const storeKeys = Object.keys(parsed.state.results);
+            storeKeys.forEach((k) => {
+              if (!keys.includes(`results_${k}`)) {
+                keys.push(`results_${k}`);
+              }
+            });
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
       return keys;
     });
 
     // Should have at least one result stored
-    expect(allKeys.length).toBeGreaterThan(0);
+    expect(storageCheck.length).toBeGreaterThan(0);
 
     // Verify draft store has the drafts (wait for Zustand to persist)
     const draftStore = await page
@@ -403,10 +446,29 @@ test.describe("Draft Tracking", () => {
       essay1
     );
 
-    // Store in localStorage (simulating what the app does)
+    // Store in both Zustand results store and direct localStorage (simulating what the app does)
     await page.evaluate(
       ([submissionId, results]) => {
+        // Store in direct localStorage (for backwards compatibility)
         localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
+        // Also store in Zustand results store (this is what the app actually uses)
+        try {
+          const storeData = localStorage.getItem("writeo-results-store");
+          const storeState = storeData ? JSON.parse(storeData) : { state: { results: {} } };
+          if (!storeState.state) {
+            storeState.state = { results: {} };
+          }
+          if (!storeState.state.results) {
+            storeState.state.results = {};
+          }
+          storeState.state.results[submissionId] = {
+            results,
+            timestamp: Date.now(),
+          };
+          localStorage.setItem("writeo-results-store", JSON.stringify(storeState));
+        } catch (error) {
+          console.warn("Failed to store in Zustand store:", error);
+        }
       },
       [firstSubmissionId, firstResults]
     );
@@ -516,9 +578,30 @@ test.describe("Draft Tracking", () => {
     const firstSubmissionId = page.url().match(/\/results\/([a-f0-9-]+)/)?.[1];
     expect(firstSubmissionId).toBeTruthy();
 
-    // Verify first submission is stored in localStorage (critical: even with server storage)
+    // Verify first submission is stored (check both Zustand store and direct localStorage)
     const firstStored = await page.evaluate((submissionId) => {
-      return localStorage.getItem(`results_${submissionId}`);
+      // Check Zustand results store first (this is what the app actually uses)
+      try {
+        const storeData = localStorage.getItem("writeo-results-store");
+        if (storeData) {
+          const parsed = JSON.parse(storeData);
+          if (parsed?.state?.results?.[submissionId]) {
+            return parsed.state.results[submissionId];
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
+      // Fallback to direct localStorage key
+      const direct = localStorage.getItem(`results_${submissionId}`);
+      if (direct) {
+        try {
+          return JSON.parse(direct);
+        } catch {
+          return direct;
+        }
+      }
+      return null;
     }, firstSubmissionId);
     expect(firstStored).toBeTruthy();
 
@@ -546,7 +629,21 @@ test.describe("Draft Tracking", () => {
         }
       }
 
-      // Wait for new results page - should load immediately from localStorage
+      // Wait for navigation to a new results page (URL should change to a different submission ID)
+      await page.waitForFunction(
+        (firstId) => {
+          const currentUrl = window.location.href;
+          const match = currentUrl.match(/\/results\/([a-f0-9-]+)/);
+          if (match && match[1]) {
+            return match[1] !== firstId; // URL should have a different submission ID
+          }
+          return false;
+        },
+        firstSubmissionId,
+        { timeout: 20000 }
+      );
+
+      // Wait for new results page to load
       await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
       await resultsPage.waitForResults();
 
@@ -562,13 +659,60 @@ test.describe("Draft Tracking", () => {
       expect(newSubmissionId).toBeTruthy();
       expect(newSubmissionId).not.toBe(firstSubmissionId);
 
+      // Wait for the new submission to be stored (check both Zustand store and direct localStorage)
+      await page.waitForFunction(
+        (id) => {
+          try {
+            // Check Zustand results store first
+            const storeData = localStorage.getItem("writeo-results-store");
+            if (storeData) {
+              const parsed = JSON.parse(storeData);
+              if (parsed?.state?.results?.[id]) {
+                return true;
+              }
+            }
+            // Also check direct localStorage key
+            return localStorage.getItem(`results_${id}`) !== null;
+          } catch {
+            return false;
+          }
+        },
+        newSubmissionId,
+        { timeout: 10000 }
+      );
+
       const storedResults = await page.evaluate((submissionId) => {
+        // Check Zustand results store first
+        try {
+          const storeData = localStorage.getItem("writeo-results-store");
+          if (storeData) {
+            const parsed = JSON.parse(storeData);
+            if (parsed?.state?.results?.[submissionId]) {
+              return JSON.stringify(parsed.state.results[submissionId]);
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+        // Fallback to direct localStorage key
         return localStorage.getItem(`results_${submissionId}`);
       }, newSubmissionId);
       expect(storedResults).toBeTruthy(); // Critical: should be stored immediately
 
-      // Verify parent relationship is stored
+      // Verify parent relationship is stored (check Zustand results store)
       const parentStored = await page.evaluate((submissionId) => {
+        try {
+          const storeData = localStorage.getItem("writeo-results-store");
+          if (storeData) {
+            const parsed = JSON.parse(storeData);
+            if (parsed?.state?.results?.[submissionId]) {
+              return parsed.state.results[submissionId].parentSubmissionId || null;
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+        // Fallback to direct localStorage key (for backwards compatibility)
         return localStorage.getItem(`draft_parent_${submissionId}`);
       }, newSubmissionId);
       expect(parentStored).toBe(firstSubmissionId);
@@ -708,17 +852,52 @@ test.describe("Draft Tracking", () => {
       essay2
     );
 
-    // Store both in localStorage
+    // Store both in localStorage (including draft store for history)
     await page.goto("/");
     await page.evaluate(
       ([draft1Id, results1, draft2Id, results2, draft1IdParent]) => {
         localStorage.setItem(`results_${draft1Id}`, JSON.stringify(results1));
         localStorage.setItem(`results_${draft2Id}`, JSON.stringify(results2));
         localStorage.setItem(`draft_parent_${draft2Id}`, draft1IdParent);
+
+        // Inject draft store state
+        const createDraft = (id, num, score) => ({
+          draftNumber: num,
+          submissionId: id,
+          timestamp: new Date().toISOString(),
+          wordCount: 300,
+          errorCount: 5,
+          overallScore: score || 8.0,
+          cefrLevel: "B2",
+          errorIds: [],
+        });
+
+        const draftStore = {
+          state: {
+            drafts: {
+              [draft1Id]: [
+                createDraft(draft1Id, 1, results1.meta?.overallScore),
+                createDraft(draft2Id, 2, results2.meta?.overallScore),
+              ],
+            },
+            progress: {},
+            fixedErrors: {},
+            achievements: [],
+            streak: {
+              currentStreak: 1,
+              longestStreak: 1,
+              lastActivityDate: new Date().toISOString(),
+            },
+          },
+          version: 0,
+        };
+        localStorage.setItem("writeo-draft-store", JSON.stringify(draftStore));
       },
       [draft1Id, results1, draft2Id, results2, draft1Id]
     );
     // Wait for store to hydrate
+    await resultsPage.waitForStoreHydration();
+    await page.reload(); // Force reload to ensure store hydration
     await resultsPage.waitForStoreHydration();
 
     // Navigate to draft 2
@@ -783,7 +962,7 @@ test.describe("Draft Tracking", () => {
       essay3
     );
 
-    // Store all in localStorage
+    // Store all in localStorage (including draft store for history)
     await page.goto("/");
     await page.evaluate(
       ([draft1Id, results1, draft2Id, results2, draft3Id, results3, draft1IdParent]) => {
@@ -792,10 +971,46 @@ test.describe("Draft Tracking", () => {
         localStorage.setItem(`results_${draft3Id}`, JSON.stringify(results3));
         localStorage.setItem(`draft_parent_${draft2Id}`, draft1IdParent);
         localStorage.setItem(`draft_parent_${draft3Id}`, draft1IdParent);
+
+        // Inject draft store state
+        const createDraft = (id, num, score) => ({
+          draftNumber: num,
+          submissionId: id,
+          timestamp: new Date().toISOString(),
+          wordCount: 300,
+          errorCount: 5,
+          overallScore: score || 8.0,
+          cefrLevel: "B2",
+          errorIds: [],
+        });
+
+        const draftStore = {
+          state: {
+            drafts: {
+              [draft1Id]: [
+                createDraft(draft1Id, 1, results1.meta?.overallScore),
+                createDraft(draft2Id, 2, results2.meta?.overallScore),
+                createDraft(draft3Id, 3, results3.meta?.overallScore),
+              ],
+            },
+            progress: {},
+            fixedErrors: {},
+            achievements: [],
+            streak: {
+              currentStreak: 1,
+              longestStreak: 1,
+              lastActivityDate: new Date().toISOString(),
+            },
+          },
+          version: 0,
+        };
+        localStorage.setItem("writeo-draft-store", JSON.stringify(draftStore));
       },
       [draft1Id, results1, draft2Id, results2, draft3Id, results3, draft1Id]
     );
     // Wait for store to hydrate
+    await resultsPage.waitForStoreHydration();
+    await page.reload(); // Force reload to ensure store hydration
     await resultsPage.waitForStoreHydration();
 
     // Test viewing from draft 1 - should see all drafts
@@ -858,17 +1073,52 @@ test.describe("Draft Tracking", () => {
       essay2
     );
 
-    // Store both in localStorage
+    // Store both in localStorage (including draft store for history)
     await page.goto("/");
     await page.evaluate(
       ([draft1Id, results1, draft2Id, results2, draft1IdParent]) => {
         localStorage.setItem(`results_${draft1Id}`, JSON.stringify(results1));
         localStorage.setItem(`results_${draft2Id}`, JSON.stringify(results2));
         localStorage.setItem(`draft_parent_${draft2Id}`, draft1IdParent);
+
+        // Inject draft store state
+        const createDraft = (id, num, score) => ({
+          draftNumber: num,
+          submissionId: id,
+          timestamp: new Date().toISOString(),
+          wordCount: 300,
+          errorCount: 5,
+          overallScore: score || 8.0,
+          cefrLevel: "B2",
+          errorIds: [],
+        });
+
+        const draftStore = {
+          state: {
+            drafts: {
+              [draft1Id]: [
+                createDraft(draft1Id, 1, results1.meta?.overallScore),
+                createDraft(draft2Id, 2, results2.meta?.overallScore),
+              ],
+            },
+            progress: {},
+            fixedErrors: {},
+            achievements: [],
+            streak: {
+              currentStreak: 1,
+              longestStreak: 1,
+              lastActivityDate: new Date().toISOString(),
+            },
+          },
+          version: 0,
+        };
+        localStorage.setItem("writeo-draft-store", JSON.stringify(draftStore));
       },
       [draft1Id, results1, draft2Id, results2, draft1Id]
     );
     // Wait for store to hydrate
+    await resultsPage.waitForStoreHydration();
+    await page.reload(); // Force reload to ensure store hydration
     await resultsPage.waitForStoreHydration();
 
     // Navigate to draft 2

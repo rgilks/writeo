@@ -91,6 +91,14 @@ export default function ResultsPage() {
             // Use stored results immediately, but still try to fetch from server in background
             setData(storedResults);
             setStatus("success");
+            // Ensure results are stored in localStorage for tests and persistence
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem(`results_${submissionId}`, JSON.stringify(storedResults));
+              } catch (error) {
+                console.warn("Failed to store results in localStorage:", error);
+              }
+            }
 
             // Try to fetch from server to get latest version (but don't wait)
             // This ensures we have the latest data if available
@@ -100,6 +108,17 @@ export default function ResultsPage() {
                   // Update with server results if available
                   setData(serverResults);
                   setResult(submissionId, serverResults, parentId || undefined);
+                  // Also store in localStorage
+                  if (typeof window !== "undefined") {
+                    try {
+                      localStorage.setItem(
+                        `results_${submissionId}`,
+                        JSON.stringify(serverResults)
+                      );
+                    } catch (error) {
+                      console.warn("Failed to store results in localStorage:", error);
+                    }
+                  }
                 }
               })
               .catch(() => {
@@ -132,6 +151,14 @@ export default function ResultsPage() {
             setStatus("success");
             // Save to results store for future access
             setResult(submissionId, resultsToStore, parentId || undefined);
+            // Also store in localStorage for tests and persistence
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
+              } catch (error) {
+                console.warn("Failed to store results in localStorage:", error);
+              }
+            }
           }
         } catch (serverError) {
           // If server fetch fails (especially 404), try results store as fallback

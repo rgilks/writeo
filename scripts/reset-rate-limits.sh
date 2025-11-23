@@ -132,11 +132,15 @@ done
 echo ""
 
 # Confirm before proceeding
-read -p "Delete these rate limit keys? (type 'yes' to confirm): " confirmation
+if [[ "$1" != "-y" && "$1" != "--yes" ]]; then
+    read -p "Delete these rate limit keys? (type 'yes' to confirm): " confirmation
 
-if [ "$confirmation" != "yes" ]; then
-    echo "Cancelled."
-    exit 0
+    if [ "$confirmation" != "yes" ]; then
+        echo "Cancelled."
+        exit 0
+    fi
+else
+    echo "Skipping confirmation (-y flag provided)."
 fi
 
 echo ""

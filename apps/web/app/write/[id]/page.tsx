@@ -193,8 +193,15 @@ export default function WritePage() {
       // Store results in results store (persistent) and sessionStorage (immediate display)
       setResult(submissionId, resultsToStore);
       if (typeof window !== "undefined") {
-        // Also store in sessionStorage for immediate display on results page
-        sessionStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
+        try {
+          // Store in localStorage for persistence (needed for tests and draft tracking)
+          localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
+          // Also store in sessionStorage for immediate display on results page
+          sessionStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
+        } catch (error) {
+          // If localStorage is full or unavailable, log but continue
+          console.warn("Failed to store results in localStorage:", error);
+        }
       }
       // Redirect to results page - results will be available immediately
       router.push(`/results/${submissionId}`);

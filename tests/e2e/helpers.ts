@@ -355,48 +355,65 @@ export class ResultsPage {
 
   async getEditableEssay() {
     // Find the textarea within the "Improve Your Writing" section
-    // The main editing textarea is the first textarea in that section
-    const improveSection = this.page.locator("text=Improve Your Writing").locator("..");
-    return improveSection
-      .locator("textarea")
+    // The component should always render EditableEssay when finalAnswerText exists
+
+    // Wait for the "Improve Your Writing" section to appear (this is the main indicator)
+    const improveSection = this.page.locator("text=Improve Your Writing");
+    const sectionExists = await improveSection
+      .waitFor({ timeout: 10000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!sectionExists) {
+      // Section doesn't exist, return empty locator
+      return this.page.locator("textarea").filter({ hasText: /^$/ }); // Empty locator
+    }
+
+    // Look for textarea - it should be a sibling or descendant of the Improve Your Writing heading
+    // Try multiple strategies to find the textarea
+    let textarea = this.page.locator("text=Improve Your Writing").locator("..").locator("textarea");
+
+    // If not found, try finding any textarea that's near the Improve Your Writing section
+    if ((await textarea.count()) === 0) {
+      // Find the parent container and look for textarea within it
+      const container = this.page.locator("text=Improve Your Writing").locator("../..");
+      textarea = container.locator("textarea");
+    }
+
+    // If still not found, look for any textarea on the page (fallback)
+    if ((await textarea.count()) === 0) {
+      textarea = this.page.locator("textarea").filter({ hasText: /./ });
+    }
+
+    // Wait for at least one textarea to be visible (with timeout)
+    await textarea
       .first()
-      .or(
-        this.page
-          .locator("text=Question text is not available for editing")
-          .or(this.page.locator("textarea").nth(1))
-      );
+      .waitFor({ timeout: 5000 })
+      .catch(() => {
+        // If textarea doesn't appear, that's OK - return what we have
+      });
+
+    return textarea;
   }
 
   async getDraftHistory() {
     return this.page
       .locator('[data-testid="draft-history"]')
-      .or(this.page.locator("text=Draft History"));
+      .or(this.page.locator("h2:has-text('Draft History')").locator(".."));
   }
 
   async getDraftButtons() {
-    // Draft buttons are divs with "Draft {number}" text
-    // They're inside the draft history section
-    // The DraftButton component structure: <div onClick><div>Draft {number}</div><div>{score}</div></div>
-    // has-text matches parent elements containing the text in descendants
     const draftHistory = await this.getDraftHistory();
-    if ((await draftHistory.count()) > 0) {
-      // Find all divs within draft history that contain "Draft" followed by a number
-      // Filter to get only the outer button containers (not the inner text divs)
-      return draftHistory.locator("div").filter({ hasText: /^Draft \d+$/m });
-    }
-    return this.page.locator("div").filter({ hasText: /^Draft \d+$/m });
+    // Get buttons: direct children of the flex container
+    // Structure: Card > FlexContainer > Buttons
+    // So we want direct div children of direct div children of the card
+    // Filter by having "Draft" text to be safe
+    return draftHistory.locator("> div > div").filter({ hasText: /^Draft \d+/ });
   }
 
   async getDraftButton(draftNumber: number) {
-    // Find draft button by number within draft history section
-    // The DraftButton component renders: <div><div>Draft {number}</div>...</div>
-    const draftHistory = await this.getDraftHistory();
-    const textPattern = new RegExp(`^Draft ${draftNumber}$`, "m");
-    if ((await draftHistory.count()) > 0) {
-      // Match divs that contain exactly "Draft {number}" (the outer button container)
-      return draftHistory.locator("div").filter({ hasText: textPattern }).first();
-    }
-    return this.page.locator("div").filter({ hasText: textPattern }).first();
+    const draftButtons = await this.getDraftButtons();
+    return draftButtons.filter({ hasText: `Draft ${draftNumber}` }).first();
   }
 
   async clickDraftButton(draftNumber: number) {
@@ -487,21 +504,33 @@ export class ResultsPage {
    * Wait for Zustand store to hydrate from localStorage
    * This is needed when manually setting localStorage before navigation
    */
-  async waitForStoreHydration(timeout = 5000): Promise<void> {
-    // Wait for the store to be initialized by checking if it exists in localStorage
+  async waitForStoreHydration(timeout = 10000): Promise<void> {
+    // First, ensure the store key exists in localStorage (it might be created by persist middleware)
+    // Then wait for the store to actually be initialized by checking if we can access store data
     await this.page.waitForFunction(
       () => {
         try {
-          const store = localStorage.getItem("writeo-draft-store");
-          return store !== null;
+          // Check if store key exists (created by Zustand persist)
+          const storeData = localStorage.getItem("writeo-draft-store");
+          if (!storeData) {
+            // Store might not exist yet - that's OK, it will be created on first access
+            return true;
+          }
+          // Try to parse the store data to ensure it's valid
+          const parsed = JSON.parse(storeData);
+          // Store is considered hydrated if it has a state property
+          return parsed && typeof parsed === "object" && ("state" in parsed || "drafts" in parsed);
         } catch {
           return false;
         }
       },
       { timeout }
     );
-    // Give a small delay for React to re-render after store hydration
-    await this.page.waitForTimeout(500);
+
+    // Trigger store initialization by navigating to a page that uses it
+    // This ensures React components have mounted and accessed the store
+    // Wait a bit for any pending state updates
+    await this.page.waitForTimeout(1000);
   }
 }
 

@@ -54,6 +54,7 @@ export function DraftHistorySection({
           marginBottom: "var(--spacing-md)",
         }}
         lang="en"
+        data-testid="draft-buttons-container"
       >
         {displayDraftHistory.map((draft) => {
           const { navigateUrl, hasValidSubmissionId } = useDraftNavigation(

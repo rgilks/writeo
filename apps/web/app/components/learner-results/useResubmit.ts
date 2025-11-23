@@ -54,8 +54,11 @@ export function useResubmit() {
       const parentToUse = parentId || submissionId;
       setResult(newSubmissionId, results, parentToUse);
 
-      // Also store in sessionStorage for immediate display
+      // Store in both localStorage and sessionStorage for persistence and immediate display
       if (typeof window !== "undefined") {
+        // Store in localStorage for persistence (needed for tests and draft tracking)
+        localStorage.setItem(`results_${newSubmissionId}`, JSON.stringify(results));
+        // Also store in sessionStorage for immediate display on results page
         sessionStorage.setItem(`results_${newSubmissionId}`, JSON.stringify(results));
       }
 

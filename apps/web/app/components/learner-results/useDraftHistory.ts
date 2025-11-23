@@ -16,7 +16,9 @@ export function useDraftHistory(
   finalAnswerText: string,
   parentSubmissionId?: string
 ) {
-  // Store functions are stable, so we can call getState() directly
+  // Subscribe to drafts state so component re-renders when drafts change
+  const drafts = useDraftStore((state) => state.drafts);
+  // Store functions are stable
   const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
 
   const draftNumber = (data.meta?.draftNumber as number) || 1;
@@ -119,6 +121,7 @@ export function useDraftHistory(
     grammarErrors.length,
     finalAnswerText,
     getDraftHistory,
+    drafts, // Add drafts to dependency array
   ]);
 
   return { displayDraftHistory, draftNumber, parentSubmissionId };
