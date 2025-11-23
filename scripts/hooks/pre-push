@@ -214,7 +214,10 @@ if [ "$API_RUNNING" = false ] || [ "$WEB_RUNNING" = false ]; then
   echo ""
 fi
 
-# Check if servers are ready
+# Check if servers are ready (use default false if not set)
+API_READY=${API_READY:-false}
+WEB_READY=${WEB_READY:-false}
+
 if [ "$API_READY" = false ]; then
   echo "${RED}Error: API worker failed to start within ${MAX_WAIT_TIME} seconds${NC}"
   echo "${YELLOW}API worker logs:${NC}"
