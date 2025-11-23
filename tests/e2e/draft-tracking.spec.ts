@@ -916,11 +916,12 @@ test.describe("Draft Tracking", () => {
     // Navigate to draft 2
     await resultsPage.goto(draft2Id, draft1Id);
     await resultsPage.waitForResults();
-    // Wait for draft storage to complete
+
+    // Wait for draft storage to complete (this ensures the current draft is stored)
     await resultsPage.waitForDraftStorage(draft2Id, 10000);
 
-    // Wait for draft storage to complete
-    await resultsPage.waitForDraftStorage(draft2Id, 10000);
+    // Give the component time to process the store and re-render
+    await page.waitForTimeout(1000);
 
     // Wait for draft history to appear (requires 2+ drafts)
     await resultsPage.waitForDraftHistory(10000);
@@ -1137,11 +1138,12 @@ test.describe("Draft Tracking", () => {
     // Navigate to draft 2
     await resultsPage.goto(draft2Id, draft1Id);
     await resultsPage.waitForResults();
-    // Wait for draft storage to complete
+
+    // Wait for draft storage to complete (this ensures the current draft is stored)
     await resultsPage.waitForDraftStorage(draft2Id, 10000);
 
-    // Wait for draft storage to complete
-    await resultsPage.waitForDraftStorage(draft2Id, 10000);
+    // Give the component time to process the store and re-render
+    await page.waitForTimeout(1000);
 
     // Wait for draft history to appear (requires 2+ drafts)
     await resultsPage.waitForDraftHistory(10000);
@@ -1260,9 +1262,9 @@ test.describe("Draft Tracking", () => {
 
     // Verify the draft loads (it might not have full draft history since localStorage was cleared,
     // but it should still work as a standalone draft)
-    const draftHistory = await resultsPage.getDraftHistory();
-    // Draft history might be empty or incomplete, but that's acceptable for this edge case
-    // The important thing is that the page loads and displays results
+    // Note: After clearing localStorage, the draft won't be stored because there's no parent submission ID
+    // This is expected behavior - the page should still load and display results
+    // We don't wait for draft storage here because it won't happen without a parent submission ID
 
     // Verify we can still see the editable essay (for potential resubmission)
     const editableEssayAfterReload = await resultsPage.getEditableEssay();

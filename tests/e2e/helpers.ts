@@ -495,8 +495,49 @@ export class ResultsPage {
    * Wait for draft history to appear (requires 2+ drafts)
    */
   async waitForDraftHistory(timeout = 10000): Promise<void> {
-    const draftHistory = await this.getDraftHistory();
-    await expect(draftHistory.first()).toBeVisible({ timeout });
+    const startTime = Date.now();
+
+    // First wait for the store to have at least 2 drafts
+    await this.page.waitForFunction(
+      () => {
+        try {
+          const store = localStorage.getItem("writeo-draft-store");
+          if (!store) return false;
+          const parsed = JSON.parse(store);
+          if (parsed?.state?.drafts) {
+            const drafts = parsed.state.drafts;
+            // Check if any draft array has 2+ drafts
+            for (const key in drafts) {
+              if (Array.isArray(drafts[key]) && drafts[key].length >= 2) {
+                return true;
+              }
+            }
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      },
+      { timeout: Math.min(timeout, 5000) }
+    );
+
+    // Now wait for the component to actually render the draft history
+    // Use a more flexible locator that waits for either the testid or the h2 heading
+    const remainingTime = timeout - (Date.now() - startTime);
+    if (remainingTime > 0) {
+      try {
+        await this.page.waitForSelector('[data-testid="draft-history"]', {
+          timeout: remainingTime,
+          state: "visible",
+        });
+      } catch {
+        // Fallback to h2 heading if testid selector fails
+        await this.page.waitForSelector('h2:has-text("Draft History")', {
+          timeout: remainingTime,
+          state: "visible",
+        });
+      }
+    }
   }
 
   /**
