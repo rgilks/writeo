@@ -39,6 +39,7 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
   // Test API keys get much higher limits for automated testing
   let maxRequests = isTest ? 1000 : 30; // Test keys: 1000/min, Production: 30/min
   let limitType = "general";
+  let checkDailyLimit = false;
 
   if (
     path.startsWith("/text/submissions/") &&
@@ -49,9 +50,10 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
     limitType = "results";
   } else if (path.startsWith("/text/submissions/") && c.req.method === "PUT") {
     // Limit submissions to 10/min to keep costs under control
-    // 10/min = 14,400/day max × $0.03/submission = ~$432/day max (but rate limiting prevents constant usage)
+    // 10/min = 14,400/day max (theoretical)
     maxRequests = isTest ? 500 : 10; // Test keys: 500/min, Production: 10/min
     limitType = "submissions";
+    checkDailyLimit = true; // Enable daily limit check for submissions
   } else if (path.startsWith("/text/questions/")) {
     maxRequests = isTest ? 1000 : 30; // Test keys: 1000/min, Production: 30/min
     limitType = "writes";
@@ -65,6 +67,7 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
   const windowMs = 60 * 1000;
 
   try {
+    // 1. Check Per-Minute Limit (Burst Protection)
     const current = await c.env.WRITEO_RESULTS.get(rateLimitKey);
     let count = 0;
     let resetTime = now + windowMs;
@@ -78,11 +81,10 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
     }
 
     if (count >= maxRequests) {
-      const secondsUntilReset = Math.ceil((resetTime - now) / 1000);
       const friendlyMessage =
         limitType === "submissions"
-          ? `Too many essay submissions from this network. Please wait ${secondsUntilReset} second${secondsUntilReset !== 1 ? "s" : ""} before trying again.`
-          : `Too many requests. Please wait ${secondsUntilReset} second${secondsUntilReset !== 1 ? "s" : ""} and try again.`;
+          ? `Too many essay submissions from this network. Please wait a moment before trying again.`
+          : `Too many requests. Please wait a moment and try again.`;
 
       c.header("X-RateLimit-Limit", String(maxRequests));
       c.header("X-RateLimit-Remaining", "0");
@@ -90,6 +92,33 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
       return errorResponse(429, friendlyMessage, c);
     }
 
+    // 2. Check Daily Limit (Volume/Cost Protection) - ONLY for submissions
+    if (checkDailyLimit && !isTest) {
+      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+      const dailyLimitKey = `rate_limit:prod:daily_submissions:${today}:${ip}`;
+      const dailyLimit = 100; // 100 submissions per day per IP
+
+      const dailyCurrent = await c.env.WRITEO_RESULTS.get(dailyLimitKey);
+      let dailyCount = dailyCurrent ? parseInt(dailyCurrent) : 0;
+
+      if (dailyCount >= dailyLimit) {
+        // Daily limit exceeded
+        // Return generic message to avoid revealing specific limits
+        return errorResponse(
+          429,
+          "Daily submission limit reached for this network. Please try again tomorrow.",
+          c
+        );
+      }
+
+      // Increment daily count
+      // TTL = 24 hours (86400 seconds) to be safe, or until end of day
+      await c.env.WRITEO_RESULTS.put(dailyLimitKey, String(dailyCount + 1), {
+        expirationTtl: 86400,
+      });
+    }
+
+    // Update Per-Minute Count
     count++;
     // Cloudflare KV requires minimum TTL of 60 seconds
     const ttlSeconds = Math.max(60, Math.ceil((resetTime - now) / 1000));

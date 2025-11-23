@@ -77,25 +77,28 @@ _Note: Ranges account for varying essay lengths (250-500 words) and error counts
 
 ### Submission Volume Scenarios
 
-Based on **rate limit of 10 submissions/minute** (14,400 submissions/day maximum):
+Based on **rate limit of 10 submissions/minute per IP address** AND **Daily Limit of 100 submissions/day**:
 
-**OpenAI (GPT-4o-mini) Cost Scenarios:**
+- **Daily Max Per User:** 100 submissions (enforced hard limit)
+- **System-Wide Capacity:** Scales with number of concurrent users (unlimited by architecture)
 
-| Scenario                   | Submissions/Day | Submissions/Month | Cost/Submission | Monthly Cost      |
-| -------------------------- | --------------- | ----------------- | --------------- | ----------------- |
-| **Low Usage**              | 10              | ~300              | $0.0025         | **~$0.75/month**  |
-| **Moderate Usage**         | 100             | ~3,000            | $0.0025         | **~$7.50/month**  |
-| **High Usage**             | 1,000           | ~30,000           | $0.0025         | **~$75/month**    |
-| **Maximum (rate limited)** | 14,400          | ~432,000          | $0.0025         | **~$1,080/month** |
+**OpenAI (GPT-4o-mini) Cost Scenarios (Per User/IP):**
 
-**Groq (Llama 3.3 70B Versatile) Cost Scenarios:**
+| Scenario               | Submissions/Day | Submissions/Month | Cost/Submission | Monthly Cost     |
+| ---------------------- | --------------- | ----------------- | --------------- | ---------------- |
+| **Low Usage**          | 10              | ~300              | $0.0025         | **~$0.75/month** |
+| **Moderate Usage**     | 50              | ~1,500            | $0.0025         | **~$3.75/month** |
+| **Heavy Usage**        | 80              | ~2,400            | $0.0025         | **~$6.00/month** |
+| **Maximum (per user)** | 100             | ~3,000            | $0.0025         | **~$7.50/month** |
 
-| Scenario                   | Submissions/Day | Submissions/Month | Cost/Submission | Monthly Cost      |
-| -------------------------- | --------------- | ----------------- | --------------- | ----------------- |
-| **Low Usage**              | 10              | ~300              | $0.006          | **~$1.80/month**  |
-| **Moderate Usage**         | 100             | ~3,000            | $0.006          | **~$18/month**    |
-| **High Usage**             | 1,000           | ~30,000           | $0.006          | **~$180/month**   |
-| **Maximum (rate limited)** | 14,400          | ~432,000          | $0.006          | **~$2,592/month** |
+**Groq (Llama 3.3 70B Versatile) Cost Scenarios (Per User/IP):**
+
+| Scenario               | Submissions/Day | Submissions/Month | Cost/Submission | Monthly Cost      |
+| ---------------------- | --------------- | ----------------- | --------------- | ----------------- |
+| **Low Usage**          | 10              | ~300              | $0.006          | **~$1.80/month**  |
+| **Moderate Usage**     | 50              | ~1,500            | $0.006          | **~$9.00/month**  |
+| **Heavy Usage**        | 80              | ~2,400            | $0.006          | **~$14.40/month** |
+| **Maximum (per user)** | 100             | ~3,000            | $0.006          | **~$18.00/month** |
 
 ### Realistic Usage Estimates
 
@@ -111,7 +114,12 @@ Based on **rate limit of 10 submissions/minute** (14,400 submissions/day maximum
 - Medium class (100 students): ~100-200 submissions/day = **~$18-36/month**
 - Large institution (1,000 students): ~1,000-2,000 submissions/day = **~$180-360/month**
 
-**Note:** Rate limiting (10/min) prevents runaway costs. Maximum theoretical cost is **~$1,080/month (OpenAI)** or **~$2,592/month (Groq)** if running at full capacity 24/7.
+**Note:** Two-tier rate limiting protects against abuse:
+
+1. **Burst Limit:** 10 submissions/min (per IP) to prevent rapid-fire scripts.
+2. **Daily Limit:** 100 submissions/day (per IP) to cap total daily cost.
+
+**Maximum theoretical liability per IP:** ~$0.25/day (OpenAI) or ~$0.60/day (Groq).
 
 ---
 
@@ -156,9 +164,9 @@ If LLM API is disabled (both OpenAI and Groq), Writeo can still function with re
 | Usage Level | Submissions/Day | Monthly Cost      |
 | ----------- | --------------- | ----------------- |
 | Low         | 10              | ~$0.11-1.10/month |
-| Moderate    | 100             | ~$0.11-1.10/month |
-| High        | 1,000           | ~$0.11-1.10/month |
-| Maximum     | 14,400          | ~$0.11-1.10/month |
+| Moderate    | 50              | ~$0.11-1.10/month |
+| High        | 80              | ~$0.11-1.10/month |
+| Maximum     | 100             | ~$0.11-1.10/month |
 
 **Key Points:**
 
@@ -218,15 +226,20 @@ Set `OPENAI_API_KEY=MOCK` or `GROQ_API_KEY=MOCK` to use mock responses (no real 
 
 **Implementation:** `apps/api-worker/src/middleware/rate-limit.ts`
 
-- **Submissions:** 10/minute per IP address
+- **Burst Limit:** 10 submissions/minute per IP address (prevents rapid-fire abuse)
+- **Daily Limit:** 100 submissions/day per IP address (hard cost cap)
 - **General requests:** 30/minute per IP address
 - **Results requests:** 60/minute per IP address
 
 **Cost Protection:**
 
-- Maximum: 14,400 submissions/day = ~432,000/month
-- At $0.006/submission: **Maximum ~$2,592/month**
-- Prevents single user from causing runaway costs
+- **Maximum Daily Liability (per IP):**
+  - OpenAI: 100 \* $0.0025 = **$0.25/day**
+  - Groq: 100 \* $0.006 = **$0.60/day**
+- **Maximum Monthly Liability (per IP):**
+  - OpenAI: ~$7.50/month
+  - Groq: ~$18.00/month
+- Prevents single user/IP from causing runaway costs
 
 ### 2. Word Count Limits ✅
 

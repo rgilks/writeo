@@ -550,7 +550,7 @@ Each submission makes **2 required API calls** to your chosen LLM provider:
 | High        | 1,000           | ~$75/month    |
 | Maximum\*   | 14,400          | ~$1,080/month |
 
-\*Maximum limited by rate limit: 10 submissions/minute per IP
+\*Maximum limited by rate limit: 100 submissions/day per IP (hard cap)
 
 **Cost Controls:**
 
