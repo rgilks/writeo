@@ -4,7 +4,7 @@
 
 Writeo is a comprehensive, open-source automated essay scoring and feedback system designed for educational use. It provides multi-dimensional assessment, grammar checking, and detailed AI feedback to help students improve their writing skills.
 
-![License](https://img.shields.io/badge/license-MIT-blue)
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-green)
 ![LLM](https://img.shields.io/badge/LLM-Groq%20Llama%203.3%2070B%20%7C%20OpenAI%20GPT--4o--mini-orange)
 
@@ -157,4 +157,4 @@ See **[TESTING.md](docs/TESTING.md)** for more info.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
