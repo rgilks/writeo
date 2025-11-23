@@ -12,6 +12,12 @@ import { createTestSubmission, generateValidEssay } from "./helpers";
  * - All drafts visible regardless of current draft
  * - Draft comparison table
  * - Unique drafts (no duplicates)
+ *
+ * Storage Notes:
+ * - Tests use direct localStorage access for backwards compatibility
+ * - In production, results are stored via Zustand Results Store (writeo-results-store)
+ * - Direct localStorage access still works due to backwards compatibility
+ * - Prefer using useResultsStore.getState() in new tests when possible
  */
 
 test.describe("Draft Tracking", () => {

@@ -163,6 +163,7 @@ graph TB
 
 - **Draft Store** - Draft history, progress tracking, achievements, streaks
 - **Preferences Store** - User preferences (view mode, storage settings)
+- **Results Store** - Assessment results storage with automatic cleanup
 
 **Key Features:**
 

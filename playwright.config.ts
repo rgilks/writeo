@@ -15,6 +15,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // Stop on first failure in local development (but allow retries in CI)
+  maxFailures: process.env.CI ? undefined : 1,
   // Optimized worker count: more parallel execution for faster tests
   // With 4 workers locally, max ~240 submissions/min if all run simultaneously, well under 500/min limit
   // CI uses 2 workers for better parallelization while staying under limits

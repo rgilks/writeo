@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { createSafeStorage } from "../utils/storage";
 
 export type ViewMode = "learner" | "developer";
 
@@ -82,7 +83,14 @@ export const usePreferencesStore = create<PreferencesStore>()(
       }),
       {
         name: STORAGE_KEY,
-        storage: createJSONStorage(() => localStorage),
+        storage: createJSONStorage(() => {
+          const safeStorage = createSafeStorage();
+          return {
+            getItem: safeStorage.getItem,
+            setItem: safeStorage.setItem,
+            removeItem: safeStorage.removeItem,
+          };
+        }),
         // Migrate from old separate keys
         onRehydrateStorage: () => (state) => {
           if (state && typeof window !== "undefined") {

@@ -72,48 +72,9 @@ export async function getTeacherFeedback(
       focusArea: data.focusArea,
     };
 
-    if (typeof window !== "undefined") {
-      try {
-        const storedResults = localStorage.getItem(`results_${submissionId}`);
-        if (storedResults) {
-          const results = JSON.parse(storedResults) as any;
-
-          if (results.results?.parts?.[0]?.answers?.[0]) {
-            const firstAnswer = results.results.parts[0].answers[0];
-            if (!firstAnswer["assessor-results"]) {
-              firstAnswer["assessor-results"] = [];
-            }
-
-            let teacherAssessor = firstAnswer["assessor-results"].find(
-              (a: any) => a.id === "T-TEACHER-FEEDBACK"
-            );
-
-            if (!teacherAssessor) {
-              teacherAssessor = {
-                id: "T-TEACHER-FEEDBACK",
-                name: "Teacher's Feedback",
-                type: "feedback",
-                meta: {},
-              };
-              firstAnswer["assessor-results"].push(teacherAssessor);
-            }
-
-            const existingMeta = (teacherAssessor.meta || {}) as Record<string, any>;
-            teacherAssessor.meta = {
-              ...existingMeta,
-              message: existingMeta.message || feedbackResult.message,
-              focusArea: feedbackResult.focusArea || existingMeta.focusArea,
-              ...(mode === "clues" && { cluesMessage: feedbackResult.message }),
-              ...(mode === "explanation" && { explanationMessage: feedbackResult.message }),
-            };
-
-            localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
-          }
-        }
-      } catch (storageError) {
-        console.warn("[getTeacherFeedback] Failed to store feedback locally:", storageError);
-      }
-    }
+    // Note: Storage updates should be handled by the client component calling this action
+    // Server actions can't access localStorage, so we return the feedback data
+    // The client component (TeacherFeedback.tsx) should update the results store
 
     return feedbackResult;
   } catch (error) {

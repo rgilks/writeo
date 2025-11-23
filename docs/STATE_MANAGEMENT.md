@@ -8,9 +8,10 @@
 
 Writeo uses a modern, performant state management architecture:
 
-- **Zustand** for global state (draft tracking, user preferences)
+- **Zustand** for global state (draft tracking, user preferences, assessment results)
 - **Zustand Persist Middleware** for automatic localStorage persistence
 - **Zustand Immer Middleware** for immutable state updates with direct mutations
+- **Safe Storage Utilities** for error handling, quota management, and cleanup
 - **useState** for component-specific UI state
 
 ## Architecture
@@ -47,6 +48,7 @@ Manages draft history, progress tracking, achievements, and streaks.
 **Persistence:**
 
 - Uses Zustand's `persist` middleware for automatic localStorage persistence
+- Uses `createSafeStorage()` utility for error handling and quota management
 - Custom storage adapter handles `Set<string>` serialization/deserialization for `fixedErrors`
 - Automatically saves on every state change
 - Automatically hydrates on store initialization
@@ -68,8 +70,39 @@ Manages user preferences that persist across sessions.
 **Persistence:**
 
 - Uses Zustand's `persist` middleware for automatic localStorage persistence
+- Uses `createSafeStorage()` utility for error handling and quota management
 - Automatic migration from old separate keys (`writeo-view-mode`, `writeo-store-results`)
 - Migration handled in `onRehydrateStorage` callback
+
+#### Results Store (`apps/web/app/lib/stores/results-store.ts`)
+
+Manages assessment results storage in localStorage. Replaces direct localStorage access with centralized, type-safe storage.
+
+**State:**
+
+- `results`: Record of assessment results by submission ID
+  - Each entry includes: `results` (AssessmentResults), `timestamp`, `parentSubmissionId`
+
+**Actions:**
+
+- `setResult()`: Store assessment results with optional parent submission ID
+- `getResult()`: Retrieve assessment results by submission ID
+- `getParentSubmissionId()`: Get parent submission ID for draft tracking
+- `removeResult()`: Remove a specific result
+- `clearAllResults()`: Clear all stored results
+- `cleanupOldResults()`: Remove results older than specified age (default: 30 days)
+
+**Computed Selectors:**
+
+- `getAllSubmissionIds()`: Get all stored submission IDs
+- `getResultsCount()`: Get total number of stored results
+
+**Persistence:**
+
+- Uses Zustand's `persist` middleware with `createSafeStorage()` utility
+- Automatic cleanup of old results (30 days) on rehydration
+- Automatic cleanup on app start
+- Type-safe API prevents storage errors
 
 ### Custom Hooks
 
@@ -220,12 +253,33 @@ const currentValue = usePreferencesStore.getState().storeResults;
 - **Automatic Persistence**: Zustand persist middleware optimizes when persistence happens
 - **Structural Sharing**: Immer middleware provides structural sharing out of the box
 
+## Storage Utilities
+
+### Safe Storage (`apps/web/app/lib/utils/storage.ts`)
+
+Provides centralized storage utilities with error handling, quota management, and cleanup:
+
+- **Error Handling**: Catches and handles `QuotaExceededError`, `SecurityError`, and other storage errors
+- **Quota Management**: Warns when storage is approaching limits and attempts cleanup
+- **Corruption Detection**: Automatically detects and clears corrupted data (e.g., `"[object Object]"`)
+- **Cleanup Utilities**: Functions to clean up expired storage entries
+
+**Usage:**
+
+```typescript
+import { createSafeStorage } from "@/app/lib/utils/storage";
+
+// Use with Zustand persist
+storage: createJSONStorage(() => createSafeStorage());
+```
+
 ## DevTools
 
-Zustand DevTools enabled for both stores:
+Zustand DevTools enabled for all stores:
 
 - `DraftStore` - Debug draft tracking and progress
 - `PreferencesStore` - Debug user preferences
+- `ResultsStore` - Debug assessment results storage
 
 Install Redux DevTools browser extension to use.
 
@@ -302,6 +356,8 @@ export const useDraftStore = create<DraftStore>()(
 ### Preferences Store Example
 
 ```typescript
+import { createSafeStorage } from "@/app/lib/utils/storage";
+
 export const usePreferencesStore = create<PreferencesStore>()(
   devtools(
     persist(
@@ -317,13 +373,52 @@ export const usePreferencesStore = create<PreferencesStore>()(
       })),
       {
         name: "writeo-preferences",
-        storage: createJSONStorage(() => localStorage),
+        storage: createJSONStorage(() => createSafeStorage()),
         onRehydrateStorage: () => (state) => {
           // Migration logic
         },
       }
     ),
     { name: "PreferencesStore" }
+  )
+);
+```
+
+### Results Store Example
+
+```typescript
+import { createSafeStorage } from "@/app/lib/utils/storage";
+
+export const useResultsStore = create<ResultsStore>()(
+  devtools(
+    persist(
+      immer((set, get) => ({
+        results: {},
+
+        setResult: (submissionId, results, parentSubmissionId) => {
+          set((state) => {
+            state.results[submissionId] = {
+              results,
+              timestamp: Date.now(),
+              parentSubmissionId,
+            };
+          });
+        },
+
+        getResult: (submissionId) => {
+          return get().results[submissionId]?.results || null;
+        },
+      })),
+      {
+        name: "writeo-results-store",
+        storage: createJSONStorage(() => createSafeStorage()),
+        onRehydrateStorage: () => (state) => {
+          // Cleanup old results
+          state?.cleanupOldResults(30 * 24 * 60 * 60 * 1000);
+        },
+      }
+    ),
+    { name: "ResultsStore" }
   )
 );
 ```
@@ -372,8 +467,35 @@ await page.evaluate(() => {
 });
 ```
 
-For draft store testing, results are stored in localStorage with keys:
+### Storage Keys
 
-- `results_{submissionId}` - Assessment results
-- `draft_parent_{submissionId}` - Parent submission ID for drafts
-- `writeo-draft-store` - Zustand persist store (handled automatically)
+**Zustand Stores (managed automatically):**
+
+- `writeo-draft-store` - Draft store (Zustand persist)
+- `writeo-preferences` - Preferences store (Zustand persist)
+- `writeo-results-store` - Results store (Zustand persist)
+
+**Legacy Keys (for backwards compatibility):**
+
+- `results_{submissionId}` - Assessment results (now managed by Results Store)
+- `draft_parent_{submissionId}` - Parent submission ID (now managed by Results Store)
+
+**Testing Notes:**
+
+Tests can still use direct localStorage access for backwards compatibility, but prefer using stores:
+
+```typescript
+// Works (backwards compatible)
+await page.evaluate((submissionId) => {
+  localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
+});
+
+// Better (uses Results Store)
+await page.evaluate(
+  (submissionId, results) => {
+    useResultsStore.getState().setResult(submissionId, results);
+  },
+  submissionId,
+  results
+);
+```

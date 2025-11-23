@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
+import { useResultsStore } from "@/app/lib/stores/results-store";
 import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
 
 // Task data - matches tasks from home page
@@ -54,6 +55,7 @@ const taskData: Record<string, { title: string; prompt: string }> = {
 export default function WritePage() {
   const params = useParams();
   const router = useRouter();
+  const setResult = useResultsStore((state) => state.setResult);
   const taskId = params.id as string;
   const isCustom = taskId === "custom";
 
@@ -188,11 +190,10 @@ export default function WritePage() {
         }
       }
 
-      // Always store results in localStorage (client-side only)
+      // Store results in results store (persistent) and sessionStorage (immediate display)
+      setResult(submissionId, resultsToStore);
       if (typeof window !== "undefined") {
-        // Store in localStorage for persistence across sessions
-        localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
-        // Also store in sessionStorage for immediate display
+        // Also store in sessionStorage for immediate display on results page
         sessionStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
       }
       // Redirect to results page - results will be available immediately

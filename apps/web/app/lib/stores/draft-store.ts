@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { devtools, persist, StateStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { createSafeStorage } from "../utils/storage";
 
 export interface DraftHistory {
   draftNumber: number;
@@ -71,33 +72,7 @@ const STORAGE_KEY = "writeo-draft-store";
 // Custom storage that handles Set serialization/deserialization
 // Based on Zustand docs: https://zustand.docs.pmnd.rs/integrations/persisting-store-data#how-do-i-use-it-with-map-and-set
 // We need to convert Sets to/from arrays for JSON serialization
-const baseStorage: StateStorage = {
-  getItem: (name: string): string | null => {
-    if (typeof window === "undefined") return null;
-    try {
-      return localStorage.getItem(name);
-    } catch (error) {
-      console.error(`Failed to get item ${name} from localStorage:`, error);
-      return null;
-    }
-  },
-  setItem: (name: string, value: string): void => {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.setItem(name, value);
-    } catch (error) {
-      console.error(`Failed to set item ${name} in localStorage:`, error);
-    }
-  },
-  removeItem: (name: string): void => {
-    if (typeof window === "undefined") return;
-    try {
-      localStorage.removeItem(name);
-    } catch (error) {
-      console.error(`Failed to remove item ${name} from localStorage:`, error);
-    }
-  },
-};
+const baseStorage = createSafeStorage();
 
 // Custom storage adapter that handles Set conversion
 // Zustand persist wraps state in { state: {...}, version: number }

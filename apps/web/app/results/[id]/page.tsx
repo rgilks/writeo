@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSubmissionResults, getSubmissionResultsWithDraftTracking } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
+import { useResultsStore } from "@/app/lib/stores/results-store";
 import { LearnerResultsView } from "@/app/components/LearnerResultsView";
 import { DeveloperResultsView } from "@/app/components/DeveloperResultsView";
 import { ModeSwitcher } from "@/app/components/ModeSwitcher";
@@ -17,20 +18,20 @@ export default function ResultsPage() {
   const router = useRouter();
   const submissionId = params.id as string;
   const mode = usePreferencesStore((state) => state.viewMode);
+  const getResult = useResultsStore((state) => state.getResult);
+  const getParentSubmissionId = useResultsStore((state) => state.getParentSubmissionId);
+  const setResult = useResultsStore((state) => state.setResult);
   const [submissionStartTime] = useState<number>(Date.now());
   const [processingTime, setProcessingTime] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
 
-  // Get parent submission ID from URL params or localStorage
-  const parentId =
-    searchParams?.get("parent") ||
-    (typeof window !== "undefined" ? localStorage.getItem(`draft_parent_${submissionId}`) : null);
+  // Get parent submission ID from URL params or results store
+  const parentId = searchParams?.get("parent") || getParentSubmissionId(submissionId) || null;
 
   // Check if results were passed via router state (from write page) or stored locally
   const [initialResults] = useState<AssessmentResults | null>(() => {
-    // Try to get results from localStorage or sessionStorage (client-side storage)
+    // Try to get results from sessionStorage first (immediate display from write page)
     if (typeof window !== "undefined") {
-      // First check sessionStorage (from write page)
       const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
       if (sessionStored) {
         try {
@@ -38,18 +39,11 @@ export default function ResultsPage() {
           sessionStorage.removeItem(`results_${submissionId}`); // Clean up
           return parsed;
         } catch {
-          // Fall through to localStorage check
+          // Fall through to store check
         }
       }
-      // Then check localStorage (persistent storage)
-      const localStored = localStorage.getItem(`results_${submissionId}`);
-      if (localStored) {
-        try {
-          return JSON.parse(localStored);
-        } catch {
-          return null;
-        }
-      }
+      // Then check results store (persistent storage)
+      return getResult(submissionId);
     }
     return null;
   });
@@ -83,56 +77,36 @@ export default function ResultsPage() {
         // Check if we're in local mode (not saving to server)
         const storeResults = usePreferencesStore.getState().storeResults;
 
-        // Get parent results from localStorage if in local mode
+        // Get parent results from results store if in local mode
         let parentResults: any = undefined;
-        if (!storeResults && typeof window !== "undefined" && parentId) {
-          const storedParentResults = localStorage.getItem(`results_${parentId}`);
-          if (storedParentResults) {
-            try {
-              parentResults = JSON.parse(storedParentResults);
-            } catch (e) {
-              console.warn("[fetchResults] Failed to parse parent results from localStorage:", e);
-            }
-          }
+        if (!storeResults && parentId) {
+          parentResults = getResult(parentId);
         }
 
         // Try to fetch from server (only works if user opted in to server storage)
-        // But first check if we have results in localStorage/sessionStorage (from draft creation)
-        if (typeof window !== "undefined") {
-          const localStored = localStorage.getItem(`results_${submissionId}`);
-          const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
-          const storedResults = sessionStored || localStored;
+        // But first check if we have results in store or sessionStorage (from draft creation)
+        const storedResults = getResult(submissionId);
+        if (storedResults) {
+          if (!cancelled) {
+            // Use stored results immediately, but still try to fetch from server in background
+            setData(storedResults);
+            setStatus("success");
 
-          if (storedResults) {
-            try {
-              const parsed = JSON.parse(storedResults);
-              if (!cancelled) {
-                // Use stored results immediately, but still try to fetch from server in background
-                setData(parsed);
-                setStatus("success");
+            // Try to fetch from server to get latest version (but don't wait)
+            // This ensures we have the latest data if available
+            getSubmissionResults(submissionId)
+              .then((serverResults) => {
+                if (!cancelled && serverResults) {
+                  // Update with server results if available
+                  setData(serverResults);
+                  setResult(submissionId, serverResults, parentId || undefined);
+                }
+              })
+              .catch(() => {
+                // Server fetch failed, but we already have local results, so that's OK
+              });
 
-                // Try to fetch from server to get latest version (but don't wait)
-                // This ensures we have the latest data if available
-                getSubmissionResults(submissionId)
-                  .then((serverResults) => {
-                    if (!cancelled && serverResults) {
-                      // Update with server results if available
-                      setData(serverResults);
-                      localStorage.setItem(
-                        `results_${submissionId}`,
-                        JSON.stringify(serverResults)
-                      );
-                    }
-                  })
-                  .catch(() => {
-                    // Server fetch failed, but we already have local results, so that's OK
-                  });
-
-                return;
-              }
-            } catch {
-              // Fall through to server fetch
-            }
+            return;
           }
         }
 
@@ -146,58 +120,46 @@ export default function ResultsPage() {
               )
             : await getSubmissionResults(submissionId);
           if (!cancelled) {
-            setData(results);
-            setStatus("success");
-            // Also save to localStorage for future access
             // Ensure questionTexts are preserved if they exist in initialResults
-            if (typeof window !== "undefined") {
-              const resultsToStore = { ...results };
-              // Preserve questionTexts from initialResults if they exist and aren't in fetched results
-              if (initialResults?.meta?.questionTexts && !resultsToStore.meta?.questionTexts) {
-                if (!resultsToStore.meta) {
-                  resultsToStore.meta = {};
-                }
-                resultsToStore.meta.questionTexts = initialResults.meta.questionTexts;
+            const resultsToStore = { ...results };
+            if (initialResults?.meta?.questionTexts && !resultsToStore.meta?.questionTexts) {
+              if (!resultsToStore.meta) {
+                resultsToStore.meta = {};
               }
-              localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
+              resultsToStore.meta.questionTexts = initialResults.meta.questionTexts;
             }
+            setData(resultsToStore);
+            setStatus("success");
+            // Save to results store for future access
+            setResult(submissionId, resultsToStore, parentId || undefined);
           }
         } catch (serverError) {
-          // If server fetch fails (especially 404), try localStorage as fallback
+          // If server fetch fails (especially 404), try results store as fallback
+          const fallbackResults = getResult(submissionId);
+          if (fallbackResults) {
+            if (!cancelled) {
+              console.log(`[ResultsPage] Using results store data for submission ${submissionId}`);
+              setData(fallbackResults);
+              setStatus("success");
+              return;
+            }
+          }
+          // Check sessionStorage as well (temporary storage)
           if (typeof window !== "undefined") {
-            const localStored = localStorage.getItem(`results_${submissionId}`);
-            if (localStored) {
+            const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
+            if (sessionStored) {
               try {
-                const parsed = JSON.parse(localStored);
+                const parsed = JSON.parse(sessionStored);
                 if (!cancelled) {
                   console.log(
-                    `[ResultsPage] Using localStorage data for submission ${submissionId}`
+                    `[ResultsPage] Using sessionStorage data for submission ${submissionId}`
                   );
                   setData(parsed);
                   setStatus("success");
                   return;
                 }
-              } catch (parseError) {
-                console.warn(`[ResultsPage] Failed to parse localStorage data:`, parseError);
+              } catch {
                 // Fall through to error handling
-              }
-            } else {
-              // Check sessionStorage as well
-              const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
-              if (sessionStored) {
-                try {
-                  const parsed = JSON.parse(sessionStored);
-                  if (!cancelled) {
-                    console.log(
-                      `[ResultsPage] Using sessionStorage data for submission ${submissionId}`
-                    );
-                    setData(parsed);
-                    setStatus("success");
-                    return;
-                  }
-                } catch {
-                  // Fall through to error handling
-                }
               }
             }
           }
@@ -249,37 +211,30 @@ export default function ResultsPage() {
 
   // Function to switch drafts without page reload
   const switchDraft = (targetSubmissionId: string, rootSubmissionId?: string) => {
-    // Check if results are in localStorage
-    if (typeof window !== "undefined") {
-      const storedResults = localStorage.getItem(`results_${targetSubmissionId}`);
-      if (storedResults) {
-        try {
-          const parsed = JSON.parse(storedResults);
-          const targetDraftNumber = (parsed.meta?.draftNumber as number) || 1;
+    // Check if results are in results store
+    const storedResults = getResult(targetSubmissionId);
+    if (storedResults) {
+      const targetDraftNumber = (storedResults.meta?.draftNumber as number) || 1;
 
-          setData(parsed);
-          setStatus("success");
-          setError(null);
+      setData(storedResults);
+      setStatus("success");
+      setError(null);
 
-          // Update URL without reload
-          // Only include parent param if it's not draft 1 and root is different
-          const newUrl =
-            targetDraftNumber === 1 || !rootSubmissionId || rootSubmissionId === targetSubmissionId
-              ? `/results/${targetSubmissionId}`
-              : `/results/${targetSubmissionId}?parent=${rootSubmissionId}`;
-          router.replace(newUrl);
+      // Update URL without reload
+      // Only include parent param if it's not draft 1 and root is different
+      const newUrl =
+        targetDraftNumber === 1 || !rootSubmissionId || rootSubmissionId === targetSubmissionId
+          ? `/results/${targetSubmissionId}`
+          : `/results/${targetSubmissionId}?parent=${rootSubmissionId}`;
+      router.replace(newUrl);
 
-          // Update answer text
-          const answerTexts = parsed.meta?.answerTexts as Record<string, string> | undefined;
-          if (answerTexts) {
-            const firstAnswerId = Object.keys(answerTexts)[0];
-            setAnswerText(answerTexts[firstAnswerId] || "");
-          }
-          return true; // Successfully switched
-        } catch (e) {
-          console.warn("[switchDraft] Failed to parse stored results:", e);
-        }
+      // Update answer text
+      const answerTexts = storedResults.meta?.answerTexts as Record<string, string> | undefined;
+      if (answerTexts) {
+        const firstAnswerId = Object.keys(answerTexts)[0];
+        setAnswerText(answerTexts[firstAnswerId] || "");
       }
+      return true; // Successfully switched
     }
     return false; // Results not found, will need to navigate
   };
