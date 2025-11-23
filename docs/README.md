@@ -27,7 +27,7 @@ This directory contains all documentation for the Writeo project.
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Step-by-step deployment guide and troubleshooting
 - **[OPERATIONS.md](OPERATIONS.md)** - Environment variables, logging, monitoring, performance tuning
 - **[MODES.md](MODES.md)** - Quick guide for switching between Cheap Mode and Turbo Mode
-- **[COST_REVIEW.md](COST_REVIEW.md)** - Comprehensive cost analysis, guardrails, and optimization strategies
+- **[COST_REVIEW.md](COST_REVIEW.md)** - Comprehensive cost analysis and current cost controls
 - **[SCRIPTS.md](SCRIPTS.md)** - Scripts reference and usage guide
 - **[SERVICES.md](SERVICES.md)** - Individual services documentation (Modal, Shared package)
 - **[TESTING.md](TESTING.md)** - Complete testing guide with test structure, examples, and best practices

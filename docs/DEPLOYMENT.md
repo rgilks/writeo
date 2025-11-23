@@ -30,7 +30,7 @@ Writeo supports two operational modes:
 
 - Set `LLM_PROVIDER=groq` and `GROQ_API_KEY`
 - Configure Modal services with reduced `scaledown_window` or keep warm
-- **Cost:** ~$65-80/month (100 submissions/day)
+- **Cost:** ~$25-40/month (100 submissions/day)
 - **Performance:** 2-5s first request, 1-3s warm
 
 See [MODES.md](MODES.md) for quick mode switching guide.  

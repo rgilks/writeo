@@ -10,8 +10,7 @@ Writeo supports multiple LLM providers for AI-powered feedback. This document pr
 
 - Cost breakdown per submission for each provider
 - Monthly cost estimates at different usage levels
-- Cost guardrails and prevention strategies
-- Optimization recommendations
+- Current cost controls and prevention strategies
 - Provider comparison
 
 **Supported Providers:**
@@ -301,47 +300,7 @@ Set `OPENAI_API_KEY=MOCK` or `GROQ_API_KEY=MOCK` to use mock responses (no real 
 4. **Text Truncation** - Limits input token usage
 5. **Mocking System** - Prevents test costs
 
-### Recommended Additional Guardrails
-
-#### 1. Daily Cost Budget (Not Yet Implemented)
-
-**Recommendation:** Add daily cost tracking and automatic shutdown
-
-```typescript
-// Pseudo-code for daily budget tracking
-const DAILY_BUDGET = 50; // $50/day maximum
-const COST_PER_SUBMISSION = 0.02;
-
-// Track in KV: daily_cost:YYYY-MM-DD
-// If daily cost exceeds budget, return 429 with message
-```
-
-**Implementation Effort:** Medium  
-**Cost Protection:** High  
-**Impact:** Prevents unexpected daily spikes
-
-#### 2. Per-User Rate Limiting (Not Yet Implemented)
-
-**Current:** Rate limiting is per IP address  
-**Recommendation:** Add per-user rate limiting (if user authentication added)
-
-**Implementation Effort:** Medium  
-**Cost Protection:** Medium  
-**Impact:** Better cost control for authenticated users
-
-#### 3. Cost Monitoring Dashboard (Not Yet Implemented)
-
-**Recommendation:** Add cost tracking endpoint and dashboard
-
-- Track daily/monthly costs
-- Alert on cost spikes
-- Show cost trends
-
-**Implementation Effort:** High  
-**Cost Protection:** Medium  
-**Impact:** Better visibility and early warning
-
-#### 4. Request Size Limits ✅
+### Request Size Limits ✅
 
 **Already Implemented:** 1MB request body limit
 
@@ -359,41 +318,6 @@ const COST_PER_SUBMISSION = 0.02;
 3. **Text Truncation** - Limits input tokens
 4. **Error Context Limits** - Only top 10 errors included
 5. **Parallel Processing** - Faster responses, but doesn't reduce costs
-
-### Future Optimization Opportunities
-
-#### 1. Caching Similar Submissions (Not Yet Implemented)
-
-**Idea:** Cache feedback for similar answers (same question + similar text)
-
-**Potential Savings:** 20-30% if 30% of submissions are similar  
-**Implementation Effort:** High  
-**Complexity:** Need similarity detection, cache invalidation
-
-#### 2. Smaller Model for Grammar Checks (Not Yet Implemented)
-
-**Idea:** Use smaller/faster model for grammar checks, keep large model for feedback
-
-**Potential Savings:** 30-50% on grammar check costs  
-**Implementation Effort:** Medium  
-**Trade-off:** May reduce grammar check quality
-
-#### 3. Batch Processing (Not Yet Implemented)
-
-**Idea:** Batch multiple submissions together
-
-**Potential Savings:** Minimal (OpenAI doesn't offer batch discounts)  
-**Implementation Effort:** High  
-**Trade-off:** Delayed responses, complexity
-
-#### 4. Pre-filter with LanguageTool (Partially Implemented)
-
-**Current:** LanguageTool runs in parallel with LLM  
-**Idea:** Use LanguageTool errors to reduce LLM prompt size
-
-**Potential Savings:** 10-15% on input tokens  
-**Implementation Effort:** Low  
-**Trade-off:** Minimal
 
 ---
 
@@ -475,13 +399,6 @@ OPENAI_API_KEY=test_anything npm run dev
 - **OpenAI Dashboard:** Manual checking at https://platform.openai.com/usage
 - **Cloudflare Logs:** Review Worker logs for error patterns and usage
 
-### Recommended Monitoring
-
-1. **Daily Cost Tracking** - Store daily costs in KV
-2. **Cost Alerts** - Alert if daily cost exceeds threshold
-3. **Usage Dashboard** - Show submissions/day, cost/day, trends
-4. **Cost Per User** - Track costs per IP/user (if authentication added)
-
 ---
 
 ## Emergency Cost Controls
@@ -552,160 +469,6 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 - **Monthly (100/day):** ~$0.11-1.10
 
 **Savings:** ~99% cost reduction, but loses AI feedback features
-
----
-
-## How to Guard Against Runaway Costs (Without Major Changes)
-
-### Quick Wins - No Code Changes Required
-
-1. **Monitor OpenAI Dashboard Daily**
-   - Check https://platform.openai.com/usage daily for unexpected usage
-   - Set up email alerts if OpenAI supports them
-   - **Time:** 2 minutes/day
-   - **Protection:** Early detection of cost spikes
-
-2. **Set OpenAI API Budget Alert**
-   - Configure spending limits in OpenAI dashboard (if available)
-   - Set alert threshold (e.g., $50/day or $500/month)
-   - **Time:** 5 minutes one-time setup
-   - **Protection:** Automatic alerts on cost spikes
-
-3. **Review Rate Limit Logs Weekly**
-   - Check Cloudflare Workers logs for rate limit hits
-   - Look for patterns of high usage from single IPs
-   - **Time:** 10 minutes/week
-   - **Protection:** Identify abuse patterns early
-
-### Low-Effort Code Changes (1-2 hours)
-
-1. **Add Daily Cost Tracking** ⚠️ **RECOMMENDED**
-
-   Track daily costs in KV and reject requests if budget exceeded:
-
-   ```typescript
-   // In submission-processor.ts, before processing:
-   const today = new Date().toISOString().split("T")[0];
-   const dailyCostKey = `daily_cost:${today}`;
-   const DAILY_BUDGET = 50; // $50/day
-   const COST_PER_SUBMISSION = 0.02;
-
-   const currentCost = await c.env.WRITEO_RESULTS.get(dailyCostKey);
-   const cost = currentCost ? parseFloat(currentCost) : 0;
-
-   if (cost + COST_PER_SUBMISSION > DAILY_BUDGET) {
-     return errorResponse(429, `Daily cost limit reached. Please try again tomorrow.`, c);
-   }
-
-   // After successful processing:
-   await c.env.WRITEO_RESULTS.put(dailyCostKey, String(cost + COST_PER_SUBMISSION), {
-     expirationTtl: 86400,
-   });
-   ```
-
-   **Effort:** 1-2 hours  
-   **Protection:** Prevents daily cost spikes  
-   **Impact:** High
-
-2. **Add Cost Logging** ⚠️ **RECOMMENDED**
-
-   Log costs to Cloudflare Workers logs for monitoring:
-
-   ```typescript
-   // After each OpenAI API call, log cost:
-   const cost = estimateCostFromTokens(usage);
-   console.log(`[Cost] Submission ${submissionId}: $${cost.toFixed(4)}`);
-   ```
-
-   **Effort:** 30 minutes  
-   **Protection:** Better visibility  
-   **Impact:** Medium
-
-3. **Add Environment Variable for Rate Limit**
-
-   Make rate limit configurable via environment variable:
-
-   ```typescript
-   // In rate-limit.ts:
-   const maxSubmissions = parseInt(c.env.MAX_SUBMISSIONS_PER_MIN || "10");
-   ```
-
-   **Effort:** 15 minutes  
-   **Protection:** Quick adjustment without code deploy  
-   **Impact:** Medium
-
-### Medium-Effort Changes (4-8 hours)
-
-1. **Add Maintenance Mode** ⚠️ **RECOMMENDED**
-
-   Add environment variable to disable all submissions:
-
-   ```typescript
-   // In submission-processor.ts, at the start:
-   if (c.env.MAINTENANCE_MODE === "true") {
-     return errorResponse(503, "Service temporarily unavailable for maintenance", c);
-   }
-   ```
-
-   **Effort:** 30 minutes  
-   **Protection:** Emergency shutdown  
-   **Impact:** High
-
-2. **Add Cost Monitoring Endpoint**
-
-   Create `/admin/costs` endpoint to view daily/monthly costs:
-
-   ```typescript
-   // GET /admin/costs?period=day|month
-   // Returns: { period, submissions, cost, budget, remaining }
-   ```
-
-   **Effort:** 2-3 hours  
-   **Protection:** Better visibility  
-   **Impact:** Medium
-
-### Summary: Best Protection with Minimal Changes
-
-**Immediate (No Code):**
-
-- ✅ Monitor OpenAI dashboard daily
-- ✅ Set OpenAI API budget alerts
-- ✅ Review rate limit logs weekly
-
-**Quick Wins (1-2 hours total):**
-
-- ⚠️ Add daily cost budget tracking (prevents spikes)
-- ⚠️ Add cost logging (better visibility)
-- ⚠️ Make rate limit configurable (quick adjustments)
-
-**Emergency Controls (30 minutes):**
-
-- ⚠️ Add maintenance mode (emergency shutdown)
-
-**Total Implementation Time:** ~2-3 hours for all quick wins  
-**Cost Protection:** Prevents 95%+ of runaway cost scenarios
-
----
-
-## Recommendations
-
-### High Priority
-
-1. ✅ **Keep current rate limits** (10/min) - Good balance of usability and cost control
-2. ✅ **Keep word count limits** (250-500 words) - Prevents excessive costs
-3. ⚠️ **Add daily cost budget** - Prevents unexpected spikes
-4. ⚠️ **Add cost monitoring** - Better visibility
-
-### Medium Priority
-
-1. **Consider caching** - If submission patterns show similarity
-2. **Monitor OpenAI pricing** - Prices may change
-3. **Review token usage** - Periodically check if limits can be further reduced
-
-### Low Priority
-
-1. **Smaller model for grammar** - Only if quality acceptable
-2. **Batch processing** - Only if OpenAI adds batch discounts
 
 ---
 

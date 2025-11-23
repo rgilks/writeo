@@ -6,7 +6,7 @@
 **Live Services:**
 
 - [Web Frontend](https://writeo.tre.systems) - Interactive essay submission interface
-- [API Documentation](https://your-api-worker.workers.dev/docs) - Interactive Swagger UI (available at `/docs` endpoint)
+- [API Documentation](https://writeo-api.workers.dev/docs) - Interactive Swagger UI (available at `/docs` endpoint)
 
 ---
 
@@ -579,12 +579,6 @@ Each submission makes **2 required API calls** to your chosen LLM provider:
 4. ✅ **Model Caching** - Modal Volume caches model weights for faster cold starts
 5. ✅ **Synchronous Processing** - Results returned immediately in PUT response body (typically 3-10s)
 
-**Future Optimization Opportunities:**
-
-- Modal Keep-Warm Strategy - Reduce cold starts (5-15 min warm window)
-- AI Feedback Caching - Cache feedback for similar answers
-- Pre-fetch Common Questions - Cache frequently used questions in KV
-
 ---
 
 ## Appendix: Technology Stack Details
@@ -613,5 +607,3 @@ Each submission makes **2 required API calls** to your chosen LLM provider:
 - **Grammar**: LanguageTool 6.4+
 
 ---
-
-**Document Status:** ✅ Current
