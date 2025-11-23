@@ -5,7 +5,6 @@
 #
 
 set -e  # Exit immediately if a command exits with a non-zero status
-set -u  # Exit if an unset variable is used
 
 # Colors for output
 RED='\033[0;31m'
