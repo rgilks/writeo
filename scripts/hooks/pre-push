@@ -140,13 +140,18 @@ else
 fi
 
 # Step 2: Start web app with local API configuration (if not already running)
+# Load API_KEY early so we can pass it to web app
+if [ -f "$ROOT_DIR/apps/api-worker/.dev.vars" ]; then
+  API_KEY_FOR_WEB=$(grep "^API_KEY=" "$ROOT_DIR/apps/api-worker/.dev.vars" | cut -d'=' -f2 | tr -d '"' | tr -d "'" | head -1)
+fi
+
 if [ "$WEB_RUNNING" = false ]; then
   show_time
   echo "${YELLOW}Starting web app on port 3000...${NC}"
   echo "${CYAN}  Logs: /tmp/writeo-web.log${NC}"
   cd "$ROOT_DIR/apps/web"
-  # Set NEXT_PUBLIC_API_BASE to point to local API worker
-  NEXT_PUBLIC_API_BASE="$API_URL" npm run dev > /tmp/writeo-web.log 2>&1 &
+  # Set API configuration for server actions (API_BASE_URL, API_KEY) and client (NEXT_PUBLIC_API_BASE)
+  API_BASE_URL="$API_URL" API_KEY="${API_KEY_FOR_WEB:-}" NEXT_PUBLIC_API_BASE="$API_URL" npm run dev > /tmp/writeo-web.log 2>&1 &
   WEB_PID=$!
   cd "$ROOT_DIR"
   show_time
