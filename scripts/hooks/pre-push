@@ -68,8 +68,18 @@ echo "${BLUE}========================================${NC}"
 echo "${BLUE}Running pre-push tests${NC}"
 echo "${BLUE}========================================${NC}"
 echo ""
+show_time
+echo "${CYAN}This hook will:${NC}"
+echo "  1. Check/start API worker (port 8787)"
+echo "  2. Check/start web app (port 3000)"
+echo "  3. Wait for servers to be ready"
+echo "  4. Run unit tests"
+echo "  5. Run E2E tests"
+echo ""
 
 # Check if servers are already running and can be reused
+show_time
+echo "${CYAN}Checking for existing servers...${NC}"
 API_RUNNING=false
 WEB_RUNNING=false
 
@@ -103,11 +113,14 @@ fi
 if [ "$API_RUNNING" = false ]; then
   show_time
   echo "${YELLOW}Starting API worker on port 8787...${NC}"
+  echo "${CYAN}  Logs: /tmp/writeo-api-worker.log${NC}"
   cd "$ROOT_DIR/apps/api-worker"
   # Set GROQ_API_KEY to MOCK to enable mocking in tests (saves API costs)
   GROQ_API_KEY=MOCK npm run dev > /tmp/writeo-api-worker.log 2>&1 &
   API_PID=$!
   cd "$ROOT_DIR"
+  show_time
+  echo "${CYAN}  API worker started (PID: $API_PID)${NC}"
 else
   API_PID=""
 fi
@@ -116,11 +129,14 @@ fi
 if [ "$WEB_RUNNING" = false ]; then
   show_time
   echo "${YELLOW}Starting web app on port 3000...${NC}"
+  echo "${CYAN}  Logs: /tmp/writeo-web.log${NC}"
   cd "$ROOT_DIR/apps/web"
   # Set NEXT_PUBLIC_API_BASE to point to local API worker
   NEXT_PUBLIC_API_BASE="$API_URL" npm run dev > /tmp/writeo-web.log 2>&1 &
   WEB_PID=$!
   cd "$ROOT_DIR"
+  show_time
+  echo "${CYAN}  Web app started (PID: $WEB_PID)${NC}"
 else
   WEB_PID=""
 fi
@@ -133,6 +149,7 @@ if [ "$API_RUNNING" = false ] || [ "$WEB_RUNNING" = false ]; then
   API_READY=$API_RUNNING
   WEB_READY=$WEB_RUNNING
   ELAPSED=0
+  LAST_STATUS_UPDATE=0
   
   while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
     # Check API worker
@@ -158,9 +175,24 @@ if [ "$API_RUNNING" = false ] || [ "$WEB_RUNNING" = false ]; then
       break
     fi
     
+    # Show status update every 5 seconds
+    if [ $((ELAPSED - LAST_STATUS_UPDATE)) -ge 5 ]; then
+      STATUS_MSG=""
+      if [ "$API_READY" = false ]; then
+        STATUS_MSG="${STATUS_MSG}API:waiting "
+      fi
+      if [ "$WEB_READY" = false ]; then
+        STATUS_MSG="${STATUS_MSG}Web:waiting "
+      fi
+      if [ ! -z "$STATUS_MSG" ]; then
+        show_time
+        echo "${CYAN}Still waiting... ${STATUS_MSG}(${ELAPSED}s/${MAX_WAIT_TIME}s)${NC}"
+      fi
+      LAST_STATUS_UPDATE=$ELAPSED
+    fi
+    
     sleep $CHECK_INTERVAL
     ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-    echo -n "."
   done
   
   echo ""
@@ -207,7 +239,8 @@ export CI=true
 # Run unit tests first (faster, catches API issues quickly)
 show_time
 echo "${CYAN}Running unit tests...${NC}"
-if ! npm test; then
+echo ""
+if ! npm test 2>&1; then
   echo ""
   show_time
   echo "${RED}Unit tests failed!${NC}"
@@ -215,11 +248,13 @@ if ! npm test; then
   exit 1
 fi
 
+echo ""
 # Run e2e tests with list reporter (non-interactive)
 # Use more workers for faster execution (config defaults to 2 for CI, 4 for local)
 show_time
 echo "${CYAN}Running E2E tests...${NC}"
-if ! npm run test:e2e -- --reporter=list; then
+echo ""
+if ! npm run test:e2e -- --reporter=list 2>&1; then
   echo ""
   show_time
   echo "${RED}E2E tests failed!${NC}"
