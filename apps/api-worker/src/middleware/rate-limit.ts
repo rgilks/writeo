@@ -2,38 +2,15 @@ import type { Context } from "hono";
 import { errorResponse } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
 
-/**
- * Check if the request is using a test API key
- * Test API keys get higher rate limits for automated testing
- */
-function isTestApiKey(c: Context): boolean {
-  const testApiKey = c.env.TEST_API_KEY;
-  if (!testApiKey) {
-    return false;
-  }
-
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader) {
-    return false;
-  }
-
-  const match = authHeader.match(/^Token\s+(.+)$/);
-  if (!match) {
-    return false;
-  }
-
-  const providedKey = match[1];
-  return providedKey === testApiKey;
-}
-
 export async function rateLimit(c: Context, next: () => Promise<void>) {
   const path = new URL(c.req.url).pathname;
   if (path === "/health" || path === "/docs" || path === "/openapi.json") {
     return next();
   }
 
-  // Check if this is a test API key request
-  const isTest = isTestApiKey(c);
+  // Get auth context (set by authenticate middleware)
+  const isTest = (c.get("isTestKey") as boolean) || false;
+  const apiKeyOwner = (c.get("apiKeyOwner") as string) || "unknown";
 
   // Rate limiting applies to all requests
   // Test API keys get much higher limits for automated testing
@@ -60,9 +37,16 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
   }
 
   const ip = c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "unknown";
+
+  // Use API key owner as identifier if available (more reliable than IP), otherwise fallback to IP
+  // For 'admin' (web app), we might want to use IP still to prevent one user from exhausting the app's limit?
+  // Actually, 'admin' key should probably have unlimited or very high limits, OR we rely on IP for 'admin' users.
+  // Current decision: If owner is 'admin' (shared key), use IP. If owner is specific user, use owner ID.
+  const identifier = apiKeyOwner === "admin" || apiKeyOwner === "unknown" ? ip : apiKeyOwner;
+
   // Separate rate limit buckets for test vs production keys
   const keyPrefix = isTest ? "test" : "prod";
-  const rateLimitKey = `rate_limit:${keyPrefix}:${limitType}:${ip}`;
+  const rateLimitKey = `rate_limit:${keyPrefix}:${limitType}:${identifier}`;
   const now = Date.now();
   const windowMs = 60 * 1000;
 
@@ -95,8 +79,8 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
     // 2. Check Daily Limit (Volume/Cost Protection) - ONLY for submissions
     if (checkDailyLimit && !isTest) {
       const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-      const dailyLimitKey = `rate_limit:prod:daily_submissions:${today}:${ip}`;
-      const dailyLimit = 100; // 100 submissions per day per IP
+      const dailyLimitKey = `rate_limit:prod:daily_submissions:${today}:${identifier}`;
+      const dailyLimit = 100; // 100 submissions per day per User/IP
 
       const dailyCurrent = await c.env.WRITEO_RESULTS.get(dailyLimitKey);
       let dailyCount = dailyCurrent ? parseInt(dailyCurrent) : 0;
@@ -106,7 +90,7 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
         // Return generic message to avoid revealing specific limits
         return errorResponse(
           429,
-          "Daily submission limit reached for this network. Please try again tomorrow.",
+          "Daily submission limit reached for this account. Please try again tomorrow.",
           c
         );
       }

@@ -27,12 +27,32 @@ export async function authenticate(c: Context, next: () => Promise<void>) {
     return errorResponse(500, "Server configuration error", c);
   }
 
-  // Accept either API_KEY or TEST_API_KEY
-  const isValidKey = providedKey === expectedKey || (testApiKey && providedKey === testApiKey);
-
-  if (!isValidKey) {
-    return errorResponse(401, "Invalid API key", c);
+  // 1. Check Standard Env Keys (Admin/Test)
+  if (providedKey === expectedKey) {
+    c.set("apiKeyOwner", "admin");
+    c.set("isTestKey", false);
+    return next();
   }
 
-  return next();
+  if (testApiKey && providedKey === testApiKey) {
+    c.set("apiKeyOwner", "test-runner");
+    c.set("isTestKey", true);
+    return next();
+  }
+
+  // 2. Check KV for User Keys
+  try {
+    const keyInfoStr = await c.env.WRITEO_RESULTS.get(`apikey:${providedKey}`);
+    if (keyInfoStr) {
+      const keyInfo = JSON.parse(keyInfoStr);
+      c.set("apiKeyOwner", keyInfo.owner || "unknown");
+      c.set("isTestKey", false); // User keys are production by default
+      return next();
+    }
+  } catch (error) {
+    safeLogError("Error checking API key in KV", error);
+    // Continue to failure
+  }
+
+  return errorResponse(401, "Invalid API key", c);
 }

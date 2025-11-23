@@ -32,9 +32,6 @@ app.use(
 // Security headers
 app.use("*", securityHeaders);
 
-// Rate limiting
-app.use("*", rateLimit);
-
 // Execution context middleware
 // Note: Cloudflare Workers ExecutionContext is attached to env by the runtime
 app.use("*", async (_c, next) => {
@@ -48,6 +45,9 @@ app.route("/", healthRouter);
 
 // Authentication middleware
 app.use("*", authenticate);
+
+// Rate limiting (runs after auth to use user identity)
+app.use("*", rateLimit);
 
 // Protected routes
 app.route("/", questionsRouter);
