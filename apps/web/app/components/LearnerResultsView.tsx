@@ -24,9 +24,10 @@ interface LearnerResultsViewProps {
   data: AssessmentResults;
   answerText: string;
   processingTime?: number | null;
+  onDraftSwitch?: (submissionId: string, parentId?: string) => boolean;
 }
 
-export function LearnerResultsView({ data, answerText }: LearnerResultsViewProps) {
+export function LearnerResultsView({ data, answerText, onDraftSwitch }: LearnerResultsViewProps) {
   const [isFeedbackRevealed, setIsFeedbackRevealed] = useState(false);
   const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
 
@@ -141,6 +142,7 @@ export function LearnerResultsView({ data, answerText }: LearnerResultsViewProps
         submissionId={submissionId}
         parentSubmissionId={parentSubmissionId}
         getDraftHistory={getDraftHistory}
+        onDraftSwitch={onDraftSwitch}
       />
 
       <FooterSection />

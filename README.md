@@ -8,7 +8,7 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 ![Status](https://img.shields.io/badge/status-production--ready-green)
 ![LLM](https://img.shields.io/badge/LLM-Groq%20Llama%203.3%2070B%20%7C%20OpenAI%20GPT--4o--mini-orange)
 
-[Live Demo](https://writeo.tre.systems) • [API Docs](https://your-api-worker.workers.dev/docs) • [Documentation](#-documentation)
+[Live Demo](https://writeo.tre.systems)
 
 <a href='https://ko-fi.com/N4N31DPNUS' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=6' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 

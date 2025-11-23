@@ -14,19 +14,23 @@ export function DraftHistorySection({
   submissionId,
   parentSubmissionId,
   getDraftHistory,
+  onDraftSwitch,
 }: {
   displayDraftHistory: DraftHistory[];
   draftNumber: number;
   submissionId?: string;
   parentSubmissionId?: string;
   getDraftHistory: (id: string) => DraftHistory[];
+  onDraftSwitch?: (submissionId: string, parentId?: string) => boolean;
 }) {
   if (displayDraftHistory.length <= 1) return null;
 
   const rootDraft = displayDraftHistory.find((d) => d.draftNumber === 1);
+  // Determine root submission ID: use parentSubmissionId if it exists, otherwise use draft 1's submissionId
+  const rootSubmissionId = parentSubmissionId || rootDraft?.submissionId || submissionId;
 
   return (
-    <div className="card" lang="en" style={{ padding: "var(--spacing-md)" }}>
+    <div className="card" lang="en" style={{ padding: "var(--spacing-md)" }} data-testid="draft-history">
       <h2
         style={{
           fontSize: "16px",
@@ -63,6 +67,8 @@ export function DraftHistorySection({
               isCurrent={draft.draftNumber === draftNumber}
               navigateUrl={navigateUrl}
               hasValidSubmissionId={hasValidSubmissionId}
+              rootSubmissionId={rootSubmissionId}
+              onDraftSwitch={onDraftSwitch}
             />
           );
         })}

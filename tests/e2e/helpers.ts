@@ -378,6 +378,53 @@ export class ResultsPage {
       .or(this.page.locator("text=Draft History"));
   }
 
+  async getDraftButtons() {
+    // Draft buttons are divs with "Draft {number}" text
+    // They're inside the draft history section
+    const draftHistory = await this.getDraftHistory();
+    if ((await draftHistory.count()) > 0) {
+      return draftHistory.locator("..").locator('div:has-text(/^Draft \\d+$/i)');
+    }
+    return this.page.locator('div:has-text(/^Draft \\d+$/i)');
+  }
+
+  async getDraftButton(draftNumber: number) {
+    // Find draft button by number within draft history section
+    const draftHistory = await this.getDraftHistory();
+    if ((await draftHistory.count()) > 0) {
+      return draftHistory
+        .locator("..")
+        .locator(`div:has-text("Draft ${draftNumber}")`)
+        .first();
+    }
+    return this.page.locator(`div:has-text("Draft ${draftNumber}")`).first();
+  }
+
+  async clickDraftButton(draftNumber: number) {
+    const button = await this.getDraftButton(draftNumber);
+    await button.click();
+  }
+
+  async getCurrentDraftNumber(): Promise<number | null> {
+    // Find the draft button with primary color (current draft)
+    const currentButton = this.page.locator('div[style*="var(--primary-color)"], div[style*="rgb"]').filter({
+      hasText: /Draft \d+/,
+    });
+    const count = await currentButton.count();
+    if (count > 0) {
+      const text = await currentButton.first().textContent();
+      const match = text?.match(/Draft (\d+)/);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+    }
+    return null;
+  }
+
+  async getDraftComparisonTable() {
+    return this.page.locator("text=Draft Comparison").or(this.page.locator("table"));
+  }
+
   async getLoadingMessage() {
     return this.page
       .locator("text=Analyzing your writing…")
@@ -386,6 +433,12 @@ export class ResultsPage {
 
   async getErrorState() {
     return this.page.locator("text=Results Not Available");
+  }
+
+  async getSubmitDraftButton() {
+    return this.page
+      .locator('button:has-text("Submit Improved Draft")')
+      .or(this.page.locator('button:has-text("Submit")').filter({ hasText: /draft|improve/i }));
   }
 }
 

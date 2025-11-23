@@ -247,6 +247,43 @@ export default function ResultsPage() {
     }
   }, [data, status, submissionStartTime]);
 
+  // Function to switch drafts without page reload
+  const switchDraft = (targetSubmissionId: string, rootSubmissionId?: string) => {
+    // Check if results are in localStorage
+    if (typeof window !== "undefined") {
+      const storedResults = localStorage.getItem(`results_${targetSubmissionId}`);
+      if (storedResults) {
+        try {
+          const parsed = JSON.parse(storedResults);
+          const targetDraftNumber = (parsed.meta?.draftNumber as number) || 1;
+          
+          setData(parsed);
+          setStatus("success");
+          setError(null);
+          
+          // Update URL without reload
+          // Only include parent param if it's not draft 1 and root is different
+          const newUrl = 
+            targetDraftNumber === 1 || !rootSubmissionId || rootSubmissionId === targetSubmissionId
+              ? `/results/${targetSubmissionId}`
+              : `/results/${targetSubmissionId}?parent=${rootSubmissionId}`;
+          router.replace(newUrl);
+          
+          // Update answer text
+          const answerTexts = parsed.meta?.answerTexts as Record<string, string> | undefined;
+          if (answerTexts) {
+            const firstAnswerId = Object.keys(answerTexts)[0];
+            setAnswerText(answerTexts[firstAnswerId] || "");
+          }
+          return true; // Successfully switched
+        } catch (e) {
+          console.warn("[switchDraft] Failed to parse stored results:", e);
+        }
+      }
+    }
+    return false; // Results not found, will need to navigate
+  };
+
   return (
     <>
       <header className="header">
@@ -355,6 +392,7 @@ export default function ResultsPage() {
                   data={data}
                   answerText={answerText}
                   processingTime={processingTime}
+                  onDraftSwitch={switchDraft}
                 />
               </ErrorBoundary>
             )}

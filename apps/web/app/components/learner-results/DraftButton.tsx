@@ -10,13 +10,32 @@ export function DraftButton({
   isCurrent,
   navigateUrl,
   hasValidSubmissionId,
+  rootSubmissionId,
+  onDraftSwitch,
 }: {
   draft: DraftHistory;
   isCurrent: boolean;
   navigateUrl: string;
   hasValidSubmissionId: boolean;
+  rootSubmissionId?: string;
+  onDraftSwitch?: (submissionId: string, parentId?: string) => boolean;
 }) {
   const router = useRouter();
+
+  const handleClick = () => {
+    if (!hasValidSubmissionId || isCurrent) return;
+    
+    // Try client-side switch first (if callback provided)
+    if (onDraftSwitch && draft.submissionId) {
+      const switched = onDraftSwitch(draft.submissionId, rootSubmissionId);
+      if (switched) {
+        return; // Successfully switched without navigation
+      }
+    }
+    
+    // Fall back to navigation if client-side switch failed or callback not provided
+    router.push(navigateUrl);
+  };
 
   return (
     <div
@@ -35,11 +54,7 @@ export function DraftButton({
         minWidth: "100px",
         border: isCurrent ? "2px solid var(--primary-color)" : "1px solid var(--border-color)",
       }}
-      onClick={() => {
-        if (hasValidSubmissionId && !isCurrent) {
-          router.push(navigateUrl);
-        }
-      }}
+      onClick={handleClick}
       onMouseEnter={(e) => {
         if (!isCurrent && hasValidSubmissionId) {
           e.currentTarget.style.backgroundColor = "var(--bg-primary)";

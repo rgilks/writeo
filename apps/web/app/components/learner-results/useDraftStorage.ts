@@ -59,6 +59,9 @@ export function useDraftStorage(
         console.error("Error storing draft:", error);
       }
     }
+    // Store functions (addDraft, getDraftHistory, trackFixedErrors) are stable
+    // and don't need to be in the dependency array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     submissionId,
     overall,
@@ -66,8 +69,5 @@ export function useDraftStorage(
     grammarErrors.length,
     finalAnswerText,
     parentSubmissionId,
-    addDraft,
-    getDraftHistory,
-    trackFixedErrors,
   ]);
 }

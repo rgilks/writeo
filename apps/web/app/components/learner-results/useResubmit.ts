@@ -10,6 +10,9 @@ import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 export function useResubmit() {
   const router = useRouter();
   const [isResubmitting, setIsResubmitting] = useState(false);
+  // Use hook selector for consistency (even though we read it in async function)
+  // This ensures component re-renders if preference changes
+  const storeResults = usePreferencesStore((state) => state.storeResults);
 
   const handleResubmit = async (
     editedText: string,
@@ -24,7 +27,6 @@ export function useResubmit() {
     setIsResubmitting(true);
     try {
       const parentId = parentSubmissionId || submissionId;
-      const storeResults = usePreferencesStore.getState().storeResults;
 
       let parentResults: any = undefined;
       if (!storeResults && typeof window !== "undefined" && parentId) {

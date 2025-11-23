@@ -2,7 +2,7 @@
  * Annotated text revealed component - shows text with error annotations
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { AnnotatedTextRevealedProps } from "./types";
 import { ErrorDetail } from "./ErrorDetail";
 import { ErrorSpan } from "./ErrorSpan";
@@ -18,6 +18,7 @@ export function AnnotatedTextRevealed({
 }: AnnotatedTextRevealedProps) {
   const [activeErrorKey, setActiveErrorKey] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const explanationRef = useRef<HTMLDivElement>(null);
 
   let allErrors = [...errors];
   if (showMediumConfidence) {
@@ -91,9 +92,22 @@ export function AnnotatedTextRevealed({
     ? sorted.find((_, i) => `error-${sorted[i].start}-${sorted[i].end}-${i}` === activeErrorKey)
     : null;
 
+  // Scroll to show explanation at the top when an error is activated
+  useEffect(() => {
+    if (activeError && explanationRef.current) {
+      // Scroll the explanation div to the top of the viewport
+      explanationRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+    }
+  }, [activeError]);
+
   return (
     <div ref={containerRef} translate="no" lang="en" style={{ position: "relative" }}>
       <div
+        ref={explanationRef}
         style={{
           position: "sticky",
           top: 0,

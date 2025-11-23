@@ -2,6 +2,7 @@
  * Hook for managing draft history
  */
 
+import { useMemo } from "react";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { countWords } from "@writeo/shared";
 import { mapScoreToCEFR } from "./utils";
@@ -15,6 +16,7 @@ export function useDraftHistory(
   finalAnswerText: string,
   parentSubmissionId?: string
 ) {
+  // Store functions are stable, so we can call getState() directly
   const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
 
   const draftNumber = (data.meta?.draftNumber as number) || 1;
@@ -27,79 +29,102 @@ export function useDraftHistory(
       overallScore?: number;
     }>) || [];
 
-  const storedDraftHistory = submissionId ? getDraftHistory(submissionId) : [];
-  const parentDraftHistory = parentSubmissionId ? getDraftHistory(parentSubmissionId) : [];
+  // Memoize expensive draft history computation
+  const displayDraftHistory = useMemo(() => {
+    // Use root submission ID to get all drafts in the chain
+    // The root is either parentSubmissionId (if it exists) or submissionId (for draft 1)
+    const rootSubmissionId = parentSubmissionId || submissionId || "";
+    
+    // Get all drafts stored under the root submission ID
+    const storedDraftHistory = rootSubmissionId ? getDraftHistory(rootSubmissionId) : [];
+    
+    // Also try to get drafts by current submissionId in case they're stored differently
+    const currentDraftHistory = submissionId && submissionId !== rootSubmissionId 
+      ? getDraftHistory(submissionId) 
+      : [];
+    
+    // Merge both, preferring stored drafts with submissionIds
+    const allStoredDrafts = [
+      ...storedDraftHistory,
+      ...currentDraftHistory.filter(
+        (d) => !storedDraftHistory.some((sd) => sd.submissionId === d.submissionId)
+      ),
+    ];
 
-  const allStoredDrafts = [
-    ...storedDraftHistory,
-    ...parentDraftHistory.filter(
-      (d) => !storedDraftHistory.some((sd) => sd.submissionId === d.submissionId)
-    ),
-  ];
+    const draftMap = new Map<number, (typeof allStoredDrafts)[0]>();
 
-  const draftMap = new Map<number, (typeof allStoredDrafts)[0]>();
-
-  allStoredDrafts.forEach((draft) => {
-    if (draft.draftNumber) {
-      const existing = draftMap.get(draft.draftNumber);
-      if (!existing) {
-        draftMap.set(draft.draftNumber, draft);
-      } else if (
-        (!existing.submissionId && draft.submissionId) ||
-        (existing.timestamp < draft.timestamp && draft.submissionId)
-      ) {
-        draftMap.set(draft.draftNumber, draft);
+    allStoredDrafts.forEach((draft) => {
+      if (draft.draftNumber) {
+        const existing = draftMap.get(draft.draftNumber);
+        if (!existing) {
+          draftMap.set(draft.draftNumber, draft);
+        } else if (
+          (!existing.submissionId && draft.submissionId) ||
+          (existing.timestamp < draft.timestamp && draft.submissionId)
+        ) {
+          draftMap.set(draft.draftNumber, draft);
+        }
       }
-    }
-  });
+    });
 
-  draftHistory.forEach((d, idx) => {
-    const draftNum = d.draftNumber || idx + 1;
-    if (!draftMap.has(draftNum)) {
-      const isCurrentDraft = draftNum === draftNumber;
-      draftMap.set(draftNum, {
-        draftNumber: draftNum,
-        submissionId: isCurrentDraft ? submissionId || "" : "",
-        timestamp: d.timestamp,
-        wordCount: d.wordCount,
-        errorCount: d.errorCount,
-        overallScore: d.overallScore,
-        cefrLevel: d.overallScore ? mapScoreToCEFR(d.overallScore) : undefined,
+    draftHistory.forEach((d, idx) => {
+      const draftNum = d.draftNumber || idx + 1;
+      if (!draftMap.has(draftNum)) {
+        const isCurrentDraft = draftNum === draftNumber;
+        draftMap.set(draftNum, {
+          draftNumber: draftNum,
+          submissionId: isCurrentDraft ? submissionId || "" : "",
+          timestamp: d.timestamp,
+          wordCount: d.wordCount,
+          errorCount: d.errorCount,
+          overallScore: d.overallScore,
+          cefrLevel: d.overallScore ? mapScoreToCEFR(d.overallScore) : undefined,
+          errorIds: [],
+        });
+      }
+    });
+
+    let result = Array.from(draftMap.values()).sort(
+      (a, b) => a.draftNumber - b.draftNumber
+    );
+
+    const hasCurrentDraft = result.some((d) => d.draftNumber === draftNumber);
+    if (!hasCurrentDraft && submissionId && overall > 0) {
+      const wordCount = countWords(finalAnswerText);
+      result.push({
+        draftNumber,
+        submissionId,
+        timestamp: new Date().toISOString(),
+        wordCount,
+        errorCount: grammarErrors.length,
+        overallScore: overall,
+        cefrLevel: mapScoreToCEFR(overall),
         errorIds: [],
       });
+      result.sort((a, b) => a.draftNumber - b.draftNumber);
     }
-  });
 
-  let displayDraftHistory = Array.from(draftMap.values()).sort(
-    (a, b) => a.draftNumber - b.draftNumber
-  );
-
-  const hasCurrentDraft = displayDraftHistory.some((d) => d.draftNumber === draftNumber);
-  if (!hasCurrentDraft && submissionId && overall > 0) {
-    const wordCount = countWords(finalAnswerText);
-    displayDraftHistory.push({
-      draftNumber,
-      submissionId,
-      timestamp: new Date().toISOString(),
-      wordCount,
-      errorCount: grammarErrors.length,
-      overallScore: overall,
-      cefrLevel: mapScoreToCEFR(overall),
-      errorIds: [],
+    const finalDraftMap = new Map<number, (typeof result)[0]>();
+    result.forEach((draft) => {
+      const existing = finalDraftMap.get(draft.draftNumber);
+      if (!existing || (!existing.submissionId && draft.submissionId)) {
+        finalDraftMap.set(draft.draftNumber, draft);
+      }
     });
-    displayDraftHistory.sort((a, b) => a.draftNumber - b.draftNumber);
-  }
-
-  const finalDraftMap = new Map<number, (typeof displayDraftHistory)[0]>();
-  displayDraftHistory.forEach((draft) => {
-    const existing = finalDraftMap.get(draft.draftNumber);
-    if (!existing || (!existing.submissionId && draft.submissionId)) {
-      finalDraftMap.set(draft.draftNumber, draft);
-    }
-  });
-  displayDraftHistory = Array.from(finalDraftMap.values()).sort(
-    (a, b) => a.draftNumber - b.draftNumber
-  );
+    
+    return Array.from(finalDraftMap.values()).sort(
+      (a, b) => a.draftNumber - b.draftNumber
+    );
+  }, [
+    draftNumber,
+    draftHistory,
+    submissionId,
+    parentSubmissionId,
+    overall,
+    grammarErrors.length,
+    finalAnswerText,
+    getDraftHistory,
+  ]);
 
   return { displayDraftHistory, draftNumber, parentSubmissionId };
 }

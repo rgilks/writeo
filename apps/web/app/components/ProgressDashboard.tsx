@@ -193,12 +193,14 @@ export function ProgressDashboard() {
 
   // Use selectors to subscribe only to needed state slices
   // This prevents re-renders when unrelated state changes
+  // Separate selectors are more efficient - Zustand handles them optimally
   const drafts = useDraftStore((state) => state.drafts);
   const progress = useDraftStore((state) => state.progress);
   const streak = useDraftStore((state) => state.streak);
   const achievements = useDraftStore((state) => state.achievements);
 
   // Use computed selectors from store for better performance
+  // These are stable functions, so we can call them directly
   const totalDrafts = useDraftStore((state) => state.getTotalDrafts());
   const totalWritings = useDraftStore((state) => state.getTotalWritings());
   const averageImprovement = useDraftStore((state) => state.getAverageImprovement());

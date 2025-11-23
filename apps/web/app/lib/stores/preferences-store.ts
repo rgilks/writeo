@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { devtools } from "zustand/middleware";
-import { produce } from "immer";
+import { devtools, persist, createJSONStorage } from "zustand/middleware";
+import { immer } from "zustand/middleware/immer";
 
 export type ViewMode = "learner" | "developer";
 
@@ -57,55 +57,55 @@ const loadFromStorage = (): Partial<PreferencesStore> => {
   return {};
 };
 
-// Save to localStorage
-const saveToStorage = (state: PreferencesStore) => {
-  if (typeof window === "undefined") return;
-
-  try {
-    const toStore = {
-      viewMode: state.viewMode,
-      storeResults: state.storeResults,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
-  } catch (error) {
-    console.error("Failed to save preferences to localStorage:", error);
-  }
-};
-
 export const usePreferencesStore = create<PreferencesStore>()(
   devtools(
-    (set, get) => {
-      const initialState = loadFromStorage();
+    persist(
+      immer((set) => {
+        const initialState = loadFromStorage();
 
-      return {
-        viewMode: (initialState.viewMode as ViewMode) || "learner",
-        storeResults: initialState.storeResults ?? false,
+        return {
+          viewMode: (initialState.viewMode as ViewMode) || "learner",
+          storeResults: initialState.storeResults ?? false,
 
-        setViewMode: (mode) => {
-          set(
-            produce((draft) => {
-              draft.viewMode = mode;
-            }),
-            false,
-            "setViewMode"
-          );
-          // Save after mutation completes (get final state)
-          saveToStorage(get());
+          setViewMode: (mode) => {
+            set((state) => {
+              state.viewMode = mode;
+            });
+          },
+
+          setStoreResults: (value) => {
+            set((state) => {
+              state.storeResults = value;
+            });
+          },
+        };
+      }),
+      {
+        name: STORAGE_KEY,
+        storage: createJSONStorage(() => localStorage),
+        // Migrate from old separate keys
+        onRehydrateStorage: () => (state) => {
+          if (state && typeof window !== "undefined") {
+            // Migrate from old separate keys for backwards compatibility
+            const oldViewMode = localStorage.getItem("writeo-view-mode");
+            const oldStoreResults = localStorage.getItem("writeo-store-results");
+
+            if (oldViewMode === "developer" || oldViewMode === "learner") {
+              state.viewMode = oldViewMode;
+            }
+            if (oldStoreResults === "true") {
+              state.storeResults = true;
+            }
+
+            // Clean up old keys if they exist
+            if (oldViewMode || oldStoreResults) {
+              localStorage.removeItem("writeo-view-mode");
+              localStorage.removeItem("writeo-store-results");
+            }
+          }
         },
-
-        setStoreResults: (value) => {
-          set(
-            produce((draft) => {
-              draft.storeResults = value;
-            }),
-            false,
-            "setStoreResults"
-          );
-          // Save after mutation completes (get final state)
-          saveToStorage(get());
-        },
-      };
-    },
+      }
+    ),
     { name: "PreferencesStore" }
   )
 );

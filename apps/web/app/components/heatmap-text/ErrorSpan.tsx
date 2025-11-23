@@ -2,7 +2,7 @@
  * Error span component - highlights text and triggers suggestion display
  */
 
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import type { ErrorSpanProps } from "./types";
 
 export function ErrorSpan({
@@ -16,15 +16,8 @@ export function ErrorSpan({
 }: ErrorSpanProps) {
   const errorRef = useRef<HTMLSpanElement>(null);
 
-  useEffect(() => {
-    if (isActive && errorRef.current) {
-      errorRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "nearest",
-      });
-    }
-  }, [isActive]);
+  // Removed scroll behavior - scrolling is now handled by parent component
+  // to show the explanation at the top instead of centering the error span
 
   return (
     <span
