@@ -14,8 +14,6 @@ You need **different files for different parts**:
 - **Web App**: `apps/web/.env.local` (Next.js standard)
 - **Tests**: `.env.local` in project root
 
-**You don't need `.env` files** - `.env.local` is sufficient. Some configs load `.env` as a fallback, but `.env.local` takes precedence.
-
 ### API Worker
 
 **Production:** Set via `wrangler secret put`:
