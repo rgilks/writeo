@@ -62,7 +62,7 @@ Client → API Worker → [Essay Scoring + LanguageTool + Relevance Check (paral
 
 - **LLM:** Groq Llama 3.3 70B Versatile
 - **Modal Services:** Keep warm (reduced scaledown window)
-- **Cost:** ~$65-80/month (100 submissions/day)
+- **Cost:** ~$25-40/month (100 submissions/day)
 
 **Processing Flow:**
 
@@ -193,7 +193,7 @@ See [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) for detailed documentation.
 
 - **Multi-Provider Support**: Choose between OpenAI (GPT-4o-mini) or Groq (Llama 3.3 70B Versatile)
 - **OpenAI (GPT-4o-mini)**: Cost-effective (~$0.0025/submission), excellent quality, ~1-3s inference
-- **Groq (Llama 3.3 70B)**: Ultra-fast (~100-500ms inference), excellent quality, ~$0.02/submission
+- **Groq (Llama 3.3 70B Versatile)**: Ultra-fast (~100-500ms inference), excellent quality, ~$0.006/submission
 - Receives full context from essay scores and LanguageTool errors
 - Provides contextual, actionable feedback tailored to student's level
 - Switch providers via `LLM_PROVIDER` environment variable
@@ -534,6 +534,7 @@ Each submission makes **2 required API calls** to OpenAI:
 | **Cloudflare R2 Storage**       | 10 GB free        | $0.00                   |
 | **Cloudflare KV Storage**       | 100 MB free       | $0.00                   |
 | **OpenAI API (GPT-4o-mini)**    | Pay-per-use       | ~$0.0025 per submission |
+| **Groq API (Llama 3.3 70B)**    | Pay-per-use       | ~$0.006 per submission  |
 | **Modal Essay Scoring Service** | Pay-per-use       | ~$0.10-1.00/month       |
 | **Modal LanguageTool**          | Pay-per-use       | ~$0.01-0.10/month       |
 | **Total Infrastructure**        | -                 | **~$0.12-1.15/month**   |

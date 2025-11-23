@@ -140,8 +140,8 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 
 - [ ] Review OpenAI Terms: https://openai.com/policies/terms-of-use
 - [ ] Review OpenAI Privacy: https://openai.com/policies/privacy-policy
-- [ ] Review Groq Terms (if using Groq): https://groq.com/legal/terms
-- [ ] Review Groq Privacy (if using Groq): https://groq.com/legal/privacy
+- [ ] Review Groq Terms: https://groq.com/legal/terms
+- [ ] Review Groq Privacy: https://groq.com/legal/privacy
 - [ ] Review Cloudflare Terms: https://www.cloudflare.com/terms/
 - [ ] Review Cloudflare Privacy: https://www.cloudflare.com/privacy/
 - [ ] Verify HuggingFace model licenses
@@ -421,7 +421,7 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 ### Third-Party Terms to Review
 
 - OpenAI: https://openai.com/policies/terms-of-use
-- Groq (if used): https://groq.com/legal/terms
+- Groq: https://groq.com/legal/terms
 - Cloudflare: https://www.cloudflare.com/terms/
 - LanguageTool: https://languagetool.org/legal/
 - HuggingFace: https://huggingface.co/terms
@@ -440,37 +440,9 @@ This document tracks legal compliance requirements for Writeo, including GDPR, C
 
 1. **Missing Contact Information** - Privacy policy and Terms reference "contact us" but provide no actual contact details (email, address). Violates GDPR Article 13(1)(a) and CCPA.
 
-2. ~~**Missing Age Restriction Statement**~~ ✅ **RESOLVED** - Age guidelines added (all ages welcome, parental guidance recommended).
-
-3. ~~**Age Verification Implementation**~~ ✅ **NOT REQUIRED** - With opt-in storage model (no data collection by default), COPPA doesn't apply. No age gate needed.
-
 ### Should Fix Soon:
 
-4. ~~**API Rate Limiting Not Disclosed**~~ ✅ **RESOLVED** - Rate limits documented in Terms of Service.
-
-5. ~~**Missing Accessibility Statement**~~ ✅ **RESOLVED** - Accessibility statement created and linked from footer.
-
-6. ~~**Missing Cookie Policy**~~ ✅ **RESOLVED** - Cookie policy created explaining no cookies are used.
-
-7. ~~**CCPA "Do Not Sell" Option**~~ ✅ **RESOLVED** - Added to privacy policy.
-
-8. ~~**Non-Discrimination Policy**~~ ✅ **RESOLVED** - Added to privacy policy.
-
-9. ~~**DPA Information**~~ ✅ **RESOLVED** - Expanded third-party services section with DPA details.
-
-10. ~~**Data Breach Notification Procedures**~~ ✅ **RESOLVED** - Added to privacy policy.
-
-11. **Missing Data Breach Notification Procedures** - Required for GDPR/CCPA compliance (even with opt-in storage model).
-
-### Nice to Have:
-
-7. **Cookie Policy** - While not required (no cookies used), a dedicated policy is best practice.
-
-8. **CCPA "Do Not Sell" Option** - Required if serving California users (even if not selling data).
-
-9. **Non-Discrimination Policy** - Required for CCPA compliance.
-
-10. **DPA Information** - Clarify data processor relationships for enterprise users.
+1. **Missing Data Breach Notification Procedures** - Required for GDPR/CCPA compliance (even with opt-in storage model).
 
 ---
 

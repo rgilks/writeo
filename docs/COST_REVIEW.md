@@ -17,12 +17,12 @@ Writeo supports multiple LLM providers for AI-powered feedback. This document pr
 **Supported Providers:**
 
 - **OpenAI (GPT-4o-mini)**: ~$0.0025 per submission - Cost-effective, excellent quality
-- **Groq (Llama 3.3 70B)**: ~$0.02 per submission - Ultra-fast, excellent quality
+- **Groq (Llama 3.3 70B Versatile)**: ~$0.006 per submission - Ultra-fast, excellent quality
 
 **Operational Modes:**
 
 - **🪙 Cheap Mode**: GPT-4o-mini + Modal scale-to-zero → ~$7.60-8.50/month (100 submissions/day)
-- **⚡ Turbo Mode**: Llama 3.3 70B + Modal keep-warm → ~$65-80/month (100 submissions/day)
+- **⚡ Turbo Mode**: Llama 3.3 70B + Modal keep-warm → ~$25-40/month (100 submissions/day)
 
 **Key Cost Driver:** LLM API calls (varies by provider and mode)
 
@@ -99,14 +99,14 @@ Based on **rate limit of 10 submissions/minute** (14,400 submissions/day maximum
 | **High Usage**             | 1,000           | ~30,000           | $0.0025         | **~$75/month**    |
 | **Maximum (rate limited)** | 14,400          | ~432,000          | $0.0025         | **~$1,080/month** |
 
-**Groq (Llama 3.3 70B) Cost Scenarios:**
+**Groq (Llama 3.3 70B Versatile) Cost Scenarios:**
 
 | Scenario                   | Submissions/Day | Submissions/Month | Cost/Submission | Monthly Cost      |
 | -------------------------- | --------------- | ----------------- | --------------- | ----------------- |
-| **Low Usage**              | 10              | ~300              | $0.02           | **~$6/month**     |
-| **Moderate Usage**         | 100             | ~3,000            | $0.02           | **~$60/month**    |
-| **High Usage**             | 1,000           | ~30,000           | $0.02           | **~$600/month**   |
-| **Maximum (rate limited)** | 14,400          | ~432,000          | $0.02           | **~$8,640/month** |
+| **Low Usage**              | 10              | ~300              | $0.006          | **~$1.80/month**  |
+| **Moderate Usage**         | 100             | ~3,000            | $0.006          | **~$18/month**    |
+| **High Usage**             | 1,000           | ~30,000           | $0.006          | **~$180/month**   |
+| **Maximum (rate limited)** | 14,400          | ~432,000          | $0.006          | **~$2,592/month** |
 
 ### Realistic Usage Estimates
 
@@ -118,11 +118,11 @@ Based on **rate limit of 10 submissions/minute** (14,400 submissions/day maximum
 
 **Educational Context (Groq):**
 
-- Small class (20 students): ~20-40 submissions/day = **~$12-24/month**
-- Medium class (100 students): ~100-200 submissions/day = **~$60-120/month**
-- Large institution (1,000 students): ~1,000-2,000 submissions/day = **~$600-1,200/month**
+- Small class (20 students): ~20-40 submissions/day = **~$3.60-7.20/month**
+- Medium class (100 students): ~100-200 submissions/day = **~$18-36/month**
+- Large institution (1,000 students): ~1,000-2,000 submissions/day = **~$180-360/month**
 
-**Note:** Rate limiting (10/min) prevents runaway costs. Maximum theoretical cost is **~$1,080/month (OpenAI)** or **~$8,640/month (Groq)** if running at full capacity 24/7.
+**Note:** Rate limiting (10/min) prevents runaway costs. Maximum theoretical cost is **~$1,080/month (OpenAI)** or **~$2,592/month (Groq)** if running at full capacity 24/7.
 
 ---
 
@@ -216,10 +216,10 @@ Set `OPENAI_API_KEY=MOCK` or `GROQ_API_KEY=MOCK` to use mock responses (no real 
 | Detailed AI Feedback            | ✅                            | ❌              |
 | Teacher Feedback                | ✅                            | ❌              |
 | Context-aware Suggestions       | ✅                            | ❌              |
-| **Cost per submission**         | ~$0.02                        | ~$0.0001-0.001  |
-| **Monthly cost (100/day)**      | ~$60                          | ~$0.11-1.10     |
+| **Cost per submission**         | ~$0.006                       | ~$0.0001-0.001  |
+| **Monthly cost (100/day)**      | ~$18                          | ~$0.11-1.10     |
 
-**Recommendation:** For production use, both OpenAI and Groq provide excellent value for comprehensive AI feedback. Choose OpenAI for cost efficiency (~$0.0025/submission) or Groq for ultra-fast responses (~$0.02/submission). If cost is a concern, the system can operate without LLM API using only LanguageTool for grammar checking.
+**Recommendation:** For production use, both OpenAI and Groq provide excellent value for comprehensive AI feedback. Choose OpenAI for cost efficiency (~$0.0025/submission) or Groq for ultra-fast responses (~$0.006/submission). If cost is a concern, the system can operate without LLM API using only LanguageTool for grammar checking.
 
 ---
 
@@ -236,7 +236,7 @@ Set `OPENAI_API_KEY=MOCK` or `GROQ_API_KEY=MOCK` to use mock responses (no real 
 **Cost Protection:**
 
 - Maximum: 14,400 submissions/day = ~432,000/month
-- At $0.02/submission: **Maximum ~$8,640/month**
+- At $0.006/submission: **Maximum ~$2,592/month**
 - Prevents single user from causing runaway costs
 
 ### 2. Word Count Limits ✅
@@ -529,8 +529,8 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 - Token limits reduced
 - Text truncation enabled
 - Rate limiting active
-- **Cost:** ~$0.02 per submission
-- **Monthly (100/day):** ~$60
+- **Cost:** ~$0.0025 per submission (OpenAI) / ~$0.006 (Groq)
+- **Monthly (100/day):** ~$7.50 (OpenAI) / ~$18 (Groq)
 
 ### Scenario 2: Without Optimizations (Hypothetical)
 
