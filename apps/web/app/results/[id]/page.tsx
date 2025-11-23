@@ -25,17 +25,6 @@ export default function ResultsPage() {
   const [processingTime, setProcessingTime] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
 
-  // Get parent submission ID from results.meta (single source of truth)
-  // URL param ?parent= is no longer needed since parentSubmissionId is in results.meta
-  const [parentId, setParentId] = useState<string | null>(() => {
-    // Try to get from initial results if available
-    if (initialResults?.meta?.parentSubmissionId) {
-      return initialResults.meta.parentSubmissionId as string;
-    }
-    // Fallback to results store
-    return getParentSubmissionId(submissionId);
-  });
-
   // Check if results were passed via router state (from write page) or stored locally
   const [initialResults] = useState<AssessmentResults | null>(() => {
     // Try to get results from sessionStorage first (immediate display from write page)
@@ -54,6 +43,17 @@ export default function ResultsPage() {
       return getResult(submissionId);
     }
     return null;
+  });
+
+  // Get parent submission ID from results.meta (single source of truth)
+  // URL param ?parent= is no longer needed since parentSubmissionId is in results.meta
+  const [parentId, setParentId] = useState<string | null>(() => {
+    // Try to get from initial results if available
+    if (initialResults?.meta?.parentSubmissionId) {
+      return initialResults.meta.parentSubmissionId as string;
+    }
+    // Fallback to results store
+    return getParentSubmissionId(submissionId);
   });
 
   // Fetch results
