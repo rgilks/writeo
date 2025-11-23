@@ -34,53 +34,42 @@ Writeo supports multiple LLM providers for AI-powered feedback. This document pr
 
 Each essay submission triggers **2 required API calls** to your chosen LLM provider (OpenAI or Groq):
 
+**Pricing Basis (as of Q1 2025):**
+
+- **OpenAI GPT-4o-mini:** ~$0.15/1M input, ~$0.60/1M output
+- **Groq Llama 3.3 70B:** ~$0.59/1M input, ~$0.79/1M output
+
 1. **Grammar Error Detection** (`getLLMAssessment`)
-   - **Purpose:** Identify grammar, spelling, and language errors
-   - **Input tokens:** ~2,000-3,000 (question + answer text + prompt)
-   - **Output tokens:** ~500-1,000 (JSON error list)
-   - **Max tokens:** 2,500 (reduced from 4,000 to save costs)
-   - **Cost:** ~$0.001 per call
+   - **Input tokens:** ~2,500 avg (Question + Answer + Prompt)
+   - **Output tokens:** ~750 avg (JSON error list)
+   - **Cost (OpenAI):** ~$0.0008
+   - **Cost (Groq):** ~$0.0021
    - **Frequency:** Once per answer submission
 
 2. **Detailed Feedback** (`getCombinedFeedback`)
-   - **Purpose:** Provide comprehensive feedback on essay quality (relevance, strengths, improvements)
-   - **Input tokens:** ~3,000-5,000 (question + answer + assessment context + grammar errors)
-   - **Output tokens:** ~400-500 (structured JSON feedback)
-   - **Max tokens:** 500
-   - **Cost:** ~$0.0015 per call
+   - **Input tokens:** ~4,000 avg (Question + Answer + Context + Errors)
+   - **Output tokens:** ~450 avg (Structured feedback)
+   - **Cost (OpenAI):** ~$0.0009
+   - **Cost (Groq):** ~$0.0027
    - **Frequency:** Once per answer submission
-   - **Optimizations:**
-     - Essay text truncated to 15,000 chars (~2,500 words) to limit input tokens
-     - Question text truncated to 500 chars (safety measure)
-     - Error context limited to top 10 errors
 
 3. **Teacher Feedback** (`getTeacherFeedback` / streaming endpoint) - **OPTIONAL**
    - **Purpose:** Provide concise, teacher-style feedback (initial, clues, or detailed explanation)
-   - **Input tokens:** ~2,000-4,000 (varies by mode)
-   - **Output tokens:** ~100-200 (initial/clues) or ~400-800 (explanation)
-   - **Max tokens:** 150 (initial/clues) or 800 (explanation)
-   - **Cost:** ~$0.001 per call
+   - **Input tokens:** ~1,200-1,500 (average observed: ~1,300)
+   - **Output tokens:** ~400-800 (average observed: ~750 for explanation)
+   - **Cost (OpenAI):** ~$0.0008
+   - **Cost (Groq):** ~$0.0014
    - **Frequency:** On-demand (user requests teacher feedback)
    - **Streaming:** The UI uses Server-Sent Events (SSE) streaming for real-time feedback display
-     - Feedback appears incrementally as it's generated
-     - Provides better user experience with immediate visual feedback
-     - Uses `/text/submissions/{id}/ai-feedback/stream` endpoint
-   - **Modes:**
-     - **Initial:** Brief 2-3 sentence feedback
-     - **Clues:** Hints to guide student improvement
-     - **Explanation:** Detailed markdown analysis for teachers (streamed in UI)
 
-### Total Cost Per Submission
+### Total Cost Per Submission (Base)
 
-- **Base submission (required):** ~$0.0025
-- **With teacher feedback (optional):** ~$0.003-0.004
-- **Average (assuming 20% request teacher feedback):** ~$0.0027
+| Provider                 | Input Cost (6.5k tokens) | Output Cost (1.2k tokens) | **Total Base Cost**   |
+| :----------------------- | :----------------------- | :------------------------ | :-------------------- |
+| **OpenAI (GPT-4o-mini)** | ~$0.0010                 | ~$0.0007                  | **~$0.0017 - 0.0025** |
+| **Groq (Llama 3.3 70B)** | ~$0.0038                 | ~$0.0009                  | **~$0.0048 - 0.0060** |
 
-**Note:** Costs vary based on:
-
-- Essay length (affects input tokens)
-- Number of errors found (affects output tokens)
-- OpenAI API pricing (subject to change)
+_Note: Ranges account for varying essay lengths (250-500 words) and error counts._
 
 ---
 
@@ -529,7 +518,7 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 - Token limits reduced
 - Text truncation enabled
 - Rate limiting active
-- **Cost:** ~$0.0025 per submission (OpenAI) / ~$0.006 (Groq)
+- **Cost:** ~$0.0017-0.0025 per submission (OpenAI) / ~$0.0048-0.0060 (Groq)
 - **Monthly (100/day):** ~$7.50 (OpenAI) / ~$18 (Groq)
 
 ### Scenario 2: Without Optimizations (Hypothetical)

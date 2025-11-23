@@ -4,10 +4,10 @@ Quick guide for switching between Cheap Mode and Turbo Mode.
 
 ## Quick Reference
 
-| Mode         | LLM Provider       | Modal Scaling       | Cost (100/day)    | Latency                |
-| ------------ | ------------------ | ------------------- | ----------------- | ---------------------- |
-| **🪙 Cheap** | OpenAI GPT-4o-mini | Scale-to-zero (30s) | ~$7.60-8.50/month | 8-15s cold, 3-10s warm |
-| **⚡ Turbo** | Groq Llama 3.3 70B Versatile | Keep warm (2s)      | ~$25-40/month     | 2-5s first, 1-3s warm  |
+| Mode         | LLM Provider                 | Modal Scaling       | Cost (100/day)    | Latency                 |
+| ------------ | ---------------------------- | ------------------- | ----------------- | ----------------------- |
+| **🪙 Cheap** | OpenAI GPT-4o-mini           | Scale-to-zero (30s) | ~$7.60-8.50/month | 10-15s cold, 3-10s warm |
+| **⚡ Turbo** | Groq Llama 3.3 70B Versatile | Keep warm (2s)      | ~$25-40/month     | 2-5s first, 1-3s warm   |
 
 ## Local Development
 

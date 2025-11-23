@@ -494,10 +494,10 @@ See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for detailed compliance informati
 | Step                                  | Warm (P50) | Cold      | Notes                                |
 | ------------------------------------- | ---------- | --------- | ------------------------------------ |
 | **PUT /text/submissions/{id}**        | ~0.94s     | 11.3s     | Includes parallel Modal calls        |
-| **Modal POST /grade (Essay Scoring)** | ~0.13s     | 8.4-10.0s | GPU inference + model loading        |
-| **Modal POST /check (LanguageTool)**  | ~0.1-0.5s  | 2-3s      | CPU-only, JAR download on cold start |
+| **Modal POST /grade (Essay Scoring)** | ~0.2s      | 9.5-11.5s | GPU inference + model loading        |
+| **Modal POST /check (LanguageTool)**  | ~0.2-0.4s  | 7.5-8.5s  | CPU-only, JAR download on cold start |
 | **GET /text/submissions/{id}**        | 6ms        | n/a       | KV read                              |
-| **End-to-end (user experience)**      | ~1.8-2.0s  | ~11s      | Full submission → results visible    |
+| **End-to-end (user experience)**      | ~1.8-2.5s  | ~12s      | Full submission → results visible    |
 
 **Bottleneck Analysis:**
 
@@ -518,26 +518,28 @@ See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for detailed compliance informati
 
 **Cost Per Submission:**
 
-Each submission makes **2 required API calls** to OpenAI:
+Each submission makes **2 required API calls** to your chosen LLM provider:
 
-- Grammar check (`getLLMAssessment`): ~$0.001
-- Detailed feedback (`getCombinedFeedback`): ~$0.0015
-- **Total:** ~$0.0025 per submission (base)
-- **With teacher feedback (optional):** ~$0.003-0.004
+- **Grammar check (`getLLMAssessment`)**: ~$0.0008 (OpenAI) / ~$0.0021 (Groq)
+- **Detailed feedback (`getCombinedFeedback`)**: ~$0.0009 (OpenAI) / ~$0.0027 (Groq)
+- **Total Base Cost:**
+  - **OpenAI (GPT-4o-mini):** ~$0.0017 - 0.0025 per submission
+  - **Groq (Llama 3.3 70B):** ~$0.0048 - 0.0060 per submission
+- **With teacher feedback (optional):** Adds ~$0.0008 (OpenAI) or ~$0.0014 (Groq)
 
 **Infrastructure Costs (Free Tier):**
 
-| Service                         | Free Tier         | Monthly Cost            |
-| ------------------------------- | ----------------- | ----------------------- |
-| **Cloudflare Workers**          | 100k requests/day | $0.00                   |
-| **Cloudflare Workers AI**       | 10k requests/day  | $0.00                   |
-| **Cloudflare R2 Storage**       | 10 GB free        | $0.00                   |
-| **Cloudflare KV Storage**       | 100 MB free       | $0.00                   |
-| **OpenAI API (GPT-4o-mini)**    | Pay-per-use       | ~$0.0025 per submission |
-| **Groq API (Llama 3.3 70B)**    | Pay-per-use       | ~$0.006 per submission  |
-| **Modal Essay Scoring Service** | Pay-per-use       | ~$0.10-1.00/month       |
-| **Modal LanguageTool**          | Pay-per-use       | ~$0.01-0.10/month       |
-| **Total Infrastructure**        | -                 | **~$0.12-1.15/month**   |
+| Service                         | Free Tier         | Monthly Cost                   |
+| ------------------------------- | ----------------- | ------------------------------ |
+| **Cloudflare Workers**          | 100k requests/day | $0.00                          |
+| **Cloudflare Workers AI**       | 10k requests/day  | $0.00                          |
+| **Cloudflare R2 Storage**       | 10 GB free        | $0.00                          |
+| **Cloudflare KV Storage**       | 100 MB free       | $0.00                          |
+| **OpenAI API (GPT-4o-mini)**    | Pay-per-use       | ~$0.0017-0.0025 per submission |
+| **Groq API (Llama 3.3 70B)**    | Pay-per-use       | ~$0.0048-0.0060 per submission |
+| **Modal Essay Scoring Service** | Pay-per-use       | ~$0.10-1.00/month              |
+| **Modal LanguageTool**          | Pay-per-use       | ~$0.01-0.10/month              |
+| **Total Infrastructure**        | -                 | **~$0.12-1.15/month**          |
 
 **Monthly Cost Examples (Including OpenAI API):**
 
