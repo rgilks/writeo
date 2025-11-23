@@ -74,6 +74,7 @@ warn_unreachable = true
 module = [
     "modal.*",
     "languagetool.*",
+    "language_tool_python.*",
 ]
 ignore_missing_imports = true
 

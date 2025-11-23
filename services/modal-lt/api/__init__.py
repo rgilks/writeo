@@ -1,9 +1,11 @@
 """API module - FastAPI app creation."""
 
 import time
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 from schemas import CheckRequest
 from tool_loader import get_languagetool_tool
@@ -13,7 +15,7 @@ from .middleware import get_api_key, verify_api_key
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Lifespan context manager for FastAPI app."""
     startup_start = time.time()
     try:
@@ -49,12 +51,12 @@ def create_fastapi_app() -> FastAPI:
     api.middleware("http")(verify_api_key)
 
     @api.get("/health", tags=["Health"])
-    async def health():
+    async def health() -> dict:
         """Health check endpoint."""
         return await handle_health()
 
     @api.post("/check", tags=["Grammar Check"])
-    async def check(request: CheckRequest):
+    async def check(request: CheckRequest) -> JSONResponse:
         """Check text for grammar and language errors using LanguageTool."""
         return await handle_check(request)
 

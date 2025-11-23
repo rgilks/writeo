@@ -45,7 +45,7 @@ def download_ngram_zip() -> str | None:
             fd, tmp_path = tempfile.mkstemp(suffix=".zip")
             os.close(fd)
 
-            def show_progress(block_num, block_size, total_size):
+            def show_progress(block_num: int, block_size: int, total_size: int) -> None:
                 if total_size > 0:
                     percent = min(100, (block_num * block_size * 100) / total_size)
                     downloaded_mb = (block_num * block_size) / (1024 * 1024)

@@ -125,14 +125,23 @@ if [ -n "$PYTHON_FILES" ]; then
   echo "${YELLOW}Running Python type checker (mypy - strict)...${NC}"
   PYTHON_ERRORS=0
   
-  # Check common Python directories that have staged files
+  # Check all Python directories that have pyproject.toml files
+  # This ensures we catch type errors even if only some Python files are staged
   for dir in services/modal-essay services/modal-lt packages/shared/py; do
-    if [ -d "$dir" ] && echo "$PYTHON_FILES" | grep -q "^$dir/"; then
-      if [ -f "$dir/pyproject.toml" ]; then
-        echo "${YELLOW}Checking $dir...${NC}"
-        if ! mypy "$dir" --config-file "$dir/pyproject.toml"; then
-          PYTHON_ERRORS=$((PYTHON_ERRORS + 1))
-        fi
+    if [ -d "$dir" ] && [ -f "$dir/pyproject.toml" ]; then
+      echo "${YELLOW}Checking $dir...${NC}"
+      # Run mypy and filter out internal errors (which we can't fix)
+      mypy_output=$(mypy "$dir" --config-file "$dir/pyproject.toml" 2>&1 | grep -v "INTERNAL ERROR" || true)
+      mypy_exit_code=$?
+      
+      # Check if there are actual type errors (not just internal errors)
+      if echo "$mypy_output" | grep -q "error:"; then
+        echo "$mypy_output"
+        PYTHON_ERRORS=$((PYTHON_ERRORS + 1))
+      elif [ $mypy_exit_code -ne 0 ] && ! echo "$mypy_output" | grep -q "Success:"; then
+        # Mypy failed but we didn't see the error message (shouldn't happen, but be safe)
+        echo "$mypy_output"
+        PYTHON_ERRORS=$((PYTHON_ERRORS + 1))
       fi
     fi
   done

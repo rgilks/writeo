@@ -12,8 +12,8 @@ from .constants import (
 
 def analyze_matches(matches: list) -> dict[str, Any]:
     """Analyze match types and return statistics."""
-    categories = {}
-    rule_types = {}
+    categories: dict[str, int] = {}
+    rule_types: dict[str, int] = {}
     grammar_count = 0
     spelling_count = 0
     style_count = 0

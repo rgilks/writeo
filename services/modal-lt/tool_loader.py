@@ -14,7 +14,7 @@ from ngram_setup import setup_ngram_data
 lt_tool: Any | None = None
 
 
-def setup_environment(cache_base: str, jar_dir: str) -> tuple[str, str, str | None]:
+def setup_environment(cache_base: str, jar_dir: str) -> tuple[str, str | None, str | None]:
     """Set up environment variables for LanguageTool."""
     original_home = os.environ.get("HOME", "/root")
     original_xdg_cache = os.environ.get("XDG_CACHE_HOME")
@@ -68,7 +68,7 @@ def create_tool_with_config(language: str, ngram_path: str | None) -> Any:
     test_grammar_text = "I goes to the store. He don't like it."
     print(f"🧪 Testing grammar detection with: '{test_grammar_text}'")
 
-    tool_config = {"maxSpellingSuggestions": 5}
+    tool_config: dict[str, Any] = {"maxSpellingSuggestions": 5}
 
     if ngram_path:
         tool_config["languageModel"] = ngram_path

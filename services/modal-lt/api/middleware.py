@@ -2,12 +2,13 @@
 
 import os
 import re
+from collections.abc import Awaitable, Callable
 
-from fastapi import Request, status
+from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
 
 
-def get_api_key() -> str:
+def get_api_key() -> str | None:
     """Get API key from environment."""
     MODAL_API_KEY = os.getenv("MODAL_API_KEY")
     if not MODAL_API_KEY:
@@ -16,7 +17,9 @@ def get_api_key() -> str:
     return MODAL_API_KEY
 
 
-async def verify_api_key(request: Request, call_next):
+async def verify_api_key(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     """Verify API key from Authorization header."""
     path = request.url.path
     if path == "/health":
