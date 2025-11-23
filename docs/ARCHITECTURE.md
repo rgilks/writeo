@@ -17,7 +17,7 @@
 3. [Components & Technology](#3-components--technology)
 4. [Data Flow](#4-data-flow)
 5. [Storage Architecture](#5-storage-architecture)
-6. [Performance & Costs](#6-performance--costs)
+6. [Performance](#6-performance)
 
 ---
 
@@ -42,7 +42,6 @@ Writeo supports two operational modes optimized for different use cases:
 
 - **LLM:** OpenAI GPT-4o-mini
 - **Modal Services:** Scale-to-zero after 30 seconds
-- **Cost:** ~$7.60-8.50/month (100 submissions/day)
 
 **Processing Flow:**
 
@@ -62,7 +61,6 @@ Client → API Worker → [Essay Scoring + LanguageTool + Relevance Check (paral
 
 - **LLM:** Groq Llama 3.3 70B Versatile
 - **Modal Services:** Keep warm (reduced scaledown window)
-- **Cost:** ~$25-40/month (100 submissions/day)
 
 **Processing Flow:**
 
@@ -192,8 +190,8 @@ See [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) for detailed documentation.
 **AI Feedback:**
 
 - **Multi-Provider Support**: Choose between OpenAI (GPT-4o-mini) or Groq (Llama 3.3 70B Versatile)
-- **OpenAI (GPT-4o-mini)**: Cost-effective (~$0.0025/submission), excellent quality, ~1-3s inference
-- **Groq (Llama 3.3 70B Versatile)**: Ultra-fast (~100-500ms inference), excellent quality, ~$0.006/submission
+- **OpenAI (GPT-4o-mini)**: Cost-effective, excellent quality, ~1-3s inference
+- **Groq (Llama 3.3 70B Versatile)**: Ultra-fast (~100-500ms inference), excellent quality
 - Receives full context from essay scores and LanguageTool errors
 - Provides contextual, actionable feedback tailored to student's level
 - Switch providers via `LLM_PROVIDER` environment variable
@@ -202,7 +200,6 @@ See [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) for detailed documentation.
 
 - Uses embeddings model (`@cf/baai/bge-base-en-v1.5`)
 - Fast cosine similarity calculation (~100-200ms)
-- Cost-effective validation (~$0.0001 per check)
 
 **Essay Scoring Service (`modal-essay`):**
 
@@ -487,7 +484,7 @@ See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for detailed compliance informati
 
 ---
 
-## 6. Performance & Costs
+## 6. Performance
 
 ### 6.1 Latency (Warm vs Cold)
 
@@ -514,60 +511,9 @@ See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for detailed compliance informati
 | **Average Requests/sec** | ~1.2 requests/second (100k/day average) |
 | **Burst Capacity**       | Handles traffic spikes automatically    |
 
-### 6.3 Cost Estimates
+### 6.3 Cost Information
 
-**Cost Per Submission:**
-
-Each submission makes **2 required API calls** to your chosen LLM provider:
-
-- **Grammar check (`getLLMAssessment`)**: ~$0.0008 (OpenAI) / ~$0.0021 (Groq)
-- **Detailed feedback (`getCombinedFeedback`)**: ~$0.0009 (OpenAI) / ~$0.0027 (Groq)
-- **Total Base Cost:**
-  - **OpenAI (GPT-4o-mini):** ~$0.0017 - 0.0025 per submission
-  - **Groq (Llama 3.3 70B):** ~$0.0048 - 0.0060 per submission
-- **With teacher feedback (optional):** Adds ~$0.0008 (OpenAI) or ~$0.0014 (Groq)
-
-**Infrastructure Costs (Free Tier):**
-
-| Service                         | Free Tier         | Monthly Cost                   |
-| ------------------------------- | ----------------- | ------------------------------ |
-| **Cloudflare Workers**          | 100k requests/day | $0.00                          |
-| **Cloudflare Workers AI**       | 10k requests/day  | $0.00                          |
-| **Cloudflare R2 Storage**       | 10 GB free        | $0.00                          |
-| **Cloudflare KV Storage**       | 100 MB free       | $0.00                          |
-| **OpenAI API (GPT-4o-mini)**    | Pay-per-use       | ~$0.0017-0.0025 per submission |
-| **Groq API (Llama 3.3 70B)**    | Pay-per-use       | ~$0.0048-0.0060 per submission |
-| **Modal Essay Scoring Service** | Pay-per-use       | ~$0.10-1.00/month              |
-| **Modal LanguageTool**          | Pay-per-use       | ~$0.01-0.10/month              |
-| **Total Infrastructure**        | -                 | **~$0.12-1.15/month**          |
-
-**Monthly Cost Examples (Including OpenAI API):**
-
-| Usage Level | Submissions/Day | Monthly Cost  |
-| ----------- | --------------- | ------------- |
-| Low         | 10              | ~$0.75/month  |
-| Moderate    | 100             | ~$7.50/month  |
-| High        | 1,000           | ~$75/month    |
-| Maximum\*   | 14,400          | ~$1,080/month |
-
-\*Maximum limited by rate limit: 100 submissions/day per IP (hard cap)
-
-**Cost Controls:**
-
-- ✅ Rate limiting: 10 submissions/minute per IP (prevents runaway costs)
-- ✅ Word limits: 250-500 words per essay (controls input size)
-- ✅ Text truncation: Essays truncated to 15,000 chars for AI processing
-- ✅ Token limits: Reduced max tokens (2,500 for grammar, 500 for feedback)
-- ✅ Mocking system: Tests use mocks to avoid API costs
-
-**Notes:**
-
-- Scale-to-zero: No idle costs for Workers or Modal services
-- Storage: Only charged for data stored (generous free tiers)
-- OpenAI API: Cost-effective LLM (~$0.0025 per submission)
-- Rate limiting provides cost protection (max ~$1,080/month theoretical)
-- See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis
-- See [OPERATIONS.md](OPERATIONS.md) for operations cost breakdown
+See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis, including per-submission costs, monthly estimates, and cost controls.
 
 ### 6.4 Performance Optimizations Implemented
 

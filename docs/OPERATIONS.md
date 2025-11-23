@@ -197,63 +197,10 @@ Writeo supports two operational modes optimized for different use cases. See [MO
 
 **Quick Summary:**
 
-- **🪙 Cheap Mode**: OpenAI GPT-4o-mini, scale-to-zero → ~$7.60-8.50/month (100/day)
-- **⚡ Turbo Mode**: Groq Llama 3.3 70B, keep warm → ~$25-40/month (100/day)
+- **🪙 Cheap Mode**: OpenAI GPT-4o-mini, scale-to-zero
+- **⚡ Turbo Mode**: Groq Llama 3.3 70B, keep warm
 
-## Cost Optimization
-
-**Free Tier Limits:**
-
-- Cloudflare Workers: 100k requests/day
-- Cloudflare Workers AI: 10k requests/day
-- R2/KV: 10GB/100MB free
-
-**Cost Per Submission:**
-
-**OpenAI (GPT-4o-mini)** - Cost-effective:
-
-- **Base:** ~$0.0025 (2 required API calls)
-- **With teacher feedback:** ~$0.003-0.004
-- **Average:** ~$0.0027
-
-**Groq (Llama 3.3 70B)** - Ultra-fast:
-
-- **Base:** ~$0.0048-0.006 (2 required API calls)
-- **With teacher feedback:** ~$0.006-0.007
-- **Average:** ~$0.006
-
-**Monthly Costs:**
-
-**Infrastructure (Free Tier):**
-
-- Cloudflare: $0
-- Modal: ~$0.10-1.00/month
-- **Total Infrastructure**: ~$0.12-1.15/month
-
-**LLM API (Pay-Per-Use) - OpenAI:**
-
-- Low usage (10/day): ~$0.75/month
-- Moderate (100/day): ~$7.50/month
-- High (1,000/day): ~$75/month
-- Maximum (14,400/day, rate limited): ~$1,080/month
-
-**LLM API (Pay-Per-Use) - Groq:**
-
-- Low usage (10/day): ~$1.80/month
-- Moderate (100/day): ~$18/month
-- High (1,000/day): ~$180/month
-- Maximum (14,400/day, rate limited): ~$2,592/month
-
-**Cost Controls:**
-
-- Rate limiting: 10 submissions/minute per IP (prevents runaway costs)
-- Word limits: 250-500 words per essay
-- Text truncation: 15,000 chars max for AI processing
-- Token limits: Reduced to minimize costs
-
-**Scale-to-Zero:** No idle costs - services scale to zero when not in use.
-
-See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis and guardrails.
+See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis.
 
 ## References
 
