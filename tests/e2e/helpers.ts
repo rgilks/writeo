@@ -1,12 +1,7 @@
 import { Page, expect } from "@playwright/test";
 import { randomUUID } from "crypto";
-import { config } from "dotenv";
-import { resolve } from "path";
-
-// Load environment variables from .env and .env.local
-// .env.local takes precedence over .env
-config({ path: resolve(process.cwd(), ".env") });
-config({ path: resolve(process.cwd(), ".env.local"), override: true });
+// Note: Environment variables are already loaded in playwright.config.ts
+// No need to load them again here to avoid duplicate messages
 
 // Test data - standard test essays for testing
 export const TEST_ESSAYS = {

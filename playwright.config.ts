@@ -2,6 +2,14 @@ import { defineConfig, devices } from "@playwright/test";
 import { config } from "dotenv";
 import { resolve } from "path";
 
+// Suppress dotenvx verbose messages
+process.env.DOTENVX_QUIET = "true";
+
+// Fix NO_COLOR/FORCE_COLOR conflict - ensure only FORCE_COLOR is set if needed
+if (process.env.NO_COLOR && process.env.FORCE_COLOR) {
+  delete process.env.NO_COLOR;
+}
+
 // Load .env files (.env.local takes precedence, but preserve PLAYWRIGHT_BASE_URL if set)
 config({ path: resolve(process.cwd(), ".env") });
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL;
