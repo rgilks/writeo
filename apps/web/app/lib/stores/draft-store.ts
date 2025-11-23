@@ -106,36 +106,85 @@ const storageWithSetHandling: StateStorage = {
     // baseStorage uses synchronous localStorage, so result is always string | null (not Promise)
     const str = baseStorage.getItem(name) as string | null;
     if (!str) return null;
+
+    // Check if the stored value is corrupted (e.g., "[object Object]")
+    if (str === "[object Object]" || (str.startsWith("[object ") && str.endsWith("]"))) {
+      console.warn("Corrupted draft store data detected, clearing it");
+      baseStorage.removeItem(name);
+      return null;
+    }
+
     try {
       const parsed = JSON.parse(str);
       // Convert fixedErrors arrays back to Sets
       if (parsed?.state?.fixedErrors) {
         const fixedErrors: Record<string, Set<string>> = {};
         Object.entries(parsed.state.fixedErrors).forEach(([key, value]) => {
-          fixedErrors[key] = new Set(value as string[]);
+          // Handle both array and Set cases (defensive)
+          if (Array.isArray(value)) {
+            fixedErrors[key] = new Set(value);
+          } else if (value instanceof Set) {
+            fixedErrors[key] = value;
+          } else {
+            console.warn(
+              `Unexpected fixedErrors value type for key ${key} when loading:`,
+              typeof value
+            );
+            fixedErrors[key] = new Set();
+          }
         });
         parsed.state.fixedErrors = fixedErrors;
       }
       return JSON.stringify(parsed);
     } catch (error) {
-      console.error("Failed to parse stored draft store:", error);
+      console.error("Failed to parse stored draft store, clearing corrupted data:", error);
+      // Clear corrupted data to prevent future errors
+      baseStorage.removeItem(name);
       return null;
     }
   },
   setItem: (name: string, value: string): void => {
+    if (typeof window === "undefined") return;
+
     try {
-      const parsed = JSON.parse(value);
+      // Handle case where value might already be an object (defensive programming)
+      let parsed: any;
+      if (typeof value === "string") {
+        try {
+          parsed = JSON.parse(value);
+        } catch (parseError) {
+          // If parsing fails, value might be corrupted - try to recover or skip
+          console.warn("Failed to parse draft store value, skipping save:", parseError);
+          return;
+        }
+      } else if (typeof value === "object" && value !== null) {
+        // If value is already an object, use it directly
+        parsed = value;
+      } else {
+        console.warn("Unexpected value type for draft store:", typeof value);
+        return;
+      }
+
       // Convert Sets to arrays for JSON serialization
       if (parsed?.state?.fixedErrors) {
         const fixedErrors: Record<string, string[]> = {};
         Object.entries(parsed.state.fixedErrors).forEach(([key, setValue]) => {
-          fixedErrors[key] = Array.from(setValue as Set<string>);
+          // Handle both Set and array cases (defensive)
+          if (setValue instanceof Set) {
+            fixedErrors[key] = Array.from(setValue);
+          } else if (Array.isArray(setValue)) {
+            fixedErrors[key] = setValue;
+          } else {
+            console.warn(`Unexpected fixedErrors value type for key ${key}:`, typeof setValue);
+          }
         });
         parsed.state.fixedErrors = fixedErrors;
       }
+
       baseStorage.setItem(name, JSON.stringify(parsed));
     } catch (error) {
-      console.error("Failed to save draft store:", error);
+      console.error("Failed to save draft store:", error, { valueType: typeof value, value });
+      // Don't throw - allow the app to continue functioning even if persistence fails
     }
   },
   removeItem: (name: string): void => {
