@@ -1,9 +1,10 @@
 """Match conversion utilities."""
 
-from typing import Dict, Any
+from typing import Any
+
 from .constants import (
-    GRAMMAR_RULE_PREFIXES,
     GRAMMAR_CATEGORIES,
+    GRAMMAR_RULE_PREFIXES,
     SPELLING_CATEGORIES,
     STYLE_CATEGORIES,
     STYLE_RULE_PREFIXES,
@@ -15,9 +16,12 @@ def determine_issue_type(category: str, rule_id: str) -> str:
     is_grammar_rule = any(rule_id.startswith(prefix) for prefix in GRAMMAR_RULE_PREFIXES)
     is_style_rule = any(rule_id.startswith(prefix) for prefix in STYLE_RULE_PREFIXES)
 
-    if category in GRAMMAR_CATEGORIES or is_grammar_rule:
-        return "error"
-    elif category in SPELLING_CATEGORIES or rule_id.startswith("MORFOLOGIK"):
+    if (
+        category in GRAMMAR_CATEGORIES
+        or is_grammar_rule
+        or category in SPELLING_CATEGORIES
+        or rule_id.startswith("MORFOLOGIK")
+    ):
         return "error"
     elif category in STYLE_CATEGORIES or is_style_rule:
         return "warning"
@@ -25,7 +29,7 @@ def determine_issue_type(category: str, rule_id: str) -> str:
         return "warning"
 
 
-def convert_match_to_dict(match: Any) -> Dict[str, Any]:
+def convert_match_to_dict(match: Any) -> dict[str, Any]:
     """Convert LanguageTool match to dictionary."""
     category = match.category if hasattr(match, "category") else "UNKNOWN"
     rule_id = match.ruleId if hasattr(match, "ruleId") else "UNKNOWN"
@@ -44,4 +48,3 @@ def convert_match_to_dict(match: Any) -> Dict[str, Any]:
         },
         "issueType": issue_type,
     }
-

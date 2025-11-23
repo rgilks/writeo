@@ -1,15 +1,16 @@
 """Match analysis utilities."""
 
-from typing import Dict, Any, List
+from typing import Any
+
 from .constants import (
-    GRAMMAR_RULE_PREFIXES,
     GRAMMAR_CATEGORIES,
+    GRAMMAR_RULE_PREFIXES,
     SPELLING_CATEGORIES,
     STYLE_CATEGORIES,
 )
 
 
-def analyze_matches(matches: List) -> Dict[str, Any]:
+def analyze_matches(matches: list) -> dict[str, Any]:
     """Analyze match types and return statistics."""
     categories = {}
     rule_types = {}
@@ -45,7 +46,7 @@ def analyze_matches(matches: List) -> Dict[str, Any]:
         print(f"📋 First 15 Rule IDs: {list(rule_types.keys())[:15]}")
 
     if grammar_count == 0 and spelling_count > 0:
-        print(f"⚠️  WARNING: Only spelling errors detected, no grammar errors found!")
+        print("⚠️  WARNING: Only spelling errors detected, no grammar errors found!")
 
     return {
         "categories": categories,
@@ -55,4 +56,3 @@ def analyze_matches(matches: List) -> Dict[str, Any]:
         "style_count": style_count,
         "unknown_count": unknown_count,
     }
-

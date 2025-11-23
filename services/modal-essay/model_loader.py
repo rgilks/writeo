@@ -2,15 +2,17 @@
 
 import os
 import time
-from typing import Optional, Tuple, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 import torch  # type: ignore
+from huggingface_hub import list_repo_files, snapshot_download  # type: ignore
 from transformers import AutoModelForSequenceClassification, AutoTokenizer  # type: ignore
-from huggingface_hub import snapshot_download, list_repo_files  # type: ignore
 
 from config import DEFAULT_MODEL, MODEL_CONFIGS, MODEL_PATH
 
 if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore
+
     ModelType = PreTrainedModel
     TokenizerType = PreTrainedTokenizer
 else:
@@ -18,7 +20,7 @@ else:
     TokenizerType = Any
 
 # Global model storage (loaded on first call, per model)
-_models: dict[str, Tuple[ModelType, TokenizerType]] = {}
+_models: dict[str, tuple[ModelType, TokenizerType]] = {}
 
 
 def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
@@ -26,16 +28,14 @@ def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
     tokenizer_start = time.time()
     try:
         tokenizer_path = os.path.join(model_path, "tokenizer_config.json")
-        if os.path.exists(tokenizer_path) or os.path.exists(
-            os.path.join(model_path, "vocab.json")
-        ):
+        if os.path.exists(tokenizer_path) or os.path.exists(os.path.join(model_path, "vocab.json")):
             print(f"📥 Loading tokenizer from cache: {model_path}")
             tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
             tokenizer_time = time.time() - tokenizer_start
             print(f"✅ Tokenizer loaded from cache in {tokenizer_time:.2f}s")
             return tokenizer
         else:
-            print(f"📥 Loading tokenizer from HuggingFace...")
+            print("📥 Loading tokenizer from HuggingFace...")
             tokenizer = AutoTokenizer.from_pretrained(model_name)
             tokenizer_time = time.time() - tokenizer_start
             print(f"✅ Tokenizer loaded from HuggingFace in {tokenizer_time:.2f}s")
@@ -43,10 +43,10 @@ def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
     except Exception as e:
         print(f"⚠️ WARNING: Error loading tokenizer for {model_name}: {e}")
         if "distilbert" in model_name.lower():
-            print(f"⚠️ Attempting workaround: using base DistilBERT tokenizer...")
+            print("⚠️ Attempting workaround: using base DistilBERT tokenizer...")
             try:
                 tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
-                print(f"✅ Using base DistilBERT tokenizer (workaround)")
+                print("✅ Using base DistilBERT tokenizer (workaround)")
                 return tokenizer
             except Exception as e2:
                 print(f"❌ ERROR: Failed to load base DistilBERT tokenizer: {e2}")
@@ -70,9 +70,7 @@ def check_model_repo(model_name: str) -> None:
         if not has_weights:
             print("WARNING: No model weight files found in repository!")
             print("The model repository appears to be missing weight files.")
-            print(
-                "Attempting to load anyway - transformers may download from cache or base model."
-            )
+            print("Attempting to load anyway - transformers may download from cache or base model.")
     except Exception as check_error:
         print(f"Error checking repo files: {check_error}")
 
@@ -80,9 +78,7 @@ def check_model_repo(model_name: str) -> None:
 def download_model(model_name: str, model_path: str) -> None:
     """Download model repository to cache."""
     try:
-        snapshot_download(
-            repo_id=model_name, local_dir=model_path, local_dir_use_symlinks=False
-        )
+        snapshot_download(repo_id=model_name, local_dir=model_path, local_dir_use_symlinks=False)
     except Exception as download_error:
         print(f"Snapshot download warning: {download_error}")
 
@@ -92,18 +88,14 @@ def load_model_from_hf(model_name: str) -> ModelType:
     model = None
     for use_safetensors in [True, False]:
         try:
-            print(
-                f"Attempting to load model {model_name} (safetensors={use_safetensors})..."
-            )
+            print(f"Attempting to load model {model_name} (safetensors={use_safetensors})...")
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_name,
                 trust_remote_code=True,
                 local_files_only=False,
                 use_safetensors=use_safetensors,
             )
-            print(
-                f"Model {model_name} loaded successfully (safetensors={use_safetensors})!"
-            )
+            print(f"Model {model_name} loaded successfully (safetensors={use_safetensors})!")
             break
         except Exception as load_error:
             print(f"Loading with safetensors={use_safetensors} failed: {load_error}")
@@ -115,7 +107,7 @@ def load_model_from_hf(model_name: str) -> ModelType:
 def save_model_to_cache(
     model: ModelType,  # type: ignore
     tokenizer: TokenizerType,  # type: ignore
-    model_path: str
+    model_path: str,
 ) -> None:
     """Save model and tokenizer to cache volume."""
     save_start = time.time()
@@ -138,9 +130,7 @@ def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:  # 
             dummy_input_ids = torch.randint(0, 1000, (1, 10), device="cuda")
             dummy_attention_mask = torch.ones(1, 10, device="cuda")
             with torch.no_grad():
-                _ = model(
-                    input_ids=dummy_input_ids, attention_mask=dummy_attention_mask
-                )
+                _ = model(input_ids=dummy_input_ids, attention_mask=dummy_attention_mask)
             torch.cuda.empty_cache()
             warmup_time = time.time() - warmup_start
             total_load_time = time.time() - load_start
@@ -149,17 +139,13 @@ def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:  # 
         except Exception as warmup_error:
             total_load_time = time.time() - load_start
             print(f"⚠️  GPU warmup failed (non-critical): {warmup_error}")
-            print(
-                f"✅ Model {model_name} loaded on GPU in {total_load_time:.2f}s (warmup skipped)"
-            )
+            print(f"✅ Model {model_name} loaded on GPU in {total_load_time:.2f}s (warmup skipped)")
     else:
         total_load_time = time.time() - load_start
-        print(
-            f"✅ Model {model_name} loaded successfully (CPU mode) in {total_load_time:.2f}s"
-        )
+        print(f"✅ Model {model_name} loaded successfully (CPU mode) in {total_load_time:.2f}s")
 
 
-def load_model(model_key: Optional[str] = None) -> Tuple[ModelType, TokenizerType]:
+def load_model(model_key: str | None = None) -> tuple[ModelType, TokenizerType]:
     """Load model and tokenizer, caching on volume."""
     load_start = time.time()
     if model_key is None:
@@ -181,9 +167,7 @@ def load_model(model_key: Optional[str] = None) -> Tuple[ModelType, TokenizerTyp
 
     model_load_start = time.time()
     try:
-        if os.path.exists(model_path) and os.path.exists(
-            os.path.join(model_path, "config.json")
-        ):
+        if os.path.exists(model_path) and os.path.exists(os.path.join(model_path, "config.json")):
             print(f"📥 Loading model from cache: {model_path}")
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_path, trust_remote_code=True, local_files_only=True
@@ -205,9 +189,7 @@ def load_model(model_key: Optional[str] = None) -> Tuple[ModelType, TokenizerTyp
         import traceback
 
         traceback.print_exc()
-        raise RuntimeError(
-            f"Failed to load model {model_name} (key: {model_key}): {e}"
-        ) from e
+        raise RuntimeError(f"Failed to load model {model_name} (key: {model_key}): {e}") from e
 
     model.eval()
     setup_gpu(model, model_name, load_start)
@@ -215,7 +197,7 @@ def load_model(model_key: Optional[str] = None) -> Tuple[ModelType, TokenizerTyp
     return model, tokenizer
 
 
-def get_model(model_key: Optional[str] = None) -> Tuple[ModelType, TokenizerType]:
+def get_model(model_key: str | None = None) -> tuple[ModelType, TokenizerType]:
     """Get or load model (lazy loading)."""
     if model_key is None:
         model_key = DEFAULT_MODEL

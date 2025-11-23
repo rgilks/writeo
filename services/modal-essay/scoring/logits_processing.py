@@ -3,10 +3,9 @@
 import numpy as np
 import torch  # type: ignore
 import torch.nn.functional as F  # type: ignore
-from typing import List
 
 
-def process_1d_logits(logits_np: np.ndarray, length: int) -> List[float]:
+def process_1d_logits(logits_np: np.ndarray, length: int) -> list[float]:
     """Process 1D logits array."""
     if length == 36:
         logits_reshaped = logits_np.reshape(6, 6)
@@ -15,9 +14,7 @@ def process_1d_logits(logits_np: np.ndarray, length: int) -> List[float]:
             logits_tensor = torch.tensor(dim_logits)
             probs = F.softmax(logits_tensor, dim=0).numpy()
             class_scores_1to5 = [1.0, 2.0, 3.0, 4.0, 5.0, 5.0]
-            weighted_score = sum(
-                probs[i] * class_scores_1to5[i] for i in range(len(probs))
-            )
+            weighted_score = sum(probs[i] * class_scores_1to5[i] for i in range(len(probs)))
             raw_scores.append(float(weighted_score))
         return raw_scores
     elif length == 6:
@@ -35,7 +32,7 @@ def process_1d_logits(logits_np: np.ndarray, length: int) -> List[float]:
             return (np.clip(logits_np, 1.0, 5.0).tolist() * 6)[:6]
 
 
-def process_2d_logits(logits_np: np.ndarray) -> List[float]:
+def process_2d_logits(logits_np: np.ndarray) -> list[float]:
     """Process 2D logits array."""
     if logits_np.shape[1] == 36:
         logits_reshaped = logits_np[0].reshape(6, 6)
@@ -44,9 +41,7 @@ def process_2d_logits(logits_np: np.ndarray) -> List[float]:
             logits_tensor = torch.tensor(dim_logits)
             probs = F.softmax(logits_tensor, dim=0).numpy()
             class_scores_1to5 = [1.0, 2.0, 3.0, 4.0, 5.0, 5.0]
-            weighted_score = sum(
-                probs[i] * class_scores_1to5[i] for i in range(len(probs))
-            )
+            weighted_score = sum(probs[i] * class_scores_1to5[i] for i in range(len(probs)))
             raw_scores.append(float(weighted_score))
         return raw_scores
     elif logits_np.shape[0] == 6 and logits_np.shape[1] == 6:
@@ -55,9 +50,7 @@ def process_2d_logits(logits_np: np.ndarray) -> List[float]:
             logits_tensor = torch.tensor(dim_logits)
             probs = F.softmax(logits_tensor, dim=0).numpy()
             class_scores_1to5 = [1.0, 2.0, 3.0, 4.0, 5.0, 5.0]
-            weighted_score = sum(
-                probs[i] * class_scores_1to5[i] for i in range(len(probs))
-            )
+            weighted_score = sum(probs[i] * class_scores_1to5[i] for i in range(len(probs)))
             raw_scores.append(float(weighted_score))
         return raw_scores
     elif logits_np.shape[0] == 1 and logits_np.shape[1] == 6:
@@ -71,16 +64,14 @@ def process_2d_logits(logits_np: np.ndarray) -> List[float]:
                 logits_tensor = torch.tensor(dim_logits)
                 probs = F.softmax(logits_tensor, dim=0).numpy()
                 class_scores_1to5 = [1.0, 2.0, 3.0, 4.0, 5.0, 5.0]
-                weighted_score = sum(
-                    probs[i] * class_scores_1to5[i] for i in range(len(probs))
-                )
+                weighted_score = sum(probs[i] * class_scores_1to5[i] for i in range(len(probs)))
                 raw_scores.append(float(weighted_score))
             return raw_scores
         else:
             return np.clip(flat[:6], 1.0, 5.0).tolist()
 
 
-def process_engessay_logits(logits_np: np.ndarray) -> List[float]:
+def process_engessay_logits(logits_np: np.ndarray) -> list[float]:
     """Process Engessay model logits into raw scores."""
     if len(logits_np.shape) == 0:
         return [float(logits_np)] * 6
@@ -97,9 +88,7 @@ def process_engessay_logits(logits_np: np.ndarray) -> List[float]:
                 logits_tensor = torch.tensor(dim_logits)
                 probs = F.softmax(logits_tensor, dim=0).numpy()
                 class_scores_1to5 = [1.0, 2.0, 3.0, 4.0, 5.0, 5.0]
-                weighted_score = sum(
-                    probs[i] * class_scores_1to5[i] for i in range(len(probs))
-                )
+                weighted_score = sum(probs[i] * class_scores_1to5[i] for i in range(len(probs)))
                 raw_scores.append(float(weighted_score))
             return raw_scores
         else:
@@ -129,10 +118,7 @@ def normalize_distilbert_score(raw_score: float) -> float:
     elif raw_score > 1:
         normalized_score = (raw_score / 5.0) * 9.0
     else:
-        if raw_score <= 1.0:
-            normalized_score = raw_score * 9.0
-        else:
-            normalized_score = min(9.0, max(0.0, raw_score))
+        normalized_score = raw_score * 9.0 if raw_score <= 1.0 else min(9.0, max(0.0, raw_score))
 
     overall_score = round(normalized_score * 2) / 2
     return max(0.0, min(9.0, overall_score))

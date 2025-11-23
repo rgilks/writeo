@@ -1,12 +1,11 @@
 """N-gram data setup utilities."""
 
 import os
+import tempfile
 import urllib.request
 import zipfile
-import tempfile
-import shutil
 from pathlib import Path
-from typing import Optional
+
 from config import LT_NGRAM_DIR, NGRAM_BASE_URL
 
 
@@ -20,7 +19,7 @@ def get_language_code(language: str) -> str:
     return lang_code_map.get(language, language.split("-")[0])
 
 
-def check_ngram_exists(language: str) -> Optional[str]:
+def check_ngram_exists(language: str) -> str | None:
     """Check if n-gram data already exists."""
     lang_code = get_language_code(language)
     ngram_lang_dir = Path(LT_NGRAM_DIR) / lang_code
@@ -31,7 +30,7 @@ def check_ngram_exists(language: str) -> Optional[str]:
     return None
 
 
-def download_ngram_zip() -> Optional[str]:
+def download_ngram_zip() -> str | None:
     """Download n-gram zip file."""
     possible_urls = [
         "https://languagetool.org/download/ngram-data/ngrams-en-20150817.zip",
@@ -43,9 +42,8 @@ def download_ngram_zip() -> Optional[str]:
     for url in possible_urls:
         try:
             print(f"   Trying URL: {url}")
-            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
-            tmp_path = tmp_file.name
-            tmp_file.close()
+            fd, tmp_path = tempfile.mkstemp(suffix=".zip")
+            os.close(fd)
 
             def show_progress(block_num, block_size, total_size):
                 if total_size > 0:
@@ -59,7 +57,7 @@ def download_ngram_zip() -> Optional[str]:
                         )
 
             print(f"   Downloading to temporary file: {tmp_path}")
-            print(f"   This is a large file (~8.35GB) and may take 10-15 minutes...")
+            print("   This is a large file (~8.35GB) and may take 10-15 minutes...")
             urllib.request.urlretrieve(url, tmp_path, show_progress)
             print()
             file_size_mb = os.path.getsize(tmp_path) / (1024 * 1024)
@@ -83,7 +81,7 @@ def download_ngram_zip() -> Optional[str]:
 def extract_ngram_data(zip_path: str, ngram_lang_dir: Path) -> bool:
     """Extract n-gram data from zip file."""
     try:
-        print(f"   Extracting n-gram data (this may take a while)...")
+        print("   Extracting n-gram data (this may take a while)...")
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             file_list = zip_ref.namelist()
             print(f"   Found {len(file_list)} files in archive")
@@ -98,14 +96,14 @@ def extract_ngram_data(zip_path: str, ngram_lang_dir: Path) -> bool:
             print(f"   Found {len(extracted_files)} files/directories")
             return True
         else:
-            print(f"⚠️  Warning: N-gram extraction completed but directory is empty")
+            print("⚠️  Warning: N-gram extraction completed but directory is empty")
             return False
     except Exception as e:
         print(f"⚠️  Error extracting n-gram data: {e}")
         return False
 
 
-def setup_ngram_data(language: str = "en-GB") -> Optional[str]:
+def setup_ngram_data(language: str = "en-GB") -> str | None:
     """Download and set up n-gram data for LanguageTool."""
     existing = check_ngram_exists(language)
     if existing:
@@ -121,8 +119,8 @@ def setup_ngram_data(language: str = "en-GB") -> Optional[str]:
     if lang_code != "en":
         return None
 
-    print(f"📥 Downloading English n-gram data...")
-    print(f"   This is a large download (~8GB) and may take several minutes.")
+    print("📥 Downloading English n-gram data...")
+    print("   This is a large download (~8GB) and may take several minutes.")
 
     try:
         zip_path = download_ngram_zip()
@@ -138,10 +136,9 @@ def setup_ngram_data(language: str = "en-GB") -> Optional[str]:
         import traceback
 
         print(f"   Error details: {traceback.format_exc()}")
-        print(f"   N-grams will be disabled. To enable manually:")
+        print("   N-grams will be disabled. To enable manually:")
         print(f"   1. Visit: {NGRAM_BASE_URL}")
-        print(f"   2. Download the English n-gram data (~8GB)")
+        print("   2. Download the English n-gram data (~8GB)")
         print(f"   3. Extract to: {ngram_lang_dir}")
-        print(f"   4. Restart the service")
+        print("   4. Restart the service")
         return None
-

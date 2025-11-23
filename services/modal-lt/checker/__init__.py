@@ -2,12 +2,15 @@
 
 import sys
 import time
-from typing import Dict, Any
+from typing import Any
+
 from fastapi import HTTPException
+
 from config import LT_VERSION
 from tool_loader import get_languagetool_tool
-from .constants import MAX_TEXT_LENGTH
+
 from .analysis import analyze_matches
+from .constants import MAX_TEXT_LENGTH
 from .conversion import convert_match_to_dict
 
 
@@ -23,8 +26,8 @@ def truncate_text(text: str) -> str:
 
 
 def create_result_base(
-    language: str, text: str, check_time_elapsed: float, matches: list, categories: Dict[str, int]
-) -> Dict[str, Any]:
+    language: str, text: str, check_time_elapsed: float, matches: list, categories: dict[str, int]
+) -> dict[str, Any]:
     """Create base result structure."""
     return {
         "software": {"name": "LanguageTool", "version": LT_VERSION},
@@ -43,7 +46,7 @@ def create_result_base(
     }
 
 
-def check_text_with_languagetool(text: str, language: str = "en-GB") -> Dict[str, Any]:
+def check_text_with_languagetool(text: str, language: str = "en-GB") -> dict[str, Any]:
     """Check text using LanguageTool Python library."""
     check_start_time = time.time()
     tool = get_languagetool_tool(language)
@@ -77,5 +80,4 @@ def check_text_with_languagetool(text: str, language: str = "en-GB") -> Dict[str
         import traceback
 
         print(f"📜 Traceback:\n{traceback.format_exc()}", file=sys.stderr)
-        raise HTTPException(status_code=500, detail=error_msg)
-
+        raise HTTPException(status_code=500, detail=error_msg) from None

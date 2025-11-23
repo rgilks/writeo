@@ -1,17 +1,20 @@
 """Pydantic schemas for Modal service request/response."""
 
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Dict, Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TemplateDict(TypedDict):
     """Template metadata structure."""
+
     name: str
     version: int
 
 
 class DimensionsDict(TypedDict, total=False):
     """Essay scoring dimensions."""
+
     TA: float
     CC: float
     Vocab: float
@@ -21,11 +24,30 @@ class DimensionsDict(TypedDict, total=False):
 
 class ModalAnswer(BaseModel):
     """Answer data with question and answer text for scoring."""
-    id: str = Field(..., description="Unique identifier for the answer (UUID)", example="550e8400-e29b-41d4-a716-446655440000")
-    question_id: str = Field(..., description="Unique identifier for the question (UUID)", example="660e8400-e29b-41d4-a716-446655440000")
-    question_text: str = Field(..., description="The question text that the answer responds to", example="Describe your weekend. What did you do?", max_length=10000)
-    answer_text: str = Field(..., description="The student's answer text to be scored", example="I went to the park yesterday and played football with my friends. It was a beautiful sunny day.", max_length=50000)
-    
+
+    id: str = Field(
+        ...,
+        description="Unique identifier for the answer (UUID)",
+        example="550e8400-e29b-41d4-a716-446655440000",
+    )
+    question_id: str = Field(
+        ...,
+        description="Unique identifier for the question (UUID)",
+        example="660e8400-e29b-41d4-a716-446655440000",
+    )
+    question_text: str = Field(
+        ...,
+        description="The question text that the answer responds to",
+        example="Describe your weekend. What did you do?",
+        max_length=10000,
+    )
+    answer_text: str = Field(
+        ...,
+        description="The student's answer text to be scored",
+        example="I went to the park yesterday and played football with my friends. It was a beautiful sunny day.",
+        max_length=50000,
+    )
+
     class Config:
         populate_by_name = True
         json_schema_extra = {
@@ -33,27 +55,44 @@ class ModalAnswer(BaseModel):
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "question_id": "660e8400-e29b-41d4-a716-446655440000",
                 "question_text": "Describe your weekend. What did you do?",
-                "answer_text": "I went to the park yesterday and played football with my friends. It was a beautiful sunny day."
+                "answer_text": "I went to the park yesterday and played football with my friends. It was a beautiful sunny day.",
             }
         }
 
 
 class ModalPart(BaseModel):
     """A part of the submission containing multiple answers."""
+
     part: int = Field(..., description="Part number (typically 1 or 2)", example=1, ge=1)
-    answers: List[ModalAnswer] = Field(..., description="List of answers in this part", min_length=1)
+    answers: list[ModalAnswer] = Field(
+        ..., description="List of answers in this part", min_length=1
+    )
 
 
 class ModalRequest(BaseModel):
     """Request model for essay scoring."""
-    submission_id: str = Field(..., description="Unique identifier for the submission (UUID)", example="770e8400-e29b-41d4-a716-446655440000")
-    template: Dict[str, Any] = Field(..., description="Template metadata with name and version", example={"name": "essay-task-2", "version": 1})
-    parts: List[ModalPart] = Field(..., description="List of submission parts to be scored", min_length=1)
-    
+
+    submission_id: str = Field(
+        ...,
+        description="Unique identifier for the submission (UUID)",
+        example="770e8400-e29b-41d4-a716-446655440000",
+    )
+    template: dict[str, Any] = Field(
+        ...,
+        description="Template metadata with name and version",
+        example={"name": "essay-task-2", "version": 1},
+    )
+    parts: list[ModalPart] = Field(
+        ..., description="List of submission parts to be scored", min_length=1
+    )
+
     def get_template_dict(self) -> TemplateDict:
         """Get template as TypedDict for type safety."""
-        return TemplateDict(name=str(self.template.get("name", "unknown")), version=int(self.template.get("version", 1)))
-    
+        return TemplateDict(
+            name=str(self.template.get("name", "unknown")),
+            version=int(self.template.get("version", 1)),
+        )
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -67,76 +106,130 @@ class ModalRequest(BaseModel):
                                 "id": "550e8400-e29b-41d4-a716-446655440000",
                                 "question_id": "660e8400-e29b-41d4-a716-446655440000",
                                 "question_text": "Describe your weekend. What did you do?",
-                                "answer_text": "I went to the park yesterday and played football with my friends. It was a beautiful sunny day."
+                                "answer_text": "I went to the park yesterday and played football with my friends. It was a beautiful sunny day.",
                             }
-                        ]
+                        ],
                     }
-                ]
+                ],
             }
         }
 
 
 class LanguageToolError(BaseModel):
     """LanguageTool error structure."""
+
     start: int = Field(..., description="Character offset (0-based)", example=10)
     end: int = Field(..., description="Character offset (exclusive)", example=14)
     length: int = Field(..., description="end - start (for convenience)", example=4)
-    sentenceIndex: Optional[int] = Field(None, description="Optional: sentence number (0-based)", example=0)
-    category: str = Field(..., description="Error category (e.g., GRAMMAR, TYPOGRAPHY, STYLE)", example="GRAMMAR")
+    sentenceIndex: int | None = Field(
+        None, description="Optional: sentence number (0-based)", example=0
+    )
+    category: str = Field(
+        ..., description="Error category (e.g., GRAMMAR, TYPOGRAPHY, STYLE)", example="GRAMMAR"
+    )
     rule_id: str = Field(..., description="LanguageTool rule identifier", example="SVA")
-    message: str = Field(..., description="Human-readable error message", example="Possible subject–verb agreement error.")
-    suggestions: Optional[List[str]] = Field(None, description="Array of suggested corrections (top 3-5)", example=["go", "went"])
+    message: str = Field(
+        ...,
+        description="Human-readable error message",
+        example="Possible subject–verb agreement error.",
+    )
+    suggestions: list[str] | None = Field(
+        None, description="Array of suggested corrections (top 3-5)", example=["go", "went"]
+    )
     source: Literal["LT"] = Field("LT", description="Always 'LT' for LanguageTool")
-    severity: Literal["warning", "error"] = Field(..., description="Error severity level", example="warning")
+    severity: Literal["warning", "error"] = Field(
+        ..., description="Error severity level", example="warning"
+    )
 
 
 class AssessorResult(BaseModel):
     """Result from an assessor (scoring model)."""
+
     id: str = Field(..., description="Assessor identifier", example="T-AES-ESSAY")
     name: str = Field(..., description="Human-readable assessor name", example="Essay scorer")
-    type: Literal["grader", "conf", "ard", "feedback"] = Field(..., description="Type of assessor: grader (scores essays), conf (confidence), ard (automated response detection), feedback (grammar errors)")
-    overall: Optional[float] = Field(None, description="Overall band score (0-9, 0.5 increments)", example=7.5, ge=0.0, le=9.0)
-    label: Optional[str] = Field(None, description="CEFR level label (A2, B1, B2, C1, C2)", example="C1")
-    dimensions: Optional[DimensionsDict] = Field(None, description="Detailed scores by dimension (TA, CC, Vocab, Grammar, Overall)", example={"TA": 7.5, "CC": 7.0, "Vocab": 8.0, "Grammar": 7.5, "Overall": 7.5})
-    errors: Optional[List[LanguageToolError]] = Field(None, description="LanguageTool errors (for type: 'feedback')")
-    meta: Optional[Dict[str, Any]] = Field(None, description="Assessor metadata")
+    type: Literal["grader", "conf", "ard", "feedback"] = Field(
+        ...,
+        description="Type of assessor: grader (scores essays), conf (confidence), ard (automated response detection), feedback (grammar errors)",
+    )
+    overall: float | None = Field(
+        None, description="Overall band score (0-9, 0.5 increments)", example=7.5, ge=0.0, le=9.0
+    )
+    label: str | None = Field(
+        None, description="CEFR level label (A2, B1, B2, C1, C2)", example="C1"
+    )
+    dimensions: DimensionsDict | None = Field(
+        None,
+        description="Detailed scores by dimension (TA, CC, Vocab, Grammar, Overall)",
+        example={"TA": 7.5, "CC": 7.0, "Vocab": 8.0, "Grammar": 7.5, "Overall": 7.5},
+    )
+    errors: list[LanguageToolError] | None = Field(
+        None, description="LanguageTool errors (for type: 'feedback')"
+    )
+    meta: dict[str, Any] | None = Field(None, description="Assessor metadata")
 
 
 class AnswerResult(BaseModel):
     """Answer result with assessor results."""
-    model_config = ConfigDict(populate_by_name=True)  # Allow using field name (assessor_results) or alias (assessor-results)
-    
-    id: str = Field(..., description="Answer ID (UUID)", example="550e8400-e29b-41d4-a716-446655440000")
-    assessor_results: List[AssessorResult] = Field(
-        ..., 
+
+    model_config = ConfigDict(
+        populate_by_name=True
+    )  # Allow using field name (assessor_results) or alias (assessor-results)
+
+    id: str = Field(
+        ..., description="Answer ID (UUID)", example="550e8400-e29b-41d4-a716-446655440000"
+    )
+    assessor_results: list[AssessorResult] = Field(
+        ...,
         alias="assessor-results",
         serialization_alias="assessor-results",
-        description="List of assessor results for this answer", 
-        min_length=1
+        description="List of assessor results for this answer",
+        min_length=1,
     )
 
 
 class AssessmentPart(BaseModel):
     """Assessment results for a single part of the submission."""
+
     part: int = Field(..., description="Part number", example=1, ge=1)
     status: Literal["success", "error"] = Field(..., description="Processing status for this part")
-    answers: List[AnswerResult] = Field(..., description="List of answer results with assessor results", min_length=1)
-    
+    answers: list[AnswerResult] = Field(
+        ..., description="List of answer results with assessor results", min_length=1
+    )
+
     class Config:
         populate_by_name = True
 
 
 class AssessmentResults(BaseModel):
     """Complete assessment results for a submission."""
-    status: Literal["success", "error", "pending", "bypassed"] = Field(..., description="Overall processing status")
-    results: Optional[Dict[str, List[AssessmentPart]]] = Field(None, description="Assessment results organized by parts. Contains a 'parts' key with list of AssessmentPart objects.")
-    template: Dict[str, Any] = Field(..., description="Template metadata (echoed from request)", example={"name": "essay-task-2", "version": 1})
-    error_message: Optional[str] = Field(None, description="Error message if status is 'error'", example="RuntimeError: Failed to load model engessay")
-    meta: Optional[Dict[str, Any]] = Field(None, description="Metadata (e.g., answer texts for frontend)")
-    
+
+    status: Literal["success", "error", "pending", "bypassed"] = Field(
+        ..., description="Overall processing status"
+    )
+    results: dict[str, list[AssessmentPart]] | None = Field(
+        None,
+        description="Assessment results organized by parts. Contains a 'parts' key with list of AssessmentPart objects.",
+    )
+    template: dict[str, Any] = Field(
+        ...,
+        description="Template metadata (echoed from request)",
+        example={"name": "essay-task-2", "version": 1},
+    )
+    error_message: str | None = Field(
+        None,
+        description="Error message if status is 'error'",
+        example="RuntimeError: Failed to load model engessay",
+    )
+    meta: dict[str, Any] | None = Field(
+        None, description="Metadata (e.g., answer texts for frontend)"
+    )
+
     def get_template_dict(self) -> TemplateDict:
         """Get template as TypedDict for type safety."""
-        return TemplateDict(name=str(self.template.get("name", "unknown")), version=int(self.template.get("version", 1)))
+        return TemplateDict(
+            name=str(self.template.get("name", "unknown")),
+            version=int(self.template.get("version", 1)),
+        )
 
 
 def map_score_to_cefr(overall: float) -> str:
@@ -151,4 +244,3 @@ def map_score_to_cefr(overall: float) -> str:
         return "B1"
     else:
         return "A2"
-

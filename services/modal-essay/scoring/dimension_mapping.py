@@ -1,11 +1,9 @@
 """Dimension mapping utilities."""
 
-from typing import Dict, List, Tuple
-
 
 def map_engessay_to_assessment(
-    raw_scores: List[float], calibrated_avg: float, avg_base_score: float
-) -> Tuple[Dict[str, float], List[float]]:
+    raw_scores: list[float], calibrated_avg: float, avg_base_score: float
+) -> tuple[dict[str, float], list[float]]:
     """Map Engessay dimensions to assessment dimensions with calibration."""
     engessay_dims = [
         "cohesion",
@@ -17,13 +15,10 @@ def map_engessay_to_assessment(
     ]
     engessay_scores = {}
 
-    if avg_base_score > 0:
-        calibration_factor = calibrated_avg / avg_base_score
-    else:
-        calibration_factor = 1.0
+    calibration_factor = calibrated_avg / avg_base_score if avg_base_score > 0 else 1.0
 
     base_scores = []
-    for i, dim in enumerate(engessay_dims):
+    for i, _dim in enumerate(engessay_dims):
         score_1to5 = max(1.0, min(5.0, float(raw_scores[i])))
         base_score = 2.0 + (score_1to5 - 1.0) * (7.0 / 4.0)
         base_scores.append(base_score)
@@ -42,7 +37,7 @@ def map_engessay_to_assessment(
     scores = {"TA": 0.0, "CC": 0.0, "Vocab": 0.0, "Grammar": 0.0}
     dim_counts = {"TA": 0, "CC": 0, "Vocab": 0, "Grammar": 0}
 
-    for eng_dim, assessment_dim in zip(engessay_dims, assessment_dims):
+    for eng_dim, assessment_dim in zip(engessay_dims, assessment_dims, strict=False):
         scores[assessment_dim] += engessay_scores[eng_dim]
         dim_counts[assessment_dim] += 1
 
@@ -58,7 +53,7 @@ def map_engessay_to_assessment(
     return scores, base_scores
 
 
-def map_distilbert_to_dimensions(overall_score: float) -> Dict[str, float]:
+def map_distilbert_to_dimensions(overall_score: float) -> dict[str, float]:
     """Map DistilBERT single score to multiple dimensions."""
     dimension_names = ["TA", "CC", "Vocab", "Grammar", "Overall"]
     scores = {}

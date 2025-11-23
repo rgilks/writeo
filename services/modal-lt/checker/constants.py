@@ -45,4 +45,3 @@ STYLE_RULE_PREFIXES = (
     "CLARITY",
     "FORMALITY",
 )
-

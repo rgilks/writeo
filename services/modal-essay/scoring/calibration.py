@@ -11,9 +11,7 @@ def calibrate_short_essay(model_score: float, word_count: int) -> float:
 
 def calibrate_medium_short_essay(model_score: float, word_count: int) -> float:
     """Calibrate scores for short essays (50-100 words)."""
-    if model_score < 3.5:
-        return max(2.0, min(3.5, model_score))
-    elif model_score < 4.0:
+    if model_score < 3.5 or model_score < 4.0:
         return max(2.0, min(3.5, model_score))
     elif model_score < 5.0:
         return max(4.0, min(5.0, model_score + 0.6))
@@ -21,7 +19,7 @@ def calibrate_medium_short_essay(model_score: float, word_count: int) -> float:
         return max(4.0, min(5.0, model_score - 1.0))
 
 
-def calibrate_high_quality_medium(model_score: float, vocab_diversity: float) -> float:
+def calibrate_high_quality_medium(model_score: float, vocab_diversity: float) -> float | None:
     """Calibrate scores for high-quality medium essays."""
     if vocab_diversity >= 0.80:
         if model_score >= 7.0:
@@ -45,7 +43,7 @@ def calibrate_medium_essay(model_score: float, vocab_diversity: float) -> float:
     high_quality_result = calibrate_high_quality_medium(model_score, vocab_diversity)
     if high_quality_result is not None:
         return high_quality_result
-    
+
     if model_score > 6.5:
         return max(4.5, min(5.5, model_score - 1.5))
     elif model_score > 5.5:
@@ -86,4 +84,3 @@ def calibrate_from_corpus(model_score: float, word_count: int, vocab_diversity: 
         return calibrate_medium_essay(model_score, vocab_diversity)
     else:
         return calibrate_long_essay(model_score, word_count, vocab_diversity)
-

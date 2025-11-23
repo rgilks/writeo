@@ -47,6 +47,7 @@ interface DraftStore {
   // Actions
   addDraft: (draft: DraftHistory, parentSubmissionId?: string) => Achievement[];
   getDraftHistory: (submissionId: string) => DraftHistory[];
+  getRootSubmissionId: (submissionId: string) => string | null; // Add this line
   getProgress: (submissionId: string) => ProgressMetrics | undefined;
   trackFixedErrors: (
     submissionId: string,
@@ -383,15 +384,33 @@ export const useDraftStore = create<DraftStore>()(
               return state.drafts[submissionId];
             }
             // Try to find in any draft array (for drafts 2+)
-            for (const drafts of Object.values(state.drafts)) {
+            for (const [key, drafts] of Object.entries(state.drafts)) {
               const found = drafts.find((d) => d.submissionId === submissionId);
               if (found) {
-                // Return all drafts in the same group
-                const key = Object.keys(state.drafts).find((k) => state.drafts[k].includes(found));
-                return key ? state.drafts[key] : [found];
+                // Return all drafts in the same group (key is the root submission ID)
+                return drafts;
               }
             }
             return [];
+          },
+
+          // Add a new helper function to find the root submission ID
+          getRootSubmissionId: (submissionId) => {
+            const state = get();
+            // First try direct lookup by submissionId (for draft 1)
+            if (state.drafts[submissionId]) {
+              return submissionId; // This is the root
+            }
+            // Try to find in any draft array (for drafts 2+)
+            for (const [key, drafts] of Object.entries(state.drafts)) {
+              const found = drafts.find((d) => d.submissionId === submissionId);
+              if (found) {
+                // The key is the root submission ID, but verify by finding draft 1
+                const draft1 = drafts.find((d) => d.draftNumber === 1);
+                return draft1?.submissionId || key;
+              }
+            }
+            return null;
           },
 
           getProgress: (submissionId) => {

@@ -1,19 +1,20 @@
 """LanguageTool tool loading utilities."""
 
 import os
+import shutil
 import sys
 import time
-import shutil
 from pathlib import Path
-from typing import Optional, Any
-from config import LT_CACHE_DIR, LT_JAR_DIR, LT_VERSION
+from typing import Any
+
+from config import LT_CACHE_DIR, LT_JAR_DIR
 from ngram_setup import setup_ngram_data
 
 # Global variable to store the LanguageTool tool instance
-lt_tool: Optional[Any] = None
+lt_tool: Any | None = None
 
 
-def setup_environment(cache_base: str, jar_dir: str) -> tuple[str, str, Optional[str]]:
+def setup_environment(cache_base: str, jar_dir: str) -> tuple[str, str, str | None]:
     """Set up environment variables for LanguageTool."""
     original_home = os.environ.get("HOME", "/root")
     original_xdg_cache = os.environ.get("XDG_CACHE_HOME")
@@ -30,7 +31,7 @@ def setup_environment(cache_base: str, jar_dir: str) -> tuple[str, str, Optional
     return original_home, original_xdg_cache, original_ltp_path
 
 
-def find_jar_in_cache(jar_dir: str, cache_base: str) -> tuple[bool, Optional[Path]]:
+def find_jar_in_cache(jar_dir: str, cache_base: str) -> tuple[bool, Path | None]:
     """Find JAR file in cache directories."""
     if Path(jar_dir).exists():
         jar_files = list(Path(jar_dir).rglob("*.jar"))
@@ -46,7 +47,7 @@ def find_jar_in_cache(jar_dir: str, cache_base: str) -> tuple[bool, Optional[Pat
     return False, None
 
 
-def configure_ngrams(ngram_path: Optional[str]) -> None:
+def configure_ngrams(ngram_path: str | None) -> None:
     """Configure n-gram environment variables."""
     if ngram_path:
         os.environ["LANGUAGETOOL_LANGUAGE_MODEL"] = ngram_path
@@ -57,10 +58,10 @@ def configure_ngrams(ngram_path: Optional[str]) -> None:
         for env_var in ["LANGUAGETOOL_LANGUAGE_MODEL", "LT_LANGUAGE_MODEL"]:
             if env_var in os.environ:
                 del os.environ[env_var]
-        print(f"ℹ️  N-gram data not available - continuing without n-grams")
+        print("ℹ️  N-gram data not available - continuing without n-grams")
 
 
-def create_tool_with_config(language: str, ngram_path: Optional[str]) -> Any:
+def create_tool_with_config(language: str, ngram_path: str | None) -> Any:
     """Create LanguageTool instance with configuration."""
     import language_tool_python
 
@@ -72,7 +73,7 @@ def create_tool_with_config(language: str, ngram_path: Optional[str]) -> Any:
     if ngram_path:
         tool_config["languageModel"] = ngram_path
         print(f"✅ Configuring LanguageTool with n-grams: {ngram_path}")
-        print(f"   Note: n-gram path should point to parent directory (contains 'en/' folder)")
+        print("   Note: n-gram path should point to parent directory (contains 'en/' folder)")
 
     test_tool = language_tool_python.LanguageTool(language, config=tool_config)
     test_matches = test_tool.check(test_grammar_text)
@@ -84,7 +85,7 @@ def create_tool_with_config(language: str, ngram_path: Optional[str]) -> Any:
             category = match.category if hasattr(match, "category") else "UNKNOWN"
             print(f"   - Rule: {rule_id}, Category: {category}, Message: {match.message[:50]}")
     else:
-        print(f"⚠️  WARNING: No grammar errors detected in test text!")
+        print("⚠️  WARNING: No grammar errors detected in test text!")
 
     return test_tool
 
@@ -102,7 +103,7 @@ def copy_jar_to_volume(all_jar_locations: list[Path], jar_dir: str) -> None:
 
 
 def restore_environment(
-    original_home: str, original_xdg_cache: Optional[str], original_ltp_path: Optional[str]
+    original_home: str, original_xdg_cache: str | None, original_ltp_path: str | None
 ) -> None:
     """Restore original environment variables."""
     if original_home:
@@ -122,9 +123,11 @@ def validate_tool(tool: Any) -> None:
     try:
         quick_test = tool.check("I goes to store")
         if quick_test:
-            print(f"✅ Quick validation: LanguageTool is working ({len(quick_test)} issue(s) detected in test)")
+            print(
+                f"✅ Quick validation: LanguageTool is working ({len(quick_test)} issue(s) detected in test)"
+            )
         else:
-            print(f"⚠️  Quick validation: No issues detected (may be normal)")
+            print("⚠️  Quick validation: No issues detected (may be normal)")
     except Exception as e:
         print(f"⚠️  Quick validation failed: {e}")
 
@@ -156,7 +159,7 @@ def get_languagetool_tool(language: str = "en-GB") -> Any:
             jar_size_mb = jar_location.stat().st_size / 1024 / 1024
             print(f"📦 Found cached JAR in volume: {jar_location} ({jar_size_mb:.1f}MB)")
         else:
-            print(f"📥 JAR not found in cache, will download")
+            print("📥 JAR not found in cache, will download")
 
         ngram_path = setup_ngram_data(language)
         configure_ngrams(ngram_path)
@@ -164,7 +167,11 @@ def get_languagetool_tool(language: str = "en-GB") -> Any:
         lt_tool = create_tool_with_config(language, ngram_path)
 
         all_jar_locations = []
-        for check_dir in [jar_dir, cache_base + "/.cache/language-tool-python", "/root/.cache/language-tool-python"]:
+        for check_dir in [
+            jar_dir,
+            cache_base + "/.cache/language-tool-python",
+            "/root/.cache/language-tool-python",
+        ]:
             check_path = Path(check_dir)
             if check_path.exists():
                 jars = list(check_path.rglob("*.jar"))
@@ -193,5 +200,4 @@ def get_languagetool_tool(language: str = "en-GB") -> Any:
         import traceback
 
         print(f"📜 Traceback:\n{traceback.format_exc()}", file=sys.stderr)
-        raise RuntimeError(error_msg)
-
+        raise RuntimeError(error_msg) from None

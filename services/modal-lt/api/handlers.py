@@ -1,12 +1,14 @@
 """API route handlers."""
 
-import time
 import sys
+import time
+
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
-from schemas import CheckRequest
-from config import LT_VERSION
+
 from checker import check_text_with_languagetool
+from config import LT_VERSION
+from schemas import CheckRequest
 from tool_loader import get_languagetool_tool, lt_tool
 
 
@@ -27,7 +29,7 @@ async def handle_check(request: CheckRequest) -> JSONResponse:
     """Handle grammar check endpoint."""
     request_start = time.time()
     print(f"\n{'=' * 60}")
-    print(f"📥 POST /check request received")
+    print("📥 POST /check request received")
     print(f"⏱️  Request time: {request_start:.2f}s")
     print(f"🌐 Language: {request.language}")
     print(f"📝 Text length: {len(request.text) if request.text else 0} chars")
@@ -72,5 +74,4 @@ async def handle_check(request: CheckRequest) -> JSONResponse:
         import traceback
 
         print(f"📜 Traceback:\n{traceback.format_exc()}", file=sys.stderr)
-        raise HTTPException(status_code=500, detail=error_msg)
-
+        raise HTTPException(status_code=500, detail=error_msg) from None

@@ -2,7 +2,7 @@ import { test, expect } from "./fixtures";
 import { createTestSubmission, generateValidEssay } from "./helpers";
 
 /**
- * Draft Tracking Tests (TC-DRAFT-001 to TC-DRAFT-027)
+ * Draft Tracking Tests (TC-DRAFT-001 to TC-DRAFT-028)
  * Tests for draft tracking, revision history, navigation, and client-side switching
  *
  * Key Features Tested:
@@ -12,6 +12,7 @@ import { createTestSubmission, generateValidEssay } from "./helpers";
  * - All drafts visible regardless of current draft
  * - Draft comparison table
  * - Unique drafts (no duplicates)
+ * - Edge case: Direct navigation to draft URL without localStorage
  *
  * Storage Notes:
  * - Tests use direct localStorage access for backwards compatibility
@@ -1160,5 +1161,113 @@ test.describe("Draft Tracking", () => {
       // This is acceptable - the test verifies it works when drafts are properly linked
       expect(tableCount).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  test("TC-DRAFT-028: Direct navigation to draft URL without localStorage (edge case)", async ({
+    writePage,
+    resultsPage,
+    page,
+  }) => {
+    // Ensure we're in local mode (storeResults = false)
+    await page.goto("/");
+    await page.evaluate(() => {
+      const prefs = { viewMode: "learner", storeResults: false };
+      localStorage.setItem("writeo-preferences", JSON.stringify(prefs));
+    });
+
+    // Create first draft
+    const essay1 = generateValidEssay();
+    await writePage.goto("1");
+    await writePage.typeEssay(essay1);
+
+    await expect(async () => {
+      const isDisabled = await writePage.isSubmitButtonDisabled();
+      expect(isDisabled).toBe(false);
+    }).toPass({ timeout: 5000 });
+
+    await writePage.clickSubmit();
+
+    // Wait for navigation
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
+    await resultsPage.waitForResults();
+
+    const firstUrl = page.url();
+    const firstSubmissionId = firstUrl.match(/\/results\/([a-f0-9-]+)/)?.[1];
+    expect(firstSubmissionId).toBeTruthy();
+
+    // Wait for draft storage
+    await resultsPage.waitForDraftStorage(firstSubmissionId!, 10000);
+
+    // Create second draft (draft 2)
+    const editableEssay = await resultsPage.getEditableEssay();
+    await expect(editableEssay.first()).toBeVisible({ timeout: 10000 });
+
+    const essay2 = essay1 + " This is an improved version.";
+    await editableEssay.first().fill(essay2);
+
+    const resubmitButton = page.locator('button:has-text("Resubmit"), button:has-text("Submit")');
+    await expect(resubmitButton.first()).toBeEnabled({ timeout: 5000 });
+    await resubmitButton.first().click();
+
+    // Wait for navigation to draft 2
+    await page.waitForFunction(
+      (firstId) => {
+        const currentUrl = window.location.href;
+        const match = currentUrl.match(/\/results\/([a-f0-9-]+)/);
+        if (match && match[1]) {
+          return match[1] !== firstId;
+        }
+        return false;
+      },
+      firstSubmissionId,
+      { timeout: 20000 }
+    );
+
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 20000 });
+    await resultsPage.waitForResults();
+
+    const secondUrl = page.url();
+    const secondSubmissionId = secondUrl.match(/\/results\/([a-f0-9-]+)/)?.[1];
+    expect(secondSubmissionId).toBeTruthy();
+    expect(secondSubmissionId).not.toBe(firstSubmissionId);
+
+    // Wait for draft 2 to be stored
+    await resultsPage.waitForDraftStorage(secondSubmissionId!, 10000);
+
+    // Now simulate the edge case: clear localStorage and directly navigate to draft 2
+    await page.evaluate(() => {
+      // Clear all localStorage except preferences
+      const prefs = localStorage.getItem("writeo-preferences");
+      localStorage.clear();
+      if (prefs) {
+        localStorage.setItem("writeo-preferences", prefs);
+      }
+    });
+
+    // Directly navigate to draft 2 URL (simulating bookmark or direct link)
+    await page.goto(`/results/${secondSubmissionId}`);
+    await resultsPage.waitForResults();
+
+    // Verify the page loads without crashing
+    const errorMessages = await page
+      .locator("text=/Results Not Available|submission.*not.*found|error/i")
+      .count();
+    expect(errorMessages).toBe(0);
+
+    // Verify results are displayed
+    const overallScore = await resultsPage.getOverallScore();
+    expect(overallScore).toBeTruthy();
+
+    // Verify the draft loads (it might not have full draft history since localStorage was cleared,
+    // but it should still work as a standalone draft)
+    const draftHistory = await resultsPage.getDraftHistory();
+    // Draft history might be empty or incomplete, but that's acceptable for this edge case
+    // The important thing is that the page loads and displays results
+
+    // Verify we can still see the editable essay (for potential resubmission)
+    const editableEssayAfterReload = await resultsPage.getEditableEssay();
+    const editableCount = await editableEssayAfterReload.count();
+    // Editable essay should be visible (allows creating draft 3)
+    expect(editableCount).toBeGreaterThan(0);
   });
 });

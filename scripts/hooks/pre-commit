@@ -109,6 +109,10 @@ if [ -n "$PYTHON_FILES" ]; then
     echo "${GREEN}Python code formatted and staged.${NC}"
   fi
   
+  # Auto-fix Python linting errors
+  echo "${YELLOW}Auto-fixing Python linting errors with ruff...${NC}"
+  ruff check --fix --unsafe-fixes . || true
+  
   # Lint Python code (strict - fails on errors)
   echo "${YELLOW}Linting Python code with ruff (strict)...${NC}"
   if ! ruff check .; then

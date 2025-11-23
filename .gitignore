@@ -40,6 +40,7 @@ __pycache__/
 *.so
 .Python
 .pytest_cache/
+.mypy_cache/
 .coverage
 .coverage.*
 htmlcov/

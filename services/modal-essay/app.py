@@ -1,6 +1,7 @@
 """Modal FastAPI service for essay scoring."""
 
 import os
+
 import modal  # type: ignore
 
 # Modal app and image setup

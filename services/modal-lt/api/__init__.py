@@ -1,14 +1,15 @@
 """API module - FastAPI app creation."""
 
-import os
 import time
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+
 from schemas import CheckRequest
 from tool_loader import get_languagetool_tool
-from .middleware import verify_api_key, get_api_key
-from .handlers import handle_health, handle_check
+
+from .handlers import handle_check, handle_health
+from .middleware import get_api_key, verify_api_key
 
 
 @asynccontextmanager
@@ -58,4 +59,3 @@ def create_fastapi_app() -> FastAPI:
         return await handle_check(request)
 
     return api
-

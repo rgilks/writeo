@@ -1,17 +1,20 @@
 """API module - FastAPI app creation."""
 
-import os
 import time
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from schemas import ModalRequest, AssessmentResults
+
 from config import DEFAULT_MODEL
 from model_loader import get_model
+from schemas import AssessmentResults, ModalRequest
+
+from .handlers_grade import handle_grade as handle_grade_impl
+from .handlers_models import handle_compare_models as handle_compare_models_impl
+from .handlers_models import handle_list_models as handle_list_models_impl
 from .middleware import verify_api_key
 from .routes import handle_health
-from .handlers_grade import handle_grade as handle_grade_impl
-from .handlers_models import handle_list_models as handle_list_models_impl, handle_compare_models as handle_compare_models_impl
 
 
 @asynccontextmanager
@@ -35,6 +38,7 @@ async def lifespan(app: FastAPI):
         print(f"⚠️ Warning: Could not pre-load default model after {total_startup_time:.2f}s: {e}")
         print("Models will be loaded on first request (lazy loading)")
         import traceback
+
         print(f"📜 Traceback:\n{traceback.format_exc()}")
 
     yield
@@ -48,29 +52,29 @@ def create_fastapi_app() -> FastAPI:
         title="Writeo Essay Scorer API",
         description="""
         ## Writeo Essay Scoring Service
-        
+
         A high-performance API for automated essay scoring using transformer-based machine learning models.
-        
+
         ### Features
         - **Multiple Model Support**: Choose from different scoring models (engessay, distilbert, fallback)
         - **Band Scoring**: Returns scores on the 0-9 band scale with 0.5 increments
         - **CEFR Mapping**: Automatic conversion from band scores to CEFR levels (A2-C2)
         - **Multi-Dimensional Scoring**: Provides scores for Task Achievement (TA), Coherence & Cohesion (CC), Vocabulary, and Grammar
         - **GPU Acceleration**: Fast inference using GPU-accelerated transformer models
-        
+
         ### Models
         - **engessay** (default): KevSun/Engessay_grading_ML - RoBERTa-based model with 6 analytic dimensions
           - Citation: Sun, K., & Wang, R. (2024). Automatic Essay Multi-dimensional Scoring with Fine-tuning and Multiple Regression. *ArXiv*. https://arxiv.org/abs/2406.01198
         - **distilbert**: Michau96/distilbert-base-uncased-essay_scoring - DistilBERT model with single score output
         - **fallback**: Heuristic-based scoring (no ML model required)
-        
+
         ### Scoring Dimensions
         - **TA** (Task Achievement): How well the task is addressed
         - **CC** (Coherence & Cohesion): Organization and linking of ideas
         - **Vocab** (Vocabulary): Range and accuracy of vocabulary
         - **Grammar**: Grammatical range and accuracy
         - **Overall**: Average of all dimensions, mapped to CEFR level
-        
+
         ### Access
         - **Swagger UI**: Available at `/docs`
         - **ReDoc**: Available at `/redoc`
@@ -101,7 +105,7 @@ def create_fastapi_app() -> FastAPI:
         ],
         lifespan=lifespan,
     )
-    
+
     api.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -109,46 +113,43 @@ def create_fastapi_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     api.middleware("http")(verify_api_key)
-    
+
     register_routes(api)
-    
+
     return api
 
 
 def register_routes(api: FastAPI) -> None:
     """Register API routes."""
-    from typing import Optional
-    from fastapi import Query
-    
+
     @api.post(
         "/grade",
         response_model=AssessmentResults,
         status_code=200,
         tags=["Assessment"],
         summary="Grade essay submission",
-        description="Scores an essay submission using machine learning models."
+        description="Scores an essay submission using machine learning models.",
     )
     async def grade(
         request: ModalRequest,
-        model_key: Optional[str] = Query(
+        model_key: str | None = Query(
             None,
             description="Model to use: 'engessay' (default), 'distilbert', or 'fallback'",
-            example="engessay"
-        )
+            example="engessay",
+        ),
     ):
         return await handle_grade_impl(request, model_key)
-    
+
     @api.get("/health", tags=["Health"], summary="Health check")
     async def health():
         return await handle_health()
-    
+
     @api.get("/models", tags=["Models"], summary="List available models")
     async def list_models():
         return await handle_list_models_impl()
-    
+
     @api.post("/grade/compare", tags=["Models"], summary="Compare models on same submission")
     async def compare_models(request: ModalRequest):
         return await handle_compare_models_impl(request)
-

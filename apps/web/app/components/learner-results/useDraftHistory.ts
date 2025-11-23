@@ -20,6 +20,7 @@ export function useDraftHistory(
   const drafts = useDraftStore((state) => state.drafts);
   // Store functions are stable
   const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
+  const getRootSubmissionId = useDraftStore((state) => state.getRootSubmissionId);
 
   const draftNumber = (data.meta?.draftNumber as number) || 1;
   const draftHistory =
@@ -33,9 +34,25 @@ export function useDraftHistory(
 
   // Memoize expensive draft history computation
   const displayDraftHistory = useMemo(() => {
-    // Use root submission ID to get all drafts in the chain
-    // The root is either parentSubmissionId (if it exists) or submissionId (for draft 1)
-    const rootSubmissionId = parentSubmissionId || submissionId || "";
+    // Find the root submission ID - this is critical for getting all drafts
+    let rootSubmissionId = parentSubmissionId || submissionId || "";
+
+    // If we have a submissionId, try to find the actual root using the store helper
+    // This handles the case where parentSubmissionId might be a non-root parent
+    if (submissionId) {
+      const foundRoot = getRootSubmissionId(submissionId);
+      if (foundRoot) {
+        rootSubmissionId = foundRoot;
+      }
+    }
+
+    // If we still don't have a root from the store, try parentSubmissionId
+    if (!rootSubmissionId && parentSubmissionId) {
+      const foundRoot = getRootSubmissionId(parentSubmissionId);
+      if (foundRoot) {
+        rootSubmissionId = foundRoot;
+      }
+    }
 
     // Get all drafts stored under the root submission ID
     const storedDraftHistory = rootSubmissionId ? getDraftHistory(rootSubmissionId) : [];
@@ -121,6 +138,7 @@ export function useDraftHistory(
     grammarErrors.length,
     finalAnswerText,
     getDraftHistory,
+    getRootSubmissionId,
     drafts, // Add drafts to dependency array
   ]);
 

@@ -1,13 +1,11 @@
 """LanguageTool server management utilities."""
 
 import subprocess
-from typing import Optional
-from pathlib import Path
 
 
 def start_languagetool_server_with_ngrams(
-    jar_path: str, ngram_path: Optional[str] = None, port: int = 8081
-) -> Optional[subprocess.Popen]:
+    jar_path: str, ngram_path: str | None = None, port: int = 8081
+) -> subprocess.Popen | None:
     """Start LanguageTool Java server with n-gram support."""
     if not ngram_path:
         return None
@@ -26,7 +24,7 @@ def start_languagetool_server_with_ngrams(
             java_cmd.extend(["--languageModel", ngram_path])
             print(f"🚀 Starting LanguageTool server with n-grams: {ngram_path}")
         else:
-            print(f"🚀 Starting LanguageTool server without n-grams")
+            print("🚀 Starting LanguageTool server without n-grams")
 
         server_process = subprocess.Popen(
             java_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
@@ -41,7 +39,7 @@ def start_languagetool_server_with_ngrams(
             return server_process
         else:
             stdout, stderr = server_process.communicate()
-            print(f"❌ LanguageTool server failed to start")
+            print("❌ LanguageTool server failed to start")
             print(f"   stdout: {stdout[:200]}")
             print(f"   stderr: {stderr[:200]}")
             return None
@@ -49,4 +47,3 @@ def start_languagetool_server_with_ngrams(
     except Exception as e:
         print(f"⚠️  Could not start LanguageTool server manually: {e}")
         return None
-

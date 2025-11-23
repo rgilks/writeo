@@ -1,7 +1,6 @@
 """Pydantic schemas for LanguageTool service."""
 
 from pydantic import BaseModel
-from typing import Optional
 
 
 class CheckRequest(BaseModel):
@@ -9,5 +8,4 @@ class CheckRequest(BaseModel):
 
     language: str = "en-GB"
     text: str
-    answer_id: Optional[str] = None
-
+    answer_id: str | None = None
