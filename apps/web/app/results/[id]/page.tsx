@@ -25,8 +25,16 @@ export default function ResultsPage() {
   const [processingTime, setProcessingTime] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
 
-  // Get parent submission ID from URL params or results store
-  const parentId = searchParams?.get("parent") || getParentSubmissionId(submissionId) || null;
+  // Get parent submission ID from results.meta (single source of truth)
+  // URL param ?parent= is no longer needed since parentSubmissionId is in results.meta
+  const [parentId, setParentId] = useState<string | null>(() => {
+    // Try to get from initial results if available
+    if (initialResults?.meta?.parentSubmissionId) {
+      return initialResults.meta.parentSubmissionId as string;
+    }
+    // Fallback to results store
+    return getParentSubmissionId(submissionId);
+  });
 
   // Check if results were passed via router state (from write page) or stored locally
   const [initialResults] = useState<AssessmentResults | null>(() => {
@@ -60,6 +68,11 @@ export default function ResultsPage() {
     // Update previousData when data changes (for draft switching)
     if (data) {
       setPreviousData(data);
+      // Update parentId from results.meta (single source of truth)
+      const metaParentId = data.meta?.parentSubmissionId as string | undefined;
+      if (metaParentId) {
+        setParentId(metaParentId);
+      }
     }
   }, [data]);
 
@@ -88,6 +101,12 @@ export default function ResultsPage() {
         const storedResults = getResult(submissionId);
         if (storedResults) {
           if (!cancelled) {
+            // Update parentId from stored results if available
+            const storedParentId = storedResults.meta?.parentSubmissionId as string | undefined;
+            if (storedParentId && !parentId) {
+              setParentId(storedParentId);
+            }
+
             // Use stored results immediately, but still try to fetch from server in background
             setData(storedResults);
             setStatus("success");
@@ -107,7 +126,7 @@ export default function ResultsPage() {
                 if (!cancelled && serverResults) {
                   // Update with server results if available
                   setData(serverResults);
-                  setResult(submissionId, serverResults, parentId || undefined);
+                  setResult(submissionId, serverResults);
                   // Also store in localStorage
                   if (typeof window !== "undefined") {
                     try {
@@ -129,13 +148,21 @@ export default function ResultsPage() {
           }
         }
 
+        // Get parentId from stored results if not already set
+        const effectiveParentId =
+          parentId || (storedResults?.meta?.parentSubmissionId as string | undefined);
+        const effectiveParentResults =
+          effectiveParentId && !storeResults
+            ? getResult(effectiveParentId) || parentResults
+            : parentResults;
+
         try {
-          const results = parentId
+          const results = effectiveParentId
             ? await getSubmissionResultsWithDraftTracking(
                 submissionId,
-                parentId,
+                effectiveParentId,
                 storeResults,
-                parentResults
+                effectiveParentResults
               )
             : await getSubmissionResults(submissionId);
           if (!cancelled) {
@@ -150,7 +177,7 @@ export default function ResultsPage() {
             setData(resultsToStore);
             setStatus("success");
             // Save to results store for future access
-            setResult(submissionId, resultsToStore, parentId || undefined);
+            setResult(submissionId, resultsToStore);
             // Also store in localStorage for tests and persistence
             if (typeof window !== "undefined") {
               try {
@@ -241,19 +268,13 @@ export default function ResultsPage() {
     // Check if results are in results store
     const storedResults = getResult(targetSubmissionId);
     if (storedResults) {
-      const targetDraftNumber = (storedResults.meta?.draftNumber as number) || 1;
-
       setData(storedResults);
       setStatus("success");
       setError(null);
 
       // Update URL without reload
-      // Only include parent param if it's not draft 1 and root is different
-      const newUrl =
-        targetDraftNumber === 1 || !rootSubmissionId || rootSubmissionId === targetSubmissionId
-          ? `/results/${targetSubmissionId}`
-          : `/results/${targetSubmissionId}?parent=${rootSubmissionId}`;
-      router.replace(newUrl);
+      // No need for ?parent= param since parentSubmissionId is in results.meta
+      router.replace(`/results/${targetSubmissionId}`);
 
       // Update answer text
       const answerTexts = storedResults.meta?.answerTexts as Record<string, string> | undefined;

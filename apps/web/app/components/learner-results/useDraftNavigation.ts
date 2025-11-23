@@ -34,13 +34,8 @@ export function useDraftNavigation(
   const isFirstDraft = draft.draftNumber === 1;
   const rootSubmissionId = rootDraft?.submissionId || parentSubmissionId || draftSubmissionId;
 
-  const navigateUrl = hasValidSubmissionId
-    ? isFirstDraft
-      ? `/results/${draftSubmissionId}`
-      : rootSubmissionId && rootSubmissionId !== draftSubmissionId
-        ? `/results/${draftSubmissionId}?parent=${rootSubmissionId}`
-        : `/results/${draftSubmissionId}`
-    : "#";
+  // No need for ?parent= param since parentSubmissionId is in results.meta
+  const navigateUrl = hasValidSubmissionId ? `/results/${draftSubmissionId}` : "#";
 
   return { navigateUrl, hasValidSubmissionId };
 }

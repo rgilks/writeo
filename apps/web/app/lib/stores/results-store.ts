@@ -12,7 +12,7 @@ import { createSafeStorage, cleanupExpiredStorage } from "../utils/storage";
 interface StoredResult {
   results: AssessmentResults;
   timestamp: number;
-  parentSubmissionId?: string;
+  // parentSubmissionId removed - it's already in results.meta.parentSubmissionId
 }
 
 interface ResultsStore {
@@ -20,11 +20,7 @@ interface ResultsStore {
   results: Record<string, StoredResult>;
 
   // Actions
-  setResult: (
-    submissionId: string,
-    results: AssessmentResults,
-    parentSubmissionId?: string
-  ) => void;
+  setResult: (submissionId: string, results: AssessmentResults) => void;
   getResult: (submissionId: string) => AssessmentResults | null;
   getParentSubmissionId: (submissionId: string) => string | null;
   removeResult: (submissionId: string) => void;
@@ -44,12 +40,11 @@ export const useResultsStore = create<ResultsStore>()(
       immer((set, get) => ({
         results: {},
 
-        setResult: (submissionId, results, parentSubmissionId) => {
+        setResult: (submissionId, results) => {
           set((state) => {
             state.results[submissionId] = {
               results,
               timestamp: Date.now(),
-              parentSubmissionId,
             };
           });
         },
@@ -60,8 +55,9 @@ export const useResultsStore = create<ResultsStore>()(
         },
 
         getParentSubmissionId: (submissionId) => {
+          // Read parentSubmissionId from results.meta instead of separate storage
           const stored = get().results[submissionId];
-          return stored?.parentSubmissionId || null;
+          return (stored?.results?.meta?.parentSubmissionId as string | undefined) || null;
         },
 
         removeResult: (submissionId) => {

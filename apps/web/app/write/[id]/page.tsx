@@ -191,6 +191,7 @@ export default function WritePage() {
       }
 
       // Store results in results store (persistent) and sessionStorage (immediate display)
+      // parentSubmissionId is already in resultsToStore.meta.parentSubmissionId
       setResult(submissionId, resultsToStore);
       if (typeof window !== "undefined") {
         try {

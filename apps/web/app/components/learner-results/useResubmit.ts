@@ -51,8 +51,8 @@ export function useResubmit() {
       }
 
       // Store results in results store
-      const parentToUse = parentId || submissionId;
-      setResult(newSubmissionId, results, parentToUse);
+      // parentSubmissionId is already in results.meta.parentSubmissionId
+      setResult(newSubmissionId, results);
 
       // Store in both localStorage and sessionStorage for persistence and immediate display
       if (typeof window !== "undefined") {
@@ -62,11 +62,8 @@ export function useResubmit() {
         sessionStorage.setItem(`results_${newSubmissionId}`, JSON.stringify(results));
       }
 
-      if (parentToUse) {
-        router.push(`/results/${newSubmissionId}?parent=${parentToUse}`);
-      } else {
-        router.push(`/results/${newSubmissionId}`);
-      }
+      // No need for ?parent= param since parentSubmissionId is in results.meta
+      router.push(`/results/${newSubmissionId}`);
     } catch (error) {
       setIsResubmitting(false);
       throw error;

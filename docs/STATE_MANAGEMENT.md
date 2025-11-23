@@ -81,13 +81,14 @@ Manages assessment results storage in localStorage. Replaces direct localStorage
 **State:**
 
 - `results`: Record of assessment results by submission ID
-  - Each entry includes: `results` (AssessmentResults), `timestamp`, `parentSubmissionId`
+  - Each entry includes: `results` (AssessmentResults), `timestamp`
+  - **Note**: `parentSubmissionId` is stored in `results.meta.parentSubmissionId`, not as a separate field
 
 **Actions:**
 
-- `setResult()`: Store assessment results with optional parent submission ID
+- `setResult()`: Store assessment results (parentSubmissionId is already in results.meta)
 - `getResult()`: Retrieve assessment results by submission ID
-- `getParentSubmissionId()`: Get parent submission ID for draft tracking
+- `getParentSubmissionId()`: Get parent submission ID from results.meta for draft tracking
 - `removeResult()`: Remove a specific result
 - `clearAllResults()`: Clear all stored results
 - `cleanupOldResults()`: Remove results older than specified age (default: 30 days)
@@ -395,12 +396,12 @@ export const useResultsStore = create<ResultsStore>()(
       immer((set, get) => ({
         results: {},
 
-        setResult: (submissionId, results, parentSubmissionId) => {
+        setResult: (submissionId, results) => {
           set((state) => {
             state.results[submissionId] = {
               results,
               timestamp: Date.now(),
-              parentSubmissionId,
+              // parentSubmissionId is stored in results.meta.parentSubmissionId
             };
           });
         },
@@ -478,7 +479,7 @@ await page.evaluate(() => {
 **Legacy Keys (for backwards compatibility):**
 
 - `results_{submissionId}` - Assessment results (now managed by Results Store)
-- `draft_parent_{submissionId}` - Parent submission ID (now managed by Results Store)
+- Note: `parentSubmissionId` is stored in `results.meta.parentSubmissionId`, not as a separate key
 
 **Testing Notes:**
 

@@ -117,9 +117,11 @@ test.describe("Draft Tracking", () => {
     await resultsPage.goto(draft2Id, draft1Id);
     await resultsPage.waitForResults();
 
-    // URL should include parent param
+    // URL should NOT include parent param (parentSubmissionId is in results.meta instead)
     const url = page.url();
-    expect(url).toContain("parent=");
+    expect(url).not.toContain("parent=");
+    // Verify we're on the results page
+    expect(url).toContain(`/results/${draft2Id}`);
   });
 
   test("TC-DRAFT-019: Draft History positioned correctly", async ({ resultsPage, page }) => {
@@ -700,20 +702,30 @@ test.describe("Draft Tracking", () => {
       expect(storedResults).toBeTruthy(); // Critical: should be stored immediately
 
       // Verify parent relationship is stored (check Zustand results store)
+      // parentSubmissionId is now stored in results.meta.parentSubmissionId, not as a separate field
       const parentStored = await page.evaluate((submissionId) => {
         try {
           const storeData = localStorage.getItem("writeo-results-store");
           if (storeData) {
             const parsed = JSON.parse(storeData);
-            if (parsed?.state?.results?.[submissionId]) {
-              return parsed.state.results[submissionId].parentSubmissionId || null;
+            if (parsed?.state?.results?.[submissionId]?.results?.meta?.parentSubmissionId) {
+              return parsed.state.results[submissionId].results.meta.parentSubmissionId;
             }
           }
         } catch {
           // Ignore parse errors
         }
-        // Fallback to direct localStorage key (for backwards compatibility)
-        return localStorage.getItem(`draft_parent_${submissionId}`);
+        // Fallback: try to read from direct localStorage results
+        try {
+          const directResults = localStorage.getItem(`results_${submissionId}`);
+          if (directResults) {
+            const parsed = JSON.parse(directResults);
+            return parsed?.meta?.parentSubmissionId || null;
+          }
+        } catch {
+          // Ignore parse errors
+        }
+        return null;
       }, newSubmissionId);
       expect(parentStored).toBe(firstSubmissionId);
     }

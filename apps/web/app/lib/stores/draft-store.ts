@@ -186,6 +186,8 @@ export const useDraftStore = create<DraftStore>()(
             let newAchievements: Achievement[] = [];
 
             set((state) => {
+              // Use root submissionId: parentSubmissionId if provided, otherwise submissionId (for draft 1)
+              // This is simpler than the old logic and matches how results.meta.parentSubmissionId works
               const key = parentSubmissionId || draft.submissionId;
 
               // Initialize array if it doesn't exist
@@ -376,7 +378,11 @@ export const useDraftStore = create<DraftStore>()(
 
           getDraftHistory: (submissionId) => {
             const state = get();
-            // Try to find in any draft array
+            // First try direct lookup by submissionId (for draft 1)
+            if (state.drafts[submissionId]) {
+              return state.drafts[submissionId];
+            }
+            // Try to find in any draft array (for drafts 2+)
             for (const drafts of Object.values(state.drafts)) {
               const found = drafts.find((d) => d.submissionId === submissionId);
               if (found) {

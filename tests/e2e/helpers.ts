@@ -274,10 +274,9 @@ export class ResultsPage {
   constructor(private page: Page) {}
 
   async goto(submissionId: string, parentId?: string) {
-    const url = parentId
-      ? `/results/${submissionId}?parent=${parentId}`
-      : `/results/${submissionId}`;
-    await this.page.goto(url);
+    // parentId parameter kept for backwards compatibility but not used in URL
+    // parentSubmissionId is now read from results.meta instead of URL param
+    await this.page.goto(`/results/${submissionId}`);
   }
 
   async waitForResults(timeout = 30000) {
