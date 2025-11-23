@@ -138,8 +138,6 @@ modal app logs writeo-essay
 modal app logs writeo-lt
 ```
 
-⚠️ **Never use `wrangler tail` without timeout** - it blocks indefinitely. Always use the helper script or add `timeout 10s`.
-
 ## Performance
 
 **Typical Response Times:**
