@@ -4,7 +4,8 @@
 # Starts local dev servers, runs all tests, then cleans up
 #
 
-set -e
+set -e  # Exit immediately if a command exits with a non-zero status
+set -u  # Exit if an unset variable is used
 
 # Colors for output
 RED='\033[0;31m'
@@ -254,13 +255,19 @@ export CI=true
 show_time
 echo "${CYAN}Running unit tests...${NC}"
 echo ""
-if ! npm test 2>&1; then
+set +e  # Temporarily disable exit on error to capture test result
+npm test 2>&1
+UNIT_TEST_EXIT_CODE=$?
+set -e  # Re-enable exit on error
+if [ $UNIT_TEST_EXIT_CODE -ne 0 ]; then
   echo ""
   show_time
-  echo "${RED}Unit tests failed!${NC}"
-  echo "${YELLOW}To skip this check, use: git push --no-verify${NC}"
+  echo "${RED}✗ Unit tests failed (exit code: $UNIT_TEST_EXIT_CODE)!${NC}"
+  echo "${YELLOW}Stopping pre-push hook. To skip this check, use: git push --no-verify${NC}"
   exit 1
 fi
+show_time
+echo "${GREEN}✓ Unit tests passed${NC}"
 
 echo ""
 # Run e2e tests with list reporter (non-interactive)
@@ -268,13 +275,19 @@ echo ""
 show_time
 echo "${CYAN}Running E2E tests...${NC}"
 echo ""
-if ! npm run test:e2e -- --reporter=list 2>&1; then
+set +e  # Temporarily disable exit on error to capture test result
+npm run test:e2e -- --reporter=list 2>&1
+E2E_TEST_EXIT_CODE=$?
+set -e  # Re-enable exit on error
+if [ $E2E_TEST_EXIT_CODE -ne 0 ]; then
   echo ""
   show_time
-  echo "${RED}E2E tests failed!${NC}"
-  echo "${YELLOW}To skip this check, use: git push --no-verify${NC}"
+  echo "${RED}✗ E2E tests failed (exit code: $E2E_TEST_EXIT_CODE)!${NC}"
+  echo "${YELLOW}Stopping pre-push hook. To skip this check, use: git push --no-verify${NC}"
   exit 1
 fi
+show_time
+echo "${GREEN}✓ E2E tests passed${NC}"
 
 echo ""
 show_time
