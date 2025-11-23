@@ -383,19 +383,16 @@ export class ResultsPage {
     // They're inside the draft history section
     const draftHistory = await this.getDraftHistory();
     if ((await draftHistory.count()) > 0) {
-      return draftHistory.locator("..").locator('div:has-text(/^Draft \\d+$/i)');
+      return draftHistory.locator("..").locator("div:has-text(/^Draft \\d+$/i)");
     }
-    return this.page.locator('div:has-text(/^Draft \\d+$/i)');
+    return this.page.locator("div:has-text(/^Draft \\d+$/i)");
   }
 
   async getDraftButton(draftNumber: number) {
     // Find draft button by number within draft history section
     const draftHistory = await this.getDraftHistory();
     if ((await draftHistory.count()) > 0) {
-      return draftHistory
-        .locator("..")
-        .locator(`div:has-text("Draft ${draftNumber}")`)
-        .first();
+      return draftHistory.locator("..").locator(`div:has-text("Draft ${draftNumber}")`).first();
     }
     return this.page.locator(`div:has-text("Draft ${draftNumber}")`).first();
   }
@@ -407,9 +404,11 @@ export class ResultsPage {
 
   async getCurrentDraftNumber(): Promise<number | null> {
     // Find the draft button with primary color (current draft)
-    const currentButton = this.page.locator('div[style*="var(--primary-color)"], div[style*="rgb"]').filter({
-      hasText: /Draft \d+/,
-    });
+    const currentButton = this.page
+      .locator('div[style*="var(--primary-color)"], div[style*="rgb"]')
+      .filter({
+        hasText: /Draft \d+/,
+      });
     const count = await currentButton.count();
     if (count > 0) {
       const text = await currentButton.first().textContent();

@@ -24,7 +24,7 @@ export function DraftButton({
 
   const handleClick = () => {
     if (!hasValidSubmissionId || isCurrent) return;
-    
+
     // Try client-side switch first (if callback provided)
     if (onDraftSwitch && draft.submissionId) {
       const switched = onDraftSwitch(draft.submissionId, rootSubmissionId);
@@ -32,7 +32,7 @@ export function DraftButton({
         return; // Successfully switched without navigation
       }
     }
-    
+
     // Fall back to navigation if client-side switch failed or callback not provided
     router.push(navigateUrl);
   };

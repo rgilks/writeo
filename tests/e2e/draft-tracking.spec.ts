@@ -4,7 +4,7 @@ import { createTestSubmission, generateValidEssay } from "./helpers";
 /**
  * Draft Tracking Tests (TC-DRAFT-001 to TC-DRAFT-027)
  * Tests for draft tracking, revision history, navigation, and client-side switching
- * 
+ *
  * Key Features Tested:
  * - Draft creation in local and server storage modes
  * - Draft history visibility (hidden for single draft, visible for 2+)
@@ -712,7 +712,7 @@ test.describe("Draft Tracking", () => {
     // The score might be different between drafts
     const newScore = await resultsPage.getOverallScore();
     const newScoreText = await newScore.first().textContent();
-    
+
     // At minimum, verify we're on the correct draft's page
     expect(newUrl).toContain("/results/");
   });
@@ -760,7 +760,7 @@ test.describe("Draft Tracking", () => {
 
     const draftHistory1 = await resultsPage.getDraftHistory();
     const visible1 = (await draftHistory1.count()) > 0;
-    
+
     if (visible1) {
       const draftButtons1 = await resultsPage.getDraftButtons();
       const count1 = await draftButtons1.count();
@@ -775,7 +775,7 @@ test.describe("Draft Tracking", () => {
 
     const draftHistory2 = await resultsPage.getDraftHistory();
     const visible2 = (await draftHistory2.count()) > 0;
-    
+
     if (visible2) {
       const draftButtons2 = await resultsPage.getDraftButtons();
       const count2 = await draftButtons2.count();
@@ -790,7 +790,7 @@ test.describe("Draft Tracking", () => {
 
     const draftHistory3 = await resultsPage.getDraftHistory();
     const visible3 = (await draftHistory3.count()) > 0;
-    
+
     if (visible3) {
       const draftButtons3 = await resultsPage.getDraftButtons();
       const count3 = await draftButtons3.count();
@@ -799,10 +799,7 @@ test.describe("Draft Tracking", () => {
     }
   });
 
-  test("TC-DRAFT-027: Draft comparison table displays correctly", async ({
-    resultsPage,
-    page,
-  }) => {
+  test("TC-DRAFT-027: Draft comparison table displays correctly", async ({ resultsPage, page }) => {
     // Create two drafts
     const essay1 = generateValidEssay();
     const { submissionId: draft1Id, results: results1 } = await createTestSubmission(

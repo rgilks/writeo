@@ -256,19 +256,19 @@ export default function ResultsPage() {
         try {
           const parsed = JSON.parse(storedResults);
           const targetDraftNumber = (parsed.meta?.draftNumber as number) || 1;
-          
+
           setData(parsed);
           setStatus("success");
           setError(null);
-          
+
           // Update URL without reload
           // Only include parent param if it's not draft 1 and root is different
-          const newUrl = 
+          const newUrl =
             targetDraftNumber === 1 || !rootSubmissionId || rootSubmissionId === targetSubmissionId
               ? `/results/${targetSubmissionId}`
               : `/results/${targetSubmissionId}?parent=${rootSubmissionId}`;
           router.replace(newUrl);
-          
+
           // Update answer text
           const answerTexts = parsed.meta?.answerTexts as Record<string, string> | undefined;
           if (answerTexts) {

@@ -30,7 +30,12 @@ export function DraftHistorySection({
   const rootSubmissionId = parentSubmissionId || rootDraft?.submissionId || submissionId;
 
   return (
-    <div className="card" lang="en" style={{ padding: "var(--spacing-md)" }} data-testid="draft-history">
+    <div
+      className="card"
+      lang="en"
+      style={{ padding: "var(--spacing-md)" }}
+      data-testid="draft-history"
+    >
       <h2
         style={{
           fontSize: "16px",

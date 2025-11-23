@@ -44,7 +44,8 @@ Manages draft history, progress tracking, achievements, and streaks.
 - `getAverageImprovement()`: Average score improvement
 - `getAllDrafts()`: All drafts flattened
 
-**Persistence:** 
+**Persistence:**
+
 - Uses Zustand's `persist` middleware for automatic localStorage persistence
 - Custom storage adapter handles `Set<string>` serialization/deserialization for `fixedErrors`
 - Automatically saves on every state change
@@ -65,6 +66,7 @@ Manages user preferences that persist across sessions.
 - `setStoreResults()`: Update server storage preference
 
 **Persistence:**
+
 - Uses Zustand's `persist` middleware for automatic localStorage persistence
 - Automatic migration from old separate keys (`writeo-view-mode`, `writeo-store-results`)
 - Migration handled in `onRehydrateStorage` callback
@@ -79,15 +81,16 @@ Custom hooks encapsulate store logic and provide clean APIs for components:
 - **`useDraftNavigation`**: Calculates navigation URLs for draft buttons
 
 **Pattern:**
+
 ```typescript
 export function useDraftHistory(...) {
   const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
-  
+
   // Memoize expensive computation
   const displayDraftHistory = useMemo(() => {
     // ... expensive computation
   }, [deps]);
-  
+
   return { displayDraftHistory, draftNumber, parentSubmissionId };
 }
 ```
@@ -137,9 +140,11 @@ set((state) => {
 
 ```typescript
 // Don't do this - immer middleware handles it automatically
-set(produce((draft) => {
-  draft.property = newValue;
-}));
+set(
+  produce((draft) => {
+    draft.property = newValue;
+  })
+);
 ```
 
 **❌ DON'T: Destructure for mutation**
@@ -254,6 +259,7 @@ create<StoreType>()(
 ```
 
 **Why this order matters:**
+
 - `immer` must be innermost to handle mutations
 - `persist` wraps immer to serialize state
 - `devtools` wraps everything for debugging
@@ -270,7 +276,7 @@ export const useDraftStore = create<DraftStore>()(
         fixedErrors: {},
         achievements: [],
         streak: { currentStreak: 0, longestStreak: 0, lastActivityDate: "" },
-        
+
         addDraft: (draft, parentSubmissionId) => {
           set((state) => {
             // Direct mutations - immer middleware handles immutability
@@ -302,7 +308,7 @@ export const usePreferencesStore = create<PreferencesStore>()(
       immer((set) => ({
         viewMode: "learner",
         storeResults: false,
-        
+
         setViewMode: (mode) => {
           set((state) => {
             state.viewMode = mode; // Direct mutation
@@ -367,6 +373,7 @@ await page.evaluate(() => {
 ```
 
 For draft store testing, results are stored in localStorage with keys:
+
 - `results_{submissionId}` - Assessment results
 - `draft_parent_{submissionId}` - Parent submission ID for drafts
 - `writeo-draft-store` - Zustand persist store (handled automatically)

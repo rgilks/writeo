@@ -103,7 +103,8 @@ const baseStorage: StateStorage = {
 // Zustand persist wraps state in { state: {...}, version: number }
 const storageWithSetHandling: StateStorage = {
   getItem: (name: string): string | null => {
-    const str = baseStorage.getItem(name);
+    // baseStorage uses synchronous localStorage, so result is always string | null (not Promise)
+    const str = baseStorage.getItem(name) as string | null;
     if (!str) return null;
     try {
       const parsed = JSON.parse(str);
@@ -157,10 +158,10 @@ export const useDraftStore = create<DraftStore>()(
             lastActivityDate: "",
           },
 
-        addDraft: (draft, parentSubmissionId) => {
-          let newAchievements: Achievement[] = [];
+          addDraft: (draft, parentSubmissionId) => {
+            let newAchievements: Achievement[] = [];
 
-          set((state) => {
+            set((state) => {
               const key = parentSubmissionId || draft.submissionId;
 
               // Initialize array if it doesn't exist
@@ -342,145 +343,145 @@ export const useDraftStore = create<DraftStore>()(
                 state.achievements.push(...achievementsToAdd);
                 newAchievements = achievementsToAdd.map((a) => ({ ...a }));
               }
-          });
-
-          // Return new achievements for notification
-          // Note: Persistence is handled automatically by persist middleware
-          return newAchievements;
-        },
-
-        getDraftHistory: (submissionId) => {
-          const state = get();
-          // Try to find in any draft array
-          for (const drafts of Object.values(state.drafts)) {
-            const found = drafts.find((d) => d.submissionId === submissionId);
-            if (found) {
-              // Return all drafts in the same group
-              const key = Object.keys(state.drafts).find((k) => state.drafts[k].includes(found));
-              return key ? state.drafts[key] : [found];
-            }
-          }
-          return [];
-        },
-
-        getProgress: (submissionId) => {
-          return get().progress[submissionId];
-        },
-
-        trackFixedErrors: (submissionId, previousErrorIds, currentErrorIds) => {
-          set((state) => {
-            if (!state.fixedErrors[submissionId]) {
-              state.fixedErrors[submissionId] = new Set();
-            }
-
-            // Find errors that were in previous draft but not in current
-            previousErrorIds.forEach((errorId) => {
-              if (!currentErrorIds.includes(errorId)) {
-                state.fixedErrors[submissionId].add(errorId);
-              }
             });
-          });
-          // Note: Persistence is handled automatically by persist middleware
-        },
 
-        getFixedErrors: (submissionId) => {
-          return get().fixedErrors[submissionId] || new Set();
-        },
+            // Return new achievements for notification
+            // Note: Persistence is handled automatically by persist middleware
+            return newAchievements;
+          },
 
-        updateStreak: () => {
-          set((state) => {
-            const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-            const lastDate = state.streak.lastActivityDate;
+          getDraftHistory: (submissionId) => {
+            const state = get();
+            // Try to find in any draft array
+            for (const drafts of Object.values(state.drafts)) {
+              const found = drafts.find((d) => d.submissionId === submissionId);
+              if (found) {
+                // Return all drafts in the same group
+                const key = Object.keys(state.drafts).find((k) => state.drafts[k].includes(found));
+                return key ? state.drafts[key] : [found];
+              }
+            }
+            return [];
+          },
 
-            if (!lastDate) {
-              // First activity
-              state.streak.currentStreak = 1;
-              state.streak.lastActivityDate = today;
-              state.streak.longestStreak = 1;
-            } else if (lastDate === today) {
-              // Already active today, don't increment
-              // Keep current streak
-            } else {
-              // Check if yesterday
-              const yesterday = new Date();
-              yesterday.setDate(yesterday.getDate() - 1);
-              const yesterdayStr = yesterday.toISOString().split("T")[0];
+          getProgress: (submissionId) => {
+            return get().progress[submissionId];
+          },
 
-              if (lastDate === yesterdayStr) {
-                // Consecutive day - increment streak
-                state.streak.currentStreak += 1;
-                state.streak.lastActivityDate = today;
-                if (state.streak.currentStreak > state.streak.longestStreak) {
-                  state.streak.longestStreak = state.streak.currentStreak;
+          trackFixedErrors: (submissionId, previousErrorIds, currentErrorIds) => {
+            set((state) => {
+              if (!state.fixedErrors[submissionId]) {
+                state.fixedErrors[submissionId] = new Set();
+              }
+
+              // Find errors that were in previous draft but not in current
+              previousErrorIds.forEach((errorId) => {
+                if (!currentErrorIds.includes(errorId)) {
+                  state.fixedErrors[submissionId].add(errorId);
                 }
-              } else {
-                // Streak broken - reset
+              });
+            });
+            // Note: Persistence is handled automatically by persist middleware
+          },
+
+          getFixedErrors: (submissionId) => {
+            return get().fixedErrors[submissionId] || new Set();
+          },
+
+          updateStreak: () => {
+            set((state) => {
+              const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+              const lastDate = state.streak.lastActivityDate;
+
+              if (!lastDate) {
+                // First activity
                 state.streak.currentStreak = 1;
                 state.streak.lastActivityDate = today;
+                state.streak.longestStreak = 1;
+              } else if (lastDate === today) {
+                // Already active today, don't increment
+                // Keep current streak
+              } else {
+                // Check if yesterday
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+                if (lastDate === yesterdayStr) {
+                  // Consecutive day - increment streak
+                  state.streak.currentStreak += 1;
+                  state.streak.lastActivityDate = today;
+                  if (state.streak.currentStreak > state.streak.longestStreak) {
+                    state.streak.longestStreak = state.streak.currentStreak;
+                  }
+                } else {
+                  // Streak broken - reset
+                  state.streak.currentStreak = 1;
+                  state.streak.lastActivityDate = today;
+                }
               }
-            }
-          });
-          // Note: Persistence is handled automatically by persist middleware
-        },
+            });
+            // Note: Persistence is handled automatically by persist middleware
+          },
 
-        getStreak: () => {
-          return get().streak;
-        },
+          getStreak: () => {
+            return get().streak;
+          },
 
-        checkAndUnlockAchievements: (draft, allDrafts) => {
-          // This method is now handled within addDraft for better atomicity
-          // Keeping for backwards compatibility but it's no longer used
-          return [];
-        },
+          checkAndUnlockAchievements: (draft, allDrafts) => {
+            // This method is now handled within addDraft for better atomicity
+            // Keeping for backwards compatibility but it's no longer used
+            return [];
+          },
 
-        getAchievements: () => {
-          return get().achievements;
-        },
+          getAchievements: () => {
+            return get().achievements;
+          },
 
-        clearDrafts: () => {
-          set((state) => {
-            state.drafts = {};
-            state.progress = {};
-            state.fixedErrors = {};
-            state.achievements = [];
-            state.streak = {
-              currentStreak: 0,
-              longestStreak: 0,
-              lastActivityDate: "",
-            };
-          });
-          // Note: Persistence is handled automatically by persist middleware
-          // The clearDrafts action will automatically persist the cleared state
-        },
+          clearDrafts: () => {
+            set((state) => {
+              state.drafts = {};
+              state.progress = {};
+              state.fixedErrors = {};
+              state.achievements = [];
+              state.streak = {
+                currentStreak: 0,
+                longestStreak: 0,
+                lastActivityDate: "",
+              };
+            });
+            // Note: Persistence is handled automatically by persist middleware
+            // The clearDrafts action will automatically persist the cleared state
+          },
 
-        // Computed selectors
-        getTotalDrafts: () => {
-          const state = get();
-          return Object.values(state.drafts).reduce((sum, drafts) => sum + drafts.length, 0);
-        },
+          // Computed selectors
+          getTotalDrafts: () => {
+            const state = get();
+            return Object.values(state.drafts).reduce((sum, drafts) => sum + drafts.length, 0);
+          },
 
-        getTotalWritings: () => {
-          return Object.keys(get().drafts).length;
-        },
+          getTotalWritings: () => {
+            return Object.keys(get().drafts).length;
+          },
 
-        getAverageImprovement: () => {
-          const state = get();
-          const improvements = Object.values(state.progress)
-            .map((p) => p.scoreImprovement || 0)
-            .filter((i) => i > 0);
-          return improvements.length > 0
-            ? improvements.reduce((a, b) => a + b, 0) / improvements.length
-            : 0;
-        },
+          getAverageImprovement: () => {
+            const state = get();
+            const improvements = Object.values(state.progress)
+              .map((p) => p.scoreImprovement || 0)
+              .filter((i) => i > 0);
+            return improvements.length > 0
+              ? improvements.reduce((a, b) => a + b, 0) / improvements.length
+              : 0;
+          },
 
-        getAllDrafts: () => {
-          return Object.values(get().drafts).flat();
-        },
-      };
-      },
+          getAllDrafts: () => {
+            return Object.values(get().drafts).flat();
+          },
+        };
+      }),
       {
         name: STORAGE_KEY,
-        storage: storageWithSetHandling,
+        storage: storageWithSetHandling as any, // Custom storage with Set handling - compatible with persist
       }
     ),
     { name: "DraftStore" }
