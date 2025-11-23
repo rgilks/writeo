@@ -83,30 +83,44 @@ echo "${CYAN}Checking for existing servers...${NC}"
 API_RUNNING=false
 WEB_RUNNING=false
 
+show_time
+echo "${CYAN}  Checking port 8787 (API worker)...${NC}"
 if lsof -ti:8787 > /dev/null 2>&1; then
-  if curl -s -f "$API_HEALTH_URL" > /dev/null 2>&1; then
+  show_time
+  echo "${CYAN}    Port 8787 is in use, checking if it's responding...${NC}"
+  if curl -s -f --max-time 2 "$API_HEALTH_URL" > /dev/null 2>&1; then
     API_RUNNING=true
     show_time
-    echo "${GREEN}✓ API worker already running, reusing...${NC}"
+    echo "${GREEN}    ✓ API worker already running, reusing...${NC}"
   else
     show_time
-    echo "${YELLOW}Port 8787 in use but not responding. Cleaning up...${NC}"
+    echo "${YELLOW}    Port 8787 in use but not responding. Cleaning up...${NC}"
     lsof -ti:8787 | xargs kill -9 2>/dev/null || true
     sleep 1
   fi
+else
+  show_time
+  echo "${CYAN}    Port 8787 is free${NC}"
 fi
 
+show_time
+echo "${CYAN}  Checking port 3000 (Web app)...${NC}"
 if lsof -ti:3000 > /dev/null 2>&1; then
-  if curl -s -f "$WEB_URL" > /dev/null 2>&1; then
+  show_time
+  echo "${CYAN}    Port 3000 is in use, checking if it's responding...${NC}"
+  if curl -s -f --max-time 2 "$WEB_URL" > /dev/null 2>&1; then
     WEB_RUNNING=true
     show_time
-    echo "${GREEN}✓ Web app already running, reusing...${NC}"
+    echo "${GREEN}    ✓ Web app already running, reusing...${NC}"
   else
     show_time
-    echo "${YELLOW}Port 3000 in use but not responding. Cleaning up...${NC}"
+    echo "${YELLOW}    Port 3000 in use but not responding. Cleaning up...${NC}"
     lsof -ti:3000 | xargs kill -9 2>/dev/null || true
     sleep 1
   fi
+else
+  show_time
+  echo "${CYAN}    Port 3000 is free${NC}"
 fi
 
 # Step 1: Start API worker (if not already running)
@@ -154,7 +168,7 @@ if [ "$API_RUNNING" = false ] || [ "$WEB_RUNNING" = false ]; then
   while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
     # Check API worker
     if [ "$API_READY" = false ]; then
-      if curl -s -f "$API_HEALTH_URL" > /dev/null 2>&1; then
+      if curl -s -f --max-time 2 "$API_HEALTH_URL" > /dev/null 2>&1; then
         API_READY=true
         show_time
         echo "${GREEN}✓ API worker is ready${NC}"
@@ -163,7 +177,7 @@ if [ "$API_RUNNING" = false ] || [ "$WEB_RUNNING" = false ]; then
     
     # Check web app
     if [ "$WEB_READY" = false ]; then
-      if curl -s -f "$WEB_URL" > /dev/null 2>&1; then
+      if curl -s -f --max-time 2 "$WEB_URL" > /dev/null 2>&1; then
         WEB_READY=true
         show_time
         echo "${GREEN}✓ Web app is ready${NC}"
