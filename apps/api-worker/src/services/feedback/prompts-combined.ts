@@ -41,9 +41,15 @@ export function buildCombinedFeedbackPrompt(
 
   return `You are an expert English language tutor specializing in academic argumentative writing. Analyze the following essay answer and provide TWO types of feedback:
 
-Question: ${truncatedQuestionText}
+<question>
+${truncatedQuestionText}
+</question>
 
-Answer: ${truncatedAnswerText}${essayContext}${grammarContext}${relevanceContext}
+<answer>
+${truncatedAnswerText}
+</answer>
+
+${essayContext}${grammarContext}${relevanceContext}
 
 Provide feedback in TWO formats:
 

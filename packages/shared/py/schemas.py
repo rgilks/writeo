@@ -23,8 +23,8 @@ class ModalAnswer(BaseModel):
     """Answer data with question and answer text for scoring."""
     id: str = Field(..., description="Unique identifier for the answer (UUID)", example="550e8400-e29b-41d4-a716-446655440000")
     question_id: str = Field(..., description="Unique identifier for the question (UUID)", example="660e8400-e29b-41d4-a716-446655440000")
-    question_text: str = Field(..., description="The question text that the answer responds to", example="Describe your weekend. What did you do?")
-    answer_text: str = Field(..., description="The student's answer text to be scored", example="I went to the park yesterday and played football with my friends. It was a beautiful sunny day.")
+    question_text: str = Field(..., description="The question text that the answer responds to", example="Describe your weekend. What did you do?", max_length=10000)
+    answer_text: str = Field(..., description="The student's answer text to be scored", example="I went to the park yesterday and played football with my friends. It was a beautiful sunny day.", max_length=50000)
     
     class Config:
         populate_by_name = True

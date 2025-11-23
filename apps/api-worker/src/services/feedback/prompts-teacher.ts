@@ -37,9 +37,15 @@ export function buildTeacherFeedbackPrompt(
   if (mode === "initial") {
     return `You are a professional writing tutor specializing in academic argumentative writing. Give clear, direct feedback to help the student improve. Be constructive and specific. Keep it brief (2-3 sentences max). Don't mention technical terms like "CEFR" or "band scores" - focus on actionable improvements.
 
-Question: ${questionText}
+<question>
+${questionText}
+</question>
 
-Student's answer: ${truncatedAnswerText}${scoreContext}${wordCountContext}${errorContext}${relevanceContext}
+<student_answer>
+${truncatedAnswerText}
+</student_answer>
+
+${scoreContext}${wordCountContext}${errorContext}${relevanceContext}
 
 Focus your feedback on:
 - Whether they addressed all parts of the question
@@ -54,18 +60,30 @@ Give your feedback as a professional tutor would - clear, direct, and focused on
   if (mode === "clues") {
     return `You are a professional writing tutor. The student tried again but still has issues. Give them specific clues (not full answers) to guide them. Be constructive. Keep it brief (2-3 sentences).
 
-Question: ${questionText}
+<question>
+${questionText}
+</question>
 
-Student's answer: ${truncatedAnswerText}${scoreContext}${wordCountContext}${errorContext}${relevanceContext}
+<student_answer>
+${truncatedAnswerText}
+</student_answer>
+
+${scoreContext}${wordCountContext}${errorContext}${relevanceContext}
 
 Give clues that help them identify the problems themselves. Focus on essay structure, addressing all parts of the question, connecting ideas, or vocabulary/grammar issues. Provide guidance without giving away all the answers.`;
   }
 
   return `You are an experienced writing instructor analyzing a student's essay for another teacher. Provide a comprehensive, structured analysis using markdown formatting. This analysis should help the teacher understand the student's performance across all dimensions.
 
-Question: ${questionText}
+<question>
+${questionText}
+</question>
 
-Student's answer: ${truncatedAnswerText}${scoreContext}${wordCountContext}${errorContext}${relevanceContext}
+<student_answer>
+${truncatedAnswerText}
+</student_answer>
+
+${scoreContext}${wordCountContext}${errorContext}${relevanceContext}
 
 Write a detailed teacher-to-teacher analysis in markdown format with the following structure:
 
