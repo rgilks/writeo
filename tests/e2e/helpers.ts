@@ -376,20 +376,27 @@ export class ResultsPage {
   async getDraftButtons() {
     // Draft buttons are divs with "Draft {number}" text
     // They're inside the draft history section
+    // The DraftButton component structure: <div onClick><div>Draft {number}</div><div>{score}</div></div>
+    // has-text matches parent elements containing the text in descendants
     const draftHistory = await this.getDraftHistory();
     if ((await draftHistory.count()) > 0) {
-      return draftHistory.locator("..").locator("div:has-text(/^Draft \\d+$/i)");
+      // Find all divs within draft history that contain "Draft" followed by a number
+      // Filter to get only the outer button containers (not the inner text divs)
+      return draftHistory.locator("div").filter({ hasText: /^Draft \d+$/m });
     }
-    return this.page.locator("div:has-text(/^Draft \\d+$/i)");
+    return this.page.locator("div").filter({ hasText: /^Draft \d+$/m });
   }
 
   async getDraftButton(draftNumber: number) {
     // Find draft button by number within draft history section
+    // The DraftButton component renders: <div><div>Draft {number}</div>...</div>
     const draftHistory = await this.getDraftHistory();
+    const textPattern = new RegExp(`^Draft ${draftNumber}$`, "m");
     if ((await draftHistory.count()) > 0) {
-      return draftHistory.locator("..").locator(`div:has-text("Draft ${draftNumber}")`).first();
+      // Match divs that contain exactly "Draft {number}" (the outer button container)
+      return draftHistory.locator("div").filter({ hasText: textPattern }).first();
     }
-    return this.page.locator(`div:has-text("Draft ${draftNumber}")`).first();
+    return this.page.locator("div").filter({ hasText: textPattern }).first();
   }
 
   async clickDraftButton(draftNumber: number) {
@@ -433,6 +440,68 @@ export class ResultsPage {
     return this.page
       .locator('button:has-text("Submit Improved Draft")')
       .or(this.page.locator('button:has-text("Submit")').filter({ hasText: /draft|improve/i }));
+  }
+
+  /**
+   * Wait for draft to be stored in Zustand store (localStorage)
+   * This is needed because draft storage happens asynchronously via useEffect
+   */
+  async waitForDraftStorage(submissionId: string, timeout = 10000): Promise<void> {
+    await this.page.waitForFunction(
+      (id) => {
+        try {
+          const store = localStorage.getItem("writeo-draft-store");
+          if (!store) return false;
+          const parsed = JSON.parse(store);
+          // Check if the draft exists in the store
+          if (parsed?.state?.drafts) {
+            const drafts = parsed.state.drafts;
+            // Check all draft arrays for this submissionId
+            for (const key in drafts) {
+              if (Array.isArray(drafts[key])) {
+                if (drafts[key].some((d: any) => d.submissionId === id)) {
+                  return true;
+                }
+              }
+            }
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      },
+      submissionId,
+      { timeout }
+    );
+  }
+
+  /**
+   * Wait for draft history to appear (requires 2+ drafts)
+   */
+  async waitForDraftHistory(timeout = 10000): Promise<void> {
+    const draftHistory = await this.getDraftHistory();
+    await expect(draftHistory.first()).toBeVisible({ timeout });
+  }
+
+  /**
+   * Wait for Zustand store to hydrate from localStorage
+   * This is needed when manually setting localStorage before navigation
+   */
+  async waitForStoreHydration(timeout = 5000): Promise<void> {
+    // Wait for the store to be initialized by checking if it exists in localStorage
+    await this.page.waitForFunction(
+      () => {
+        try {
+          const store = localStorage.getItem("writeo-draft-store");
+          return store !== null;
+        } catch {
+          return false;
+        }
+      },
+      { timeout }
+    );
+    // Give a small delay for React to re-render after store hydration
+    await this.page.waitForTimeout(500);
   }
 }
 
