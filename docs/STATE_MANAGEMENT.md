@@ -20,9 +20,21 @@ Writeo uses a modern, performant state management architecture:
 
 #### Draft Store (`apps/web/app/lib/stores/draft-store.ts`)
 
-Manages draft history, progress tracking, achievements, and streaks.
+**Consolidated store** managing all draft-related data: content before submission, assessment results after submission, and progress tracking.
 
 **State:**
+
+**Draft Content (Before Submission):**
+
+- `contentDrafts`: Array of saved draft snapshots (chronological, most recent first)
+- `currentContent`: The text currently in the editor
+- `activeDraftId`: ID of the currently active draft (null if new/unsaved)
+
+**Assessment Results (After Submission):**
+
+- `results`: Record of full assessment results by submissionId
+
+**Submission History & Progress (After Submission):**
 
 - `drafts`: Record of draft histories by submission ID
 - `progress`: Progress metrics per submission
@@ -32,11 +44,37 @@ Manages draft history, progress tracking, achievements, and streaks.
 
 **Actions:**
 
+**Draft Content Actions:**
+
+- `updateContent()`: Updates the editor content (high-frequency, not persisted immediately)
+- `saveContentDraft()`: Commits current content to draft history (auto-saved via debouncing)
+- `loadContentDraft()`: Loads a specific draft into the editor
+- `createNewContentDraft()`: Clears editor and starts a new draft
+- `deleteContentDraft()`: Removes a draft from history
+
+**Assessment Results Actions:**
+
+- `setResult()`: Store assessment results by submissionId
+- `getResult()`: Retrieve assessment results by submissionId
+- `getParentSubmissionId()`: Get parent submission ID from results.meta
+- `removeResult()`: Remove a specific result
+- `clearAllResults()`: Clear all stored results
+- `cleanupOldResults()`: Remove results older than specified age (default: 30 days)
+- `getAllSubmissionIds()`: Get all stored submission IDs
+- `getResultsCount()`: Get total number of stored results
+
+**Submission History Actions:**
+
 - `addDraft()`: Add/update draft with automatic progress calculation
 - `getDraftHistory()`: Retrieve draft history for a submission
+- `getRootSubmissionId()`: Find root submission ID for a draft chain
+- `getProgress()`: Get progress metrics for a submission
 - `trackFixedErrors()`: Track which errors were fixed between drafts
+- `getFixedErrors()`: Get fixed errors for a submission
 - `updateStreak()`: Update daily practice streak
-- `checkAndUnlockAchievements()`: Check and unlock new achievements
+- `getStreak()`: Get streak data
+- `getAchievements()`: Get unlocked achievements
+- `clearDrafts()`: Clear all draft history
 
 **Computed Selectors:**
 
@@ -50,8 +88,10 @@ Manages draft history, progress tracking, achievements, and streaks.
 - Uses Zustand's `persist` middleware for automatic localStorage persistence
 - Uses `createSafeStorage()` utility for error handling and quota management
 - Custom storage adapter handles `Set<string>` serialization/deserialization for `fixedErrors`
+- Auto-saves draft content after 2 seconds of inactivity (debounced in component layer)
 - Automatically saves on every state change
 - Automatically hydrates on store initialization
+- Persists to localStorage key: `writeo-draft-store`
 
 #### Preferences Store (`apps/web/app/lib/stores/preferences-store.ts`)
 
@@ -71,39 +111,6 @@ Manages user preferences that persist across sessions.
 
 - Uses Zustand's `persist` middleware for automatic localStorage persistence
 - Uses `createSafeStorage()` utility for error handling and quota management
-- Automatic migration from old separate keys (`writeo-view-mode`, `writeo-store-results`)
-- Migration handled in `onRehydrateStorage` callback
-
-#### Results Store (`apps/web/app/lib/stores/results-store.ts`)
-
-Manages assessment results storage in localStorage. Replaces direct localStorage access with centralized, type-safe storage.
-
-**State:**
-
-- `results`: Record of assessment results by submission ID
-  - Each entry includes: `results` (AssessmentResults), `timestamp`
-  - **Note**: `parentSubmissionId` is stored in `results.meta.parentSubmissionId`, not as a separate field
-
-**Actions:**
-
-- `setResult()`: Store assessment results (parentSubmissionId is already in results.meta)
-- `getResult()`: Retrieve assessment results by submission ID
-- `getParentSubmissionId()`: Get parent submission ID from results.meta for draft tracking
-- `removeResult()`: Remove a specific result
-- `clearAllResults()`: Clear all stored results
-- `cleanupOldResults()`: Remove results older than specified age (default: 30 days)
-
-**Computed Selectors:**
-
-- `getAllSubmissionIds()`: Get all stored submission IDs
-- `getResultsCount()`: Get total number of stored results
-
-**Persistence:**
-
-- Uses Zustand's `persist` middleware with `createSafeStorage()` utility
-- Automatic cleanup of old results (30 days) on rehydration
-- Automatic cleanup on app start
-- Type-safe API prevents storage errors
 
 ### Custom Hooks
 
@@ -284,15 +291,6 @@ Zustand DevTools enabled for all stores:
 
 Install Redux DevTools browser extension to use.
 
-## Migration Notes
-
-The preferences store automatically migrates from old localStorage keys:
-
-- `writeo-view-mode` → `writeo-preferences.viewMode`
-- `writeo-store-results` → `writeo-preferences.storeResults`
-
-Old keys are cleaned up after migration.
-
 ## Store Structure
 
 ### Middleware Stack Order
@@ -375,51 +373,9 @@ export const usePreferencesStore = create<PreferencesStore>()(
       {
         name: "writeo-preferences",
         storage: createJSONStorage(() => createSafeStorage()),
-        onRehydrateStorage: () => (state) => {
-          // Migration logic
-        },
       }
     ),
     { name: "PreferencesStore" }
-  )
-);
-```
-
-### Results Store Example
-
-```typescript
-import { createSafeStorage } from "@/app/lib/utils/storage";
-
-export const useResultsStore = create<ResultsStore>()(
-  devtools(
-    persist(
-      immer((set, get) => ({
-        results: {},
-
-        setResult: (submissionId, results) => {
-          set((state) => {
-            state.results[submissionId] = {
-              results,
-              timestamp: Date.now(),
-              // parentSubmissionId is stored in results.meta.parentSubmissionId
-            };
-          });
-        },
-
-        getResult: (submissionId) => {
-          return get().results[submissionId]?.results || null;
-        },
-      })),
-      {
-        name: "writeo-results-store",
-        storage: createJSONStorage(() => createSafeStorage()),
-        onRehydrateStorage: () => (state) => {
-          // Cleanup old results
-          state?.cleanupOldResults(30 * 24 * 60 * 60 * 1000);
-        },
-      }
-    ),
-    { name: "ResultsStore" }
   )
 );
 ```
@@ -440,31 +396,15 @@ Record<string, string[]> → Record<string, Set<string>>
 
 This is necessary because `Set` cannot be directly serialized to JSON. The custom adapter handles this conversion automatically.
 
-### Preferences Store Migration
-
-The preferences store automatically migrates from old localStorage keys during hydration:
-
-1. Checks for new unified key: `writeo-preferences`
-2. Falls back to old keys: `writeo-view-mode`, `writeo-store-results`
-3. Migrates data to new format
-4. Cleans up old keys
-
-Migration happens in the `onRehydrateStorage` callback of the persist middleware.
-
 ## Testing
 
-Tests can directly set localStorage values for preferences (migration handles it), but prefer using the store when possible:
+Tests should use Zustand stores directly:
 
 ```typescript
-// Works (migration handles it)
-await page.evaluate(() => {
-  const prefs = { viewMode: "learner", storeResults: false };
-  localStorage.setItem("writeo-preferences", JSON.stringify(prefs));
-});
-
-// Better (uses store directly)
+// Preferred: Use store directly
 await page.evaluate(() => {
   usePreferencesStore.getState().setStoreResults(true);
+  useDraftStore.getState().setResult(submissionId, results);
 });
 ```
 
@@ -472,31 +412,11 @@ await page.evaluate(() => {
 
 **Zustand Stores (managed automatically):**
 
-- `writeo-draft-store` - Draft store (Zustand persist)
-- `writeo-preferences` - Preferences store (Zustand persist)
-- `writeo-results-store` - Results store (Zustand persist)
+- `writeo-draft-store` - Consolidated draft store (content, results, history, progress)
+- `writeo-preferences` - Preferences store
 
-**Legacy Keys (for backwards compatibility):**
+**Storage Structure:**
 
-- `results_{submissionId}` - Assessment results (now managed by Results Store)
-- Note: `parentSubmissionId` is stored in `results.meta.parentSubmissionId`, not as a separate key
-
-**Testing Notes:**
-
-Tests can still use direct localStorage access for backwards compatibility, but prefer using stores:
-
-```typescript
-// Works (backwards compatible)
-await page.evaluate((submissionId) => {
-  localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
-});
-
-// Better (uses Results Store)
-await page.evaluate(
-  (submissionId, results) => {
-    useResultsStore.getState().setResult(submissionId, results);
-  },
-  submissionId,
-  results
-);
-```
+- All data is stored via Zustand persist middleware
+- `parentSubmissionId` is stored in `results.meta.parentSubmissionId` (not as a separate key)
+- Tests should use Zustand stores directly, not localStorage

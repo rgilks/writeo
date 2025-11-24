@@ -900,6 +900,21 @@ button:not(.btn) {
   transform: translateX(2px);
 }
 
+/* Draft Sidebar Responsive Styles */
+@media (max-width: 768px) {
+  .write-page-layout {
+    flex-direction: column !important;
+  }
+  
+  .draft-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 40vh;
+    border-right: none !important;
+    border-bottom: 1px solid #e4e4e7 !important;
+  }
+}
+
 @media (max-width: 768px) {
   .container {
     padding: var(--spacing-md); /* 16px - comfortable margin on mobile */

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
-import { useResultsStore } from "@/app/lib/stores/results-store";
+import { useDraftStore } from "@/app/lib/stores/draft-store";
+import { DraftSidebar } from "@/app/components/DraftSidebar";
 import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
 
 // Task data - matches tasks from home page
@@ -55,9 +56,15 @@ const taskData: Record<string, { title: string; prompt: string }> = {
 export default function WritePage() {
   const params = useParams();
   const router = useRouter();
-  const setResult = useResultsStore((state) => state.setResult);
+  const setResult = useDraftStore((state) => state.setResult);
   const taskId = params.id as string;
   const isCustom = taskId === "custom";
+
+  // Draft store (consolidated)
+  const currentContent = useDraftStore((state) => state.currentContent);
+  const updateContent = useDraftStore((state) => state.updateContent);
+  const saveDraft = useDraftStore((state) => state.saveContentDraft);
+  const activeDraftId = useDraftStore((state) => state.activeDraftId);
 
   const [customQuestion, setCustomQuestion] = useState("");
   const task = isCustom
@@ -70,7 +77,8 @@ export default function WritePage() {
         prompt: "Write your essay here.",
       };
 
-  const [answer, setAnswer] = useState("");
+  // Use draft store content instead of local state
+  const answer = currentContent;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selfEval, setSelfEval] = useState({
@@ -78,6 +86,10 @@ export default function WritePage() {
     supportedOpinion: false,
     variedStructure: false,
   });
+
+  // Auto-save debouncing
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const AUTO_SAVE_DELAY = 2000; // 2 seconds after user stops typing
 
   // Use preferences store for storeResults (persists across sessions)
   const storeResults = usePreferencesStore((state) => state.storeResults);
@@ -87,11 +99,35 @@ export default function WritePage() {
     setStoreResults(checked);
   };
 
-  // Handle textarea change with explicit state update
-  const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    setAnswer(newValue);
-  };
+  // Handle textarea change with explicit state update and auto-save debouncing
+  const handleAnswerChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = e.target.value;
+      updateContent(newValue);
+
+      // Clear existing timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+
+      // Set new timeout for auto-save
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        if (newValue.trim().length > 0) {
+          saveDraft();
+        }
+      }, AUTO_SAVE_DELAY);
+    },
+    [updateContent, saveDraft]
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle custom question change
   const handleCustomQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -190,20 +226,9 @@ export default function WritePage() {
         }
       }
 
-      // Store results in results store (persistent) and sessionStorage (immediate display)
+      // Store results in draft store (Zustand persist handles localStorage automatically)
       // parentSubmissionId is already in resultsToStore.meta.parentSubmissionId
       setResult(submissionId, resultsToStore);
-      if (typeof window !== "undefined") {
-        try {
-          // Store in localStorage for persistence (needed for tests and draft tracking)
-          localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
-          // Also store in sessionStorage for immediate display on results page
-          sessionStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
-        } catch (error) {
-          // If localStorage is full or unavailable, log but continue
-          console.warn("Failed to store results in localStorage:", error);
-        }
-      }
       // Redirect to results page - results will be available immediately
       router.push(`/results/${submissionId}`);
     } catch (err) {
@@ -274,148 +299,182 @@ export default function WritePage() {
         </div>
       </header>
 
-      <div className="container">
-        <div style={{ marginBottom: "32px" }} lang="en">
-          <h1 className="page-title">{task.title}</h1>
-          <p className="page-subtitle">
-            Write your essay and get detailed feedback to improve your writing.
-          </p>
-        </div>
-
-        <div className="writing-container">
-          <div className="card question-card">
-            <h2
-              lang="en"
-              style={{
-                fontSize: "20px",
-                marginBottom: "16px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <span>📝</span> {isCustom ? "Your Question (Optional)" : "Question"}
-            </h2>
-            {isCustom ? (
-              <textarea
-                className="textarea notranslate"
-                value={customQuestion}
-                onChange={handleCustomQuestionChange}
-                placeholder="Enter your question here, or leave blank for free writing practice..."
-                rows={4}
-                disabled={loading}
-                translate="no"
-                lang="en"
-                style={{
-                  width: "100%",
-                  minHeight: "80px",
-                  resize: "vertical",
-                }}
-              />
-            ) : (
-              <div
-                className="prompt-box notranslate"
-                style={{ whiteSpace: "pre-wrap" }}
-                translate="no"
-                lang="en"
-              >
-                {getPrompt(task.prompt)}
-              </div>
-            )}
-            {isCustom && !customQuestion.trim() && (
-              <p
-                style={{
-                  marginTop: "12px",
-                  fontSize: "14px",
-                  color: "var(--text-secondary)",
-                  fontStyle: "italic",
-                }}
-                lang="en"
-              >
-                💡 Leave blank to practice free writing without answering a specific question.
-              </p>
-            )}
+      <div
+        style={{
+          display: "flex",
+          height: "calc(100vh - 60px)",
+          flexDirection: "row",
+        }}
+        className="write-page-layout"
+      >
+        <DraftSidebar />
+        <div className="container" style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>
+          <div style={{ marginBottom: "32px" }} lang="en">
+            <h1 className="page-title">{task.title}</h1>
+            <p className="page-subtitle">
+              Write your essay and get detailed feedback to improve your writing.
+            </p>
           </div>
 
-          <div className="card answer-card">
-            <form onSubmit={handleSubmit}>
-              <label htmlFor="answer" className="label" lang="en">
-                Your Answer
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "var(--spacing-md)",
-                    alignItems: "center",
-                    fontSize: "14px",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  <span>
-                    {wordCount} {wordCount === 1 ? "word" : "words"}
-                  </span>
-                  {wordCount < MIN_WORDS && (
-                    <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
-                      (Need at least {MIN_WORDS} words)
-                    </span>
-                  )}
-                  {wordCount >= MIN_WORDS && wordCount <= MAX_WORDS && (
-                    <span style={{ color: "var(--secondary-accent)" }}>✓</span>
-                  )}
-                  {wordCount > MAX_WORDS && (
-                    <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
-                      (Too long - maximum {MAX_WORDS} words)
-                    </span>
-                  )}
-                </div>
-              </label>
-              <textarea
-                id="answer"
-                className="textarea notranslate"
-                value={answer}
-                onChange={handleAnswerChange}
-                onInput={handleAnswerChange}
-                placeholder={
-                  isCustom && !customQuestion.trim()
-                    ? "Write your essay here. Minimum 250 words required. This is free writing practice - write about any topic you choose."
-                    : "Write your essay here. Minimum 250 words required. Aim for 250-300 words and address all parts of the question."
-                }
-                rows={20}
-                disabled={loading}
-                autoFocus={false}
-                translate="no"
+          <div className="writing-container">
+            <div className="card question-card">
+              <h2
                 lang="en"
-              />
-
-              {/* Self-Evaluation Checklist */}
-              {answer.trim().length > 50 && (
-                <div
+                style={{
+                  fontSize: "20px",
+                  marginBottom: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span>📝</span> {isCustom ? "Your Question (Optional)" : "Question"}
+              </h2>
+              {isCustom ? (
+                <textarea
+                  className="textarea notranslate"
+                  value={customQuestion}
+                  onChange={handleCustomQuestionChange}
+                  placeholder="Enter your question here, or leave blank for free writing practice..."
+                  rows={4}
+                  disabled={loading}
+                  translate="no"
                   lang="en"
                   style={{
-                    marginTop: "var(--spacing-md)",
-                    padding: "var(--spacing-md)",
-                    backgroundColor: "rgba(102, 126, 234, 0.1)",
-                    borderRadius: "var(--border-radius)",
+                    width: "100%",
+                    minHeight: "80px",
+                    resize: "vertical",
                   }}
+                />
+              ) : (
+                <div
+                  className="prompt-box notranslate"
+                  style={{ whiteSpace: "pre-wrap" }}
+                  translate="no"
+                  lang="en"
                 >
-                  <p
-                    style={{
-                      marginBottom: "var(--spacing-sm)",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                    }}
-                    lang="en"
-                  >
-                    ✓ Self-Evaluation Checklist (optional)
-                  </p>
+                  {getPrompt(task.prompt)}
+                </div>
+              )}
+              {isCustom && !customQuestion.trim() && (
+                <p
+                  style={{
+                    marginTop: "12px",
+                    fontSize: "14px",
+                    color: "var(--text-secondary)",
+                    fontStyle: "italic",
+                  }}
+                  lang="en"
+                >
+                  💡 Leave blank to practice free writing without answering a specific question.
+                </p>
+              )}
+            </div>
+
+            <div className="card answer-card">
+              <form onSubmit={handleSubmit}>
+                <label htmlFor="answer" className="label" lang="en">
+                  Your Answer
                   <div
                     style={{
                       display: "flex",
-                      flexDirection: "column",
-                      gap: "var(--spacing-sm)",
+                      gap: "var(--spacing-md)",
+                      alignItems: "center",
+                      fontSize: "14px",
+                      color: "var(--text-secondary)",
                     }}
-                    lang="en"
                   >
-                    {(!isCustom || customQuestion.trim()) && (
+                    <span>
+                      {wordCount} {wordCount === 1 ? "word" : "words"}
+                    </span>
+                    {wordCount < MIN_WORDS && (
+                      <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
+                        (Need at least {MIN_WORDS} words)
+                      </span>
+                    )}
+                    {wordCount >= MIN_WORDS && wordCount <= MAX_WORDS && (
+                      <span style={{ color: "var(--secondary-accent)" }}>✓</span>
+                    )}
+                    {wordCount > MAX_WORDS && (
+                      <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
+                        (Too long - maximum {MAX_WORDS} words)
+                      </span>
+                    )}
+                  </div>
+                </label>
+                <textarea
+                  id="answer"
+                  className="textarea notranslate"
+                  value={answer}
+                  onChange={handleAnswerChange}
+                  onInput={handleAnswerChange}
+                  placeholder={
+                    isCustom && !customQuestion.trim()
+                      ? "Write your essay here. Minimum 250 words required. This is free writing practice - write about any topic you choose."
+                      : "Write your essay here. Minimum 250 words required. Aim for 250-300 words and address all parts of the question."
+                  }
+                  rows={20}
+                  disabled={loading}
+                  autoFocus={false}
+                  translate="no"
+                  lang="en"
+                />
+
+                {/* Self-Evaluation Checklist */}
+                {answer.trim().length > 50 && (
+                  <div
+                    lang="en"
+                    style={{
+                      marginTop: "var(--spacing-md)",
+                      padding: "var(--spacing-md)",
+                      backgroundColor: "rgba(102, 126, 234, 0.1)",
+                      borderRadius: "var(--border-radius)",
+                    }}
+                  >
+                    <p
+                      style={{
+                        marginBottom: "var(--spacing-sm)",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                      }}
+                      lang="en"
+                    >
+                      ✓ Self-Evaluation Checklist (optional)
+                    </p>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "var(--spacing-sm)",
+                      }}
+                      lang="en"
+                    >
+                      {(!isCustom || customQuestion.trim()) && (
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "var(--spacing-sm)",
+                            fontSize: "14px",
+                            cursor: "pointer",
+                            lineHeight: "1.5",
+                          }}
+                          lang="en"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selfEval.answeredAllParts}
+                            onChange={(e) =>
+                              setSelfEval({
+                                ...selfEval,
+                                answeredAllParts: e.target.checked,
+                              })
+                            }
+                            style={{ cursor: "pointer" }}
+                          />
+                          Did I answer all parts of the question?
+                        </label>
+                      )}
                       <label
                         style={{
                           display: "flex",
@@ -429,174 +488,171 @@ export default function WritePage() {
                       >
                         <input
                           type="checkbox"
-                          checked={selfEval.answeredAllParts}
+                          checked={selfEval.supportedOpinion}
                           onChange={(e) =>
                             setSelfEval({
                               ...selfEval,
-                              answeredAllParts: e.target.checked,
+                              supportedOpinion: e.target.checked,
                             })
                           }
                           style={{ cursor: "pointer" }}
                         />
-                        Did I answer all parts of the question?
+                        Did I support my opinion with at least two reasons?
                       </label>
-                    )}
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--spacing-sm)",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        lineHeight: "1.5",
-                      }}
-                      lang="en"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selfEval.supportedOpinion}
-                        onChange={(e) =>
-                          setSelfEval({
-                            ...selfEval,
-                            supportedOpinion: e.target.checked,
-                          })
-                        }
-                        style={{ cursor: "pointer" }}
-                      />
-                      Did I support my opinion with at least two reasons?
-                    </label>
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--spacing-sm)",
-                        fontSize: "14px",
-                        cursor: "pointer",
-                        lineHeight: "1.5",
-                      }}
-                      lang="en"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selfEval.variedStructure}
-                        onChange={(e) =>
-                          setSelfEval({
-                            ...selfEval,
-                            variedStructure: e.target.checked,
-                          })
-                        }
-                        style={{ cursor: "pointer" }}
-                      />
-                      Did I vary my sentence structure?
-                    </label>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--spacing-sm)",
+                          fontSize: "14px",
+                          cursor: "pointer",
+                          lineHeight: "1.5",
+                        }}
+                        lang="en"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selfEval.variedStructure}
+                          onChange={(e) =>
+                            setSelfEval({
+                              ...selfEval,
+                              variedStructure: e.target.checked,
+                            })
+                          }
+                          style={{ cursor: "pointer" }}
+                        />
+                        Did I vary my sentence structure?
+                      </label>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Server Storage Opt-in */}
-              <div
-                style={{
-                  marginTop: "var(--spacing-md)",
-                  padding: "var(--spacing-md)",
-                  backgroundColor: "rgba(102, 126, 234, 0.05)",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(102, 126, 234, 0.2)",
-                }}
-                lang="en"
-              >
-                <label
+                {/* Server Storage Opt-in */}
+                <div
                   style={{
+                    marginTop: "var(--spacing-md)",
+                    padding: "var(--spacing-md)",
+                    backgroundColor: "rgba(102, 126, 234, 0.05)",
+                    borderRadius: "8px",
+                    border: "1px solid rgba(102, 126, 234, 0.2)",
+                  }}
+                  lang="en"
+                >
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "var(--spacing-sm)",
+                      fontSize: "14px",
+                      cursor: "pointer",
+                      lineHeight: "1.5",
+                    }}
+                    lang="en"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={storeResults}
+                      onChange={(e) => handleStoreResultsChange(e.target.checked)}
+                      style={{ cursor: "pointer", marginTop: "2px" }}
+                    />
+                    <span>
+                      <strong>Save results on server (optional)</strong>
+                      <br />
+                      <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+                        By default, your results are only saved in your browser. Check this box to
+                        enable server storage so you can access your results from any device. Your
+                        data will be stored for 90 days.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+
+                <div
+                  style={{
+                    marginTop: "var(--spacing-md)",
                     display: "flex",
-                    alignItems: "flex-start",
-                    gap: "var(--spacing-sm)",
+                    gap: "var(--spacing-md)",
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--spacing-sm)",
+                    }}
+                  >
+                    {activeDraftId && (
+                      <span
+                        style={{
+                          fontSize: "0.875rem",
+                          color: "var(--text-secondary)",
+                        }}
+                        lang="en"
+                      >
+                        ✓ Auto-saved
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={loading || !answer.trim()}
+                    title="We value your privacy – see our policy"
+                  >
+                    {loading ? (
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "var(--spacing-sm)",
+                        }}
+                        lang="en"
+                      >
+                        <span className="spinner"></span>
+                        Analyzing your writing…
+                      </span>
+                    ) : (
+                      <span lang="en">Get Feedback →</span>
+                    )}
+                  </button>
+                  <Link href="/" className="btn btn-secondary" lang="en">
+                    Cancel
+                  </Link>
+                </div>
+                <p
+                  style={{
                     fontSize: "14px",
-                    cursor: "pointer",
+                    color: "var(--text-secondary)",
+                    fontStyle: "italic",
+                    marginTop: "var(--spacing-sm)",
                     lineHeight: "1.5",
                   }}
                   lang="en"
                 >
-                  <input
-                    type="checkbox"
-                    checked={storeResults}
-                    onChange={(e) => handleStoreResultsChange(e.target.checked)}
-                    style={{ cursor: "pointer", marginTop: "2px" }}
-                  />
-                  <span>
-                    <strong>Save results on server (optional)</strong>
-                    <br />
-                    <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                      By default, your results are only saved in your browser. Check this box to
-                      enable server storage so you can access your results from any device. Your
-                      data will be stored for 90 days.
-                    </span>
-                  </span>
-                </label>
-              </div>
-
-              <div
-                style={{
-                  marginTop: "var(--spacing-md)",
-                  display: "flex",
-                  gap: "var(--spacing-md)",
-                }}
-              >
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={loading || !answer.trim()}
-                  title="We value your privacy – see our policy"
-                >
-                  {loading ? (
-                    <span
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "var(--spacing-sm)",
-                      }}
-                      lang="en"
-                    >
-                      <span className="spinner"></span>
-                      Analyzing your writing…
-                    </span>
-                  ) : (
-                    <span lang="en">Get Feedback →</span>
-                  )}
-                </button>
-                <Link href="/" className="btn btn-secondary" lang="en">
-                  Cancel
-                </Link>
-              </div>
-              <p
-                style={{
-                  fontSize: "14px",
-                  color: "var(--text-secondary)",
-                  fontStyle: "italic",
-                  marginTop: "var(--spacing-sm)",
-                  lineHeight: "1.5",
-                }}
-                lang="en"
-              >
-                Your text is processed by an AI model; no one else reads it.{" "}
-                <Link
-                  href="/privacy"
-                  style={{
-                    color: "var(--primary-color)",
-                    textDecoration: "underline",
-                  }}
-                >
-                  See our privacy policy
-                </Link>
-                .
-              </p>
-            </form>
+                  Your text is processed by an AI model; no one else reads it.{" "}
+                  <Link
+                    href="/privacy"
+                    style={{
+                      color: "var(--primary-color)",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    See our privacy policy
+                  </Link>
+                  .
+                </p>
+              </form>
+            </div>
           </div>
+
+          {error && (
+            <div className="error" role="alert" style={{ marginTop: "var(--spacing-md)" }}>
+              <strong>⚠️ {error}</strong>
+            </div>
+          )}
         </div>
-
-        {error && (
-          <div className="error" role="alert" style={{ marginTop: "var(--spacing-md)" }}>
-            <strong>⚠️ {error}</strong>
-          </div>
-        )}
       </div>
     </>
   );

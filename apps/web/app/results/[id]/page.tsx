@@ -5,7 +5,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSubmissionResults, getSubmissionResultsWithDraftTracking } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
-import { useResultsStore } from "@/app/lib/stores/results-store";
+import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { LearnerResultsView } from "@/app/components/LearnerResultsView";
 import { DeveloperResultsView } from "@/app/components/DeveloperResultsView";
 import { ModeSwitcher } from "@/app/components/ModeSwitcher";
@@ -18,31 +18,16 @@ export default function ResultsPage() {
   const router = useRouter();
   const submissionId = params.id as string;
   const mode = usePreferencesStore((state) => state.viewMode);
-  const getResult = useResultsStore((state) => state.getResult);
-  const getParentSubmissionId = useResultsStore((state) => state.getParentSubmissionId);
-  const setResult = useResultsStore((state) => state.setResult);
+  const getResult = useDraftStore((state) => state.getResult);
+  const getParentSubmissionId = useDraftStore((state) => state.getParentSubmissionId);
+  const setResult = useDraftStore((state) => state.setResult);
   const [submissionStartTime] = useState<number>(Date.now());
   const [processingTime, setProcessingTime] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
 
-  // Check if results were passed via router state (from write page) or stored locally
+  // Check if results are available in draft store (Zustand persist handles localStorage)
   const [initialResults] = useState<AssessmentResults | null>(() => {
-    // Try to get results from sessionStorage first (immediate display from write page)
-    if (typeof window !== "undefined") {
-      const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
-      if (sessionStored) {
-        try {
-          const parsed = JSON.parse(sessionStored);
-          sessionStorage.removeItem(`results_${submissionId}`); // Clean up
-          return parsed;
-        } catch {
-          // Fall through to store check
-        }
-      }
-      // Then check results store (persistent storage)
-      return getResult(submissionId);
-    }
-    return null;
+    return getResult(submissionId);
   });
 
   // Get parent submission ID from results.meta (single source of truth)
@@ -110,14 +95,6 @@ export default function ResultsPage() {
             // Use stored results immediately, but still try to fetch from server in background
             setData(storedResults);
             setStatus("success");
-            // Ensure results are stored in localStorage for tests and persistence
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem(`results_${submissionId}`, JSON.stringify(storedResults));
-              } catch (error) {
-                console.warn("Failed to store results in localStorage:", error);
-              }
-            }
 
             // Try to fetch from server to get latest version (but don't wait)
             // This ensures we have the latest data if available
@@ -126,18 +103,8 @@ export default function ResultsPage() {
                 if (!cancelled && serverResults) {
                   // Update with server results if available
                   setData(serverResults);
+                  // Zustand persist handles localStorage automatically
                   setResult(submissionId, serverResults);
-                  // Also store in localStorage
-                  if (typeof window !== "undefined") {
-                    try {
-                      localStorage.setItem(
-                        `results_${submissionId}`,
-                        JSON.stringify(serverResults)
-                      );
-                    } catch (error) {
-                      console.warn("Failed to store results in localStorage:", error);
-                    }
-                  }
                 }
               })
               .catch(() => {
@@ -176,16 +143,8 @@ export default function ResultsPage() {
             }
             setData(resultsToStore);
             setStatus("success");
-            // Save to results store for future access
+            // Save to draft store (Zustand persist handles localStorage automatically)
             setResult(submissionId, resultsToStore);
-            // Also store in localStorage for tests and persistence
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
-              } catch (error) {
-                console.warn("Failed to store results in localStorage:", error);
-              }
-            }
           }
         } catch (serverError) {
           // If server fetch fails (especially 404), try results store as fallback
@@ -196,25 +155,6 @@ export default function ResultsPage() {
               setData(fallbackResults);
               setStatus("success");
               return;
-            }
-          }
-          // Check sessionStorage as well (temporary storage)
-          if (typeof window !== "undefined") {
-            const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
-            if (sessionStored) {
-              try {
-                const parsed = JSON.parse(sessionStored);
-                if (!cancelled) {
-                  console.log(
-                    `[ResultsPage] Using sessionStorage data for submission ${submissionId}`
-                  );
-                  setData(parsed);
-                  setStatus("success");
-                  return;
-                }
-              } catch {
-                // Fall through to error handling
-              }
             }
           }
           // If both fail, show error

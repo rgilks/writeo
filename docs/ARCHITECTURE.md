@@ -163,14 +163,14 @@ graph TB
 
 - **Draft Store** - Draft history, progress tracking, achievements, streaks
 - **Preferences Store** - User preferences (view mode, storage settings)
-- **Results Store** - Assessment results storage with automatic cleanup
+- **Draft Store** - Consolidated store for draft content, assessment results, and progress tracking
 
 **Key Features:**
 
 - Selective subscriptions prevent unnecessary re-renders
 - Computed selectors for expensive calculations
 - DevTools integration for debugging
-- Automatic localStorage persistence with migration
+- Automatic localStorage persistence
 
 See [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) for detailed documentation.
 

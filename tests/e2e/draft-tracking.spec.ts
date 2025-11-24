@@ -16,7 +16,7 @@ import { createTestSubmission, generateValidEssay } from "./helpers";
  *
  * Storage Notes:
  * - Tests use direct localStorage access for backwards compatibility
- * - In production, results are stored via Zustand Results Store (writeo-results-store)
+ * - In production, results are stored via Zustand Results Store (writeo-draft-store)
  * - Direct localStorage access still works due to backwards compatibility
  * - Prefer using useResultsStore.getState() in new tests when possible
  */
@@ -333,7 +333,7 @@ test.describe("Draft Tracking", () => {
         (id) => {
           try {
             // Check Zustand results store
-            const storeData = localStorage.getItem("writeo-results-store");
+            const storeData = localStorage.getItem("writeo-draft-store");
             if (storeData) {
               const parsed = JSON.parse(storeData);
               if (parsed?.state?.results?.[id]) {
@@ -363,7 +363,7 @@ test.describe("Draft Tracking", () => {
       }
       // Also check Zustand results store
       try {
-        const storeData = localStorage.getItem("writeo-results-store");
+        const storeData = localStorage.getItem("writeo-draft-store");
         if (storeData) {
           const parsed = JSON.parse(storeData);
           if (parsed?.state?.results) {
@@ -456,7 +456,7 @@ test.describe("Draft Tracking", () => {
         localStorage.setItem(`results_${submissionId}`, JSON.stringify(results));
         // Also store in Zustand results store (this is what the app actually uses)
         try {
-          const storeData = localStorage.getItem("writeo-results-store");
+          const storeData = localStorage.getItem("writeo-draft-store");
           const storeState = storeData ? JSON.parse(storeData) : { state: { results: {} } };
           if (!storeState.state) {
             storeState.state = { results: {} };
@@ -468,7 +468,7 @@ test.describe("Draft Tracking", () => {
             results,
             timestamp: Date.now(),
           };
-          localStorage.setItem("writeo-results-store", JSON.stringify(storeState));
+          localStorage.setItem("writeo-draft-store", JSON.stringify(storeState));
         } catch (error) {
           console.warn("Failed to store in Zustand store:", error);
         }
@@ -585,7 +585,7 @@ test.describe("Draft Tracking", () => {
     const firstStored = await page.evaluate((submissionId) => {
       // Check Zustand results store first (this is what the app actually uses)
       try {
-        const storeData = localStorage.getItem("writeo-results-store");
+        const storeData = localStorage.getItem("writeo-draft-store");
         if (storeData) {
           const parsed = JSON.parse(storeData);
           if (parsed?.state?.results?.[submissionId]) {
@@ -667,7 +667,7 @@ test.describe("Draft Tracking", () => {
         (id) => {
           try {
             // Check Zustand results store first
-            const storeData = localStorage.getItem("writeo-results-store");
+            const storeData = localStorage.getItem("writeo-draft-store");
             if (storeData) {
               const parsed = JSON.parse(storeData);
               if (parsed?.state?.results?.[id]) {
@@ -687,7 +687,7 @@ test.describe("Draft Tracking", () => {
       const storedResults = await page.evaluate((submissionId) => {
         // Check Zustand results store first
         try {
-          const storeData = localStorage.getItem("writeo-results-store");
+          const storeData = localStorage.getItem("writeo-draft-store");
           if (storeData) {
             const parsed = JSON.parse(storeData);
             if (parsed?.state?.results?.[submissionId]) {
@@ -706,7 +706,7 @@ test.describe("Draft Tracking", () => {
       // parentSubmissionId is now stored in results.meta.parentSubmissionId, not as a separate field
       const parentStored = await page.evaluate((submissionId) => {
         try {
-          const storeData = localStorage.getItem("writeo-results-store");
+          const storeData = localStorage.getItem("writeo-draft-store");
           if (storeData) {
             const parsed = JSON.parse(storeData);
             if (parsed?.state?.results?.[submissionId]?.results?.meta?.parentSubmissionId) {
