@@ -207,19 +207,34 @@ const createStorageAdapter = (): StateStorage => {
       }
     },
 
-    setItem: (name: string, value: string): void => {
+    setItem: (name: string, value: string | unknown): void => {
       if (typeof window === "undefined") return;
 
       try {
-        // Convert Sets to arrays for JSON serialization
-        const parsed = JSON.parse(value);
-        const serialized = JSON.stringify(parsed, (key, val) => {
-          if (val instanceof Set) {
-            return { __type: "Set", value: Array.from(val) };
-          }
-          return val;
-        });
-        baseStorage.setItem(name, serialized);
+        // Zustand persist may pass either a string or an object depending on version
+        let stringValue: string;
+
+        if (typeof value === "string") {
+          stringValue = value;
+        } else if (typeof value === "object" && value !== null) {
+          // If it's an object, stringify it (Sets are already converted in partialize)
+          stringValue = JSON.stringify(value);
+        } else {
+          console.warn(`Unexpected value type for setItem: ${typeof value}`);
+          return;
+        }
+
+        // Check for corrupted data
+        if (
+          stringValue === "[object Object]" ||
+          (stringValue.startsWith("[object ") && stringValue.endsWith("]"))
+        ) {
+          console.warn(`Corrupted data detected for ${name}, skipping save`);
+          return;
+        }
+
+        // Save the stringified value
+        baseStorage.setItem(name, stringValue);
       } catch (error) {
         console.error(`Failed to save data for ${name}:`, error);
       }
@@ -729,18 +744,29 @@ export const useDraftStore = create<DraftStore>()(
       {
         name: STORAGE_KEY,
         storage: createStorageAdapter() as any,
-        partialize: (state) => ({
+        partialize: (state) => {
           // Only persist state, not functions
-          contentDrafts: state.contentDrafts,
-          currentContent: state.currentContent,
-          activeDraftId: state.activeDraftId,
-          results: state.results,
-          drafts: state.drafts,
-          progress: state.progress,
-          fixedErrors: state.fixedErrors,
-          achievements: state.achievements,
-          streak: state.streak,
-        }),
+          // Convert Sets to marked objects before Zustand stringifies (to avoid "[object Object]")
+          const fixedErrorsSerialized: Record<string, { __type: "Set"; value: string[] }> = {};
+          Object.entries(state.fixedErrors).forEach(([key, value]) => {
+            fixedErrorsSerialized[key] = {
+              __type: "Set",
+              value: value instanceof Set ? Array.from(value) : [],
+            };
+          });
+
+          return {
+            contentDrafts: state.contentDrafts,
+            currentContent: state.currentContent,
+            activeDraftId: state.activeDraftId,
+            results: state.results,
+            drafts: state.drafts,
+            progress: state.progress,
+            fixedErrors: fixedErrorsSerialized,
+            achievements: state.achievements,
+            streak: state.streak,
+          };
+        },
         onRehydrateStorage: () => (state) => {
           if (state && typeof window !== "undefined") {
             state.cleanupOldResults(30 * 24 * 60 * 60 * 1000);
