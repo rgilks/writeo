@@ -220,7 +220,7 @@ const createStorageAdapter = (): StateStorage => {
           // If it's an object, stringify it (Sets are already converted in partialize)
           stringValue = JSON.stringify(value);
         } else {
-          console.warn(`Unexpected value type for setItem: ${typeof value}`);
+          console.warn(`[StorageAdapter] Unexpected value type for setItem: ${typeof value}`);
           return;
         }
 
@@ -229,14 +229,14 @@ const createStorageAdapter = (): StateStorage => {
           stringValue === "[object Object]" ||
           (stringValue.startsWith("[object ") && stringValue.endsWith("]"))
         ) {
-          console.warn(`Corrupted data detected for ${name}, skipping save`);
+          console.warn(`[StorageAdapter] Corrupted data detected for ${name}, skipping save`);
           return;
         }
 
         // Save the stringified value
         baseStorage.setItem(name, stringValue);
       } catch (error) {
-        console.error(`Failed to save data for ${name}:`, error);
+        console.error(`[StorageAdapter] Failed to save data for ${name}:`, error);
       }
     },
 
@@ -744,6 +744,8 @@ export const useDraftStore = create<DraftStore>()(
       {
         name: STORAGE_KEY,
         storage: createStorageAdapter() as any,
+        // Disable debouncing to ensure immediate saves
+        skipHydration: false,
         partialize: (state) => {
           // Only persist state, not functions
           // Convert Sets to marked objects before Zustand stringifies (to avoid "[object Object]")

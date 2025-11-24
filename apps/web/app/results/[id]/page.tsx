@@ -12,6 +12,25 @@ import { ModeSwitcher } from "@/app/components/ModeSwitcher";
 import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 import type { AssessmentResults } from "@writeo/shared";
 
+// Helper to wait for Zustand persist rehydration
+function waitForRehydration(): Promise<void> {
+  return new Promise((resolve) => {
+    // Check if store has been rehydrated by checking if we can access it
+    const checkRehydration = () => {
+      try {
+        const store = useDraftStore.getState();
+        // If we can access the store, it's likely rehydrated
+        // Zustand persist rehydrates synchronously on first access
+        resolve();
+      } catch (e) {
+        // If there's an error, wait a bit and try again
+        setTimeout(checkRehydration, 50);
+      }
+    };
+    checkRehydration();
+  });
+}
+
 export default function ResultsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -72,6 +91,11 @@ export default function ResultsPage() {
     async function fetchResults() {
       try {
         setStatus("pending");
+
+        // Wait for Zustand persist to rehydrate from localStorage
+        // This ensures we can read results that were just stored
+        await waitForRehydration();
+
         // Check if we're in local mode (not saving to server)
         const storeResults = usePreferencesStore.getState().storeResults;
 
@@ -92,24 +116,28 @@ export default function ResultsPage() {
               setParentId(storedParentId);
             }
 
-            // Use stored results immediately, but still try to fetch from server in background
+            // Use stored results immediately
             setData(storedResults);
             setStatus("success");
 
-            // Try to fetch from server to get latest version (but don't wait)
-            // This ensures we have the latest data if available
-            getSubmissionResults(submissionId)
-              .then((serverResults) => {
-                if (!cancelled && serverResults) {
-                  // Update with server results if available
-                  setData(serverResults);
-                  // Zustand persist handles localStorage automatically
-                  setResult(submissionId, serverResults);
-                }
-              })
-              .catch(() => {
-                // Server fetch failed, but we already have local results, so that's OK
-              });
+            // Only try to fetch from server if user opted in to server storage
+            // In local-only mode, skip server fetch to avoid unnecessary errors
+            if (storeResults) {
+              // Try to fetch from server to get latest version (but don't wait)
+              // This ensures we have the latest data if available
+              getSubmissionResults(submissionId)
+                .then((serverResults) => {
+                  if (!cancelled && serverResults) {
+                    // Update with server results if available
+                    setData(serverResults);
+                    // Zustand persist handles localStorage automatically
+                    setResult(submissionId, serverResults);
+                  }
+                })
+                .catch(() => {
+                  // Server fetch failed, but we already have local results, so that's OK
+                });
+            }
 
             return;
           }
@@ -123,6 +151,29 @@ export default function ResultsPage() {
             ? getResult(effectiveParentId) || parentResults
             : parentResults;
 
+        // In local-only mode, don't try to fetch from server
+        if (!storeResults) {
+          // Results should already be in Zustand store (persisted to localStorage)
+          const fallbackResults = getResult(submissionId);
+
+          if (fallbackResults) {
+            if (!cancelled) {
+              const storedParentId = fallbackResults.meta?.parentSubmissionId as string | undefined;
+              if (storedParentId && !parentId) {
+                setParentId(storedParentId);
+              }
+              setData(fallbackResults);
+              setStatus("success");
+              return;
+            }
+          } else {
+            throw new Error(
+              "Results not found in local storage. In local-only mode, results are only stored in your browser. If you cleared your browser data, the results are no longer available."
+            );
+          }
+        }
+
+        // Server storage mode - try to fetch from server
         try {
           const results = effectiveParentId
             ? await getSubmissionResultsWithDraftTracking(
@@ -151,7 +202,6 @@ export default function ResultsPage() {
           const fallbackResults = getResult(submissionId);
           if (fallbackResults) {
             if (!cancelled) {
-              console.log(`[ResultsPage] Using results store data for submission ${submissionId}`);
               setData(fallbackResults);
               setStatus("success");
               return;
@@ -334,6 +384,7 @@ export default function ResultsPage() {
                 <LearnerResultsView
                   data={data}
                   answerText={answerText}
+                  submissionId={submissionId}
                   processingTime={processingTime}
                   onDraftSwitch={switchDraft}
                 />

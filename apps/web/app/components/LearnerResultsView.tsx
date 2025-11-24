@@ -24,10 +24,16 @@ interface LearnerResultsViewProps {
   data: AssessmentResults;
   answerText: string;
   processingTime?: number | null;
+  submissionId?: string;
   onDraftSwitch?: (submissionId: string, parentId?: string) => boolean;
 }
 
-export function LearnerResultsView({ data, answerText, onDraftSwitch }: LearnerResultsViewProps) {
+export function LearnerResultsView({
+  data,
+  answerText,
+  submissionId: propSubmissionId,
+  onDraftSwitch,
+}: LearnerResultsViewProps) {
   const [isFeedbackRevealed, setIsFeedbackRevealed] = useState(false);
   const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
 
@@ -47,7 +53,7 @@ export function LearnerResultsView({ data, answerText, onDraftSwitch }: LearnerR
     answerId,
     questionText,
     relevanceCheck,
-  } = useDataExtraction(data);
+  } = useDataExtraction(data, propSubmissionId);
 
   const answerTexts = data.meta?.answerTexts as Record<string, string> | undefined;
   const finalAnswerText = answerText || (answerTexts && answerId ? answerTexts[answerId] : "");

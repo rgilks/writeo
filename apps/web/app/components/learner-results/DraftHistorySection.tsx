@@ -52,11 +52,12 @@ export function DraftHistorySection({
           flexWrap: "wrap",
           gap: "var(--spacing-sm)",
           marginBottom: "var(--spacing-md)",
+          width: "100%",
         }}
         lang="en"
         data-testid="draft-buttons-container"
       >
-        {displayDraftHistory.map((draft) => {
+        {displayDraftHistory.map((draft, index) => {
           const { navigateUrl, hasValidSubmissionId } = useDraftNavigation(
             draft,
             draftNumber,

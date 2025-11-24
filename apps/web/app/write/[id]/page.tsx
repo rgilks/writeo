@@ -235,9 +235,9 @@ export default function WritePage() {
       }
 
       // Store results in draft store (Zustand persist handles localStorage automatically)
-      // parentSubmissionId is already in resultsToStore.meta.parentSubmissionId
       setResult(submissionId, resultsToStore);
-      // Redirect to results page - results will be available immediately
+
+      // Redirect to results page
       router.push(`/results/${submissionId}`);
     } catch (err) {
       console.error("Submission error:", err);

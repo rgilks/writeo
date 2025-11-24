@@ -64,26 +64,62 @@ export function useDraftHistory(
     // Collect all drafts that belong to the same chain
     // This handles cases where drafts might be stored under different keys
     // Search through ALL drafts in the store to find ones that belong to this chain
+    const allStoredDraftsFlat = Object.values(drafts).flat();
+
+    // Strategy: Find all drafts that share the same root, or are connected through parent chains
+    // First, try to find the root and get all drafts from that root
     if (rootSubmissionId) {
-      // Get all drafts from the store and find ones that belong to this chain
-      const allStoredDraftsFlat = Object.values(drafts).flat();
-
-      // Find all drafts that are part of this chain by checking if they share the root
-      const chainDrafts = allStoredDraftsFlat.filter((draft) => {
-        // Check if this draft belongs to the same chain
-        const draftRoot = getRootSubmissionId(draft.submissionId);
-        return draftRoot === rootSubmissionId;
-      });
-
-      // If we found drafts in the chain, use them (they should be more complete)
-      // Deduplicate by submissionId to avoid duplicates
-      if (chainDrafts.length > 0) {
-        const uniqueChainDrafts = chainDrafts.filter(
-          (draft, index, self) =>
-            index === self.findIndex((d) => d.submissionId === draft.submissionId)
-        );
-        storedDraftHistory = uniqueChainDrafts;
+      const rootDrafts = getDraftHistory(rootSubmissionId);
+      if (rootDrafts.length > storedDraftHistory.length) {
+        storedDraftHistory = rootDrafts;
       }
+    }
+
+    // Also search for drafts that reference our submissionId or parentSubmissionId
+    // This catches drafts stored under intermediate keys
+    const relatedDrafts = allStoredDraftsFlat.filter((draft) => {
+      // Check if this draft's root matches our root
+      const draftRoot = getRootSubmissionId(draft.submissionId);
+      if (draftRoot && rootSubmissionId && draftRoot === rootSubmissionId) {
+        return true;
+      }
+
+      // Check if this draft is in a chain that includes our submissionId or parentSubmissionId
+      if (draftRoot) {
+        const draftChain = getDraftHistory(draftRoot);
+        return (
+          draftChain.some((d) => d.submissionId === submissionId) ||
+          draftChain.some((d) => d.submissionId === parentSubmissionId) ||
+          draft.submissionId === submissionId ||
+          draft.submissionId === parentSubmissionId
+        );
+      }
+
+      return false;
+    });
+
+    // Merge related drafts, avoiding duplicates
+    const mergedDrafts = new Map<string, (typeof allStoredDraftsFlat)[0]>();
+
+    // Add stored drafts first
+    storedDraftHistory.forEach((draft) => {
+      if (draft.submissionId) {
+        mergedDrafts.set(draft.submissionId, draft);
+      }
+    });
+
+    // Add related drafts
+    relatedDrafts.forEach((draft) => {
+      if (draft.submissionId && !mergedDrafts.has(draft.submissionId)) {
+        mergedDrafts.set(draft.submissionId, draft);
+      }
+    });
+
+    // Convert back to array and sort by draft number
+    if (mergedDrafts.size > storedDraftHistory.length) {
+      storedDraftHistory = Array.from(mergedDrafts.values()).sort(
+        (a, b) => a.draftNumber - b.draftNumber
+      );
     }
 
     // Merge both, preferring stored drafts with submissionIds
@@ -153,7 +189,11 @@ export function useDraftHistory(
       }
     });
 
-    return Array.from(finalDraftMap.values()).sort((a, b) => a.draftNumber - b.draftNumber);
+    const finalResult = Array.from(finalDraftMap.values()).sort(
+      (a, b) => a.draftNumber - b.draftNumber
+    );
+
+    return finalResult;
   }, [
     draftNumber,
     draftHistory,

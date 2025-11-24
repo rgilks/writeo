@@ -12,7 +12,7 @@ import {
 } from "@writeo/shared";
 import { mapScoreToCEFR } from "./utils";
 
-export function useDataExtraction(data: AssessmentResults) {
+export function useDataExtraction(data: AssessmentResults, submissionId?: string) {
   const parts = data.results?.parts || [];
   const firstPart = parts[0];
   const firstAnswer = firstPart?.answers?.[0];
@@ -59,10 +59,7 @@ export function useDataExtraction(data: AssessmentResults) {
       }
     : undefined;
 
-  const submissionId =
-    typeof window !== "undefined"
-      ? window.location.pathname.split("/results/")[1]?.split("/")[0]
-      : undefined;
+  // submissionId is now passed as a parameter instead of reading from window.location
 
   const draftNumber = (data.meta?.draftNumber as number) || 1;
   const parentSubmissionId = data.meta?.parentSubmissionId as string | undefined;

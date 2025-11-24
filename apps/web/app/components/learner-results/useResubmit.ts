@@ -51,10 +51,9 @@ export function useResubmit() {
       }
 
       // Store results in draft store (Zustand persist handles localStorage automatically)
-      // parentSubmissionId is already in results.meta.parentSubmissionId
       setResult(newSubmissionId, results);
 
-      // No need for ?parent= param since parentSubmissionId is in results.meta
+      // Redirect to results page
       router.push(`/results/${newSubmissionId}`);
     } catch (error) {
       setIsResubmitting(false);
