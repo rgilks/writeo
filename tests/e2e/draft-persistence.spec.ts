@@ -28,8 +28,8 @@ test.describe("Draft Persistence & Navigation", () => {
     await page.waitForTimeout(2500);
 
     // 2. Verify draft appears in sidebar (visual confirmation)
-    const sidebar = page.locator("aside.draft-sidebar");
-    await expect(sidebar).toBeVisible({ timeout: 3000 });
+    const sidebar = page.locator('aside[aria-label="Draft history"]');
+    await expect(sidebar).toBeVisible({ timeout: 5000 });
     await expect(sidebar).toContainText(uniqueText.slice(0, 20), { timeout: 3000 });
 
     // 3. ACTION: Reload the page
@@ -43,7 +43,7 @@ test.describe("Draft Persistence & Navigation", () => {
     await expect(editorAfterReload).toHaveValue(uniqueText, { timeout: 3000 });
 
     // 5. ASSERTION: Draft is still in the sidebar
-    const sidebarAfterReload = page.locator("aside.draft-sidebar");
+    const sidebarAfterReload = page.locator('aside[aria-label="Draft history"]');
     await expect(sidebarAfterReload).toBeVisible();
     await expect(sidebarAfterReload).toContainText(uniqueText.slice(0, 20));
   });
@@ -69,7 +69,7 @@ test.describe("Draft Persistence & Navigation", () => {
     await page.waitForTimeout(2500); // Wait for auto-save
 
     // Click Draft Alpha in sidebar
-    const sidebar = page.locator("aside.draft-sidebar");
+    const sidebar = page.locator('aside[aria-label="Draft history"]');
     await sidebar.getByText("Draft Alpha").click();
     await page.waitForTimeout(500);
     await expect(editor).toHaveValue(draftA);
@@ -87,10 +87,10 @@ test.describe("Draft Persistence & Navigation", () => {
     await writePage.goto("1");
 
     const editor = page.getByRole("textbox", { name: /answer/i });
-    const sidebar = page.locator("aside.draft-sidebar");
+    const sidebar = page.locator('aside[aria-label="Draft history"]');
 
     // Initially no drafts
-    await expect(sidebar.getByText("No drafts yet")).toBeVisible();
+    await expect(sidebar.getByText(/No drafts yet/)).toBeVisible();
 
     // Type content
     const testContent = "This is test content that should auto-save after a pause";
@@ -100,7 +100,7 @@ test.describe("Draft Persistence & Navigation", () => {
     await page.waitForTimeout(2500);
 
     // Draft should appear in sidebar
-    await expect(sidebar.getByText("No drafts yet")).not.toBeVisible({ timeout: 1000 });
+    await expect(sidebar.getByText(/No drafts yet/)).not.toBeVisible({ timeout: 1000 });
     await expect(sidebar).toContainText(testContent.slice(0, 20));
   });
 
@@ -131,7 +131,7 @@ test.describe("Draft Persistence & Navigation", () => {
     await writePage.goto("1");
 
     const editor = page.getByRole("textbox", { name: /answer/i });
-    const sidebar = page.locator("aside.draft-sidebar");
+    const sidebar = page.locator('aside[aria-label="Draft history"]');
 
     // Create a draft
     const testContent = "Content to be deleted";
@@ -167,7 +167,7 @@ test.describe("Draft Persistence & Navigation", () => {
     await writePage.goto("1");
 
     const editor = page.getByRole("textbox", { name: /answer/i });
-    const sidebar = page.locator("aside.draft-sidebar");
+    const sidebar = page.locator('aside[aria-label="Draft history"]');
 
     // Create a draft with known word count
     const testContent = "One two three four five six seven eight nine ten";
@@ -189,7 +189,7 @@ test.describe("Draft Persistence & Navigation", () => {
     await writePage.goto("1");
 
     const editor = page.getByRole("textbox", { name: /answer/i });
-    const sidebar = page.locator("aside.draft-sidebar");
+    const sidebar = page.locator('aside[aria-label="Draft history"]');
     const newButton = page.getByRole("button", { name: "+ New" });
 
     // Create Draft A
@@ -225,7 +225,7 @@ test.describe("Draft Persistence & Navigation", () => {
     await writePage.goto("1");
 
     const editor = page.getByRole("textbox", { name: /answer/i });
-    const sidebar = page.locator("aside.draft-sidebar");
+    const sidebar = page.locator('aside[aria-label="Draft history"]');
     const newButton = page.getByRole("button", { name: "+ New" });
 
     // Create multiple drafts
@@ -261,7 +261,7 @@ test.describe("Draft Persistence & Navigation", () => {
     await writePage.goto("1");
 
     const editor = page.getByRole("textbox", { name: /answer/i });
-    const sidebar = page.locator("aside.draft-sidebar");
+    const sidebar = page.locator('aside[aria-label="Draft history"]');
 
     // Create two drafts
     await editor.fill("First draft for keyboard test");

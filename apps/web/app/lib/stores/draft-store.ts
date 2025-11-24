@@ -1,8 +1,22 @@
+/**
+ * Refactored Draft Store - Cleaner, more elegant design
+ *
+ * Improvements:
+ * - Separates local-only state from syncable state
+ * - Cleaner storage adapter with proper Set handling
+ * - Optional API sync middleware
+ * - Simplified immer usage
+ * - Better separation of concerns
+ */
+
 import { create } from "zustand";
-import { devtools, persist, StateStorage, createJSONStorage } from "zustand/middleware";
+import { devtools, persist, type StateStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
+import { enableMapSet } from "immer";
 import type { AssessmentResults } from "@writeo/shared";
-import { createSafeStorage, cleanupExpiredStorage } from "../utils/storage";
+import { createSafeStorage } from "../utils/storage";
+
+enableMapSet();
 
 // ============================================================================
 // TYPES
@@ -55,56 +69,68 @@ interface StoredResult {
   timestamp: number;
 }
 
-interface DraftStore {
-  // Draft content (before submission)
+// ============================================================================
+// STORE STATE (separated by concern)
+// ============================================================================
+
+interface LocalState {
+  // Local-only: never synced to API
   contentDrafts: DraftContent[];
   currentContent: string;
   activeDraftId: string | null;
+}
 
-  // Assessment results (after submission)
+interface SyncableState {
+  // Syncable: can be synced to API if user opts in
   results: Record<string, StoredResult>;
-
-  // Submission history & progress (after submission)
-  drafts: Record<string, DraftHistory[]>;
+  drafts: Record<string, DraftHistory[]>; // keyed by rootSubmissionId
   progress: Record<string, ProgressMetrics>;
   fixedErrors: Record<string, Set<string>>;
   achievements: Achievement[];
   streak: StreakData;
+}
 
+interface DraftStore extends LocalState, SyncableState {
   // Actions
+  // Local state actions
   updateContent: (text: string) => void;
   saveContentDraft: () => void;
   loadContentDraft: (id: string) => void;
   createNewContentDraft: () => void;
   deleteContentDraft: (id: string) => void;
 
+  // Syncable state actions
   setResult: (submissionId: string, results: AssessmentResults) => void;
   getResult: (submissionId: string) => AssessmentResults | null;
   getParentSubmissionId: (submissionId: string) => string | null;
   removeResult: (submissionId: string) => void;
   clearAllResults: () => void;
-  cleanupOldResults: (maxAgeMs?: number) => void;
 
-  addDraft: (draft: DraftHistory, parentSubmissionId?: string) => Achievement[];
-  getDraftHistory: (submissionId: string) => DraftHistory[];
+  addDraft: (draft: DraftHistory, rootSubmissionId: string) => Achievement[];
+  getDraftHistory: (rootSubmissionId: string) => DraftHistory[];
   getRootSubmissionId: (submissionId: string) => string | null;
   getProgress: (submissionId: string) => ProgressMetrics | undefined;
+
   trackFixedErrors: (
     submissionId: string,
     previousErrorIds: string[],
     currentErrorIds: string[]
   ) => void;
   getFixedErrors: (submissionId: string) => Set<string>;
+
   updateStreak: () => void;
   getStreak: () => StreakData;
   getAchievements: () => Achievement[];
-  clearDrafts: () => void;
 
   // Computed selectors
   getTotalDrafts: () => number;
   getTotalWritings: () => number;
   getAverageImprovement: () => number;
   getAllDrafts: () => DraftHistory[];
+
+  // Cleanup
+  cleanupOldResults: (maxAgeMs?: number) => void;
+  clearDrafts: () => void;
 }
 
 // ============================================================================
@@ -126,6 +152,147 @@ const generateSummary = (text: string): string => {
 
 const CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"] as const;
 
+// ============================================================================
+// STORAGE ADAPTER (cleaner Set handling)
+// ============================================================================
+
+const baseStorage = createSafeStorage();
+
+/**
+ * Custom storage adapter that handles Set serialization elegantly
+ */
+const createStorageAdapter = (): StateStorage => {
+  return {
+    getItem: (name: string): string | null => {
+      const str = baseStorage.getItem(name);
+      // Handle both sync and async return types
+      if (!str || (typeof str === "object" && "then" in str)) {
+        return null;
+      }
+      if (typeof str !== "string") {
+        return null;
+      }
+
+      try {
+        // Convert Set arrays back to Sets during deserialization
+        // Use a recursive function to transform the object
+        const transformSets = (obj: any): any => {
+          if (obj === null || typeof obj !== "object") {
+            return obj;
+          }
+
+          if (Array.isArray(obj)) {
+            return obj.map(transformSets);
+          }
+
+          if (obj.__type === "Set" && Array.isArray(obj.value)) {
+            return new Set(obj.value);
+          }
+
+          const transformed: any = {};
+          for (const [key, value] of Object.entries(obj)) {
+            transformed[key] = transformSets(value);
+          }
+          return transformed;
+        };
+
+        const parsed = JSON.parse(str);
+        const transformed = transformSets(parsed);
+        // Return the transformed object as JSON string for Zustand
+        return JSON.stringify(transformed);
+      } catch (error) {
+        console.error(`Failed to parse stored data for ${name}:`, error);
+        baseStorage.removeItem(name);
+        return null;
+      }
+    },
+
+    setItem: (name: string, value: string): void => {
+      if (typeof window === "undefined") return;
+
+      try {
+        // Convert Sets to arrays for JSON serialization
+        const parsed = JSON.parse(value);
+        const serialized = JSON.stringify(parsed, (key, val) => {
+          if (val instanceof Set) {
+            return { __type: "Set", value: Array.from(val) };
+          }
+          return val;
+        });
+        baseStorage.setItem(name, serialized);
+      } catch (error) {
+        console.error(`Failed to save data for ${name}:`, error);
+      }
+    },
+
+    removeItem: (name: string): void => {
+      baseStorage.removeItem(name);
+    },
+  };
+};
+
+// ============================================================================
+// HELPER FUNCTIONS (pure, testable)
+// ============================================================================
+
+/**
+ * Find root submission ID from a submission ID
+ * Pure function - no side effects
+ */
+function findRootSubmissionId(
+  submissionId: string,
+  drafts: Record<string, DraftHistory[]>
+): string | null {
+  // Check if this submissionId is a root key
+  if (drafts[submissionId]) {
+    return submissionId;
+  }
+
+  // Search through all draft arrays
+  for (const [rootId, draftArray] of Object.entries(drafts)) {
+    const found = draftArray.find((d) => d.submissionId === submissionId);
+    if (found) {
+      // Return the root ID (the key)
+      return rootId;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Calculate progress metrics from draft array
+ * Pure function - no side effects
+ */
+function calculateProgress(drafts: DraftHistory[]): ProgressMetrics | undefined {
+  if (drafts.length === 0) return undefined;
+
+  const first = drafts[0];
+  const latest = drafts[drafts.length - 1];
+
+  return {
+    totalDrafts: drafts.length,
+    firstDraftScore: first?.overallScore,
+    latestDraftScore: latest?.overallScore,
+    scoreImprovement:
+      latest?.overallScore !== undefined && first?.overallScore !== undefined
+        ? latest.overallScore - first.overallScore
+        : undefined,
+    errorReduction:
+      latest?.errorCount !== undefined && first?.errorCount !== undefined
+        ? first.errorCount - latest.errorCount
+        : undefined,
+    wordCountChange:
+      latest?.wordCount !== undefined && first?.wordCount !== undefined
+        ? latest.wordCount - first.wordCount
+        : undefined,
+  };
+}
+
+/**
+ * Check for new achievements based on draft and progress
+ * Pure function - no side effects
+ */
 function checkAchievements(
   draft: DraftHistory,
   allDrafts: DraftHistory[],
@@ -218,6 +385,10 @@ function checkAchievements(
   return achievements;
 }
 
+/**
+ * Calculate new streak based on last activity date
+ * Pure function - no side effects
+ */
 function calculateNewStreak(
   lastDate: string | "",
   currentStreak: number,
@@ -253,63 +424,6 @@ function calculateNewStreak(
 }
 
 // ============================================================================
-// STORAGE ADAPTER (handles Set serialization for fixedErrors)
-// ============================================================================
-
-const baseStorage = createSafeStorage();
-
-const storageWithSetHandling: StateStorage = {
-  getItem: (name: string): string | null => {
-    const str = baseStorage.getItem(name);
-    if (!str || typeof str !== "string") return null;
-
-    if (str === "[object Object]" || (str.startsWith("[object ") && str.endsWith("]"))) {
-      console.warn("Corrupted draft store data detected, clearing it");
-      baseStorage.removeItem(name);
-      return null;
-    }
-
-    try {
-      const parsed = JSON.parse(str);
-      // Convert fixedErrors arrays back to Sets
-      if (parsed?.state?.fixedErrors) {
-        const fixedErrors: Record<string, Set<string>> = {};
-        Object.entries(parsed.state.fixedErrors).forEach(([key, value]) => {
-          fixedErrors[key] = Array.isArray(value) ? new Set(value) : new Set();
-        });
-        parsed.state.fixedErrors = fixedErrors;
-      }
-      return JSON.stringify(parsed);
-    } catch (error) {
-      console.error("Failed to parse stored draft store, clearing corrupted data:", error);
-      baseStorage.removeItem(name);
-      return null;
-    }
-  },
-  setItem: (name: string, value: string): void => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const parsed = JSON.parse(value);
-      // Convert Sets to arrays for JSON serialization
-      if (parsed?.state?.fixedErrors) {
-        const fixedErrors: Record<string, string[]> = {};
-        Object.entries(parsed.state.fixedErrors).forEach(([key, setValue]) => {
-          fixedErrors[key] = setValue instanceof Set ? Array.from(setValue) : [];
-        });
-        parsed.state.fixedErrors = fixedErrors;
-      }
-      baseStorage.setItem(name, JSON.stringify(parsed));
-    } catch (error) {
-      console.error("Failed to save draft store:", error);
-    }
-  },
-  removeItem: (name: string): void => {
-    baseStorage.removeItem(name);
-  },
-};
-
-// ============================================================================
 // STORE CREATION
 // ============================================================================
 
@@ -320,9 +434,12 @@ export const useDraftStore = create<DraftStore>()(
     persist(
       immer((set, get) => ({
         // Initial state
+        // Local-only state
         contentDrafts: [],
         currentContent: "",
         activeDraftId: null,
+
+        // Syncable state
         results: {},
         drafts: {},
         progress: {},
@@ -334,7 +451,10 @@ export const useDraftStore = create<DraftStore>()(
           lastActivityDate: "",
         },
 
-        // Draft content actions
+        // ====================================================================
+        // LOCAL STATE ACTIONS (never synced)
+        // ====================================================================
+
         updateContent: (text: string) => {
           set((state) => {
             state.currentContent = text;
@@ -403,7 +523,10 @@ export const useDraftStore = create<DraftStore>()(
           });
         },
 
-        // Assessment results actions
+        // ====================================================================
+        // SYNCABLE STATE ACTIONS
+        // ====================================================================
+
         setResult: (submissionId, results) => {
           set((state) => {
             state.results[submissionId] = {
@@ -434,95 +557,31 @@ export const useDraftStore = create<DraftStore>()(
           });
         },
 
-        cleanupOldResults: (maxAgeMs = 30 * 24 * 60 * 60 * 1000) => {
-          const now = Date.now();
-          set((state) => {
-            Object.keys(state.results).forEach((submissionId) => {
-              const stored = state.results[submissionId];
-              if (stored && now - stored.timestamp > maxAgeMs) {
-                delete state.results[submissionId];
-              }
-            });
-          });
-          cleanupExpiredStorage(maxAgeMs);
-        },
-
-        // Submission history actions
-        getDraftHistory: (submissionId) => {
-          const state = get();
-          if (state.drafts[submissionId]) {
-            return state.drafts[submissionId];
-          }
-          for (const drafts of Object.values(state.drafts)) {
-            const found = drafts.find((d) => d.submissionId === submissionId);
-            if (found) return drafts;
-          }
-          return [];
-        },
-
-        getRootSubmissionId: (submissionId) => {
-          const state = get();
-          if (state.drafts[submissionId]) {
-            return submissionId;
-          }
-          for (const [key, drafts] of Object.entries(state.drafts)) {
-            const found = drafts.find((d) => d.submissionId === submissionId);
-            if (found) {
-              const draft1 = drafts.find((d) => d.draftNumber === 1);
-              return draft1?.submissionId || key;
-            }
-          }
-          return null;
-        },
-
-        getProgress: (submissionId) => {
-          return get().progress[submissionId];
-        },
-
-        addDraft: (draft, parentSubmissionId) => {
+        addDraft: (draft, rootSubmissionId) => {
           let newAchievements: Achievement[] = [];
 
           set((state) => {
-            const key = parentSubmissionId || draft.submissionId;
-
-            if (!state.drafts[key]) {
-              state.drafts[key] = [];
+            // Ensure the root key exists
+            if (!state.drafts[rootSubmissionId]) {
+              state.drafts[rootSubmissionId] = [];
             }
 
-            const existingIndex = state.drafts[key].findIndex(
+            const draftArray = state.drafts[rootSubmissionId];
+            const existingIndex = draftArray.findIndex(
               (d) => d.submissionId === draft.submissionId
             );
 
             if (existingIndex >= 0) {
-              state.drafts[key][existingIndex] = { ...draft };
+              draftArray[existingIndex] = { ...draft };
             } else {
-              state.drafts[key].push({ ...draft });
-              state.drafts[key].sort((a, b) => a.draftNumber - b.draftNumber);
+              draftArray.push({ ...draft });
+              draftArray.sort((a, b) => a.draftNumber - b.draftNumber);
             }
 
-            // Update progress metrics
-            const draftsArray = state.drafts[key];
-            if (draftsArray.length > 0) {
-              const first = draftsArray[0];
-              const latest = draftsArray[draftsArray.length - 1];
-
-              state.progress[draft.submissionId] = {
-                totalDrafts: draftsArray.length,
-                firstDraftScore: first?.overallScore,
-                latestDraftScore: latest?.overallScore,
-                scoreImprovement:
-                  latest?.overallScore !== undefined && first?.overallScore !== undefined
-                    ? latest.overallScore - first.overallScore
-                    : undefined,
-                errorReduction:
-                  latest?.errorCount !== undefined && first?.errorCount !== undefined
-                    ? first.errorCount - latest.errorCount
-                    : undefined,
-                wordCountChange:
-                  latest?.wordCount !== undefined && first?.wordCount !== undefined
-                    ? latest.wordCount - first.wordCount
-                    : undefined,
-              };
+            // Update progress metrics (pure function)
+            const progress = calculateProgress(draftArray);
+            if (progress) {
+              state.progress[draft.submissionId] = progress;
             }
 
             // Update streak
@@ -544,9 +603,9 @@ export const useDraftStore = create<DraftStore>()(
               draft,
               allDrafts,
               state.achievements,
-              state.progress[draft.submissionId],
+              progress,
               totalFixedErrors,
-              state.streak.currentStreak
+              newStreak.currentStreak
             );
 
             if (newAchievements.length > 0) {
@@ -555,6 +614,18 @@ export const useDraftStore = create<DraftStore>()(
           });
 
           return newAchievements;
+        },
+
+        getDraftHistory: (rootSubmissionId) => {
+          return get().drafts[rootSubmissionId] || [];
+        },
+
+        getRootSubmissionId: (submissionId) => {
+          return findRootSubmissionId(submissionId, get().drafts);
+        },
+
+        getProgress: (submissionId) => {
+          return get().progress[submissionId];
         },
 
         trackFixedErrors: (submissionId, previousErrorIds, currentErrorIds) => {
@@ -593,21 +664,10 @@ export const useDraftStore = create<DraftStore>()(
           return get().achievements;
         },
 
-        clearDrafts: () => {
-          set((state) => {
-            state.drafts = {};
-            state.progress = {};
-            state.fixedErrors = {};
-            state.achievements = [];
-            state.streak = {
-              currentStreak: 0,
-              longestStreak: 0,
-              lastActivityDate: "",
-            };
-          });
-        },
+        // ====================================================================
+        // COMPUTED SELECTORS
+        // ====================================================================
 
-        // Computed selectors
         getTotalDrafts: () => {
           const state = get();
           return Object.values(state.drafts).reduce((sum, drafts) => sum + drafts.length, 0);
@@ -630,10 +690,45 @@ export const useDraftStore = create<DraftStore>()(
         getAllDrafts: () => {
           return Object.values(get().drafts).flat();
         },
+
+        // ====================================================================
+        // CLEANUP
+        // ====================================================================
+
+        cleanupOldResults: (maxAgeMs = 30 * 24 * 60 * 60 * 1000) => {
+          const now = Date.now();
+          set((state) => {
+            Object.keys(state.results).forEach((submissionId) => {
+              const stored = state.results[submissionId];
+              if (stored && now - stored.timestamp > maxAgeMs) {
+                delete state.results[submissionId];
+              }
+            });
+          });
+          // Also cleanup expired storage entries
+          if (typeof window !== "undefined") {
+            const { cleanupExpiredStorage } = require("../utils/storage");
+            cleanupExpiredStorage(maxAgeMs);
+          }
+        },
+
+        clearDrafts: () => {
+          set((state) => {
+            state.drafts = {};
+            state.progress = {};
+            state.fixedErrors = {};
+            state.achievements = [];
+            state.streak = {
+              currentStreak: 0,
+              longestStreak: 0,
+              lastActivityDate: "",
+            };
+          });
+        },
       })),
       {
         name: STORAGE_KEY,
-        storage: storageWithSetHandling as any,
+        storage: createStorageAdapter() as any,
         partialize: (state) => ({
           // Only persist state, not functions
           contentDrafts: state.contentDrafts,
@@ -662,4 +757,35 @@ if (typeof window !== "undefined") {
   setTimeout(() => {
     useDraftStore.getState().cleanupOldResults(30 * 24 * 60 * 60 * 1000);
   }, 1000);
+}
+
+// ============================================================================
+// OPTIONAL: API SYNC MIDDLEWARE
+// ============================================================================
+
+/**
+ * Optional middleware to sync syncable state to API
+ * This can be added as a separate middleware layer if needed
+ */
+export function createApiSyncMiddleware(syncFn: (state: SyncableState) => Promise<void>) {
+  return (config: any) => (set: any, get: any, api: any) =>
+    config(
+      (...args: any[]) => {
+        set(...args);
+        // Sync after state update
+        const state = get();
+        syncFn({
+          results: state.results,
+          drafts: state.drafts,
+          progress: state.progress,
+          fixedErrors: state.fixedErrors,
+          achievements: state.achievements,
+          streak: state.streak,
+        }).catch((error) => {
+          console.error("Failed to sync state to API:", error);
+        });
+      },
+      get,
+      api
+    );
 }

@@ -65,6 +65,8 @@ export default function WritePage() {
   const updateContent = useDraftStore((state) => state.updateContent);
   const saveDraft = useDraftStore((state) => state.saveContentDraft);
   const activeDraftId = useDraftStore((state) => state.activeDraftId);
+  const contentDrafts = useDraftStore((state) => state.contentDrafts);
+  const loadContentDraft = useDraftStore((state) => state.loadContentDraft);
 
   const [customQuestion, setCustomQuestion] = useState("");
   const task = isCustom
@@ -119,6 +121,13 @@ export default function WritePage() {
     },
     [updateContent, saveDraft]
   );
+
+  // Load active draft on mount if currentContent is empty but activeDraftId exists
+  useEffect(() => {
+    if (!currentContent && activeDraftId && contentDrafts.length > 0) {
+      loadContentDraft(activeDraftId);
+    }
+  }, []); // Only run on mount
 
   // Cleanup timeout on unmount
   useEffect(() => {

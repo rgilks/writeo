@@ -66,22 +66,24 @@ export function DraftSidebar() {
         }}
       >
         <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 600 }}>Drafts</h2>
-        <button
-          onClick={createNewDraft}
-          style={{
-            padding: "6px 12px",
-            background: "#2563eb",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "0.875rem",
-            fontWeight: 500,
-          }}
-          aria-label="Create new draft"
-        >
-          + New
-        </button>
+        {drafts.length > 0 && (
+          <button
+            onClick={createNewDraft}
+            style={{
+              padding: "6px 12px",
+              background: "#2563eb",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "0.875rem",
+              fontWeight: 500,
+            }}
+            aria-label="Create new draft"
+          >
+            + New
+          </button>
+        )}
       </header>
 
       <div

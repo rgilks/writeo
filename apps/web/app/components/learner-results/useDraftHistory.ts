@@ -55,11 +55,36 @@ export function useDraftHistory(
     }
 
     // Get all drafts stored under the root submission ID
-    const storedDraftHistory = rootSubmissionId ? getDraftHistory(rootSubmissionId) : [];
+    let storedDraftHistory = rootSubmissionId ? getDraftHistory(rootSubmissionId) : [];
 
     // Also try to get drafts by current submissionId in case they're stored differently
     const currentDraftHistory =
       submissionId && submissionId !== rootSubmissionId ? getDraftHistory(submissionId) : [];
+
+    // Collect all drafts that belong to the same chain
+    // This handles cases where drafts might be stored under different keys
+    // Search through ALL drafts in the store to find ones that belong to this chain
+    if (rootSubmissionId) {
+      // Get all drafts from the store and find ones that belong to this chain
+      const allStoredDraftsFlat = Object.values(drafts).flat();
+
+      // Find all drafts that are part of this chain by checking if they share the root
+      const chainDrafts = allStoredDraftsFlat.filter((draft) => {
+        // Check if this draft belongs to the same chain
+        const draftRoot = getRootSubmissionId(draft.submissionId);
+        return draftRoot === rootSubmissionId;
+      });
+
+      // If we found drafts in the chain, use them (they should be more complete)
+      // Deduplicate by submissionId to avoid duplicates
+      if (chainDrafts.length > 0) {
+        const uniqueChainDrafts = chainDrafts.filter(
+          (draft, index, self) =>
+            index === self.findIndex((d) => d.submissionId === draft.submissionId)
+        );
+        storedDraftHistory = uniqueChainDrafts;
+      }
+    }
 
     // Merge both, preferring stored drafts with submissionIds
     const allStoredDrafts = [

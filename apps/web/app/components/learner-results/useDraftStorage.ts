@@ -54,10 +54,16 @@ export function useDraftStorage(
           rootSubmissionId = submissionId;
         }
 
+        // Only add draft if we have a root submission ID
+        if (!rootSubmissionId) {
+          console.warn("Cannot add draft: no root submission ID found");
+          return;
+        }
+
         const newAchievements = addDraft(draftData, rootSubmissionId);
 
         if (newAchievements.length > 0) {
-          console.log("New achievements unlocked:", newAchievements);
+          console.log("New achievements unlocked:", newAchievements.map((a) => a.name).join(", "));
         }
 
         if (rootSubmissionId) {

@@ -329,9 +329,7 @@ html {
 .question-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  position: sticky;
-  top: var(--spacing-md); /* 16px from top */
-  z-index: 10;
+  position: relative;
   box-shadow: var(--shadow-sm);
 }
 
