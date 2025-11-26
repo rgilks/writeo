@@ -15,19 +15,23 @@ import type { AssessmentResults } from "@writeo/shared";
 // Helper to wait for Zustand persist rehydration
 function waitForRehydration(): Promise<void> {
   return new Promise((resolve) => {
-    // Check if store has been rehydrated by checking if we can access it
-    const checkRehydration = () => {
-      try {
-        const store = useDraftStore.getState();
-        // If we can access the store, it's likely rehydrated
-        // Zustand persist rehydrates synchronously on first access
-        resolve();
-      } catch (e) {
-        // If there's an error, wait a bit and try again
-        setTimeout(checkRehydration, 50);
-      }
-    };
-    checkRehydration();
+    // Check if store has already been hydrated
+    if (useDraftStore.persist.hasHydrated()) {
+      resolve();
+      return;
+    }
+
+    // If not hydrated yet, wait for the onFinishHydration callback
+    const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
+      unsubscribe();
+      resolve();
+    });
+
+    // Fallback timeout in case hydration takes too long or fails silently
+    setTimeout(() => {
+      unsubscribe();
+      resolve();
+    }, 2000);
   });
 }
 
@@ -44,29 +48,51 @@ export default function ResultsPage() {
   const [processingTime, setProcessingTime] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
 
-  // Check if results are available in draft store (Zustand persist handles localStorage)
-  const [initialResults] = useState<AssessmentResults | null>(() => {
+  // Track hydration state - results may not be available until store is hydrated
+  const [isHydrated, setIsHydrated] = useState(() => useDraftStore.persist.hasHydrated());
+
+  // Check if results are available in draft store after hydration
+  // Don't read from store during SSR or before hydration
+  const getInitialResults = (): AssessmentResults | null => {
+    if (typeof window === "undefined" || !isHydrated) return null;
     return getResult(submissionId);
-  });
+  };
 
   // Get parent submission ID from results.meta (single source of truth)
-  // URL param ?parent= is no longer needed since parentSubmissionId is in results.meta
-  const [parentId, setParentId] = useState<string | null>(() => {
-    // Try to get from initial results if available
-    if (initialResults?.meta?.parentSubmissionId) {
-      return initialResults.meta.parentSubmissionId as string;
+  const getInitialParentId = (): string | null => {
+    if (typeof window === "undefined" || !isHydrated) return null;
+    const results = getResult(submissionId);
+    if (results?.meta?.parentSubmissionId) {
+      return results.meta.parentSubmissionId as string;
     }
-    // Fallback to results store
     return getParentSubmissionId(submissionId);
-  });
+  };
 
-  // Fetch results
-  const [data, setData] = useState<AssessmentResults | null>(initialResults);
+  const [parentId, setParentId] = useState<string | null>(getInitialParentId);
+
+  // Fetch results - initialized as pending, will check store after hydration
+  const [data, setData] = useState<AssessmentResults | null>(getInitialResults);
   const [status, setStatus] = useState<"pending" | "success" | "error">(
-    initialResults ? "success" : "pending"
+    getInitialResults() ? "success" : "pending"
   );
   const [error, setError] = useState<string | null>(null);
-  const [previousData, setPreviousData] = useState<AssessmentResults | null>(initialResults);
+  const [previousData, setPreviousData] = useState<AssessmentResults | null>(getInitialResults());
+
+  // Listen for hydration completion
+  useEffect(() => {
+    if (useDraftStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+      return;
+    }
+
+    const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
+      setIsHydrated(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     // Update previousData when data changes (for draft switching)
@@ -81,8 +107,25 @@ export default function ResultsPage() {
   }, [data]);
 
   useEffect(() => {
-    // If we already have results from write page, skip fetching
-    if (initialResults) {
+    // Wait for hydration before checking store
+    if (!isHydrated) {
+      return;
+    }
+
+    // Check if we already have results in the store (from write page or previous visit)
+    const storedResults = getResult(submissionId);
+    if (storedResults && status === "pending") {
+      setData(storedResults);
+      setStatus("success");
+      const storedParentId = storedResults.meta?.parentSubmissionId as string | undefined;
+      if (storedParentId && !parentId) {
+        setParentId(storedParentId);
+      }
+      return;
+    }
+
+    // If we already have results, no need to fetch
+    if (data && status === "success") {
       return;
     }
 
@@ -107,17 +150,19 @@ export default function ResultsPage() {
 
         // Try to fetch from server (only works if user opted in to server storage)
         // But first check if we have results in store or sessionStorage (from draft creation)
-        const storedResults = getResult(submissionId);
-        if (storedResults) {
+        const currentStoredResults = getResult(submissionId);
+        if (currentStoredResults) {
           if (!cancelled) {
             // Update parentId from stored results if available
-            const storedParentId = storedResults.meta?.parentSubmissionId as string | undefined;
+            const storedParentId = currentStoredResults.meta?.parentSubmissionId as
+              | string
+              | undefined;
             if (storedParentId && !parentId) {
               setParentId(storedParentId);
             }
 
             // Use stored results immediately
-            setData(storedResults);
+            setData(currentStoredResults);
             setStatus("success");
 
             // Only try to fetch from server if user opted in to server storage
@@ -145,7 +190,7 @@ export default function ResultsPage() {
 
         // Get parentId from stored results if not already set
         const effectiveParentId =
-          parentId || (storedResults?.meta?.parentSubmissionId as string | undefined);
+          parentId || (currentStoredResults?.meta?.parentSubmissionId as string | undefined);
         const effectiveParentResults =
           effectiveParentId && !storeResults
             ? getResult(effectiveParentId) || parentResults
@@ -184,18 +229,10 @@ export default function ResultsPage() {
               )
             : await getSubmissionResults(submissionId);
           if (!cancelled) {
-            // Ensure questionTexts are preserved if they exist in initialResults
-            const resultsToStore = { ...results };
-            if (initialResults?.meta?.questionTexts && !resultsToStore.meta?.questionTexts) {
-              if (!resultsToStore.meta) {
-                resultsToStore.meta = {};
-              }
-              resultsToStore.meta.questionTexts = initialResults.meta.questionTexts;
-            }
-            setData(resultsToStore);
+            setData(results);
             setStatus("success");
             // Save to draft store (Zustand persist handles localStorage automatically)
-            setResult(submissionId, resultsToStore);
+            setResult(submissionId, results);
           }
         } catch (serverError) {
           // If server fetch fails (especially 404), try results store as fallback
@@ -227,14 +264,14 @@ export default function ResultsPage() {
       }
     }
 
-    if (submissionId) {
+    if (submissionId && !data) {
       fetchResults();
     }
 
     return () => {
       cancelled = true;
     };
-  }, [submissionId, parentId, initialResults]);
+  }, [submissionId, parentId, isHydrated, data, status]);
 
   // Extract answer text and calculate processing time when results arrive
   useEffect(() => {

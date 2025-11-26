@@ -29,7 +29,10 @@ export function useResubmit() {
 
     setIsResubmitting(true);
     try {
-      const parentId = parentSubmissionId || submissionId;
+      // Always use the current submissionId as parent for draft number calculation
+      // This ensures correct draft numbering (draft 2 -> draft 3, not draft 2 -> draft 2)
+      // The getDraftInfo function will find the root submission ID from the parent's metadata
+      const parentId = submissionId;
 
       let parentResults: any = undefined;
       if (!storeResults && parentId) {
