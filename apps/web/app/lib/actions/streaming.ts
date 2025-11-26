@@ -6,7 +6,7 @@
 
 import { getApiBase, getApiKey } from "../api-config";
 import { getErrorMessage, makeSerializableError } from "../utils/error-handling";
-import { retryWithBackoff } from "../utils/retry-utils";
+import { retryWithBackoff } from "@writeo/shared";
 
 export async function streamAIFeedback(
   submissionId: string,

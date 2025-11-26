@@ -5,7 +5,7 @@
 "use server";
 
 import { getApiBase, getApiKey } from "../api-config";
-import { retryWithBackoff } from "../utils/retry-utils";
+import { retryWithBackoff } from "@writeo/shared";
 import { getErrorMessage, makeSerializableError } from "../utils/error-handling";
 
 export async function getTeacherFeedback(

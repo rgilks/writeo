@@ -7,7 +7,7 @@
 import { generateUUID } from "../utils/uuid-utils";
 import { apiRequest } from "../utils/api-client";
 import { getErrorMessage, makeSerializableError } from "../utils/error-handling";
-import { retryWithBackoff } from "../utils/retry-utils";
+import { retryWithBackoff } from "@writeo/shared";
 import { getApiBase, getApiKey } from "../api-config";
 
 export async function createSubmission(
