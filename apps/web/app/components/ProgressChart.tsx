@@ -134,11 +134,8 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                 const isDeclining = diff !== null && diff < 0;
 
                 return (
-                  <motion.div
+                  <div
                     key={`draft-${draft.draftNumber}-${draft.submissionId || draft.timestamp || index}`}
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: `${height}%`, opacity: 1 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
                     style={{
                       flex: 1,
                       display: "flex",
@@ -146,10 +143,14 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                       alignItems: "center",
                       justifyContent: "flex-end",
                       position: "relative",
+                      height: "100%",
                     }}
                   >
                     {/* Score bar */}
                     <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: `${height}%`, opacity: 1 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
                       style={{
                         width: "100%",
                         backgroundColor: isImproving
@@ -210,7 +211,7 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                     >
                       Draft {draft.draftNumber}
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
