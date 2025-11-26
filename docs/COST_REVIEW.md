@@ -331,7 +331,7 @@ The mocking system automatically detects test environments and returns determini
 
 **Detection Methods:**
 
-1. **Environment variable:** `MOCK_OPENAI=true` (for Node.js/test environments)
+1. **Environment variable:** `USE_MOCK_LLM=true` (unified flag for all LLM APIs)
 2. **API key pattern:** API key is `"MOCK"` or starts with `"test_"` (for worker environments)
 
 ### Mock Responses
@@ -347,18 +347,18 @@ Mock responses are designed to:
 
 **Automatic (Default):**
 
-- Pre-push hook sets `OPENAI_API_KEY=MOCK` when starting the worker
-- Vitest config sets `MOCK_OPENAI=true` by default
+- Pre-push hook sets `USE_MOCK_LLM=true` when starting the worker
+- Vitest config sets `USE_MOCK_LLM=true` by default
 - Tests automatically use mocks unless explicitly disabled
 
 **Manual Control:**
 
 ```bash
 # Use mocks (default)
-MOCK_OPENAI=true npm test
+USE_MOCK_LLM=true npm test
 
 # Use real API (for integration tests)
-MOCK_OPENAI=false npm test
+USE_MOCK_LLM=false npm test
 ```
 
 **Worker Environment:**
@@ -375,8 +375,8 @@ OPENAI_API_KEY=test_anything npm run dev
 
 **Tests Making Real API Calls:**
 
-- Verify `MOCK_OPENAI=true` is set in test environment
-- Check that worker is started with `OPENAI_API_KEY=MOCK`
+- Verify `USE_MOCK_LLM=true` is set in test environment
+- Check that worker is started with `USE_MOCK_LLM=true` or API key is `MOCK`
 - Ensure `.dev.vars` doesn't override with real API key during tests
 
 **Mock Responses Not Working:**

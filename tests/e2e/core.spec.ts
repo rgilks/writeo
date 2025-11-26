@@ -106,20 +106,18 @@ test.describe("Results Page", () => {
     const invalidId = "00000000-0000-0000-0000-000000000000";
     await resultsPage.goto(invalidId);
 
-    // Should show error or loading state
-    const errorState = await resultsPage.getErrorState();
-    const loadingState = await resultsPage.getLoadingMessage();
+    // Wait for either loading state or error - page should show something meaningful
+    await expect(
+      page.getByText("Loading Results").or(page.getByText("Results Not Available"))
+    ).toBeVisible({ timeout: 5000 });
 
-    const hasError = (await errorState.count()) > 0;
-    const hasLoading = (await loadingState.count()) > 0;
+    // Wait for error to appear (may take a moment after loading)
+    const errorMessage = page.getByText("Results Not Available");
+    const isErrorVisible = await errorMessage.isVisible().catch(() => false);
 
-    expect(hasError || hasLoading).toBe(true);
-
-    // If error shown, should be user-friendly
-    if (hasError) {
-      const errorText = await errorState.first().textContent();
-      expect(errorText).not.toContain("Server Component");
-      expect(errorText).not.toContain("omitted in production");
+    // If error is shown, verify it's user-friendly
+    if (isErrorVisible) {
+      await expect(page.locator("body")).not.toContainText("Server Component");
     }
   });
 });

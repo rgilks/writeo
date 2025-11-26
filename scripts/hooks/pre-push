@@ -130,8 +130,7 @@ if [ "$API_RUNNING" = false ]; then
   echo "${CYAN}  Logs: /tmp/writeo-api-worker.log${NC}"
   cd "$ROOT_DIR/apps/api-worker"
   # USE_MOCK_LLM=true enables deterministic mocked responses (saves API costs locally)
-  # GROQ_API_KEY=MOCK is legacy but also triggers mocking
-  USE_MOCK_LLM=true GROQ_API_KEY=MOCK npm run dev > /tmp/writeo-api-worker.log 2>&1 &
+  USE_MOCK_LLM=true npm run dev > /tmp/writeo-api-worker.log 2>&1 &
   API_PID=$!
   cd "$ROOT_DIR"
   show_time

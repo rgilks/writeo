@@ -78,13 +78,13 @@ PLAYWRIGHT_BASE_URL=http://localhost:3000
 **Mocking System:**
 
 - ✅ **No API costs** - Tests use deterministic mock responses
-- ✅ **Automatic detection** - Enabled when `OPENAI_API_KEY=MOCK` / `GROQ_API_KEY=MOCK` or `MOCK_OPENAI=true` / `MOCK_GROQ=true`
+- ✅ **Automatic detection** - Enabled when `USE_MOCK_LLM=true` or API key is `MOCK`/`test_*`
 - ✅ **Realistic responses** - Mocks return proper data structures for testing
 
 **To use real API (for integration tests only):**
 
 ```bash
-MOCK_OPENAI=false MOCK_GROQ=false npm test
+USE_MOCK_LLM=false npm test
 ```
 
 See [COST_REVIEW.md](COST_REVIEW.md) for cost optimization details.

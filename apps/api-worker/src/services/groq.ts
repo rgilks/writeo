@@ -2,10 +2,8 @@ import { fetchWithTimeout } from "../utils/fetch-with-timeout";
 
 function shouldUseMock(apiKey: string): boolean {
   const globalProcess = (globalThis as any).process;
-  // USE_MOCK_LLM is the unified mock flag (replaces MOCK_GROQ/MOCK_OPENAI)
+  // USE_MOCK_LLM enables deterministic mock responses (saves API costs)
   if (globalProcess?.env?.USE_MOCK_LLM === "true") return true;
-  // Legacy support: MOCK_GROQ still works
-  if (globalProcess?.env?.MOCK_GROQ === "true") return true;
   // API key-based mocking for local development
   return apiKey === "MOCK" || apiKey.startsWith("test_");
 }
