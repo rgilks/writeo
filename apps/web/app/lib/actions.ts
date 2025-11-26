@@ -39,18 +39,34 @@ export async function submitEssay(
       storeResults
     );
 
-    if (parentSubmissionId && results) {
-      try {
-        const draftInfo = await getDraftInfo(parentSubmissionId, storeResults, parentResults);
-        results.meta = {
-          ...results.meta,
-          draftNumber: draftInfo.draftNumber,
-          parentSubmissionId: draftInfo.parentSubmissionId,
-          draftHistory: draftInfo.draftHistory,
-        };
-      } catch (error) {
-        console.warn("[submitEssay] Failed to get draft info:", error);
+    // Always set draft metadata - even for first draft
+    if (results) {
+      if (!results.meta) {
+        results.meta = {};
       }
+
+      if (parentSubmissionId) {
+        // This is a follow-up draft
+        try {
+          const draftInfo = await getDraftInfo(parentSubmissionId, storeResults, parentResults);
+          results.meta.draftNumber = draftInfo.draftNumber;
+          results.meta.parentSubmissionId = draftInfo.parentSubmissionId;
+          results.meta.draftHistory = draftInfo.draftHistory;
+        } catch (error) {
+          console.warn("[submitEssay] Failed to get draft info:", error);
+          // Set fallback values so draft tracking still works
+          results.meta.draftNumber = 2;
+          results.meta.parentSubmissionId = parentSubmissionId;
+          results.meta.draftHistory = [];
+        }
+      } else {
+        // This is the first draft - set draftNumber: 1 explicitly
+        results.meta.draftNumber = 1;
+        results.meta.draftHistory = [];
+      }
+
+      // Store word count in meta for draft history tracking
+      results.meta.wordCount = wordCount;
     }
 
     return { submissionId, results };

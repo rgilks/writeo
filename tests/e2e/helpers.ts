@@ -450,8 +450,8 @@ export class ResultsPage {
   }
 
   /**
-   * Wait for draft to be stored in Zustand store (localStorage)
-   * This is needed because draft storage happens asynchronously via useEffect
+   * Wait for results and draft to be stored in Zustand store (localStorage)
+   * This is needed because storage happens asynchronously via useEffect
    */
   async waitForDraftStorage(submissionId: string, timeout = 10000): Promise<void> {
     await this.page.waitForFunction(
@@ -460,10 +460,15 @@ export class ResultsPage {
           const store = localStorage.getItem("writeo-draft-store");
           if (!store) return false;
           const parsed = JSON.parse(store);
-          // Check if the draft exists in the store
+
+          // Check if results exist for this submissionId
+          if (parsed?.state?.results && parsed.state.results[id]) {
+            return true;
+          }
+
+          // Also check draft arrays as fallback
           if (parsed?.state?.drafts) {
             const drafts = parsed.state.drafts;
-            // Check all draft arrays for this submissionId
             for (const key in drafts) {
               if (Array.isArray(drafts[key])) {
                 if (drafts[key].some((d: any) => d.submissionId === id)) {

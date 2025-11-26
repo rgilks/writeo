@@ -202,7 +202,6 @@ const createStorageAdapter = (): StateStorage => {
         return JSON.stringify(transformed);
       } catch (error) {
         console.error(`Failed to parse stored data for ${name}:`, error);
-        baseStorage.removeItem(name);
         return null;
       }
     },

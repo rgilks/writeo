@@ -12,25 +12,56 @@ import { ModeSwitcher } from "@/app/components/ModeSwitcher";
 import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 import type { AssessmentResults } from "@writeo/shared";
 
-// Helper to wait for Zustand persist rehydration
+// Helper to wait for Zustand persist rehydration (both stores)
 function waitForRehydration(): Promise<void> {
   return new Promise((resolve) => {
-    // Check if store has already been hydrated
-    if (useDraftStore.persist.hasHydrated()) {
+    let draftStoreHydrated = useDraftStore.persist.hasHydrated();
+    let preferencesStoreHydrated = usePreferencesStore.persist.hasHydrated();
+
+    // If both already hydrated, resolve immediately
+    if (draftStoreHydrated && preferencesStoreHydrated) {
       resolve();
       return;
     }
 
-    // If not hydrated yet, wait for the onFinishHydration callback
-    const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
-      unsubscribe();
-      resolve();
-    });
+    let unsubscribeDraft: (() => void) | null = null;
+    let unsubscribePreferences: (() => void) | null = null;
+    let resolved = false;
+
+    const checkAndResolve = () => {
+      if (resolved) return;
+      if (draftStoreHydrated && preferencesStoreHydrated) {
+        resolved = true;
+        if (unsubscribeDraft) unsubscribeDraft();
+        if (unsubscribePreferences) unsubscribePreferences();
+        resolve();
+      }
+    };
+
+    // Wait for draft store if not hydrated
+    if (!draftStoreHydrated) {
+      unsubscribeDraft = useDraftStore.persist.onFinishHydration(() => {
+        draftStoreHydrated = true;
+        checkAndResolve();
+      });
+    }
+
+    // Wait for preferences store if not hydrated
+    if (!preferencesStoreHydrated) {
+      unsubscribePreferences = usePreferencesStore.persist.onFinishHydration(() => {
+        preferencesStoreHydrated = true;
+        checkAndResolve();
+      });
+    }
 
     // Fallback timeout in case hydration takes too long or fails silently
     setTimeout(() => {
-      unsubscribe();
-      resolve();
+      if (!resolved) {
+        resolved = true;
+        if (unsubscribeDraft) unsubscribeDraft();
+        if (unsubscribePreferences) unsubscribePreferences();
+        resolve();
+      }
     }, 2000);
   });
 }
