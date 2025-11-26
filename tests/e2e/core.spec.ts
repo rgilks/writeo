@@ -54,11 +54,8 @@ test.describe("Essay Submission", () => {
     await expect(textarea).toBeVisible();
   });
 
-  test.skip("content persists after page refresh", async ({ writePage, page }) => {
-    // TODO: This test needs refinement - Zustand persist hydration timing is tricky in E2E tests
-    // The functionality works in manual testing, but the test needs better synchronization
-    // with the store hydration lifecycle. Consider using page.waitForFunction to check
-    // if the store has hydrated before verifying content.
+  test("content persists after page refresh", async ({ writePage, page }) => {
+    // Test that content persists after page refresh using Zustand persist
 
     await writePage.goto("1");
 
@@ -323,11 +320,10 @@ test.describe("Progress Dashboard", () => {
 });
 
 test.describe("Results Persistence", () => {
-  // Note: These tests are currently skipped due to a known Zustand persist hydration issue
-  // where the store overwrites persisted data on page reload.
-  // The core functionality works - users can enable server storage to persist results across devices.
+  // Tests that results persist in localStorage after page reload
+  // With simplified Zustand store, hydration should work correctly
 
-  test.skip("results persist after page reload with local storage", async ({
+  test("results persist after page reload with local storage", async ({
     writePage,
     resultsPage,
     page,
@@ -361,7 +357,7 @@ test.describe("Results Persistence", () => {
     await expect(score.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test.skip("can navigate directly to results URL", async ({ resultsPage, writePage, page }) => {
+  test("can navigate directly to results URL", async ({ resultsPage, writePage, page }) => {
     // First, create a submission to get a valid ID
     await writePage.goto("1");
     const essay = generateValidEssay();
