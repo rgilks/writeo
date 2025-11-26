@@ -18,21 +18,21 @@ if (baseUrl) process.env.PLAYWRIGHT_BASE_URL = baseUrl;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 60000,
-  expect: { timeout: 5000 },
+  // Reduced timeouts - most tests use mocks now, so they're fast
+  timeout: 30000,
+  expect: { timeout: 3000 },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  // Stop on first failure in local development (but allow retries in CI)
-  maxFailures: process.env.CI ? undefined : 1,
-  // Optimized worker count: more parallel execution for faster tests
-  // With 4 workers locally, max ~240 submissions/min if all run simultaneously, well under 500/min limit
-  // CI uses 2 workers for better parallelization while staying under limits
-  workers: process.env.CI ? 2 : 4,
-  reporter: "html",
+  retries: process.env.CI ? 1 : 0, // Reduced retries - tests should be deterministic
+  // Allow more failures to see full test results
+  maxFailures: process.env.CI ? 5 : 3,
+  // More workers for faster parallel execution
+  // Mock tests don't hit rate limits, so we can run more in parallel
+  workers: process.env.CI ? 4 : 6,
+  reporter: process.env.CI ? "github" : "list", // Faster reporter for local dev
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "https://writeo.tre.systems/",
-    actionTimeout: 10000,
+    actionTimeout: 5000, // Reduced from 10s - mocked tests are faster
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "off",

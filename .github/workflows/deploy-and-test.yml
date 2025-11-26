@@ -80,15 +80,17 @@ jobs:
         env:
           API_BASE: ${{ env.PRODUCTION_API_URL }}
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
-          MOCK_GROQ: "true"  # Use mocked Groq API to avoid costs in CI
+          # API tests use real services in CI - no mocking
 
       - name: Run E2E tests against deployed site
-        run: npm run test:e2e -- --reporter=list
+        run: npm run test:e2e -- --reporter=github
         env:
           PLAYWRIGHT_BASE_URL: ${{ env.PRODUCTION_WEB_URL }}
           API_BASE: ${{ env.PRODUCTION_API_URL }}
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
+          TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
           CI: true
+          # E2E tests use real services in CI - no mocking
 
       - name: Upload test results
         if: always()

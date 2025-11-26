@@ -6,7 +6,7 @@ type TestFixtures = {
   homePage: HomePage;
   writePage: WritePage;
   resultsPage: ResultsPage;
-  // Shared submission fixtures to reduce API calls
+  // Shared submission fixtures - created once per test file and reused
   sharedSubmission: { submissionId: string; questionText: string; essay: string };
   sharedSubmissionWithErrors: { submissionId: string; questionText: string; essay: string };
   sharedSubmissionCorrected: { submissionId: string; questionText: string; essay: string };
@@ -17,8 +17,8 @@ export const test = base.extend<TestFixtures>({
   writePage: async ({ page }, use) => await use(new WritePage(page)),
   resultsPage: async ({ page }, use) => await use(new ResultsPage(page)),
 
-  // Shared submission for tests that check the same results page
-  // Created once per test file/worker and reused across tests
+  // Shared submission - created once per worker and reused across tests
+  // Results are stored on server for later retrieval
   sharedSubmission: async ({}, use) => {
     const questionText = "Describe your weekend.";
     const essay = generateValidEssay();
@@ -26,7 +26,6 @@ export const test = base.extend<TestFixtures>({
     await use({ submissionId, questionText, essay });
   },
 
-  // Shared submission with errors for grammar error tests
   sharedSubmissionWithErrors: async ({}, use) => {
     const questionText = "Describe your weekend.";
     const essay = getTestEssay("withErrors");
@@ -34,7 +33,6 @@ export const test = base.extend<TestFixtures>({
     await use({ submissionId, questionText, essay });
   },
 
-  // Shared submission with corrected essay for no-error tests
   sharedSubmissionCorrected: async ({}, use) => {
     const questionText = "Describe your weekend.";
     const essay = getTestEssay("corrected");

@@ -27,10 +27,8 @@ const API_BASE = process.env.API_BASE || process.env.API_BASE_URL || "http://loc
 const API_KEY = process.env.TEST_API_KEY || process.env.API_KEY || "";
 
 // Track last submission time to add delays between parallel test submissions
-// Note: This is per-worker (each Playwright worker has its own instance)
-// This helps prevent hitting rate limits when multiple tests run in parallel
 let lastSubmissionTime = 0;
-const MIN_DELAY_MS = 200; // Minimum 200ms between submissions (helps with parallel workers)
+const MIN_DELAY_MS = 100; // Reduced from 200ms - only needed for rate limiting
 
 /**
  * Create a test submission via API with retry logic for rate limiting
@@ -86,7 +84,7 @@ export async function createTestSubmission(
           },
         ],
         template: { name: "generic", version: 1 },
-        storeResults: false, // No server storage for tests
+        storeResults: true, // Store results on server for test retrieval
       }),
     });
 
@@ -142,7 +140,6 @@ export async function createTestSubmission(
  */
 export async function waitForResults(page: Page, timeout = 30000): Promise<void> {
   // Wait for either success state or error state
-  // Try multiple selectors to detect when results are loaded
   const selectors = [
     '[data-testid="results-loaded"]',
     "text=Your Writing Feedback",
@@ -157,9 +154,7 @@ export async function waitForResults(page: Page, timeout = 30000): Promise<void>
   await Promise.race(
     selectors.map((selector) => page.waitForSelector(selector, { timeout }).catch(() => {}))
   );
-
-  // Additional wait to ensure content is rendered
-  await page.waitForTimeout(500);
+  // No arbitrary wait needed - selectors are sufficient
 }
 
 export class HomePage {
@@ -203,10 +198,6 @@ export class WritePage {
 
   async getCustomQuestionTextarea() {
     return this.page.locator(".question-card textarea").first();
-  }
-
-  async getCustomQuestionTextarea() {
-    return this.page.locator("textarea").first();
   }
 
   async getTextarea() {
@@ -516,21 +507,13 @@ export class ResultsPage {
    * Wait for Zustand store to hydrate from localStorage
    * This is needed when manually setting localStorage before navigation
    */
-  async waitForStoreHydration(timeout = 10000): Promise<void> {
-    // First, ensure the store key exists in localStorage (it might be created by persist middleware)
-    // Then wait for the store to actually be initialized by checking if we can access store data
+  async waitForStoreHydration(timeout = 5000): Promise<void> {
     await this.page.waitForFunction(
       () => {
         try {
-          // Check if store key exists (created by Zustand persist)
           const storeData = localStorage.getItem("writeo-draft-store");
-          if (!storeData) {
-            // Store might not exist yet - that's OK, it will be created on first access
-            return true;
-          }
-          // Try to parse the store data to ensure it's valid
+          if (!storeData) return true; // Store will be created on first access
           const parsed = JSON.parse(storeData);
-          // Store is considered hydrated if it has a state property
           return parsed && typeof parsed === "object" && ("state" in parsed || "drafts" in parsed);
         } catch {
           return false;
@@ -538,11 +521,7 @@ export class ResultsPage {
       },
       { timeout }
     );
-
-    // Trigger store initialization by navigating to a page that uses it
-    // This ensures React components have mounted and accessed the store
-    // Wait a bit for any pending state updates
-    await this.page.waitForTimeout(1000);
+    // No arbitrary wait - the function condition is sufficient
   }
 }
 
