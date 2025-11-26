@@ -2,7 +2,6 @@
  * Draft history section component
  */
 
-import { ProgressChart } from "../ProgressChart";
 import { DraftComparisonTable } from "./DraftComparisonTable";
 import { DraftButton } from "./DraftButton";
 import { useDraftNavigation } from "./useDraftNavigation";
@@ -80,9 +79,6 @@ export function DraftHistorySection({
           );
         })}
       </div>
-      {displayDraftHistory.length > 1 && (
-        <ProgressChart draftHistory={displayDraftHistory} type="score" />
-      )}
       <DraftComparisonTable draftHistory={displayDraftHistory} currentDraftNumber={draftNumber} />
     </div>
   );
