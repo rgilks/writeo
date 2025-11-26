@@ -186,9 +186,27 @@ function StatCard({
 export function ProgressDashboard() {
   // Fix hydration mismatch: defer all localStorage-dependent rendering until after client mount
   const [mounted, setMounted] = useState(false);
+  // Track store hydration state - data may not be available until store is hydrated
+  const [isHydrated, setIsHydrated] = useState(() => useDraftStore.persist.hasHydrated());
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Listen for hydration completion
+  useEffect(() => {
+    if (useDraftStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+      return;
+    }
+
+    const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
+      setIsHydrated(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Use selectors to subscribe only to needed state slices
@@ -262,7 +280,7 @@ export function ProgressDashboard() {
           marginBottom: "var(--spacing-xl)",
         }}
       >
-        {mounted && (
+        {mounted && isHydrated && (
           <>
             <StatCard
               value={totalWritings}
@@ -305,9 +323,9 @@ export function ProgressDashboard() {
         )}
       </div>
 
-      {/* Achievements Section - Only render after client-side mount to avoid hydration mismatch */}
+      {/* Achievements Section - Only render after client-side mount and hydration to avoid hydration mismatch */}
       <AnimatePresence>
-        {mounted && achievements.length > 0 && (
+        {mounted && isHydrated && achievements.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -369,7 +387,7 @@ export function ProgressDashboard() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {mounted && totalWritings === 0 && (
+        {mounted && isHydrated && totalWritings === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}

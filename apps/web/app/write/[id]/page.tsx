@@ -67,6 +67,9 @@ export default function WritePage() {
   const contentDrafts = useDraftStore((state) => state.contentDrafts);
   const loadContentDraft = useDraftStore((state) => state.loadContentDraft);
 
+  // Track hydration state - content may not be available until store is hydrated
+  const [isHydrated, setIsHydrated] = useState(() => useDraftStore.persist.hasHydrated());
+
   const [customQuestion, setCustomQuestion] = useState("");
   const task = isCustom
     ? {
@@ -78,8 +81,8 @@ export default function WritePage() {
         prompt: "Write your essay here.",
       };
 
-  // Use draft store content instead of local state
-  const answer = currentContent;
+  // Use draft store content, but only after hydration
+  const answer = isHydrated ? currentContent : "";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selfEval, setSelfEval] = useState({
@@ -121,12 +124,34 @@ export default function WritePage() {
     [updateContent, saveDraft]
   );
 
-  // Load active draft on mount if currentContent is empty but activeDraftId exists
+  // Listen for hydration completion
   useEffect(() => {
-    if (!currentContent && activeDraftId && contentDrafts.length > 0) {
-      loadContentDraft(activeDraftId);
+    if (useDraftStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+      return;
     }
-  }, []); // Only run on mount
+
+    const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
+      setIsHydrated(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Load active draft after hydration if currentContent is empty but activeDraftId exists
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    // If we have an active draft ID but no content, try to load it
+    if (!currentContent && activeDraftId && contentDrafts.length > 0) {
+      const draft = contentDrafts.find((d) => d.id === activeDraftId);
+      if (draft) {
+        loadContentDraft(activeDraftId);
+      }
+    }
+  }, [isHydrated, currentContent, activeDraftId, contentDrafts, loadContentDraft]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
