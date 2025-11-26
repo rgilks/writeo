@@ -55,11 +55,72 @@ export function useDraftHistory(
     }
 
     // Get all drafts stored under the root submission ID
-    const storedDraftHistory = rootSubmissionId ? getDraftHistory(rootSubmissionId) : [];
+    let storedDraftHistory = rootSubmissionId ? getDraftHistory(rootSubmissionId) : [];
 
     // Also try to get drafts by current submissionId in case they're stored differently
     const currentDraftHistory =
       submissionId && submissionId !== rootSubmissionId ? getDraftHistory(submissionId) : [];
+
+    // Collect all drafts that belong to the same chain
+    // This handles cases where drafts might be stored under different keys
+    // Search through ALL drafts in the store to find ones that belong to this chain
+    const allStoredDraftsFlat = Object.values(drafts).flat();
+
+    // Strategy: Find all drafts that share the same root, or are connected through parent chains
+    // First, try to find the root and get all drafts from that root
+    if (rootSubmissionId) {
+      const rootDrafts = getDraftHistory(rootSubmissionId);
+      if (rootDrafts.length > storedDraftHistory.length) {
+        storedDraftHistory = rootDrafts;
+      }
+    }
+
+    // Also search for drafts that reference our submissionId or parentSubmissionId
+    // This catches drafts stored under intermediate keys
+    const relatedDrafts = allStoredDraftsFlat.filter((draft) => {
+      // Check if this draft's root matches our root
+      const draftRoot = getRootSubmissionId(draft.submissionId);
+      if (draftRoot && rootSubmissionId && draftRoot === rootSubmissionId) {
+        return true;
+      }
+
+      // Check if this draft is in a chain that includes our submissionId or parentSubmissionId
+      if (draftRoot) {
+        const draftChain = getDraftHistory(draftRoot);
+        return (
+          draftChain.some((d) => d.submissionId === submissionId) ||
+          draftChain.some((d) => d.submissionId === parentSubmissionId) ||
+          draft.submissionId === submissionId ||
+          draft.submissionId === parentSubmissionId
+        );
+      }
+
+      return false;
+    });
+
+    // Merge related drafts, avoiding duplicates
+    const mergedDrafts = new Map<string, (typeof allStoredDraftsFlat)[0]>();
+
+    // Add stored drafts first
+    storedDraftHistory.forEach((draft) => {
+      if (draft.submissionId) {
+        mergedDrafts.set(draft.submissionId, draft);
+      }
+    });
+
+    // Add related drafts
+    relatedDrafts.forEach((draft) => {
+      if (draft.submissionId && !mergedDrafts.has(draft.submissionId)) {
+        mergedDrafts.set(draft.submissionId, draft);
+      }
+    });
+
+    // Convert back to array and sort by draft number
+    if (mergedDrafts.size > storedDraftHistory.length) {
+      storedDraftHistory = Array.from(mergedDrafts.values()).sort(
+        (a, b) => a.draftNumber - b.draftNumber
+      );
+    }
 
     // Merge both, preferring stored drafts with submissionIds
     const allStoredDrafts = [
@@ -104,8 +165,10 @@ export function useDraftHistory(
 
     let result = Array.from(draftMap.values()).sort((a, b) => a.draftNumber - b.draftNumber);
 
+    // Add current draft to history if not already present
+    // Do this even if overall is 0 (essay scoring may have failed)
     const hasCurrentDraft = result.some((d) => d.draftNumber === draftNumber);
-    if (!hasCurrentDraft && submissionId && overall > 0) {
+    if (!hasCurrentDraft && submissionId) {
       const wordCount = countWords(finalAnswerText);
       result.push({
         draftNumber,
@@ -113,8 +176,8 @@ export function useDraftHistory(
         timestamp: new Date().toISOString(),
         wordCount,
         errorCount: grammarErrors.length,
-        overallScore: overall,
-        cefrLevel: mapScoreToCEFR(overall),
+        overallScore: overall > 0 ? overall : undefined,
+        cefrLevel: overall > 0 ? mapScoreToCEFR(overall) : undefined,
         errorIds: [],
       });
       result.sort((a, b) => a.draftNumber - b.draftNumber);
@@ -128,7 +191,11 @@ export function useDraftHistory(
       }
     });
 
-    return Array.from(finalDraftMap.values()).sort((a, b) => a.draftNumber - b.draftNumber);
+    const finalResult = Array.from(finalDraftMap.values()).sort(
+      (a, b) => a.draftNumber - b.draftNumber
+    );
+
+    return finalResult;
   }, [
     draftNumber,
     draftHistory,

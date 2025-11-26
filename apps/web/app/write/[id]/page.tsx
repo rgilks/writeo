@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
-import { useResultsStore } from "@/app/lib/stores/results-store";
+import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
 
 // Task data - matches tasks from home page
@@ -55,9 +55,17 @@ const taskData: Record<string, { title: string; prompt: string }> = {
 export default function WritePage() {
   const params = useParams();
   const router = useRouter();
-  const setResult = useResultsStore((state) => state.setResult);
+  const setResult = useDraftStore((state) => state.setResult);
   const taskId = params.id as string;
   const isCustom = taskId === "custom";
+
+  // Draft store (consolidated)
+  const currentContent = useDraftStore((state) => state.currentContent);
+  const updateContent = useDraftStore((state) => state.updateContent);
+  const saveDraft = useDraftStore((state) => state.saveContentDraft);
+  const activeDraftId = useDraftStore((state) => state.activeDraftId);
+  const contentDrafts = useDraftStore((state) => state.contentDrafts);
+  const loadContentDraft = useDraftStore((state) => state.loadContentDraft);
 
   const [customQuestion, setCustomQuestion] = useState("");
   const task = isCustom
@@ -70,7 +78,8 @@ export default function WritePage() {
         prompt: "Write your essay here.",
       };
 
-  const [answer, setAnswer] = useState("");
+  // Use draft store content instead of local state
+  const answer = currentContent;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selfEval, setSelfEval] = useState({
@@ -78,6 +87,10 @@ export default function WritePage() {
     supportedOpinion: false,
     variedStructure: false,
   });
+
+  // Auto-save debouncing
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const AUTO_SAVE_DELAY = 2000; // 2 seconds after user stops typing
 
   // Use preferences store for storeResults (persists across sessions)
   const storeResults = usePreferencesStore((state) => state.storeResults);
@@ -87,11 +100,42 @@ export default function WritePage() {
     setStoreResults(checked);
   };
 
-  // Handle textarea change with explicit state update
-  const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    setAnswer(newValue);
-  };
+  // Handle textarea change with explicit state update and auto-save debouncing
+  const handleAnswerChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = e.target.value;
+      updateContent(newValue);
+
+      // Clear existing timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+
+      // Set new timeout for auto-save
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        if (newValue.trim().length > 0) {
+          saveDraft();
+        }
+      }, AUTO_SAVE_DELAY);
+    },
+    [updateContent, saveDraft]
+  );
+
+  // Load active draft on mount if currentContent is empty but activeDraftId exists
+  useEffect(() => {
+    if (!currentContent && activeDraftId && contentDrafts.length > 0) {
+      loadContentDraft(activeDraftId);
+    }
+  }, []); // Only run on mount
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle custom question change
   const handleCustomQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -190,21 +234,10 @@ export default function WritePage() {
         }
       }
 
-      // Store results in results store (persistent) and sessionStorage (immediate display)
-      // parentSubmissionId is already in resultsToStore.meta.parentSubmissionId
+      // Store results in draft store (Zustand persist handles localStorage automatically)
       setResult(submissionId, resultsToStore);
-      if (typeof window !== "undefined") {
-        try {
-          // Store in localStorage for persistence (needed for tests and draft tracking)
-          localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
-          // Also store in sessionStorage for immediate display on results page
-          sessionStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
-        } catch (error) {
-          // If localStorage is full or unavailable, log but continue
-          console.warn("Failed to store results in localStorage:", error);
-        }
-      }
-      // Redirect to results page - results will be available immediately
+
+      // Redirect to results page
       router.push(`/results/${submissionId}`);
     } catch (err) {
       console.error("Submission error:", err);
@@ -274,7 +307,7 @@ export default function WritePage() {
         </div>
       </header>
 
-      <div className="container">
+      <div className="container" style={{ overflowY: "auto" }}>
         <div style={{ marginBottom: "32px" }} lang="en">
           <h1 className="page-title">{task.title}</h1>
           <p className="page-subtitle">
@@ -538,8 +571,29 @@ export default function WritePage() {
                   marginTop: "var(--spacing-md)",
                   display: "flex",
                   gap: "var(--spacing-md)",
+                  alignItems: "center",
                 }}
               >
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--spacing-sm)",
+                  }}
+                >
+                  {activeDraftId && (
+                    <span
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "var(--text-secondary)",
+                      }}
+                      lang="en"
+                    >
+                      ✓ Auto-saved
+                    </span>
+                  )}
+                </div>
                 <button
                   type="submit"
                   className="btn btn-primary"

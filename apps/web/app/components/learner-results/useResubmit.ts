@@ -6,13 +6,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
-import { useResultsStore } from "@/app/lib/stores/results-store";
+import { useDraftStore } from "@/app/lib/stores/draft-store";
 
 export function useResubmit() {
   const router = useRouter();
   const [isResubmitting, setIsResubmitting] = useState(false);
-  const getResult = useResultsStore((state) => state.getResult);
-  const setResult = useResultsStore((state) => state.setResult);
+  const getResult = useDraftStore((state) => state.getResult);
+  const setResult = useDraftStore((state) => state.setResult);
   // Use hook selector for consistency (even though we read it in async function)
   // This ensures component re-renders if preference changes
   const storeResults = usePreferencesStore((state) => state.storeResults);
@@ -29,7 +29,10 @@ export function useResubmit() {
 
     setIsResubmitting(true);
     try {
-      const parentId = parentSubmissionId || submissionId;
+      // Always use the current submissionId as parent for draft number calculation
+      // This ensures correct draft numbering (draft 2 -> draft 3, not draft 2 -> draft 2)
+      // The getDraftInfo function will find the root submission ID from the parent's metadata
+      const parentId = submissionId;
 
       let parentResults: any = undefined;
       if (!storeResults && parentId) {
@@ -50,19 +53,10 @@ export function useResubmit() {
         throw new Error("No submission ID or results returned");
       }
 
-      // Store results in results store
-      // parentSubmissionId is already in results.meta.parentSubmissionId
+      // Store results in draft store (Zustand persist handles localStorage automatically)
       setResult(newSubmissionId, results);
 
-      // Store in both localStorage and sessionStorage for persistence and immediate display
-      if (typeof window !== "undefined") {
-        // Store in localStorage for persistence (needed for tests and draft tracking)
-        localStorage.setItem(`results_${newSubmissionId}`, JSON.stringify(results));
-        // Also store in sessionStorage for immediate display on results page
-        sessionStorage.setItem(`results_${newSubmissionId}`, JSON.stringify(results));
-      }
-
-      // No need for ?parent= param since parentSubmissionId is in results.meta
+      // Redirect to results page
       router.push(`/results/${newSubmissionId}`);
     } catch (error) {
       setIsResubmitting(false);

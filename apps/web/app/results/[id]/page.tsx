@@ -5,64 +5,137 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSubmissionResults, getSubmissionResultsWithDraftTracking } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
-import { useResultsStore } from "@/app/lib/stores/results-store";
+import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { LearnerResultsView } from "@/app/components/LearnerResultsView";
 import { DeveloperResultsView } from "@/app/components/DeveloperResultsView";
 import { ModeSwitcher } from "@/app/components/ModeSwitcher";
 import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 import type { AssessmentResults } from "@writeo/shared";
 
+// Helper to wait for Zustand persist rehydration (both stores)
+function waitForRehydration(): Promise<void> {
+  return new Promise((resolve) => {
+    let draftStoreHydrated = useDraftStore.persist.hasHydrated();
+    let preferencesStoreHydrated = usePreferencesStore.persist.hasHydrated();
+
+    // If both already hydrated, resolve immediately
+    if (draftStoreHydrated && preferencesStoreHydrated) {
+      resolve();
+      return;
+    }
+
+    let unsubscribeDraft: (() => void) | null = null;
+    let unsubscribePreferences: (() => void) | null = null;
+    let resolved = false;
+
+    const checkAndResolve = () => {
+      if (resolved) return;
+      if (draftStoreHydrated && preferencesStoreHydrated) {
+        resolved = true;
+        if (unsubscribeDraft) unsubscribeDraft();
+        if (unsubscribePreferences) unsubscribePreferences();
+        resolve();
+      }
+    };
+
+    // Wait for draft store if not hydrated
+    if (!draftStoreHydrated) {
+      unsubscribeDraft = useDraftStore.persist.onFinishHydration(() => {
+        draftStoreHydrated = true;
+        checkAndResolve();
+      });
+    }
+
+    // Wait for preferences store if not hydrated
+    if (!preferencesStoreHydrated) {
+      unsubscribePreferences = usePreferencesStore.persist.onFinishHydration(() => {
+        preferencesStoreHydrated = true;
+        checkAndResolve();
+      });
+    }
+
+    // Fallback timeout in case hydration takes too long or fails silently
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        if (unsubscribeDraft) unsubscribeDraft();
+        if (unsubscribePreferences) unsubscribePreferences();
+        resolve();
+      }
+    }, 2000);
+  });
+}
+
 export default function ResultsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const submissionId = params.id as string;
+  const urlSubmissionId = params.id as string;
   const mode = usePreferencesStore((state) => state.viewMode);
-  const getResult = useResultsStore((state) => state.getResult);
-  const getParentSubmissionId = useResultsStore((state) => state.getParentSubmissionId);
-  const setResult = useResultsStore((state) => state.setResult);
+  const getResult = useDraftStore((state) => state.getResult);
+  const getParentSubmissionId = useDraftStore((state) => state.getParentSubmissionId);
+  const setResult = useDraftStore((state) => state.setResult);
   const [submissionStartTime] = useState<number>(Date.now());
   const [processingTime, setProcessingTime] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
 
-  // Check if results were passed via router state (from write page) or stored locally
-  const [initialResults] = useState<AssessmentResults | null>(() => {
-    // Try to get results from sessionStorage first (immediate display from write page)
-    if (typeof window !== "undefined") {
-      const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
-      if (sessionStored) {
-        try {
-          const parsed = JSON.parse(sessionStored);
-          sessionStorage.removeItem(`results_${submissionId}`); // Clean up
-          return parsed;
-        } catch {
-          // Fall through to store check
-        }
-      }
-      // Then check results store (persistent storage)
-      return getResult(submissionId);
-    }
-    return null;
-  });
+  // Track active submission ID separately from URL to handle client-side switches
+  // This ensures child components get the correct ID immediately after a switch
+  const [activeSubmissionId, setActiveSubmissionId] = useState<string>(urlSubmissionId);
+
+  // Sync activeSubmissionId with URL when URL changes (e.g., browser navigation)
+  useEffect(() => {
+    setActiveSubmissionId(urlSubmissionId);
+  }, [urlSubmissionId]);
+
+  // Use activeSubmissionId for all lookups
+  const submissionId = activeSubmissionId;
+
+  // Track hydration state - results may not be available until store is hydrated
+  const [isHydrated, setIsHydrated] = useState(() => useDraftStore.persist.hasHydrated());
+
+  // Check if results are available in draft store after hydration
+  // Don't read from store during SSR or before hydration
+  const getInitialResults = (): AssessmentResults | null => {
+    if (typeof window === "undefined" || !isHydrated) return null;
+    return getResult(submissionId);
+  };
 
   // Get parent submission ID from results.meta (single source of truth)
-  // URL param ?parent= is no longer needed since parentSubmissionId is in results.meta
-  const [parentId, setParentId] = useState<string | null>(() => {
-    // Try to get from initial results if available
-    if (initialResults?.meta?.parentSubmissionId) {
-      return initialResults.meta.parentSubmissionId as string;
+  const getInitialParentId = (): string | null => {
+    if (typeof window === "undefined" || !isHydrated) return null;
+    const results = getResult(submissionId);
+    if (results?.meta?.parentSubmissionId) {
+      return results.meta.parentSubmissionId as string;
     }
-    // Fallback to results store
     return getParentSubmissionId(submissionId);
-  });
+  };
 
-  // Fetch results
-  const [data, setData] = useState<AssessmentResults | null>(initialResults);
+  const [parentId, setParentId] = useState<string | null>(getInitialParentId);
+
+  // Fetch results - initialized as pending, will check store after hydration
+  const [data, setData] = useState<AssessmentResults | null>(getInitialResults);
   const [status, setStatus] = useState<"pending" | "success" | "error">(
-    initialResults ? "success" : "pending"
+    getInitialResults() ? "success" : "pending"
   );
   const [error, setError] = useState<string | null>(null);
-  const [previousData, setPreviousData] = useState<AssessmentResults | null>(initialResults);
+  const [previousData, setPreviousData] = useState<AssessmentResults | null>(getInitialResults());
+
+  // Listen for hydration completion
+  useEffect(() => {
+    if (useDraftStore.persist.hasHydrated()) {
+      setIsHydrated(true);
+      return;
+    }
+
+    const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
+      setIsHydrated(true);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     // Update previousData when data changes (for draft switching)
@@ -77,8 +150,25 @@ export default function ResultsPage() {
   }, [data]);
 
   useEffect(() => {
-    // If we already have results from write page, skip fetching
-    if (initialResults) {
+    // Wait for hydration before checking store
+    if (!isHydrated) {
+      return;
+    }
+
+    // Check if we already have results in the store (from write page or previous visit)
+    const storedResults = getResult(submissionId);
+    if (storedResults && status === "pending") {
+      setData(storedResults);
+      setStatus("success");
+      const storedParentId = storedResults.meta?.parentSubmissionId as string | undefined;
+      if (storedParentId && !parentId) {
+        setParentId(storedParentId);
+      }
+      return;
+    }
+
+    // If we already have results, no need to fetch
+    if (data && status === "success") {
       return;
     }
 
@@ -87,6 +177,11 @@ export default function ResultsPage() {
     async function fetchResults() {
       try {
         setStatus("pending");
+
+        // Wait for Zustand persist to rehydrate from localStorage
+        // This ensures we can read results that were just stored
+        await waitForRehydration();
+
         // Check if we're in local mode (not saving to server)
         const storeResults = usePreferencesStore.getState().storeResults;
 
@@ -98,51 +193,39 @@ export default function ResultsPage() {
 
         // Try to fetch from server (only works if user opted in to server storage)
         // But first check if we have results in store or sessionStorage (from draft creation)
-        const storedResults = getResult(submissionId);
-        if (storedResults) {
+        const currentStoredResults = getResult(submissionId);
+        if (currentStoredResults) {
           if (!cancelled) {
             // Update parentId from stored results if available
-            const storedParentId = storedResults.meta?.parentSubmissionId as string | undefined;
+            const storedParentId = currentStoredResults.meta?.parentSubmissionId as
+              | string
+              | undefined;
             if (storedParentId && !parentId) {
               setParentId(storedParentId);
             }
 
-            // Use stored results immediately, but still try to fetch from server in background
-            setData(storedResults);
+            // Use stored results immediately
+            setData(currentStoredResults);
             setStatus("success");
-            // Ensure results are stored in localStorage for tests and persistence
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem(`results_${submissionId}`, JSON.stringify(storedResults));
-              } catch (error) {
-                console.warn("Failed to store results in localStorage:", error);
-              }
-            }
 
-            // Try to fetch from server to get latest version (but don't wait)
-            // This ensures we have the latest data if available
-            getSubmissionResults(submissionId)
-              .then((serverResults) => {
-                if (!cancelled && serverResults) {
-                  // Update with server results if available
-                  setData(serverResults);
-                  setResult(submissionId, serverResults);
-                  // Also store in localStorage
-                  if (typeof window !== "undefined") {
-                    try {
-                      localStorage.setItem(
-                        `results_${submissionId}`,
-                        JSON.stringify(serverResults)
-                      );
-                    } catch (error) {
-                      console.warn("Failed to store results in localStorage:", error);
-                    }
+            // Only try to fetch from server if user opted in to server storage
+            // In local-only mode, skip server fetch to avoid unnecessary errors
+            if (storeResults) {
+              // Try to fetch from server to get latest version (but don't wait)
+              // This ensures we have the latest data if available
+              getSubmissionResults(submissionId)
+                .then((serverResults) => {
+                  if (!cancelled && serverResults) {
+                    // Update with server results if available
+                    setData(serverResults);
+                    // Zustand persist handles localStorage automatically
+                    setResult(submissionId, serverResults);
                   }
-                }
-              })
-              .catch(() => {
-                // Server fetch failed, but we already have local results, so that's OK
-              });
+                })
+                .catch(() => {
+                  // Server fetch failed, but we already have local results, so that's OK
+                });
+            }
 
             return;
           }
@@ -150,12 +233,35 @@ export default function ResultsPage() {
 
         // Get parentId from stored results if not already set
         const effectiveParentId =
-          parentId || (storedResults?.meta?.parentSubmissionId as string | undefined);
+          parentId || (currentStoredResults?.meta?.parentSubmissionId as string | undefined);
         const effectiveParentResults =
           effectiveParentId && !storeResults
             ? getResult(effectiveParentId) || parentResults
             : parentResults;
 
+        // In local-only mode, don't try to fetch from server
+        if (!storeResults) {
+          // Results should already be in Zustand store (persisted to localStorage)
+          const fallbackResults = getResult(submissionId);
+
+          if (fallbackResults) {
+            if (!cancelled) {
+              const storedParentId = fallbackResults.meta?.parentSubmissionId as string | undefined;
+              if (storedParentId && !parentId) {
+                setParentId(storedParentId);
+              }
+              setData(fallbackResults);
+              setStatus("success");
+              return;
+            }
+          } else {
+            throw new Error(
+              "Results not found in local storage. In local-only mode, results are only stored in your browser. If you cleared your browser data, the results are no longer available."
+            );
+          }
+        }
+
+        // Server storage mode - try to fetch from server
         try {
           const results = effectiveParentId
             ? await getSubmissionResultsWithDraftTracking(
@@ -166,55 +272,19 @@ export default function ResultsPage() {
               )
             : await getSubmissionResults(submissionId);
           if (!cancelled) {
-            // Ensure questionTexts are preserved if they exist in initialResults
-            const resultsToStore = { ...results };
-            if (initialResults?.meta?.questionTexts && !resultsToStore.meta?.questionTexts) {
-              if (!resultsToStore.meta) {
-                resultsToStore.meta = {};
-              }
-              resultsToStore.meta.questionTexts = initialResults.meta.questionTexts;
-            }
-            setData(resultsToStore);
+            setData(results);
             setStatus("success");
-            // Save to results store for future access
-            setResult(submissionId, resultsToStore);
-            // Also store in localStorage for tests and persistence
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem(`results_${submissionId}`, JSON.stringify(resultsToStore));
-              } catch (error) {
-                console.warn("Failed to store results in localStorage:", error);
-              }
-            }
+            // Save to draft store (Zustand persist handles localStorage automatically)
+            setResult(submissionId, results);
           }
         } catch (serverError) {
           // If server fetch fails (especially 404), try results store as fallback
           const fallbackResults = getResult(submissionId);
           if (fallbackResults) {
             if (!cancelled) {
-              console.log(`[ResultsPage] Using results store data for submission ${submissionId}`);
               setData(fallbackResults);
               setStatus("success");
               return;
-            }
-          }
-          // Check sessionStorage as well (temporary storage)
-          if (typeof window !== "undefined") {
-            const sessionStored = sessionStorage.getItem(`results_${submissionId}`);
-            if (sessionStored) {
-              try {
-                const parsed = JSON.parse(sessionStored);
-                if (!cancelled) {
-                  console.log(
-                    `[ResultsPage] Using sessionStorage data for submission ${submissionId}`
-                  );
-                  setData(parsed);
-                  setStatus("success");
-                  return;
-                }
-              } catch {
-                // Fall through to error handling
-              }
             }
           }
           // If both fail, show error
@@ -237,14 +307,14 @@ export default function ResultsPage() {
       }
     }
 
-    if (submissionId) {
+    if (submissionId && !data) {
       fetchResults();
     }
 
     return () => {
       cancelled = true;
     };
-  }, [submissionId, parentId, initialResults]);
+  }, [submissionId, parentId, isHydrated, data, status]);
 
   // Extract answer text and calculate processing time when results arrive
   useEffect(() => {
@@ -268,6 +338,10 @@ export default function ResultsPage() {
     // Check if results are in results store
     const storedResults = getResult(targetSubmissionId);
     if (storedResults) {
+      // Update active submission ID immediately (before URL update)
+      // This ensures child components get the correct ID right away
+      setActiveSubmissionId(targetSubmissionId);
+
       setData(storedResults);
       setStatus("success");
       setError(null);
@@ -394,6 +468,7 @@ export default function ResultsPage() {
                 <LearnerResultsView
                   data={data}
                   answerText={answerText}
+                  submissionId={submissionId}
                   processingTime={processingTime}
                   onDraftSwitch={switchDraft}
                 />

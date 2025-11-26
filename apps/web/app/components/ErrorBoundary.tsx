@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -12,8 +13,18 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+// Wrapper component to provide router to class component
+function ErrorBoundaryWithRouter(props: ErrorBoundaryProps) {
+  const router = useRouter();
+  return <ErrorBoundaryInner {...props} router={router} />;
+}
+
+interface ErrorBoundaryInnerProps extends ErrorBoundaryProps {
+  router: ReturnType<typeof useRouter>;
+}
+
+class ErrorBoundaryInner extends React.Component<ErrorBoundaryInnerProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryInnerProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -25,6 +36,12 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+    // Use Next.js router to refresh instead of window.location.reload()
+    this.props.router.refresh();
+  };
 
   render() {
     if (this.state.hasError) {
@@ -50,14 +67,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             >
               {this.state.error?.message || "An unexpected error occurred"}
             </p>
-            <button
-              onClick={() => {
-                this.setState({ hasError: false, error: null });
-                window.location.reload();
-              }}
-              className="btn btn-primary"
-              lang="en"
-            >
+            <button onClick={this.handleReset} className="btn btn-primary" lang="en">
               Try again
             </button>
           </div>
@@ -68,3 +78,5 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     return this.props.children;
   }
 }
+
+export const ErrorBoundary = ErrorBoundaryWithRouter;

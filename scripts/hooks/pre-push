@@ -126,15 +126,15 @@ fi
 # Step 1: Start API worker (if not already running)
 if [ "$API_RUNNING" = false ]; then
   show_time
-  echo "${YELLOW}Starting API worker on port 8787...${NC}"
+  echo "${YELLOW}Starting API worker on port 8787 (with mocked LLM APIs)...${NC}"
   echo "${CYAN}  Logs: /tmp/writeo-api-worker.log${NC}"
   cd "$ROOT_DIR/apps/api-worker"
-  # Set GROQ_API_KEY to MOCK to enable mocking in tests (saves API costs)
-  GROQ_API_KEY=MOCK npm run dev > /tmp/writeo-api-worker.log 2>&1 &
+  # USE_MOCK_LLM=true enables deterministic mocked responses (saves API costs locally)
+  USE_MOCK_LLM=true npm run dev > /tmp/writeo-api-worker.log 2>&1 &
   API_PID=$!
   cd "$ROOT_DIR"
   show_time
-  echo "${CYAN}  API worker started (PID: $API_PID)${NC}"
+  echo "${CYAN}  API worker started (PID: $API_PID) - using mocked LLM responses${NC}"
 else
   API_PID=""
 fi
