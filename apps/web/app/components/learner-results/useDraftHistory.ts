@@ -165,8 +165,10 @@ export function useDraftHistory(
 
     let result = Array.from(draftMap.values()).sort((a, b) => a.draftNumber - b.draftNumber);
 
+    // Add current draft to history if not already present
+    // Do this even if overall is 0 (essay scoring may have failed)
     const hasCurrentDraft = result.some((d) => d.draftNumber === draftNumber);
-    if (!hasCurrentDraft && submissionId && overall > 0) {
+    if (!hasCurrentDraft && submissionId) {
       const wordCount = countWords(finalAnswerText);
       result.push({
         draftNumber,
@@ -174,8 +176,8 @@ export function useDraftHistory(
         timestamp: new Date().toISOString(),
         wordCount,
         errorCount: grammarErrors.length,
-        overallScore: overall,
-        cefrLevel: mapScoreToCEFR(overall),
+        overallScore: overall > 0 ? overall : undefined,
+        cefrLevel: overall > 0 ? mapScoreToCEFR(overall) : undefined,
         errorIds: [],
       });
       result.sort((a, b) => a.draftNumber - b.draftNumber);

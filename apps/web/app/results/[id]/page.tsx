@@ -39,7 +39,7 @@ export default function ResultsPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const submissionId = params.id as string;
+  const urlSubmissionId = params.id as string;
   const mode = usePreferencesStore((state) => state.viewMode);
   const getResult = useDraftStore((state) => state.getResult);
   const getParentSubmissionId = useDraftStore((state) => state.getParentSubmissionId);
@@ -47,6 +47,18 @@ export default function ResultsPage() {
   const [submissionStartTime] = useState<number>(Date.now());
   const [processingTime, setProcessingTime] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
+
+  // Track active submission ID separately from URL to handle client-side switches
+  // This ensures child components get the correct ID immediately after a switch
+  const [activeSubmissionId, setActiveSubmissionId] = useState<string>(urlSubmissionId);
+
+  // Sync activeSubmissionId with URL when URL changes (e.g., browser navigation)
+  useEffect(() => {
+    setActiveSubmissionId(urlSubmissionId);
+  }, [urlSubmissionId]);
+
+  // Use activeSubmissionId for all lookups
+  const submissionId = activeSubmissionId;
 
   // Track hydration state - results may not be available until store is hydrated
   const [isHydrated, setIsHydrated] = useState(() => useDraftStore.persist.hasHydrated());
@@ -295,6 +307,10 @@ export default function ResultsPage() {
     // Check if results are in results store
     const storedResults = getResult(targetSubmissionId);
     if (storedResults) {
+      // Update active submission ID immediately (before URL update)
+      // This ensures child components get the correct ID right away
+      setActiveSubmissionId(targetSubmissionId);
+
       setData(storedResults);
       setStatus("success");
       setError(null);

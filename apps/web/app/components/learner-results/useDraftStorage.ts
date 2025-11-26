@@ -22,7 +22,9 @@ export function useDraftStorage(
   const trackFixedErrors = useDraftStore((state) => state.trackFixedErrors);
 
   useEffect(() => {
-    if (submissionId && overall > 0) {
+    // Store draft even if overall score is 0 (essay scoring may have failed)
+    // This ensures draft history works correctly regardless of scoring service availability
+    if (submissionId) {
       try {
         const cefrLevel = mapScoreToCEFR(overall);
         const wordCount = countWords(finalAnswerText);

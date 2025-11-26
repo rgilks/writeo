@@ -29,6 +29,13 @@ export function DimensionScores({
 
   const columnCount = dimensionItems.length;
 
+  // Check if all scores are 0 (essay grading service may have failed)
+  const allScoresZero = dimensionItems.every((item) => item.score === 0);
+
+  if (allScoresZero) {
+    return null; // Don't show dimension scores when scoring service failed
+  }
+
   return (
     <div
       style={{
