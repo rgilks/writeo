@@ -96,20 +96,63 @@ export default function HomePage() {
       </header>
 
       <div className="container">
-        <div style={{ marginBottom: "48px" }}>
-          <h1 className="hero-title">Practice Writing</h1>
-          <p className="hero-subtitle">
+        <motion.div
+          style={{ marginBottom: "48px" }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <motion.h1
+            className="hero-title"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+          >
+            Practice Writing
+          </motion.h1>
+          <motion.p
+            className="hero-subtitle"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+          >
             Choose a task to practice your writing. Get detailed feedback on your essays and improve
             with each draft.
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         <div style={{ marginBottom: "var(--spacing-xl)" }}>
           <ProgressDashboard />
         </div>
 
-        <motion.div className="grid" layout transition={{ duration: 0.5, ease: "easeInOut" }}>
-          <div>
+        <motion.div
+          className="grid"
+          layout
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          initial="hidden"
+          animate="visible"
+          variants={{
+            visible: {
+              transition: {
+                staggerChildren: 0.05,
+                delayChildren: 1.0, // Start after progress dashboard animations complete
+              },
+            },
+          }}
+        >
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: {
+                opacity: 1,
+                y: 0,
+                transition: {
+                  duration: 0.5,
+                  ease: "easeOut",
+                },
+              },
+            }}
+          >
             <Link
               href="/write/custom"
               style={{ textDecoration: "none", display: "block" }}
@@ -128,9 +171,22 @@ export default function HomePage() {
                 </div>
               </div>
             </Link>
-          </div>
-          {tasks.map((task) => (
-            <div key={task.id}>
+          </motion.div>
+          {tasks.map((task, index) => (
+            <motion.div
+              key={task.id}
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.5,
+                    ease: "easeOut",
+                  },
+                },
+              }}
+            >
               <Link
                 href={`/write/${task.id}`}
                 style={{ textDecoration: "none", display: "block" }}
@@ -147,7 +203,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </Link>
-            </div>
+            </motion.div>
           ))}
         </motion.div>
       </div>
