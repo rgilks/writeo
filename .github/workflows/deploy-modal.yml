@@ -70,7 +70,7 @@ jobs:
           version: "latest"
 
       - name: Install Modal CLI
-        run: uv pip install modal
+        run: uv pip install --system modal
 
       - name: Authenticate with Modal
         env:
@@ -117,7 +117,7 @@ jobs:
           version: "latest"
 
       - name: Install Modal CLI
-        run: uv pip install modal
+        run: uv pip install --system modal
 
       - name: Authenticate with Modal
         env:
