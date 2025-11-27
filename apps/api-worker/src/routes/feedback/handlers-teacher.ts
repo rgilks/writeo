@@ -12,6 +12,7 @@ import {
 import { MAX_ANSWER_TEXT_LENGTH, MAX_REQUEST_BODY_SIZE } from "../../utils/constants";
 import { parseLLMProvider, getDefaultModel, getAPIKey, type LLMProvider } from "../../services/llm";
 import { getTeacherFeedback, type TeacherFeedback } from "../../services/feedback";
+import { getServices } from "../../utils/context";
 import { StorageService } from "../../services/storage";
 import {
   loadFeedbackDataFromStorage,
@@ -166,7 +167,7 @@ export async function handleTeacherFeedbackRequest(
     );
   }
 
-  const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
+  const { storage } = getServices(c);
   const results = await storage.getResults(submissionId);
   const cachedMessage = getCachedTeacherFeedback(results, body.mode);
 

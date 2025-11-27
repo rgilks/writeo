@@ -5,9 +5,6 @@
 import type { AssessmentResults, AssessorResult } from "@writeo/shared";
 import { safeLogError } from "../../utils/logging";
 
-const DEBUG_ESSAY_ASSESSMENT =
-  typeof process !== "undefined" && process.env?.DEBUG_ESSAY_ASSESSMENT === "true";
-
 async function readErrorTextWithTimeout(response: Response, timeoutMs = 1000): Promise<string> {
   const fallback = response.statusText;
   const timeoutPromise = new Promise<string>((_, reject) =>
@@ -22,7 +19,7 @@ async function readErrorTextWithTimeout(response: Response, timeoutMs = 1000): P
 }
 
 function logAssessorDetails(essayAssessment: AssessmentResults, submissionId: string) {
-  if (!DEBUG_ESSAY_ASSESSMENT || !essayAssessment?.results?.parts) {
+  if (!essayAssessment?.results?.parts) {
     return;
   }
 

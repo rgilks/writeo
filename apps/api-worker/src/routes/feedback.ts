@@ -1,8 +1,6 @@
 import { Hono } from "hono";
-import type { Context } from "hono";
 import type { Env } from "../types/env";
-import { errorResponse } from "../utils/errors";
-import { safeLogError, sanitizeError } from "../utils/logging";
+import { withErrorHandling } from "../utils/handlers";
 import { validateApiKey } from "./feedback/auth";
 import {
   handleStreamingRequest,
@@ -13,8 +11,12 @@ import {
 
 export const feedbackRouter = new Hono<{ Bindings: Env }>();
 
-feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", (c) =>
-  handleFeedbackRoute(c, "Error streaming AI feedback", async () => {
+feedbackRouter.post(
+  "/text/submissions/:submission_id/ai-feedback/stream",
+  withErrorHandling(async (c) => {
+    const authError = validateApiKey(c);
+    if (authError) return authError;
+
     const requestData = await handleStreamingRequest(c);
     if (requestData instanceof Response) {
       return requestData;
@@ -41,33 +43,20 @@ feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", (c) =
         Connection: "keep-alive",
       },
     });
-  }),
+  }, "Error streaming AI feedback"),
 );
 
-feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", (c) =>
-  handleFeedbackRoute(c, "Error getting Teacher feedback", async () => {
+feedbackRouter.post(
+  "/text/submissions/:submission_id/teacher-feedback",
+  withErrorHandling(async (c) => {
+    const authError = validateApiKey(c);
+    if (authError) return authError;
+
     const result = await handleTeacherFeedbackRequest(c);
     if (result instanceof Response) {
       return result;
     }
 
     return c.json(result.feedback);
-  }),
+  }, "Error getting Teacher feedback"),
 );
-
-async function handleFeedbackRoute(
-  c: Context<{ Bindings: Env }>,
-  logContext: string,
-  handler: () => Promise<Response>,
-): Promise<Response> {
-  const authError = validateApiKey(c);
-  if (authError) return authError;
-
-  try {
-    return await handler();
-  } catch (error) {
-    const sanitized = sanitizeError(error);
-    safeLogError(logContext, sanitized);
-    return errorResponse(500, "Internal server error", c);
-  }
-}

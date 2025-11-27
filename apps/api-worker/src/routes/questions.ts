@@ -3,7 +3,7 @@ import type { Env } from "../types/env";
 import { errorResponse } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
 import { validateText, validateRequestBodySize } from "../utils/validation";
-import { StorageService } from "../services/storage";
+import { getServices } from "../utils/context";
 import type { CreateQuestionRequest } from "@writeo/shared";
 import { MAX_REQUEST_BODY_SIZE, MAX_QUESTION_LENGTH } from "../utils/constants";
 import { z } from "zod";
@@ -50,7 +50,7 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
     }
     const body = parsedBody.data;
 
-    const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
+    const { storage } = getServices(c);
     const existing = await storage.getQuestion(parsedQuestionId.data);
 
     if (existing) {

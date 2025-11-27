@@ -5,11 +5,22 @@ const SERVER_ERROR_THRESHOLD = 500;
 const SANITIZED_ERROR_MESSAGE = "An internal error occurred. Please try again later.";
 
 /**
- * Detects production environment by checking if URL contains localhost/127.0.0.1.
+ * Detects production environment.
+ * Checks ENVIRONMENT env var first, falls back to URL-based detection.
  * Defaults to production when context is unavailable (fail-safe).
  */
 function isProduction(c?: Context<{ Bindings: Env }> | Context): boolean {
   if (!c) return true;
+
+  // Check environment variable if available
+  if ("env" in c && c.env && typeof c.env === "object") {
+    const env = c.env as { ENVIRONMENT?: string };
+    if (env.ENVIRONMENT) {
+      return env.ENVIRONMENT === "production";
+    }
+  }
+
+  // Fallback to URL-based detection
   const url = c.req.url;
   return !url.includes("localhost") && !url.includes("127.0.0.1");
 }

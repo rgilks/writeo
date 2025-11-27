@@ -5,9 +5,6 @@
 import type { LanguageToolError } from "@writeo/shared";
 import { safeLogError } from "../../utils/logging";
 
-const DEBUG_LLM_ASSESSMENT =
-  typeof process !== "undefined" && process.env?.DEBUG_LLM_ASSESSMENT === "true";
-
 type LLMResultSettle = PromiseSettledResult<LanguageToolError[][]>;
 
 function logLLMProcessingSummary(
@@ -31,10 +28,6 @@ function logPerAnswerDetails(
   llmProvider: string,
   aiModel: string,
 ) {
-  if (!DEBUG_LLM_ASSESSMENT) {
-    return;
-  }
-
   const message =
     llmErrors.length === 0
       ? `[LLM Assessment][debug] No errors found for answer ${answerId}`

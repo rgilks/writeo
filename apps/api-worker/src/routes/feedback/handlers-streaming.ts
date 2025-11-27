@@ -4,6 +4,7 @@
 
 import { errorResponse } from "../../utils/errors";
 import { parseLLMProvider, getDefaultModel, getAPIKey, type LLMProvider } from "../../services/llm";
+import { getServices } from "../../utils/context";
 import { StorageService } from "../../services/storage";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
@@ -126,7 +127,7 @@ export async function handleStreamingRequest(
 
   // Fetch missing data from storage if needed
   if (!questionText || !essayScores || !ltErrors) {
-    const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
+    const { storage } = getServices(c);
     const results = await storage.getResults(submissionId);
 
     if (!questionText) {

@@ -2,7 +2,7 @@
  * Parallel service calls for submission processing
  */
 
-import type { ModalRequest } from "@writeo/shared";
+import type { ModalRequest, LanguageToolError } from "@writeo/shared";
 import { getLLMAssessment } from "../ai-assessment";
 import { checkAnswerRelevance, type RelevanceCheck } from "../relevance";
 import type { AppConfig } from "../config";
@@ -22,7 +22,7 @@ export interface ServiceRequests {
     answerId: string;
     questionText: string;
     answerText: string;
-    request: Promise<any[]>;
+    request: Promise<LanguageToolError[]>;
   }>;
   llmProvider: LLMProvider;
   apiKey: string;
@@ -47,7 +47,7 @@ export function prepareServiceRequests(
     answerId: string;
     questionText: string;
     answerText: string;
-    request: Promise<any[]>;
+    request: Promise<LanguageToolError[]>;
   }> = [];
 
   const ltEnabled = config.features.languageTool.enabled && config.modal.ltUrl;
@@ -107,7 +107,7 @@ export async function executeServiceRequests(
 ): Promise<{
   essayResult: PromiseSettledResult<Response>;
   ltResults: PromiseSettledResult<Response[]>;
-  llmResults: PromiseSettledResult<any[]>;
+  llmResults: PromiseSettledResult<LanguageToolError[][]>;
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>;
 }> {
   const essayStartTime = performance.now();

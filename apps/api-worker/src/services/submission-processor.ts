@@ -1,14 +1,13 @@
 import type { Context } from "hono";
 import type { Env } from "../types/env";
 import type { CreateSubmissionRequest, AssessmentResults } from "@writeo/shared";
-import { StorageService } from "./storage";
 import { validateRequestBodySize } from "../utils/validation";
 import { errorResponse } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
 import { getCombinedFeedbackWithRetry } from "./feedback";
 import { mergeAssessmentResults } from "./merge-results";
 import type { AIFeedback, TeacherFeedback } from "./feedback";
-import { validateSubmissionBody } from "./submission/validator";
+import { validateSubmissionBody, type ValidationResult } from "./submission/validator";
 import { storeSubmissionEntities } from "./submission/storage";
 import { buildModalRequest } from "./submission/data-loader";
 import { prepareServiceRequests, executeServiceRequests } from "./submission/services";
@@ -19,16 +18,16 @@ import { processLLMResults } from "./submission/results-llm";
 import { extractEssayScores } from "./submission/results-scores";
 import { processRelevanceResults } from "./submission/results-relevance";
 import { buildMetadata, buildResponseHeaders } from "./submission/metadata";
-import { buildConfig } from "./config";
 import type { LLMProvider } from "./llm";
-import type { ModalRequest } from "@writeo/shared";
+import type { ModalRequest, LanguageToolError } from "@writeo/shared";
+import type { RelevanceCheck } from "./relevance";
 import { uuidStringSchema, formatZodMessage } from "../utils/zod";
-import { MAX_REQUEST_BODY_SIZE } from "../utils/constants";
-
-/** Results storage TTL: 90 days */
-const RESULTS_TTL_SECONDS = 60 * 60 * 24 * 90;
-/** Retry configuration for combined feedback generation */
-const FEEDBACK_RETRY_OPTIONS = { maxAttempts: 3, baseDelayMs: 500 };
+import {
+  MAX_REQUEST_BODY_SIZE,
+  RESULTS_TTL_SECONDS,
+  FEEDBACK_RETRY_OPTIONS,
+} from "../utils/constants";
+import { getServices } from "../utils/context";
 
 interface FeedbackMaps {
   llmFeedbackByAnswerId: Map<string, AIFeedback>;
@@ -103,6 +102,125 @@ function applyMetadata(
 }
 
 /**
+ * Validates and parses the submission request.
+ */
+async function validateAndParseSubmission(
+  c: Context<{ Bindings: Env }>,
+  timings: Record<string, number>,
+): Promise<{ body: CreateSubmissionRequest; validation: ValidationResult } | Response> {
+  const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
+  if (!sizeValidation.valid) {
+    return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
+  }
+
+  const parseStartTime = performance.now();
+  const body = await c.req.json<CreateSubmissionRequest>();
+  timings["1_parse_request"] = performance.now() - parseStartTime;
+
+  const validateStartTime = performance.now();
+  const validation = validateSubmissionBody(body, c);
+  if (validation instanceof Response) {
+    return validation;
+  }
+  timings["1b_validate_submission"] = performance.now() - validateStartTime;
+
+  return { body, validation };
+}
+
+/**
+ * Loads submission data and prepares service requests.
+ */
+async function loadSubmissionData(
+  body: CreateSubmissionRequest,
+  validation: ValidationResult,
+  storeResults: boolean,
+  submissionId: string,
+  storage: ReturnType<typeof getServices>["storage"],
+  config: ReturnType<typeof getServices>["config"],
+  c: Context<{ Bindings: Env }>,
+  timings: Record<string, number>,
+): Promise<
+  | { modalRequest: ModalRequest; serviceRequests: ReturnType<typeof prepareServiceRequests> }
+  | Response
+> {
+  const autoCreateStartTime = performance.now();
+  if (storeResults) {
+    const storageResult = await storeSubmissionEntities(storage, validation, submissionId, body, c);
+    if (storageResult) {
+      return storageResult;
+    }
+  }
+  timings["1c_auto_create_entities"] = performance.now() - autoCreateStartTime;
+
+  const loadDataStartTime = performance.now();
+  const modalRequestResult = await buildModalRequest(body, storeResults, storage, c);
+  if (modalRequestResult instanceof Response) {
+    return modalRequestResult;
+  }
+  const modalRequest = modalRequestResult as ModalRequest;
+  timings["4_load_data_from_r2"] = performance.now() - loadDataStartTime;
+
+  const serviceRequests = prepareServiceRequests(modalRequest.parts, config, c.env.AI);
+
+  return { modalRequest, serviceRequests };
+}
+
+/**
+ * Processes all service results into structured data.
+ */
+async function processServiceResults(
+  essayResult: PromiseSettledResult<Response>,
+  ltResults: PromiseSettledResult<Response[]>,
+  llmResults: PromiseSettledResult<LanguageToolError[][]>,
+  relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>,
+  serviceRequests: ReturnType<typeof prepareServiceRequests>,
+  modalRequest: ModalRequest,
+  submissionId: string,
+  config: ReturnType<typeof getServices>["config"],
+  timings: Record<string, number>,
+) {
+  const processEssayStartTime = performance.now();
+  const essayAssessment = await processEssayResult(essayResult, submissionId);
+  timings["6_process_essay"] = performance.now() - processEssayStartTime;
+
+  const processLTStartTime = performance.now();
+  const { ltErrorsByAnswerId, answerTextsByAnswerId } = await processLanguageToolResults(
+    ltResults,
+    serviceRequests.ltRequests,
+    modalRequest.parts,
+    config.features.languageTool.enabled,
+  );
+  timings["7_process_languagetool"] = performance.now() - processLTStartTime;
+
+  const processLLMStartTime = performance.now();
+  const llmErrorsByAnswerId = processLLMResults(
+    llmResults,
+    serviceRequests.llmAssessmentRequests,
+    serviceRequests.llmProvider,
+    serviceRequests.aiModel,
+  );
+  timings["7b_process_ai_assessment"] = performance.now() - processLLMStartTime;
+
+  const essayScoresByAnswerId = extractEssayScores(essayAssessment, modalRequest.parts);
+
+  const processRelevanceStartTime = performance.now();
+  const relevanceByAnswerId = processRelevanceResults(
+    relevanceResults,
+    serviceRequests.relevanceRequests,
+  );
+  timings["9_process_relevance"] = performance.now() - processRelevanceStartTime;
+
+  return {
+    essayAssessment,
+    ltErrorsByAnswerId,
+    llmErrorsByAnswerId,
+    answerTextsByAnswerId,
+    essayScoresByAnswerId,
+    relevanceByAnswerId,
+  };
+}
+
+/**
  * Processes a submission request, orchestrating all assessment services.
  *
  * This is the main entry point for essay submission processing. It:
@@ -137,50 +255,32 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
   const timings: Record<string, number> = {};
 
   try {
-    const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
-    if (!sizeValidation.valid) {
-      return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
+    // Phase 1: Validate and parse request
+    const parseResult = await validateAndParseSubmission(c, timings);
+    if (parseResult instanceof Response) {
+      return parseResult;
     }
-
-    const parseStartTime = performance.now();
-    const body = await c.req.json<CreateSubmissionRequest>();
-    timings["1_parse_request"] = performance.now() - parseStartTime;
-
-    const validateStartTime = performance.now();
-    const validation = validateSubmissionBody(body, c);
-    if (validation instanceof Response) {
-      return validation;
-    }
-    timings["1b_validate_submission"] = performance.now() - validateStartTime;
-
+    const { body, validation } = parseResult;
     const storeResults = body.storeResults === true;
-    const autoCreateStartTime = performance.now();
-    const config = buildConfig(c.env);
-    const storage = new StorageService(config.storage.r2Bucket, config.storage.kvNamespace);
 
-    if (storeResults) {
-      const storageResult = await storeSubmissionEntities(
-        storage,
-        validation,
-        submissionId,
-        body,
-        c,
-      );
-      if (storageResult) {
-        return storageResult;
-      }
+    // Phase 2: Initialize services and load data
+    const { config, storage } = getServices(c);
+    const loadResult = await loadSubmissionData(
+      body,
+      validation,
+      storeResults,
+      submissionId,
+      storage,
+      config,
+      c,
+      timings,
+    );
+    if (loadResult instanceof Response) {
+      return loadResult;
     }
-    timings["1c_auto_create_entities"] = performance.now() - autoCreateStartTime;
+    const { modalRequest, serviceRequests } = loadResult;
 
-    const loadDataStartTime = performance.now();
-    const modalRequestResult = await buildModalRequest(body, storeResults, storage, c);
-    if (modalRequestResult instanceof Response) {
-      return modalRequestResult;
-    }
-    const modalRequest = modalRequestResult as ModalRequest;
-    timings["4_load_data_from_r2"] = performance.now() - loadDataStartTime;
-
-    const serviceRequests = prepareServiceRequests(modalRequest.parts, config, c.env.AI);
+    // Phase 3: Execute assessment services in parallel
     const { essayResult, ltResults, llmResults, relevanceResults } = await executeServiceRequests(
       modalRequest,
       serviceRequests,
@@ -188,74 +288,59 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       timings,
     );
 
-    const processEssayStartTime = performance.now();
-    const essayAssessment = await processEssayResult(essayResult, submissionId);
-    timings["6_process_essay"] = performance.now() - processEssayStartTime;
-
-    const processLTStartTime = performance.now();
-    const { ltErrorsByAnswerId, answerTextsByAnswerId } = await processLanguageToolResults(
+    // Phase 4: Process service results
+    const processedResults = await processServiceResults(
+      essayResult,
       ltResults,
-      serviceRequests.ltRequests,
-      modalRequest.parts,
-      config.features.languageTool.enabled,
-    );
-    timings["7_process_languagetool"] = performance.now() - processLTStartTime;
-
-    const processLLMStartTime = performance.now();
-    const llmErrorsByAnswerId = processLLMResults(
       llmResults,
-      serviceRequests.llmAssessmentRequests,
-      serviceRequests.llmProvider,
-      serviceRequests.aiModel,
-    );
-    timings["7b_process_ai_assessment"] = performance.now() - processLLMStartTime;
-
-    const essayScoresByAnswerId = extractEssayScores(essayAssessment, modalRequest.parts);
-
-    const processRelevanceStartTime = performance.now();
-    const relevanceByAnswerId = processRelevanceResults(
       relevanceResults,
-      serviceRequests.relevanceRequests,
+      serviceRequests,
+      modalRequest,
+      submissionId,
+      config,
+      timings,
     );
-    timings["9_process_relevance"] = performance.now() - processRelevanceStartTime;
 
+    // Phase 5: Generate AI feedback
     const aiFeedbackStartTime = performance.now();
     const { llmFeedbackByAnswerId, teacherFeedbackByAnswerId } = await generateCombinedFeedback(
       modalRequest.parts,
-      essayScoresByAnswerId,
-      ltErrorsByAnswerId,
-      llmErrorsByAnswerId,
-      relevanceByAnswerId,
+      processedResults.essayScoresByAnswerId,
+      processedResults.ltErrorsByAnswerId,
+      processedResults.llmErrorsByAnswerId,
+      processedResults.relevanceByAnswerId,
       serviceRequests,
     );
     timings["8_ai_feedback"] = performance.now() - aiFeedbackStartTime;
 
+    // Phase 6: Merge results and apply metadata
     const mergeStartTime = performance.now();
     const mergedAssessment = mergeAssessmentResults(
-      essayAssessment,
-      ltErrorsByAnswerId,
-      llmErrorsByAnswerId,
-      answerTextsByAnswerId,
+      processedResults.essayAssessment,
+      processedResults.ltErrorsByAnswerId,
+      processedResults.llmErrorsByAnswerId,
+      processedResults.answerTextsByAnswerId,
       modalRequest,
       config.features.languageTool.language,
       serviceRequests.aiModel,
       serviceRequests.llmProvider,
       llmFeedbackByAnswerId,
-      relevanceByAnswerId,
+      processedResults.relevanceByAnswerId,
       teacherFeedbackByAnswerId,
     );
     timings["10_merge_results"] = performance.now() - mergeStartTime;
 
     const metadataStartTime = performance.now();
     const metadata = buildMetadata(
-      answerTextsByAnswerId,
-      ltErrorsByAnswerId,
-      llmErrorsByAnswerId,
-      essayAssessment,
+      processedResults.answerTextsByAnswerId,
+      processedResults.ltErrorsByAnswerId,
+      processedResults.llmErrorsByAnswerId,
+      processedResults.essayAssessment,
     );
     applyMetadata(mergedAssessment, metadata);
     timings["10a_metadata"] = performance.now() - metadataStartTime;
 
+    // Phase 7: Store results if requested
     if (storeResults) {
       const storeResultsStartTime = performance.now();
       await storage.putResults(submissionId, mergedAssessment, RESULTS_TTL_SECONDS);
@@ -263,7 +348,6 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     }
 
     timings["0_total"] = performance.now() - requestStartTime;
-
     const headersObj = buildResponseHeaders(timings);
 
     return c.json(mergedAssessment, 200, headersObj);

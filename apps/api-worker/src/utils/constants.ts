@@ -16,6 +16,14 @@ export const MAX_TOKENS_TEACHER_FEEDBACK_EXPLANATION = 800;
 // Request limits
 export const MAX_REQUEST_BODY_SIZE = 1024 * 1024; // 1MB
 
+// Storage configuration
+/** Results storage TTL: 90 days */
+export const RESULTS_TTL_SECONDS = 60 * 60 * 24 * 90;
+
+// Retry configuration
+/** Retry configuration for combined feedback generation */
+export const FEEDBACK_RETRY_OPTIONS = { maxAttempts: 3, baseDelayMs: 500 } as const;
+
 // Public paths (no authentication or rate limiting)
 export const PUBLIC_PATHS = ["/health", "/docs", "/openapi.json"] as const;
 

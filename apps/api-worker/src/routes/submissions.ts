@@ -3,7 +3,7 @@ import type { Env } from "../types/env";
 import { processSubmission } from "../services/submission-processor";
 import { errorResponse } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
-import { StorageService } from "../services/storage";
+import { getServices } from "../utils/context";
 import { uuidStringSchema, formatZodMessage } from "../utils/zod";
 
 export async function processSubmissionHandler(c: Context<{ Bindings: Env }>) {
@@ -24,7 +24,7 @@ export async function getSubmissionHandler(c: Context<{ Bindings: Env }>) {
   const submissionId = submissionIdResult.data;
 
   try {
-    const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
+    const { storage } = getServices(c);
     const result = await storage.getResults(submissionId);
 
     if (!result) {
