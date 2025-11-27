@@ -42,14 +42,21 @@ fi
 
 echo "${GREEN}Security check passed.${NC}"
 
-# Step 1: Format code with Prettier
+# Step 1: Format code with Prettier (only staged files for speed)
 echo "${YELLOW}Formatting code with Prettier...${NC}"
-if ! npm run format:check > /dev/null 2>&1; then
-  echo "${YELLOW}Code formatting issues detected. Auto-formatting...${NC}"
-  npm run format
-  # Stage the formatted files
-  git add -u
-  echo "${GREEN}Code formatted and staged.${NC}"
+STAGED_TS_FILES=$(echo "$STAGED_FILES" | grep -E "\.(ts|tsx|js|jsx|json|md)$" || true)
+if [ -n "$STAGED_TS_FILES" ]; then
+  # Check if formatting is needed first
+  if echo "$STAGED_TS_FILES" | xargs npx prettier --check > /dev/null 2>&1; then
+    echo "${GREEN}Code already formatted.${NC}"
+  else
+    echo "${YELLOW}Code formatting issues detected. Auto-formatting...${NC}"
+    echo "$STAGED_TS_FILES" | xargs npx prettier --write
+    echo "$STAGED_TS_FILES" | xargs git add
+    echo "${GREEN}Code formatted and staged.${NC}"
+  fi
+else
+  echo "${GREEN}No code files to format.${NC}"
 fi
 
 # Step 2: Run linting
@@ -153,6 +160,23 @@ if [ -n "$PYTHON_FILES" ]; then
   fi
   
   echo "${GREEN}Python checks passed.${NC}"
+fi
+
+# Step 5: Validate commit message format (optional but helpful)
+COMMIT_MSG_FILE="$1"
+if [ -f "$COMMIT_MSG_FILE" ]; then
+  COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+  # Check for very short messages (likely typos)
+  if [ ${#COMMIT_MSG} -lt 10 ] && [ ${#COMMIT_MSG} -gt 0 ]; then
+    echo "${YELLOW}⚠️  Warning: Commit message is very short. Consider adding more detail.${NC}"
+  fi
+  # Check for common mistakes
+  if echo "$COMMIT_MSG" | grep -qiE "^(fix|wip|test|debug)"; then
+    if ! echo "$COMMIT_MSG" | grep -qiE "^(fix|feat|chore|docs|style|refactor|test|perf|ci|build|revert):"; then
+      echo "${YELLOW}💡 Tip: Consider using conventional commit format: 'type: description'${NC}"
+      echo "${YELLOW}   Example: 'fix: resolve type error in auth middleware'${NC}"
+    fi
+  fi
 fi
 
 echo "${GREEN}All pre-commit checks passed!${NC}"

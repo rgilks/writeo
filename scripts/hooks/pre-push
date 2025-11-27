@@ -26,6 +26,25 @@ START_TIME=$(date +%s)
 ROOT_DIR=$(git rev-parse --show-toplevel)
 cd "$ROOT_DIR"
 
+# Check for quick mode (skip E2E tests)
+SKIP_E2E=false
+CHECK_DOCS_ONLY=false
+
+# Check for QUICK_PUSH environment variable
+if [ "$QUICK_PUSH" = "true" ]; then
+  SKIP_E2E=true
+fi
+
+# Optionally check if only docs changed in recent commits (heuristic)
+RECENT_COMMITS=$(git log --oneline -5 --name-only --pretty=format:"" 2>/dev/null | grep -vE "^\s*$" | sort -u || echo "")
+if [ -n "$RECENT_COMMITS" ]; then
+  CODE_FILES=$(echo "$RECENT_COMMITS" | grep -vE "\.(md|txt|yml|yaml)$|^docs/|^README|^\.github/" || true)
+  if [ -z "$CODE_FILES" ]; then
+    CHECK_DOCS_ONLY=true
+    SKIP_E2E=true
+  fi
+fi
+
 # Helper function to show elapsed time
 show_time() {
   local elapsed=$(($(date +%s) - START_TIME))
@@ -70,11 +89,23 @@ echo "${BLUE}========================================${NC}"
 echo ""
 show_time
 echo "${CYAN}This hook will:${NC}"
-echo "  1. Check/start API worker (port 8787)"
-echo "  2. Check/start web app (port 3000)"
-echo "  3. Wait for servers to be ready"
-echo "  4. Run unit tests"
-echo "  5. Run E2E tests"
+if [ "$CHECK_DOCS_ONLY" = "true" ]; then
+  echo "  📄 Docs-only changes detected - skipping tests"
+  echo "  1. Run unit tests (quick check)"
+  SKIP_E2E=true
+elif [ "$SKIP_E2E" = "true" ]; then
+  echo "  ⚡ Quick mode - skipping E2E tests"
+  echo "  1. Check/start API worker (port 8787)"
+  echo "  2. Check/start web app (port 3000)"
+  echo "  3. Wait for servers to be ready"
+  echo "  4. Run unit tests"
+else
+  echo "  1. Check/start API worker (port 8787)"
+  echo "  2. Check/start web app (port 3000)"
+  echo "  3. Wait for servers to be ready"
+  echo "  4. Run unit tests"
+  echo "  5. Run E2E tests"
+fi
 echo ""
 
 # Check if servers are already running and can be reused
@@ -278,24 +309,35 @@ show_time
 echo "${GREEN}✓ Unit tests passed${NC}"
 
 echo ""
-# Run e2e tests with list reporter (non-interactive)
-# Use more workers for faster execution (config defaults to 2 for CI, 4 for local)
-show_time
-echo "${CYAN}Running E2E tests...${NC}"
-echo ""
-set +e  # Temporarily disable exit on error to capture test result
-npm run test:e2e -- --reporter=list 2>&1
-E2E_TEST_EXIT_CODE=$?
-set -e  # Re-enable exit on error
-if [ $E2E_TEST_EXIT_CODE -ne 0 ]; then
-  echo ""
+# Run e2e tests with list reporter (non-interactive) - unless skipped
+if [ "$SKIP_E2E" = "true" ]; then
   show_time
-  echo "${RED}✗ E2E tests failed (exit code: $E2E_TEST_EXIT_CODE)!${NC}"
-  echo "${YELLOW}Stopping pre-push hook. To skip this check, use: git push --no-verify${NC}"
-  exit 1
+  echo "${YELLOW}⏭️  Skipping E2E tests${NC}"
+  if [ "$CHECK_DOCS_ONLY" = "true" ]; then
+    echo "  (docs-only changes detected)"
+  else
+    echo "  (quick mode enabled)"
+    echo "  To run full tests: git push (without QUICK_PUSH=true)"
+  fi
+else
+  # Use more workers for faster execution (config defaults to 2 for CI, 4 for local)
+  show_time
+  echo "${CYAN}Running E2E tests...${NC}"
+  echo ""
+  set +e  # Temporarily disable exit on error to capture test result
+  npm run test:e2e -- --reporter=list 2>&1
+  E2E_TEST_EXIT_CODE=$?
+  set -e  # Re-enable exit on error
+  if [ $E2E_TEST_EXIT_CODE -ne 0 ]; then
+    echo ""
+    show_time
+    echo "${RED}✗ E2E tests failed (exit code: $E2E_TEST_EXIT_CODE)!${NC}"
+    echo "${YELLOW}Stopping pre-push hook. To skip this check, use: git push --no-verify${NC}"
+    exit 1
+  fi
+  show_time
+  echo "${GREEN}✓ E2E tests passed${NC}"
 fi
-show_time
-echo "${GREEN}✓ E2E tests passed${NC}"
 
 echo ""
 show_time
