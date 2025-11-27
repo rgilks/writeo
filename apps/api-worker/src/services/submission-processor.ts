@@ -1,11 +1,10 @@
 import type { Context } from "hono";
 import type { Env } from "../types/env";
 import type { CreateSubmissionRequest } from "@writeo/shared";
-import { isValidUUID } from "@writeo/shared";
 import { StorageService } from "./storage";
 import { validateRequestBodySize } from "../utils/validation";
 import { errorResponse } from "../utils/errors";
-import { safeLogError, safeLogWarn, sanitizeError } from "../utils/logging";
+import { safeLogError, sanitizeError } from "../utils/logging";
 import { getCombinedFeedbackWithRetry } from "./feedback";
 import { mergeAssessmentResults } from "./merge-results";
 import type { AIFeedback, TeacherFeedback } from "./feedback";
@@ -13,6 +12,7 @@ import { validateSubmissionBody } from "./submission/validator";
 import { storeSubmissionEntities } from "./submission/storage";
 import { buildModalRequest } from "./submission/data-loader";
 import { prepareServiceRequests, executeServiceRequests } from "./submission/services";
+import { iterateAnswers } from "./submission/utils";
 import { processEssayResult } from "./submission/results-essay";
 import { processLanguageToolResults } from "./submission/results-languagetool";
 import { processLLMResults } from "./submission/results-llm";
@@ -21,6 +21,7 @@ import { processRelevanceResults } from "./submission/results-relevance";
 import { buildMetadata, buildResponseHeaders } from "./submission/metadata";
 import { buildConfig } from "./config";
 import type { ModalRequest } from "@writeo/shared";
+import { uuidStringSchema, formatZodMessage } from "../utils/zod";
 
 /**
  * Processes a submission request, orchestrating all assessment services.
@@ -41,10 +42,17 @@ import type { ModalRequest } from "@writeo/shared";
  * ```
  */
 export async function processSubmission(c: Context<{ Bindings: Env }>) {
-  const submissionId = c.req.param("submission_id");
-  if (!isValidUUID(submissionId)) {
-    return errorResponse(400, "Invalid submission_id format", c);
+  const submissionIdResult = uuidStringSchema("submission_id").safeParse(
+    c.req.param("submission_id"),
+  );
+  if (!submissionIdResult.success) {
+    return errorResponse(
+      400,
+      formatZodMessage(submissionIdResult.error, "Invalid submission_id format"),
+      c,
+    );
   }
+  const submissionId = submissionIdResult.data;
 
   const requestStartTime = performance.now();
   const timings: Record<string, number> = {};
@@ -140,33 +148,31 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       Promise<{ answerId: string; feedback: import("./feedback").CombinedFeedback }>
     > = [];
 
-    for (const part of modalRequest.parts) {
-      for (const answer of part.answers) {
-        const essayScores = essayScoresByAnswerId.get(answer.id);
-        const ltErrors = ltErrorsByAnswerId.get(answer.id);
-        const llmErrors = llmErrorsByAnswerId.get(answer.id);
-        const relevanceCheck = relevanceByAnswerId.get(answer.id);
+    for (const answer of iterateAnswers(modalRequest.parts)) {
+      const essayScores = essayScoresByAnswerId.get(answer.id);
+      const ltErrors = ltErrorsByAnswerId.get(answer.id);
+      const llmErrors = llmErrorsByAnswerId.get(answer.id);
+      const relevanceCheck = relevanceByAnswerId.get(answer.id);
 
-        combinedFeedbackPromises.push(
-          (async () => {
-            const feedback = await getCombinedFeedbackWithRetry(
-              {
-                llmProvider: serviceRequests.llmProvider,
-                apiKey: serviceRequests.apiKey,
-                questionText: answer.question_text,
-                answerText: answer.answer_text,
-                modelName: serviceRequests.aiModel,
-                essayScores,
-                languageToolErrors: ltErrors,
-                llmErrors,
-                relevanceCheck,
-              },
-              { maxAttempts: 3, baseDelayMs: 500 },
-            );
-            return { answerId: answer.id, feedback };
-          })(),
-        );
-      }
+      combinedFeedbackPromises.push(
+        (async () => {
+          const feedback = await getCombinedFeedbackWithRetry(
+            {
+              llmProvider: serviceRequests.llmProvider,
+              apiKey: serviceRequests.apiKey,
+              questionText: answer.question_text,
+              answerText: answer.answer_text,
+              modelName: serviceRequests.aiModel,
+              essayScores,
+              languageToolErrors: ltErrors,
+              llmErrors,
+              relevanceCheck,
+            },
+            { maxAttempts: 3, baseDelayMs: 500 },
+          );
+          return { answerId: answer.id, feedback };
+        })(),
+      );
     }
 
     const combinedFeedbackResults = await Promise.allSettled(combinedFeedbackPromises);
@@ -183,13 +189,6 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     }
 
     timings["8_ai_feedback"] = performance.now() - aiFeedbackStartTime;
-
-    if (relevanceResults.status !== "fulfilled" || !Array.isArray(relevanceResults.value)) {
-      safeLogWarn("Relevance check failed", {
-        reason:
-          relevanceResults.status === "rejected" ? relevanceResults.reason : "Invalid response",
-      });
-    }
 
     const mergeStartTime = performance.now();
     const mergedAssessment = mergeAssessmentResults(

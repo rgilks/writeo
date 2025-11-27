@@ -1,19 +1,41 @@
 import { Hono } from "hono";
 import type { Env } from "../types/env";
-import { isValidUUID } from "@writeo/shared";
 import { errorResponse } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
 import { validateText, validateRequestBodySize } from "../utils/validation";
 import { StorageService } from "../services/storage";
 import type { CreateQuestionRequest } from "@writeo/shared";
 import { MAX_REQUEST_BODY_SIZE, MAX_QUESTION_LENGTH } from "../utils/constants";
+import { z } from "zod";
+import { formatZodMessage, uuidStringSchema } from "../utils/zod";
 
 export const questionsRouter = new Hono<{ Bindings: Env }>();
 
+const questionIdSchema = uuidStringSchema("question_id");
+
+const questionTextSchema: z.ZodType<CreateQuestionRequest> = z
+  .object({
+    text: z.string().superRefine((val, ctx) => {
+      const validation = validateText(val, MAX_QUESTION_LENGTH);
+      if (!validation.valid) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: validation.error || "Invalid text content",
+        });
+      }
+    }),
+  })
+  .strict();
+
 questionsRouter.put("/text/questions/:question_id", async (c) => {
   const questionId = c.req.param("question_id");
-  if (!isValidUUID(questionId)) {
-    return errorResponse(400, "Invalid question_id format", c);
+  const parsedQuestionId = questionIdSchema.safeParse(questionId);
+  if (!parsedQuestionId.success) {
+    return errorResponse(
+      400,
+      formatZodMessage(parsedQuestionId.error, "Invalid question_id format"),
+      c,
+    );
   }
 
   try {
@@ -22,18 +44,14 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
       return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
     }
 
-    const body = await c.req.json<CreateQuestionRequest>();
-    if (!body.text || typeof body.text !== "string") {
-      return errorResponse(400, "Missing or invalid 'text' field", c);
+    const parsedBody = questionTextSchema.safeParse(await c.req.json());
+    if (!parsedBody.success) {
+      return errorResponse(400, formatZodMessage(parsedBody.error, "Invalid question payload"), c);
     }
-
-    const textValidation = validateText(body.text, MAX_QUESTION_LENGTH);
-    if (!textValidation.valid) {
-      return errorResponse(400, textValidation.error || "Invalid text content", c);
-    }
+    const body = parsedBody.data;
 
     const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
-    const existing = await storage.getQuestion(questionId);
+    const existing = await storage.getQuestion(parsedQuestionId.data);
 
     if (existing) {
       if (existing.text === body.text) {
@@ -43,7 +61,7 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
         {
           error: "Question already exists with different content",
           existingQuestion: {
-            id: questionId,
+            id: parsedQuestionId.data,
             text: existing.text,
           },
         },
@@ -51,7 +69,7 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
       );
     }
 
-    await storage.putQuestion(questionId, body);
+    await storage.putQuestion(parsedQuestionId.data, body);
     return new Response(null, { status: 201 });
   } catch (error) {
     const sanitized = sanitizeError(error);

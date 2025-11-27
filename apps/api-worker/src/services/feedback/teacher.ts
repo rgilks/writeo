@@ -11,6 +11,30 @@ import { buildTeacherFeedbackPrompt } from "./prompts-teacher";
 import { getLowestDimension, getFocusArea, normalizeEssayScores } from "./context";
 import type { TeacherFeedback, EssayScores, FeedbackError, RelevanceCheck } from "./types";
 
+const SYSTEM_MESSAGE_INITIAL =
+  "You are a professional writing tutor specializing in academic argumentative writing. Always respond with clear, direct feedback. Never mention technical terms like CEFR or band scores. Focus on actionable improvements.";
+
+const SYSTEM_MESSAGE_EXPLANATION =
+  "You are an experienced writing instructor providing detailed analysis for another teacher. Use markdown formatting to structure your analysis. Be comprehensive, specific, and cite examples from the student's work. Never mention technical terms like CEFR or band scores.";
+
+const MODE_CONFIG: Record<
+  "initial" | "clues" | "explanation",
+  { systemMessage: string; maxTokens: number }
+> = {
+  initial: {
+    systemMessage: SYSTEM_MESSAGE_INITIAL,
+    maxTokens: MAX_TOKENS_TEACHER_FEEDBACK_INITIAL,
+  },
+  clues: {
+    systemMessage: SYSTEM_MESSAGE_INITIAL,
+    maxTokens: MAX_TOKENS_TEACHER_FEEDBACK_INITIAL,
+  },
+  explanation: {
+    systemMessage: SYSTEM_MESSAGE_EXPLANATION,
+    maxTokens: MAX_TOKENS_TEACHER_FEEDBACK_EXPLANATION,
+  },
+};
+
 export async function getTeacherFeedback(
   llmProvider: LLMProvider,
   apiKey: string,
@@ -23,7 +47,8 @@ export async function getTeacherFeedback(
   llmErrors?: FeedbackError[],
   relevanceCheck?: RelevanceCheck,
 ): Promise<TeacherFeedback> {
-  const normalizedScores = normalizeEssayScores(essayScores);
+  const normalizedScores = essayScores ? normalizeEssayScores(essayScores) : undefined;
+  const { systemMessage, maxTokens } = MODE_CONFIG[mode];
 
   const prompt = buildTeacherFeedbackPrompt(
     questionText,
@@ -34,11 +59,6 @@ export async function getTeacherFeedback(
     llmErrors,
     relevanceCheck,
   );
-
-  const systemMessage =
-    mode === "explanation"
-      ? "You are an experienced writing instructor providing detailed analysis for another teacher. Use markdown formatting to structure your analysis. Be comprehensive, specific, and cite examples from the student's work. Never mention technical terms like CEFR or band scores."
-      : "You are a professional writing tutor specializing in academic argumentative writing. Always respond with clear, direct feedback. Never mention technical terms like CEFR or band scores. Focus on actionable improvements.";
 
   const responseText = await callLLMAPI(
     llmProvider,
@@ -54,9 +74,7 @@ export async function getTeacherFeedback(
         content: prompt,
       },
     ],
-    mode === "explanation"
-      ? MAX_TOKENS_TEACHER_FEEDBACK_EXPLANATION
-      : MAX_TOKENS_TEACHER_FEEDBACK_INITIAL,
+    maxTokens,
   );
 
   const trimmedResponseText = responseText.trim();
@@ -69,8 +87,8 @@ export async function getTeacherFeedback(
 
   return {
     message: trimmedResponseText,
-    focusArea: mode === "initial" ? focusArea : undefined,
-    clues: mode === "clues" ? trimmedResponseText : undefined,
-    explanation: mode === "explanation" ? trimmedResponseText : undefined,
+    ...(mode === "initial" && { focusArea }),
+    ...(mode === "clues" && { clues: trimmedResponseText }),
+    ...(mode === "explanation" && { explanation: trimmedResponseText }),
   };
 }

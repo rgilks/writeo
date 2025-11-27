@@ -9,9 +9,9 @@ import { healthRouter } from "./routes/health";
 import { feedbackRouter } from "./routes/feedback";
 import { errorResponse } from "./utils/errors";
 import { safeLogError, sanitizeError } from "./utils/logging";
-import { isValidUUID } from "@writeo/shared";
 import { StorageService } from "./services/storage";
 import { processSubmissionHandler } from "./routes/submissions";
+import { uuidStringSchema, formatZodMessage } from "./utils/zod";
 
 const app = new Hono<{
   Bindings: Env;
@@ -59,10 +59,17 @@ app.route("/", feedbackRouter);
 app.put("/text/submissions/:submission_id", processSubmissionHandler);
 
 app.get("/text/submissions/:submission_id", async (c) => {
-  const submissionId = c.req.param("submission_id");
-  if (!isValidUUID(submissionId)) {
-    return errorResponse(400, "Invalid submission_id format", c);
+  const submissionIdResult = uuidStringSchema("submission_id").safeParse(
+    c.req.param("submission_id"),
+  );
+  if (!submissionIdResult.success) {
+    return errorResponse(
+      400,
+      formatZodMessage(submissionIdResult.error, "Invalid submission_id format"),
+      c,
+    );
   }
+  const submissionId = submissionIdResult.data;
 
   try {
     const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);

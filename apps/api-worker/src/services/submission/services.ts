@@ -3,11 +3,12 @@
  */
 
 import type { ModalRequest } from "@writeo/shared";
-import { fetchWithTimeout } from "../../utils/fetch-with-timeout";
 import { getLLMAssessment } from "../ai-assessment";
 import { checkAnswerRelevance, type RelevanceCheck } from "../relevance";
 import type { AppConfig } from "../config";
 import type { LLMProvider } from "../llm";
+import { iterateAnswers } from "./utils";
+import { postJsonWithAuth } from "../../utils/http";
 
 export interface ServiceRequests {
   ltRequests: Array<{ answerId: string; request: Promise<Response> }>;
@@ -36,67 +37,56 @@ export function prepareServiceRequests(
   const language = config.features.languageTool.language;
 
   const ltRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
-  if (config.features.languageTool.enabled && config.modal.ltUrl) {
-    for (const part of modalParts) {
-      for (const answer of part.answers) {
-        ltRequests.push({
-          answerId: answer.id,
-          request: fetchWithTimeout(`${config.modal.ltUrl}/check`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Token ${config.api.key}`,
-            },
-            body: JSON.stringify({
-              language,
-              text: answer.answer_text,
-              answer_id: answer.id,
-            }),
-            timeout: 30000,
-          }),
-        });
-      }
-    }
-  }
-
   const relevanceRequests: Array<{
     answerId: string;
     questionText: string;
     answerText: string;
     request: Promise<RelevanceCheck | null>;
   }> = [];
-  for (const part of modalParts) {
-    for (const answer of part.answers) {
-      relevanceRequests.push({
-        answerId: answer.id,
-        questionText: answer.question_text,
-        answerText: answer.answer_text,
-        request: checkAnswerRelevance(ai, answer.question_text, answer.answer_text, 0.5),
-      });
-    }
-  }
-
   const llmAssessmentRequests: Array<{
     answerId: string;
     questionText: string;
     answerText: string;
     request: Promise<any[]>;
   }> = [];
-  for (const part of modalParts) {
-    for (const answer of part.answers) {
-      llmAssessmentRequests.push({
+
+  const ltEnabled = config.features.languageTool.enabled && config.modal.ltUrl;
+  for (const answer of iterateAnswers(modalParts)) {
+    if (ltEnabled) {
+      ltRequests.push({
         answerId: answer.id,
-        questionText: answer.question_text,
-        answerText: answer.answer_text,
-        request: getLLMAssessment(
-          config.llm.provider,
-          config.llm.apiKey,
-          answer.question_text,
-          answer.answer_text,
-          config.llm.model,
+        request: postJsonWithAuth(
+          `${config.modal.ltUrl}/check`,
+          config.api.key,
+          {
+            language,
+            text: answer.answer_text,
+            answer_id: answer.id,
+          },
+          30000,
         ),
       });
     }
+
+    relevanceRequests.push({
+      answerId: answer.id,
+      questionText: answer.question_text,
+      answerText: answer.answer_text,
+      request: checkAnswerRelevance(ai, answer.question_text, answer.answer_text, 0.5),
+    });
+
+    llmAssessmentRequests.push({
+      answerId: answer.id,
+      questionText: answer.question_text,
+      answerText: answer.answer_text,
+      request: getLLMAssessment(
+        config.llm.provider,
+        config.llm.apiKey,
+        answer.question_text,
+        answer.answer_text,
+        config.llm.model,
+      ),
+    });
   }
 
   return {
@@ -126,42 +116,32 @@ export async function executeServiceRequests(
   const [essayResult, ltResults, llmResults, relevanceResults] = await Promise.allSettled([
     (async () => {
       const start = performance.now();
-      const result = await fetchWithTimeout(`${config.modal.gradeUrl}/grade`, {
-        timeout: 60000,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${config.api.key}`,
-        },
-        body: JSON.stringify(modalRequest),
-      });
+      const result = await postJsonWithAuth(
+        `${config.modal.gradeUrl}/grade`,
+        config.api.key,
+        modalRequest,
+        60000,
+      );
       timings["5a_essay_fetch"] = performance.now() - start;
       return result;
     })(),
     (async () => {
       const start = performance.now();
-      const result =
-        ltRequests.length > 0 ? await Promise.all(ltRequests.map((r) => r.request)) : [];
+      const resolved = await Promise.all(ltRequests.map((r) => r.request));
       timings["5b_languagetool_fetch"] = performance.now() - start;
-      return result;
+      return resolved;
     })(),
     (async () => {
       const start = performance.now();
-      const result =
-        llmAssessmentRequests.length > 0
-          ? await Promise.all(llmAssessmentRequests.map((r) => r.request))
-          : [];
+      const resolved = await Promise.all(llmAssessmentRequests.map((r) => r.request));
       timings["5d_ai_assessment_fetch"] = performance.now() - start;
-      return result;
+      return resolved;
     })(),
     (async () => {
       const start = performance.now();
-      const result =
-        relevanceRequests.length > 0
-          ? await Promise.all(relevanceRequests.map((r) => r.request))
-          : [];
+      const resolved = await Promise.all(relevanceRequests.map((r) => r.request));
       timings["5c_relevance_fetch"] = performance.now() - start;
-      return result;
+      return resolved;
     })(),
   ]);
 

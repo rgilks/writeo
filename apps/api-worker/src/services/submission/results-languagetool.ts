@@ -6,6 +6,7 @@ import type { LanguageToolError, LanguageToolResponse } from "@writeo/shared";
 import type { ModalRequest } from "@writeo/shared";
 import { safeLogError } from "../../utils/logging";
 import { transformLanguageToolResponse } from "../../utils/text-processing";
+import { buildAnswerLookup, iterateAnswers } from "./utils";
 
 export async function processLanguageToolResults(
   ltResults: PromiseSettledResult<Response[]>,
@@ -18,6 +19,7 @@ export async function processLanguageToolResults(
 }> {
   const ltErrorsByAnswerId = new Map<string, LanguageToolError[]>();
   const answerTextsByAnswerId = new Map<string, string>();
+  const answersById = buildAnswerLookup(modalParts);
 
   if (languageToolEnabled) {
     if (ltResults.status !== "fulfilled" || !Array.isArray(ltResults.value)) {
@@ -47,24 +49,15 @@ export async function processLanguageToolResults(
         if (result.status === "fulfilled") {
           const answerId = ltRequests[i]?.answerId;
           if (answerId) {
-            for (const part of modalParts) {
-              const answer = part.answers.find((a) => a.id === answerId);
-              if (answer) {
-                answerTextsByAnswerId.set(answerId, answer.answer_text);
-                break;
-              }
+            const answer = answersById.get(answerId);
+            if (!answer) {
+              safeLogError("LanguageTool response missing matching answer", { answerId });
+              continue;
             }
-            let fullText = "";
-            for (const part of modalParts) {
-              const answer = part.answers.find((a) => a.id === answerId);
-              if (answer) {
-                fullText = answer.answer_text;
-                break;
-              }
-            }
+            answerTextsByAnswerId.set(answerId, answer.answer_text);
             const errors = transformLanguageToolResponse(
               (result as PromiseFulfilledResult<LanguageToolResponse>).value,
-              fullText,
+              answer.answer_text,
             );
             ltErrorsByAnswerId.set(answerId, errors);
           }
@@ -76,10 +69,8 @@ export async function processLanguageToolResults(
       }
     }
   } else {
-    for (const part of modalParts) {
-      for (const answer of part.answers) {
-        answerTextsByAnswerId.set(answer.id, answer.answer_text);
-      }
+    for (const answer of iterateAnswers(modalParts)) {
+      answerTextsByAnswerId.set(answer.id, answer.answer_text);
     }
   }
 

@@ -2,13 +2,14 @@
  * Submission validation utilities
  */
 
-import type { CreateSubmissionRequest, SubmissionPart } from "@writeo/shared";
-import { isValidUUID } from "@writeo/shared";
+import type { CreateSubmissionRequest } from "@writeo/shared";
 import { validateText } from "../../utils/validation";
 import { errorResponse } from "../../utils/errors";
 import { MAX_ANSWER_TEXT_LENGTH } from "../../utils/constants";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
+import { z } from "zod";
+import { formatZodMessage } from "../../utils/zod";
 
 export interface ValidationResult {
   answerIds: string[];
@@ -20,80 +21,106 @@ export interface ValidationResult {
   }>;
 }
 
-function validateAnswer(
-  answer: SubmissionPart["answers"][number],
-  answerIds: string[],
-  questionsToCreate: Array<{ id: string; text: string }>,
-  answersToCreate: Array<{ id: string; questionId: string; answerText: string }>,
-  c: Context<{ Bindings: Env }>,
-): Response | null {
-  if (!answer.id || !isValidUUID(answer.id)) {
-    return errorResponse(400, `Invalid answer id: ${answer.id}`, c);
-  }
-  answerIds.push(answer.id);
+const MAX_QUESTION_TEXT_LENGTH = 10000;
 
-  const answerText = answer["text"];
-  if (!answerText) {
-    return errorResponse(
-      400,
-      `Answer text is required. Answers must be sent inline with the submission.`,
-      c,
-    );
-  }
+const templateSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  version: z.number({ invalid_type_error: "Template version must be a number" }),
+});
 
-  if (!answer["question-id"]) {
-    return errorResponse(400, `question-id is required for each answer`, c);
+const answerTextValidator = (
+  value: string,
+  ctx: z.RefinementCtx,
+  maxLength: number,
+  label: string,
+) => {
+  const validation = validateText(value, maxLength);
+  if (!validation.valid) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Invalid ${label}: ${validation.error || "Invalid content"}`,
+    });
   }
+};
 
-  const questionId = answer["question-id"];
-  if (!isValidUUID(questionId)) {
-    return errorResponse(400, `Invalid question-id format: ${questionId}`, c);
-  }
+const answerSchema = z.object({
+  id: z.string().uuid("Invalid answer id"),
+  text: z
+    .string()
+    .superRefine((val, ctx) =>
+      answerTextValidator(val, ctx, MAX_ANSWER_TEXT_LENGTH, "answer text"),
+    ),
+  "question-id": z.string().uuid("Invalid question-id format"),
+  "question-text": z
+    .string()
+    .optional()
+    .superRefine((val, ctx) => {
+      if (typeof val === "undefined") {
+        return;
+      }
+      answerTextValidator(val, ctx, MAX_QUESTION_TEXT_LENGTH, "question-text");
+    }),
+});
 
-  const answerTextValidation = validateText(answerText, MAX_ANSWER_TEXT_LENGTH);
-  if (!answerTextValidation.valid) {
-    return errorResponse(
-      400,
-      `Invalid answer text: ${answerTextValidation.error || "Invalid content"}`,
-      c,
-    );
-  }
+const submissionPartSchema = z.object({
+  part: z.string().min(1, "Each submission part must include a part identifier"),
+  answers: z
+    .array(answerSchema, { required_error: "Each submission part must include answers" })
+    .min(1, "Each submission part must include at least one answer"),
+});
 
-  const questionText = answer["question-text"];
-  if (questionText) {
-    const questionTextValidation = validateText(questionText, 10000);
-    if (!questionTextValidation.valid) {
-      return errorResponse(
-        400,
-        `Invalid question-text: ${questionTextValidation.error || "Invalid content"}`,
-        c,
-      );
-    }
-    questionsToCreate.push({ id: questionId, text: questionText });
-  }
+const submissionSchema = z
+  .object({
+    submission: z
+      .array(submissionPartSchema, { required_error: "Submission array is required" })
+      .min(1, "Submission must include at least one part"),
+    template: templateSchema,
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    const answerIds = new Set<string>();
+    const questionsById = new Map<string, string>();
+    data.submission.forEach((part, partIndex) => {
+      part.answers.forEach((answer, answerIndex) => {
+        if (answerIds.has(answer.id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Duplicate answer id detected: ${answer.id}`,
+            path: ["submission", partIndex, "answers", answerIndex, "id"],
+          });
+        } else {
+          answerIds.add(answer.id);
+        }
 
-  answersToCreate.push({
-    id: answer.id,
-    questionId: questionId,
-    answerText: answerText,
+        const questionId = answer["question-id"];
+        const questionText = answer["question-text"];
+        if (typeof questionText === "string") {
+          const existing = questionsById.get(questionId);
+          if (existing && existing !== questionText) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `Conflicting question text provided for question-id ${questionId}`,
+              path: ["submission", partIndex, "answers", answerIndex, "question-text"],
+            });
+          } else if (!existing) {
+            questionsById.set(questionId, questionText);
+          }
+        }
+      });
+    });
   });
-
-  return null;
-}
 
 export function validateSubmissionBody(
   body: CreateSubmissionRequest,
   c: Context<{ Bindings: Env }>,
 ): ValidationResult | Response {
-  if (!body.submission || !Array.isArray(body.submission)) {
-    return errorResponse(400, "Missing or invalid 'submission' array", c);
-  }
-
-  if (!body.template || !body.template.name || typeof body.template.version !== "number") {
-    return errorResponse(400, "Missing or invalid 'template' object", c);
+  const parsed = submissionSchema.safeParse(body);
+  if (!parsed.success) {
+    return errorResponse(400, formatZodMessage(parsed.error, "Invalid submission payload"), c);
   }
 
   const answerIds: string[] = [];
+  const questionsById = new Map<string, string>();
   const questionsToCreate: Array<{ id: string; text: string }> = [];
   const answersToCreate: Array<{
     id: string;
@@ -101,13 +128,22 @@ export function validateSubmissionBody(
     answerText: string;
   }> = [];
 
-  for (const part of body.submission) {
-    if (!part.part || !Array.isArray(part.answers)) {
-      return errorResponse(400, "Invalid submission part structure", c);
-    }
+  for (const part of parsed.data.submission) {
     for (const answer of part.answers) {
-      const result = validateAnswer(answer, answerIds, questionsToCreate, answersToCreate, c);
-      if (result) return result;
+      answerIds.push(answer.id);
+
+      const questionId = answer["question-id"];
+      const questionText = answer["question-text"];
+      if (typeof questionText === "string" && !questionsById.has(questionId)) {
+        questionsById.set(questionId, questionText);
+        questionsToCreate.push({ id: questionId, text: questionText });
+      }
+
+      answersToCreate.push({
+        id: answer.id,
+        questionId,
+        answerText: answer.text,
+      });
     }
   }
 

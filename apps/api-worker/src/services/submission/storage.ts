@@ -9,30 +9,38 @@ import type { Context } from "hono";
 import type { Env } from "../../types/env";
 import type { ValidationResult } from "./validator";
 
+type StorageConflict = Response & { status: 409 };
+
+function conflictResponse(message: string, c: Context<{ Bindings: Env }>): StorageConflict {
+  return errorResponse(409, message, c) as StorageConflict;
+}
+
 async function storeQuestions(
   storage: StorageService,
   questionsToCreate: Array<{ id: string; text: string }>,
   c: Context<{ Bindings: Env }>,
 ): Promise<Response | null> {
-  const questionPromises = questionsToCreate.map(async (question) => {
-    const existing = await storage.getQuestion(question.id);
-    if (!existing) {
-      await storage.putQuestion(question.id, { text: question.text });
-    } else {
-      if (existing.text !== question.text) {
-        throw new Error(`Question ${question.id} already exists with different content`);
-      }
-    }
-  });
+  const existingQuestions = new Map<string, Awaited<ReturnType<StorageService["getQuestion"]>>>();
 
-  const questionResults = await Promise.allSettled(questionPromises);
-  for (const result of questionResults) {
-    if (result.status === "rejected") {
-      return errorResponse(
-        409,
-        result.reason instanceof Error ? result.reason.message : String(result.reason),
-        c,
-      );
+  for (const question of questionsToCreate) {
+    if (!existingQuestions.has(question.id)) {
+      existingQuestions.set(question.id, await storage.getQuestion(question.id));
+    }
+    const existing = existingQuestions.get(question.id);
+    if (!existing) {
+      try {
+        await storage.putQuestion(question.id, { text: question.text });
+      } catch (error) {
+        return errorResponse(
+          500,
+          `Failed to store question ${question.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          c,
+        );
+      }
+    } else if (existing.text !== question.text) {
+      return conflictResponse(`Question ${question.id} already exists with different content`, c);
     }
   }
   return null;
@@ -44,34 +52,43 @@ async function storeAnswers(
   createdQuestionIds: Set<string>,
   c: Context<{ Bindings: Env }>,
 ): Promise<Response | null> {
-  const answerPromises = answersToCreate.map(async (answer) => {
-    const existing = await storage.getAnswer(answer.id);
+  const existingAnswers = new Map<string, Awaited<ReturnType<StorageService["getAnswer"]>>>();
+  const questionExistenceCache = new Map<string, boolean>();
+
+  for (const answer of answersToCreate) {
+    if (!existingAnswers.has(answer.id)) {
+      existingAnswers.set(answer.id, await storage.getAnswer(answer.id));
+    }
+    const existing = existingAnswers.get(answer.id);
     if (!existing) {
       if (!createdQuestionIds.has(answer.questionId)) {
-        const questionExists = await storage.getQuestion(answer.questionId);
-        if (!questionExists) {
-          throw new Error(`Referenced question does not exist: ${answer.questionId}`);
+        if (!questionExistenceCache.has(answer.questionId)) {
+          const questionExists = await storage.getQuestion(answer.questionId);
+          questionExistenceCache.set(answer.questionId, Boolean(questionExists));
+        }
+        if (!questionExistenceCache.get(answer.questionId)) {
+          return conflictResponse(`Referenced question does not exist: ${answer.questionId}`, c);
         }
       }
-      await storage.putAnswer(answer.id, {
-        "question-id": answer.questionId,
-        text: answer.answerText,
-      });
-    } else {
-      if (existing["question-id"] !== answer.questionId || existing.text !== answer.answerText) {
-        throw new Error(`Answer ${answer.id} already exists with different content`);
+      try {
+        await storage.putAnswer(answer.id, {
+          "question-id": answer.questionId,
+          text: answer.answerText,
+        });
+      } catch (error) {
+        return errorResponse(
+          500,
+          `Failed to store answer ${answer.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          c,
+        );
       }
-    }
-  });
-
-  const answerResults = await Promise.allSettled(answerPromises);
-  for (const result of answerResults) {
-    if (result.status === "rejected") {
-      return errorResponse(
-        409,
-        result.reason instanceof Error ? result.reason.message : String(result.reason),
-        c,
-      );
+    } else if (
+      existing["question-id"] !== answer.questionId ||
+      existing.text !== answer.answerText
+    ) {
+      return conflictResponse(`Answer ${answer.id} already exists with different content`, c);
     }
   }
   return null;
@@ -88,22 +105,6 @@ export async function storeSubmissionEntities(
 
   const questionResult = await storeQuestions(storage, questionsToCreate, c);
   if (questionResult) return questionResult;
-
-  const answersWithoutQuestionText = answersToCreate.filter((answer) => {
-    return !questionsToCreate.some((q) => q.id === answer.questionId);
-  });
-
-  // Allow answers without question text (free writing) - only check if question exists when storeResults is true
-  // If question doesn't exist and no question-text was provided, that's OK for free writing
-  for (const answer of answersWithoutQuestionText) {
-    const existingQuestion = await storage.getQuestion(answer.questionId);
-    // Only require question to exist if we're storing results and question wasn't provided
-    // Empty question text is valid for free writing
-    if (!existingQuestion) {
-      // This is OK - empty question text is allowed for free writing
-      // The question ID will still be stored but with empty text
-    }
-  }
 
   const createdQuestionIds = new Set(questionsToCreate.map((q) => q.id));
   const answerResult = await storeAnswers(storage, answersToCreate, createdQuestionIds, c);

@@ -5,7 +5,6 @@
 import { errorResponse } from "../../utils/errors";
 import { validateText, validateRequestBodySize } from "../../utils/validation";
 import {
-  isValidUUID,
   findAssessorResultById,
   type AssessmentResults,
   type AssessorResult,
@@ -22,6 +21,7 @@ import {
 import { TeacherFeedbackRequestSchema, formatZodError } from "./validation";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
+import { uuidStringSchema, formatZodMessage } from "../../utils/zod";
 
 type FeedbackMode = "clues" | "explanation";
 
@@ -134,10 +134,17 @@ function validateQuestionText(
 export async function handleTeacherFeedbackRequest(
   c: Context<{ Bindings: Env }>,
 ): Promise<TeacherFeedbackResponse | Response> {
-  const submissionId = c.req.param("submission_id");
-  if (!isValidUUID(submissionId)) {
-    return errorResponse(400, "Invalid submission_id format", c);
+  const submissionIdResult = uuidStringSchema("submission_id").safeParse(
+    c.req.param("submission_id"),
+  );
+  if (!submissionIdResult.success) {
+    return errorResponse(
+      400,
+      formatZodMessage(submissionIdResult.error, "Invalid submission_id format"),
+      c,
+    );
   }
+  const submissionId = submissionIdResult.data;
 
   const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
   if (!sizeValidation.valid) {
