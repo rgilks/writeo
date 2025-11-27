@@ -1,0 +1,141 @@
+name: Deploy Modal Services
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'services/modal-essay/**'
+      - 'services/modal-lt/**'
+      - 'packages/shared/py/**'
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      modal-essay: ${{ steps.changes.outputs.modal-essay }}
+      modal-lt: ${{ steps.changes.outputs.modal-lt }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # Manual trigger - deploy all services
+            echo "modal-essay=true" >> $GITHUB_OUTPUT
+            echo "modal-lt=true" >> $GITHUB_OUTPUT
+          else
+            # Get the base commit (use merge-base for PRs, or HEAD^1 for pushes)
+            BASE_SHA="${{ github.event.before }}"
+            if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]; then
+              BASE_SHA="HEAD^1"
+            fi
+            
+            # Check for changes in modal-essay
+            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-essay/|^packages/shared/py/"; then
+              echo "modal-essay=true" >> $GITHUB_OUTPUT
+            else
+              echo "modal-essay=false" >> $GITHUB_OUTPUT
+            fi
+            
+            # Check for changes in modal-lt
+            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-lt/|^packages/shared/py/"; then
+              echo "modal-lt=true" >> $GITHUB_OUTPUT
+            else
+              echo "modal-lt=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  deploy-modal-essay:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modal-essay == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install Modal CLI
+        run: uv pip install modal
+
+      - name: Authenticate with Modal
+        run: |
+          echo "${{ secrets.MODAL_TOKEN }}" | modal token set
+        env:
+          MODAL_TOKEN: ${{ secrets.MODAL_TOKEN }}
+
+      - name: Deploy Modal Essay Service
+        working-directory: services/modal-essay
+        run: |
+          echo "Deploying Modal Essay service..."
+          modal deploy app.py
+
+      - name: Extract Modal URL
+        id: extract-url
+        working-directory: services/modal-essay
+        run: |
+          # Modal deploy outputs the URL, but we need to capture it
+          # This is a best-effort extraction - the URL will be in the logs
+          echo "Modal deployment completed. Check the logs above for the endpoint URL."
+          echo "url=check-logs" >> $GITHUB_OUTPUT
+
+  deploy-modal-lt:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modal-lt == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install Modal CLI
+        run: uv pip install modal
+
+      - name: Authenticate with Modal
+        run: |
+          echo "${{ secrets.MODAL_TOKEN }}" | modal token set
+        env:
+          MODAL_TOKEN: ${{ secrets.MODAL_TOKEN }}
+
+      - name: Check if app.py exists
+        id: check-app
+        working-directory: services/modal-lt
+        run: |
+          if [ -f "app.py" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️  app.py not found in modal-lt. Skipping deployment."
+            echo "   If you want to deploy modal-lt, create an app.py file similar to modal-essay."
+          fi
+
+      - name: Deploy Modal LanguageTool Service
+        if: steps.check-app.outputs.exists == 'true'
+        working-directory: services/modal-lt
+        run: |
+          echo "Deploying Modal LanguageTool service..."
+          modal deploy app.py
+
