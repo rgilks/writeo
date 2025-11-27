@@ -44,9 +44,6 @@ interface TeacherFeedbackMeta {
   model?: string;
 }
 
-/**
- * Sets up LLM configuration from environment
- */
 function setupLLMConfig(env: Env): { provider: LLMProvider; apiKey: string; model: string } | null {
   const provider = parseLLMProvider(env.LLM_PROVIDER);
   const apiKey = getAPIKey(provider, {
@@ -125,13 +122,6 @@ function validateQuestionText(
   return questionText;
 }
 
-/**
- * Handles teacher feedback requests by validating input, checking cache,
- * fetching missing data, and generating or returning cached feedback.
- *
- * @param c - Hono context with environment bindings
- * @returns Teacher feedback response or error response
- */
 export async function handleTeacherFeedbackRequest(
   c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<TeacherFeedbackResponse | Response> {

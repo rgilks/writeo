@@ -11,10 +11,7 @@ interface KeyInfo {
   owner?: string;
 }
 
-/**
- * Validates an API key and sets authentication context.
- * Checks in order: admin key, test key, then user keys in KV store.
- */
+// Checks in order: admin key, test key, then user keys in KV store
 async function validateApiKey(
   providedKey: string,
   adminKey: string,

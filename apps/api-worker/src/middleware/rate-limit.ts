@@ -30,9 +30,6 @@ interface RateLimitConfig {
   checkDailyLimit: boolean;
 }
 
-/**
- * Determines rate limit configuration based on request path and method.
- */
 function getRateLimitConfig(path: string, method: string, isTest: boolean): RateLimitConfig {
   if (path.startsWith("/text/submissions/") && path.includes("/results") && method === "GET") {
     return {
@@ -65,10 +62,7 @@ function getRateLimitConfig(path: string, method: string, isTest: boolean): Rate
   };
 }
 
-/**
- * Gets the identifier for rate limiting.
- * Uses IP for shared keys (admin/unknown), owner ID for user-specific keys.
- */
+// Uses IP for shared keys (admin/unknown), owner ID for user-specific keys
 function getRateLimitIdentifier(apiKeyOwner: string, ip: string): string {
   return apiKeyOwner === KEY_OWNER.ADMIN || apiKeyOwner === KEY_OWNER.UNKNOWN ? ip : apiKeyOwner;
 }
@@ -107,10 +101,6 @@ function setRateLimitHeaders(
   c.header("X-RateLimit-Reset", String(Math.ceil(resetTime / 1000)));
 }
 
-/**
- * Checks daily submission limit and returns the result.
- * @returns Object with `exceeded` boolean and current `count`
- */
 async function checkDailyLimit(
   kvStore: KVNamespace,
   identifier: string,
@@ -137,9 +127,6 @@ async function checkDailyLimit(
   return { exceeded: false, count: dailyCount + 1 };
 }
 
-/**
- * Checks if the rate limit has been exceeded and returns an error response if so.
- */
 async function checkRateLimitExceeded(
   c: Context<{
     Bindings: Env;
@@ -161,9 +148,6 @@ async function checkRateLimitExceeded(
   return null;
 }
 
-/**
- * Checks daily submission limit and returns an error response if exceeded.
- */
 async function checkDailyLimitExceeded(
   c: Context<{
     Bindings: Env;
@@ -183,9 +167,6 @@ async function checkDailyLimitExceeded(
   return null;
 }
 
-/**
- * Updates the rate limit state in KV store and sets response headers.
- */
 async function updateRateLimitState(
   c: Context<{
     Bindings: Env;
@@ -206,10 +187,6 @@ async function updateRateLimitState(
   setRateLimitHeaders(c, config.maxRequests, newCount, resetTime);
 }
 
-/**
- * Rate limiting middleware.
- * Checks request rate limits and daily submission limits based on API key owner or IP.
- */
 export async function rateLimit(
   c: Context<{
     Bindings: Env;

@@ -1,18 +1,8 @@
-/**
- * Authentication utilities for feedback routes
- */
-
 import { errorResponse } from "../../utils/errors";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
 
-/**
- * Validates the API key from the Authorization header.
- * Supports both the production API_KEY and optional TEST_API_KEY.
- *
- * @param c - Hono context with environment bindings
- * @returns Error response if unauthorized, null if valid
- */
+// Supports both "Token <key>" and bare key formats
 export function validateApiKey(
   c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Response | null {

@@ -28,9 +28,6 @@ interface StreamingRequestData {
   aiModel: string;
 }
 
-/**
- * Extracts essay scores and language tool errors from assessment results
- */
 function extractAssessmentData(results: AssessmentResults): {
   essayScores?: EssayScores;
   ltErrors?: GrammarErrors;
@@ -58,9 +55,6 @@ function extractAssessmentData(results: AssessmentResults): {
   return { essayScores, ltErrors };
 }
 
-/**
- * Fetches question text from storage, trying multiple sources
- */
 async function fetchQuestionText(
   storage: StorageService,
   results: AssessmentResults | null,
@@ -86,9 +80,6 @@ async function fetchQuestionText(
   return null;
 }
 
-/**
- * Sets up LLM configuration from environment
- */
 function setupLLMConfig(env: Env): { provider: LLMProvider; apiKey: string; model: string } | null {
   const provider = parseLLMProvider(env.LLM_PROVIDER);
   const apiKey = getAPIKey(provider, {
@@ -104,13 +95,6 @@ function setupLLMConfig(env: Env): { provider: LLMProvider; apiKey: string; mode
   return { provider, apiKey, model };
 }
 
-/**
- * Handles streaming feedback requests by validating input, fetching missing data from storage,
- * and setting up LLM configuration for streaming AI feedback generation.
- *
- * @param c - Hono context with environment bindings
- * @returns Request data for streaming or error response
- */
 export async function handleStreamingRequest(
   c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<StreamingRequestData | Response> {

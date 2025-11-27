@@ -80,9 +80,6 @@ function getRequestId(context?: { get?: (key: string) => unknown }): string | un
   return undefined;
 }
 
-/**
- * Formats a log message with optional request ID prefix.
- */
 function formatLogMessage(message: string, requestId?: string): string {
   if (requestId) {
     return `[req-${requestId}] ${message}`;
@@ -90,9 +87,6 @@ function formatLogMessage(message: string, requestId?: string): string {
   return message;
 }
 
-/**
- * Internal logging helper that sanitizes data before logging.
- */
 function safeLog(
   level: "error" | "warn" | "info",
   message: string,
@@ -106,12 +100,7 @@ function safeLog(
   logFn(formattedMessage, sanitizedData);
 }
 
-/**
- * Logs an error with sanitized data.
- * @param message - Error message
- * @param data - Optional data to log (will be sanitized)
- * @param context - Optional Hono context to extract request ID
- */
+// All logs are automatically sanitized to remove sensitive data
 export function safeLogError(
   message: string,
   data?: unknown,
@@ -120,12 +109,6 @@ export function safeLogError(
   safeLog("error", message, data, context);
 }
 
-/**
- * Logs a warning with sanitized data.
- * @param message - Warning message
- * @param data - Optional data to log (will be sanitized)
- * @param context - Optional Hono context to extract request ID
- */
 export function safeLogWarn(
   message: string,
   data?: unknown,
@@ -134,12 +117,6 @@ export function safeLogWarn(
   safeLog("warn", message, data, context);
 }
 
-/**
- * Logs an info message with sanitized data.
- * @param message - Info message
- * @param data - Optional data to log (will be sanitized)
- * @param context - Optional Hono context to extract request ID
- */
 export function safeLogInfo(
   message: string,
   data?: unknown,
@@ -148,9 +125,6 @@ export function safeLogInfo(
   safeLog("info", message, data, context);
 }
 
-/**
- * Sanitizes an error object, extracting message and name while removing sensitive data.
- */
 export function sanitizeError(error: unknown): {
   message: string;
   name?: string;
