@@ -12,35 +12,10 @@ import {
 } from "./context";
 import type { EssayScores, FeedbackError, RelevanceCheck } from "./types";
 
-export function buildCombinedFeedbackPrompt(
-  questionText: string,
-  answerText: string,
-  essayScores?: EssayScores,
-  languageToolErrors?: FeedbackError[],
-  llmErrors?: FeedbackError[],
-  relevanceCheck?: RelevanceCheck,
-): string {
-  const truncatedAnswerText = truncateEssayText(answerText);
-  const truncatedQuestionText = truncateQuestionText(questionText);
-  const essayContext = buildEssayContext(essayScores);
-  const grammarContext = buildGrammarContext(languageToolErrors, llmErrors);
-  const relevanceContext = buildRelevanceContext(relevanceCheck);
-  const lowestDim = getLowestDimension(essayScores);
-  const focusArea = getFocusArea(lowestDim?.[0]);
+const PROMPT_PREAMBLE =
+  "You are an expert English language tutor specializing in academic argumentative writing. Analyze the following essay answer and provide TWO types of feedback:";
 
-  return `You are an expert English language tutor specializing in academic argumentative writing. Analyze the following essay answer and provide TWO types of feedback:
-
-<question>
-${truncatedQuestionText}
-</question>
-
-<answer>
-${truncatedAnswerText}
-</answer>
-
-${essayContext}${grammarContext}${relevanceContext}
-
-Provide feedback in TWO formats:
+const DETAILED_FEEDBACK_GUIDE = `Provide feedback in TWO formats:
 
 1. DETAILED FEEDBACK:
 Analyze the essay across these key areas:
@@ -80,17 +55,19 @@ Provide:
 - Relevance: Does the answer fully address the question? (true/false, score 0.0-1.0, brief explanation)
 - Strengths: 2-3 specific things the student did well (be specific about what worked)
 - Improvements: 2-3 specific, actionable areas to improve (prioritize the most important issues)
-- Overall: A brief summary comment (1-2 sentences) that focuses on improvement and next steps
+- Overall: A brief summary comment (1-2 sentences) that focuses on improvement and next steps`;
 
-2. TEACHER FEEDBACK (simple, direct, professional):
+const TEACHER_FEEDBACK_GUIDE = `2. TEACHER FEEDBACK (simple, direct, professional):
 - Give clear, direct feedback as a professional writing tutor would
 - Be honest and constructive
 - Keep it brief (2-3 sentences max)
 - Don't mention technical terms like "CEFR" or "band scores"
 - Focus on the most important area to improve
-- Provide one specific, actionable suggestion
+- Provide one specific, actionable suggestion`;
 
-Respond ONLY with valid JSON (no markdown, no explanations):
+const buildJsonResponseFormat = (
+  focusArea: string,
+): string => `Respond ONLY with valid JSON (no markdown, no explanations):
 {
 "detailed": {
 "relevance": {
@@ -109,4 +86,35 @@ Respond ONLY with valid JSON (no markdown, no explanations):
 "focusArea": "${focusArea}"
 }
 }`;
+
+export function buildCombinedFeedbackPrompt(
+  questionText: string,
+  answerText: string,
+  essayScores?: EssayScores,
+  languageToolErrors?: FeedbackError[],
+  llmErrors?: FeedbackError[],
+  relevanceCheck?: RelevanceCheck,
+): string {
+  const truncatedAnswerText = truncateEssayText(answerText);
+  const truncatedQuestionText = truncateQuestionText(questionText);
+  const essayContext = buildEssayContext(essayScores);
+  const grammarContext = buildGrammarContext(languageToolErrors, llmErrors);
+  const relevanceContext = buildRelevanceContext(relevanceCheck);
+  const lowestDim = getLowestDimension(essayScores);
+  const focusArea = lowestDim ? getFocusArea(lowestDim[0]) : getFocusArea();
+  const contextBlock = [essayContext, grammarContext, relevanceContext]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const sections = [
+    PROMPT_PREAMBLE,
+    `<question>\n${truncatedQuestionText}\n</question>`,
+    `<answer>\n${truncatedAnswerText}\n</answer>`,
+    contextBlock,
+    DETAILED_FEEDBACK_GUIDE,
+    TEACHER_FEEDBACK_GUIDE,
+    buildJsonResponseFormat(focusArea),
+  ].filter(Boolean);
+
+  return sections.join("\n\n");
 }

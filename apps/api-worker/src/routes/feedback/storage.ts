@@ -3,7 +3,7 @@
  */
 
 import { StorageService } from "../../services/storage";
-import type { AssessmentResults, LanguageToolError, AssessorResult } from "@writeo/shared";
+import type { AssessmentResults, AssessorResult } from "@writeo/shared";
 import {
   getEssayAssessorResult,
   getLanguageToolAssessorResult,

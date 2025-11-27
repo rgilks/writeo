@@ -9,7 +9,6 @@ import type { Context } from "hono";
 import type { Env } from "../../types/env";
 import type { AssessmentResults, LanguageToolError } from "@writeo/shared";
 import {
-  AssessmentDataSchema,
   StreamingFeedbackRequestSchema,
   type AssessmentDataInput,
   formatZodError,

@@ -2,6 +2,37 @@
 
 Documentation for individual services in the Writeo project.
 
+## API Worker (Cloudflare Workers)
+
+Edge worker that exposes the public API (`/text/submissions`, `/text/.../feedback`, etc.) and orchestrates assessment services.
+
+**Location:** `apps/api-worker/`
+
+### Responsibilities
+
+- Accept submission, feedback, and teacher-feedback requests
+- Enforce rate limiting, API-key auth, and payload validation
+- Fan out to modal essay/LanguageTool services and merge results
+- Serve SSE streaming responses for incremental AI feedback
+
+### Request Validation
+
+- All feedback endpoints now share Zod schemas in `src/routes/feedback/validation.ts`
+- Schemas are used by:
+  - `handlers-teacher.ts` for teacher feedback requests
+  - `handlers-streaming.ts` for AI streaming requests
+  - `storage.ts` when merging request-supplied assessment data with stored assessor results
+- Adding/changing request fields only requires updating the schema file (and consumers automatically inherit stricter validation errors)
+
+### Local Testing
+
+- `scripts/hooks/pre-push` spins up the worker + web app with mocked LLM responses and runs both Vitest + Playwright suites
+- To run separately:
+  ```bash
+  npm test          # Vitest API suite
+  npm run test:e2e  # Playwright suite (requires dev servers or run via pre-push hook)
+  ```
+
 ## Modal Essay Scoring Service
 
 FastAPI service for essay scoring using ML models.
