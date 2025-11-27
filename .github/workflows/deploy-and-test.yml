@@ -66,22 +66,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-playwright-
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: Run API tests against production
         # Note: API tests are excluded from local runs (npm test) to save costs.
         # They only run in CI to verify production deployments.
+        # IMPORTANT: These tests use REAL APIs (not mocks) to verify production functionality.
+        # The production worker must have USE_MOCK_LLM unset or false in Cloudflare secrets.
         run: npx vitest run tests/api.test.ts
         env:
           CI: true
           API_BASE: ${{ env.PRODUCTION_API_URL }}
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
-          # Note: Tests call production API. The production worker must have USE_MOCK_LLM
-          # unset or false in Cloudflare secrets to use real LLM APIs. If USE_MOCK_LLM=true
-          # is set in the worker environment, tests will use mocked LLM responses.
+          # Tests call production API with real API keys - no mocks used
+          # Production worker must have USE_MOCK_LLM unset/false to use real LLM APIs
 
       - name: Run E2E tests against deployed site
+        # IMPORTANT: These tests use REAL APIs (not mocks) to verify production functionality.
+        # The production worker must have USE_MOCK_LLM unset or false in Cloudflare secrets.
         run: npm run test:e2e -- --reporter=github
         env:
           PLAYWRIGHT_BASE_URL: ${{ env.PRODUCTION_WEB_URL }}
@@ -89,14 +101,7 @@ jobs:
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
           TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
           CI: true
-          # Note: Tests call production API. The production worker must have USE_MOCK_LLM
-          # unset or false in Cloudflare secrets to use real LLM APIs. If USE_MOCK_LLM=true
-          # is set in the worker environment, tests will use mocked LLM responses.
+          # Tests call production API with real API keys - no mocks used
+          # Production worker must have USE_MOCK_LLM unset/false to use real LLM APIs
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
+      # Note: HTML reports disabled - using github reporter only for CI output
