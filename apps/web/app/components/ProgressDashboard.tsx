@@ -234,6 +234,8 @@ export function ProgressDashboard() {
     return recentDrafts.length > 0 ? Math.min(7, recentDrafts.length) : 0;
   }, [mounted, drafts]);
 
+  const showAchievements = mounted && isHydrated && achievements.length > 0;
+
   return (
     <motion.div
       className="card"
@@ -323,24 +325,30 @@ export function ProgressDashboard() {
         )}
       </div>
 
-      {/* Achievements Section - Only render after client-side mount and hydration to avoid hydration mismatch */}
-      <AnimatePresence>
-        {mounted && isHydrated && achievements.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            style={{
-              marginTop: "var(--spacing-xl)",
-              paddingTop: "var(--spacing-xl)",
-              borderTop: "2px solid var(--border-color)",
-              position: "relative",
-            }}
-            lang="en"
-          >
+      {/* Achievements Section - Always render container to prevent layout shift */}
+      <motion.div
+        layout
+        animate={{
+          opacity: showAchievements ? 1 : 0,
+        }}
+        transition={{
+          opacity: { duration: 0.5, delay: 0.5 },
+          layout: { duration: 0.5, ease: "easeInOut" },
+        }}
+        style={{
+          marginTop: showAchievements ? "var(--spacing-xl)" : 0,
+          paddingTop: showAchievements ? "var(--spacing-xl)" : 0,
+          borderTop: showAchievements ? "2px solid var(--border-color)" : "none",
+          position: "relative",
+          minHeight: 0,
+        }}
+        lang="en"
+      >
+        {showAchievements && (
+          <>
             <motion.h3
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.6, type: "spring", stiffness: 200 }}
               style={{
                 fontSize: "22px",
@@ -382,9 +390,9 @@ export function ProgressDashboard() {
             >
               <AchievementList achievements={achievements} maxDisplay={6} />
             </motion.div>
-          </motion.div>
+          </>
         )}
-      </AnimatePresence>
+      </motion.div>
 
       <AnimatePresence>
         {mounted && isHydrated && totalWritings === 0 && (

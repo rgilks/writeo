@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { ProgressDashboard } from "@/app/components/ProgressDashboard";
 import "./globals.css";
 
@@ -107,7 +108,7 @@ export default function HomePage() {
           <ProgressDashboard />
         </div>
 
-        <div className="grid">
+        <motion.div className="grid" layout transition={{ duration: 0.5, ease: "easeInOut" }}>
           <div>
             <Link href="/write/custom" style={{ textDecoration: "none" }}>
               <div className="task-card">
@@ -140,7 +141,7 @@ export default function HomePage() {
               </Link>
             </div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </>
   );
