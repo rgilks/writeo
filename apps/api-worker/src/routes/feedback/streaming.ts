@@ -4,37 +4,26 @@
 
 import { callLLMAPI, streamLLMAPI, type LLMProvider } from "../../services/llm";
 import { truncateEssayText, truncateQuestionText } from "../../utils/text-processing";
+import { buildEssayContext, buildGrammarContext } from "../../services/feedback/context";
+import type { FeedbackData } from "./storage";
+
+type EssayScores = FeedbackData["essayScores"];
+type GrammarErrors = FeedbackData["ltErrors"];
+
+const STREAMING_SYSTEM_MESSAGE =
+  "You are a professional writing tutor specializing in academic argumentative writing. Provide clear, direct feedback focused on actionable improvements. Never mention technical terms like CEFR or band scores.";
+const STREAMING_MAX_TOKENS = 1000;
 
 export function buildStreamingPrompt(
   questionText: string,
   answerText: string,
-  essayScores?: any,
-  ltErrors?: any[],
+  essayScores?: EssayScores,
+  ltErrors?: GrammarErrors,
 ): string {
   const truncatedAnswerText = truncateEssayText(answerText);
   const truncatedQuestionText = truncateQuestionText(questionText);
-
-  let essayContext = "";
-  if (essayScores) {
-    essayContext = `\n\nAssessment Results:
-- Overall Score: ${essayScores.overall ?? essayScores.dimensions?.Overall ?? "N/A"} / 9.0
-- Task Achievement (TA): ${essayScores.dimensions?.TA ?? "N/A"} / 9.0
-- Coherence & Cohesion (CC): ${essayScores.dimensions?.CC ?? "N/A"} / 9.0
-- Vocabulary: ${essayScores.dimensions?.Vocab ?? "N/A"} / 9.0
-- Grammar: ${essayScores.dimensions?.Grammar ?? "N/A"} / 9.0`;
-  }
-
-  let grammarContext = "";
-  if (ltErrors && ltErrors.length > 0) {
-    const errorSummary = ltErrors
-      .slice(0, 10)
-      .map(
-        (err, idx) =>
-          `${idx + 1}. ${err.message} (${err.category})${err.suggestions ? ` - Suggestions: ${err.suggestions.slice(0, 2).join(", ")}` : ""}`,
-      )
-      .join("\n");
-    grammarContext = `\n\nGrammar & Language Issues Found (${ltErrors.length} total):\n${errorSummary}${ltErrors.length > 10 ? `\n... and ${ltErrors.length - 10} more issues` : ""}`;
-  }
+  const essayContext = buildEssayContext(essayScores);
+  const grammarContext = buildGrammarContext(ltErrors, undefined);
 
   return `You are an expert English language tutor specializing in academic argumentative writing. Analyze the following essay answer and provide detailed, contextual feedback.
 
@@ -89,11 +78,10 @@ export async function createStreamingResponse(
     async start(controller) {
       const encoder = new TextEncoder();
       try {
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: "start", message: "Starting AI feedback generation..." })}\n\n`,
-          ),
-        );
+        enqueueSSE(controller, encoder, {
+          type: "start",
+          message: "Starting AI feedback generation...",
+        });
 
         let hasContent = false;
         try {
@@ -101,20 +89,11 @@ export async function createStreamingResponse(
             llmProvider,
             apiKey,
             aiModel,
-            [
-              {
-                role: "system",
-                content:
-                  "You are a professional writing tutor specializing in academic argumentative writing. Provide clear, direct feedback focused on actionable improvements. Never mention technical terms like , CEFR, or band scores.",
-              },
-              { role: "user", content: prompt },
-            ],
-            1000,
+            buildLLMMessages(prompt),
+            STREAMING_MAX_TOKENS,
           )) {
             hasContent = true;
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: chunk })}\n\n`),
-            );
+            enqueueSSE(controller, encoder, { type: "chunk", text: chunk });
           }
         } catch (streamError) {
           console.error("[Stream] Streaming failed, falling back to non-streaming:", streamError);
@@ -122,59 +101,71 @@ export async function createStreamingResponse(
             llmProvider,
             apiKey,
             aiModel,
-            [
-              {
-                role: "system",
-                content:
-                  "You are a professional writing tutor specializing in academic argumentative writing. Provide clear, direct feedback focused on actionable improvements. Never mention technical terms like , CEFR, or band scores.",
-              },
-              { role: "user", content: prompt },
-            ],
-            1000,
+            buildLLMMessages(prompt),
+            STREAMING_MAX_TOKENS,
           );
 
           if (responseText && responseText.trim().length > 0) {
             hasContent = true;
-            const words = responseText.match(/\S+|\s+/g) || [];
-            if (words.length === 0) {
-              controller.enqueue(
-                encoder.encode(
-                  `data: ${JSON.stringify({ type: "chunk", text: responseText })}\n\n`,
-                ),
-              );
-            } else {
-              for (const word of words) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: word })}\n\n`),
-                );
-                await new Promise((resolve) => setTimeout(resolve, 20));
-              }
-            }
+            await enqueueFallbackChunks(controller, encoder, responseText);
           }
         }
 
         if (!hasContent) {
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: "chunk", text: "Unable to generate feedback at this time. Please try again." })}\n\n`,
-            ),
-          );
+          enqueueSSE(controller, encoder, {
+            type: "chunk",
+            text: "Unable to generate feedback at this time. Please try again.",
+          });
         }
 
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: "done", message: "Feedback generation complete" })}\n\n`,
-          ),
-        );
+        enqueueSSE(controller, encoder, {
+          type: "done",
+          message: "Feedback generation complete",
+        });
       } catch (error) {
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: "error", message: error instanceof Error ? error.message : String(error) })}\n\n`,
-          ),
-        );
+        console.error("[Stream] Unexpected error during streaming response:", error);
+        enqueueSSE(controller, encoder, {
+          type: "error",
+          message: error instanceof Error ? error.message : String(error),
+        });
       } finally {
         controller.close();
       }
     },
   });
+}
+
+function buildLLMMessages(prompt: string) {
+  return [
+    {
+      role: "system",
+      content: STREAMING_SYSTEM_MESSAGE,
+    },
+    { role: "user", content: prompt },
+  ];
+}
+
+function enqueueSSE(
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder,
+  payload: Record<string, unknown>,
+) {
+  controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+}
+
+async function enqueueFallbackChunks(
+  controller: ReadableStreamDefaultController,
+  encoder: TextEncoder,
+  responseText: string,
+) {
+  const chunks = responseText.match(/\S+|\s+/g) || [];
+  if (chunks.length === 0) {
+    enqueueSSE(controller, encoder, { type: "chunk", text: responseText });
+    return;
+  }
+
+  for (const chunk of chunks) {
+    enqueueSSE(controller, encoder, { type: "chunk", text: chunk });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
 }

@@ -5,6 +5,11 @@
     "module": "ES2022",
     "lib": ["ES2022"],
     "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@writeo/shared": ["packages/shared/ts"],
+      "@writeo/shared/*": ["packages/shared/ts/*"]
+    },
     "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

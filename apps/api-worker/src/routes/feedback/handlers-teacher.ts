@@ -4,16 +4,143 @@
 
 import { errorResponse } from "../../utils/errors";
 import { validateText, validateRequestBodySize } from "../../utils/validation";
-import { isValidUUID } from "@writeo/shared";
+import {
+  isValidUUID,
+  findAssessorResultById,
+  type AssessmentResults,
+  type AssessorResult,
+} from "@writeo/shared";
 import { MAX_ANSWER_TEXT_LENGTH, MAX_REQUEST_BODY_SIZE } from "../../utils/constants";
-import { parseLLMProvider, getDefaultModel, getAPIKey } from "../../services/llm";
-import { getTeacherFeedback } from "../../services/feedback";
+import { parseLLMProvider, getDefaultModel, getAPIKey, type LLMProvider } from "../../services/llm";
+import { getTeacherFeedback, type TeacherFeedback } from "../../services/feedback";
 import { StorageService } from "../../services/storage";
-import { loadFeedbackDataFromStorage, getCachedTeacherFeedback } from "./storage";
+import {
+  loadFeedbackDataFromStorage,
+  getCachedTeacherFeedback,
+  type FeedbackData,
+} from "./storage";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
 
-export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>) {
+type FeedbackMode = "clues" | "explanation";
+
+interface RequestBody {
+  answerId: string;
+  mode: FeedbackMode;
+  answerText: string;
+  questionText?: string;
+  assessmentData?: Partial<FeedbackData>;
+}
+
+interface TeacherFeedbackResponse {
+  cached: boolean;
+  feedback: {
+    message: string;
+    focusArea?: string;
+    clues?: string;
+  };
+}
+
+interface TeacherFeedbackMeta {
+  message?: string;
+  focusArea?: string;
+  cluesMessage?: string;
+  explanationMessage?: string;
+  engine?: string;
+  model?: string;
+}
+
+/**
+ * Sets up LLM configuration from environment
+ */
+function setupLLMConfig(env: Env): { provider: LLMProvider; apiKey: string; model: string } | null {
+  const provider = parseLLMProvider(env.LLM_PROVIDER);
+  const apiKey = getAPIKey(provider, {
+    GROQ_API_KEY: env.GROQ_API_KEY,
+    OPENAI_API_KEY: env.OPENAI_API_KEY,
+  });
+
+  if (!apiKey) {
+    return null;
+  }
+
+  const model = env.AI_MODEL || getDefaultModel(provider);
+  return { provider, apiKey, model };
+}
+
+/**
+ * Gets teacher assessor result from assessment results
+ */
+function getTeacherAssessor(results: AssessmentResults | null): AssessorResult | undefined {
+  if (!results?.results?.parts?.[0]?.answers?.[0]?.["assessor-results"]) {
+    return undefined;
+  }
+  return findAssessorResultById(
+    results.results.parts[0].answers[0]["assessor-results"],
+    "T-TEACHER-FEEDBACK",
+  );
+}
+
+/**
+ * Builds response from cached teacher feedback
+ */
+function buildCachedResponse(
+  cachedMessage: string,
+  assessor: AssessorResult | undefined,
+  mode: FeedbackMode,
+): TeacherFeedbackResponse {
+  const meta = (assessor?.meta || {}) as TeacherFeedbackMeta;
+  return {
+    cached: true,
+    feedback: {
+      message: cachedMessage,
+      focusArea: meta.focusArea,
+      ...(mode === "clues" && { clues: cachedMessage }),
+    },
+  };
+}
+
+/**
+ * Builds response from generated teacher feedback
+ */
+function buildFeedbackResponse(
+  teacherFeedback: TeacherFeedback,
+  mode: FeedbackMode,
+): TeacherFeedbackResponse {
+  return {
+    cached: false,
+    feedback: {
+      message: teacherFeedback.message,
+      focusArea: teacherFeedback.focusArea,
+      ...(mode === "clues" && { clues: teacherFeedback.message }),
+    },
+  };
+}
+
+/**
+ * Validates and extracts question text from request or storage
+ */
+function validateQuestionText(
+  feedbackData: FeedbackData | null,
+  providedQuestionText?: string,
+): string | null {
+  const questionText = feedbackData?.questionText || providedQuestionText || "";
+  if (!questionText || questionText.trim().length === 0) {
+    return null;
+  }
+  return questionText;
+}
+
+/**
+ * Handles teacher feedback requests by validating input, checking cache,
+ * fetching missing data, and generating or returning cached feedback.
+ *
+ * @param c - Hono context with environment bindings
+ * @returns Teacher feedback response or error response
+ */
+export async function handleTeacherFeedbackRequest(
+  c: Context<{ Bindings: Env }>,
+): Promise<TeacherFeedbackResponse | Response> {
   const submissionId = c.req.param("submission_id");
   if (!isValidUUID(submissionId)) {
     return errorResponse(400, "Invalid submission_id format", c);
@@ -24,13 +151,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
   }
 
-  const body = (await c.req.json()) as {
-    answerId: string;
-    mode: "clues" | "explanation";
-    answerText: string;
-    questionText?: string;
-    assessmentData?: any;
-  };
+  const body = (await c.req.json()) as RequestBody;
 
   if (!body.answerId || !body.mode || !body.answerText) {
     return errorResponse(400, "Missing required fields: answerId, mode, answerText", c);
@@ -57,22 +178,13 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
   const results = await storage.getResults(submissionId);
   const cachedMessage = getCachedTeacherFeedback(results, body.mode);
 
+  // Return cached feedback if available
   if (cachedMessage) {
-    const firstPart = results?.results?.parts?.[0];
-    const teacherAssessor = firstPart?.answers?.[0]?.["assessor-results"]?.find(
-      (a: any) => a.id === "T-TEACHER-FEEDBACK",
-    );
-    const existingMeta = (teacherAssessor?.meta || {}) as Record<string, any>;
-    return {
-      cached: true,
-      feedback: {
-        message: cachedMessage,
-        focusArea: existingMeta.focusArea as string | undefined,
-        ...(body.mode === "clues" && { clues: cachedMessage }),
-      },
-    };
+    const teacherAssessor = getTeacherAssessor(results);
+    return buildCachedResponse(cachedMessage, teacherAssessor, body.mode);
   }
 
+  // Load feedback data from storage
   const feedbackData = await loadFeedbackDataFromStorage(
     storage,
     submissionId,
@@ -81,7 +193,9 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     body.assessmentData,
   );
 
-  if (!feedbackData?.questionText && !body.questionText) {
+  // Validate question text
+  const questionText = validateQuestionText(feedbackData, body.questionText);
+  if (!questionText) {
     return errorResponse(
       400,
       "questionText is required when submission is not stored. Please provide questionText in the request body.",
@@ -89,37 +203,24 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     );
   }
 
-  const questionText = feedbackData?.questionText || body.questionText || "";
-  if (!questionText || questionText.trim().length === 0) {
-    return errorResponse(
-      400,
-      "questionText is required. Please provide questionText in the request body.",
-      c,
-    );
-  }
-
-  const llmProvider = parseLLMProvider(c.env.LLM_PROVIDER);
-  const defaultModel = getDefaultModel(llmProvider);
-  const aiModel = c.env.AI_MODEL || defaultModel;
-  const apiKey = getAPIKey(llmProvider, {
-    GROQ_API_KEY: c.env.GROQ_API_KEY,
-    OPENAI_API_KEY: c.env.OPENAI_API_KEY,
-  });
-
-  if (!apiKey) {
+  // Setup LLM configuration
+  const llmConfig = setupLLMConfig(c.env);
+  if (!llmConfig) {
+    const provider = parseLLMProvider(c.env.LLM_PROVIDER);
     return errorResponse(
       500,
-      `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`,
+      `API key not found for provider: ${provider}. Please set ${provider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`,
       c,
     );
   }
 
+  // Generate teacher feedback
   const teacherFeedback = await getTeacherFeedback(
-    llmProvider,
-    apiKey,
+    llmConfig.provider,
+    llmConfig.apiKey,
     questionText,
     body.answerText,
-    aiModel,
+    llmConfig.model,
     body.mode,
     feedbackData?.essayScores || body.assessmentData?.essayScores,
     feedbackData?.ltErrors || body.assessmentData?.ltErrors,
@@ -127,6 +228,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     feedbackData?.relevanceCheck || body.assessmentData?.relevanceCheck,
   );
 
+  // Save to storage if results exist
   if (results) {
     await saveTeacherFeedbackToStorage(
       storage,
@@ -134,61 +236,63 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
       results,
       teacherFeedback,
       body.mode,
-      llmProvider,
-      aiModel,
+      llmConfig.provider,
+      llmConfig.model,
     );
   }
 
-  return {
-    cached: false,
-    feedback: {
-      message: teacherFeedback.message,
-      focusArea: teacherFeedback.focusArea,
-      ...(body.mode === "clues" && { clues: teacherFeedback.message }),
-    },
-  };
+  return buildFeedbackResponse(teacherFeedback, body.mode);
 }
 
+const STORAGE_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 days
+
+/**
+ * Saves teacher feedback to storage in the assessment results
+ */
 async function saveTeacherFeedbackToStorage(
   storage: StorageService,
   submissionId: string,
-  results: any,
-  teacherFeedback: any,
-  mode: string,
-  llmProvider: string,
+  results: AssessmentResults,
+  teacherFeedback: TeacherFeedback,
+  mode: FeedbackMode,
+  llmProvider: LLMProvider,
   aiModel: string,
 ): Promise<void> {
   const firstPart = results.results?.parts?.[0];
-  if (firstPart) {
-    let teacherAssessor = firstPart.answers?.[0]?.["assessor-results"]?.find(
-      (a: any) => a.id === "T-TEACHER-FEEDBACK",
-    );
-
-    if (!teacherAssessor) {
-      teacherAssessor = {
-        id: "T-TEACHER-FEEDBACK",
-        name: "Teacher's Feedback",
-        type: "feedback",
-        meta: {},
-      };
-      const firstAnswer = firstPart.answers[0];
-      if (!firstAnswer["assessor-results"]) {
-        firstAnswer["assessor-results"] = [];
-      }
-      firstAnswer["assessor-results"].push(teacherAssessor);
-    }
-
-    const existingMeta = (teacherAssessor?.meta || {}) as Record<string, any>;
-    teacherAssessor.meta = {
-      ...existingMeta,
-      message: existingMeta.message || teacherFeedback.message,
-      focusArea: teacherFeedback.focusArea || existingMeta.focusArea,
-      ...(mode === "clues" && { cluesMessage: teacherFeedback.message }),
-      ...(mode === "explanation" && { explanationMessage: teacherFeedback.message }),
-      engine: llmProvider === "groq" ? "Groq" : "OpenAI",
-      model: aiModel,
-    };
-
-    await storage.putResults(submissionId, results, 60 * 60 * 24 * 90);
+  if (!firstPart?.answers?.[0]) {
+    return;
   }
+
+  const firstAnswer = firstPart.answers[0];
+  if (!firstAnswer["assessor-results"]) {
+    firstAnswer["assessor-results"] = [];
+  }
+
+  let teacherAssessor = findAssessorResultById(
+    firstAnswer["assessor-results"],
+    "T-TEACHER-FEEDBACK",
+  );
+
+  if (!teacherAssessor) {
+    teacherAssessor = {
+      id: "T-TEACHER-FEEDBACK",
+      name: "Teacher's Feedback",
+      type: "feedback",
+      meta: {},
+    };
+    firstAnswer["assessor-results"].push(teacherAssessor);
+  }
+
+  const existingMeta = (teacherAssessor.meta || {}) as TeacherFeedbackMeta;
+  teacherAssessor.meta = {
+    ...existingMeta,
+    message: existingMeta.message || teacherFeedback.message,
+    focusArea: teacherFeedback.focusArea || existingMeta.focusArea,
+    ...(mode === "clues" && { cluesMessage: teacherFeedback.message }),
+    ...(mode === "explanation" && { explanationMessage: teacherFeedback.message }),
+    engine: llmProvider === "groq" ? "Groq" : "OpenAI",
+    model: aiModel,
+  };
+
+  await storage.putResults(submissionId, results, STORAGE_TTL_SECONDS);
 }

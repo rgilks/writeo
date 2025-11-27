@@ -1,19 +1,20 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import type { Env } from "../types/env";
 import { errorResponse } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
 import { validateApiKey } from "./feedback/auth";
-import { handleStreamingRequest } from "./feedback/handlers";
-import { buildStreamingPrompt, createStreamingResponse } from "./feedback/streaming";
-import { handleTeacherFeedbackRequest } from "./feedback/handlers";
+import {
+  handleStreamingRequest,
+  handleTeacherFeedbackRequest,
+  buildStreamingPrompt,
+  createStreamingResponse,
+} from "./feedback/handlers";
 
 export const feedbackRouter = new Hono<{ Bindings: Env }>();
 
-feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", async (c) => {
-  const authError = validateApiKey(c);
-  if (authError) return authError;
-
-  try {
+feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", (c) =>
+  handleFeedbackRoute(c, "Error streaming AI feedback", async () => {
     const requestData = await handleStreamingRequest(c);
     if (requestData instanceof Response) {
       return requestData;
@@ -40,27 +41,33 @@ feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", async
         Connection: "keep-alive",
       },
     });
-  } catch (error) {
-    const sanitized = sanitizeError(error);
-    safeLogError("Error streaming AI feedback", sanitized);
-    return errorResponse(500, "Internal server error", c);
-  }
-});
+  }),
+);
 
-feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", async (c) => {
-  const authError = validateApiKey(c);
-  if (authError) return authError;
-
-  try {
+feedbackRouter.post("/text/submissions/:submission_id/teacher-feedback", (c) =>
+  handleFeedbackRoute(c, "Error getting Teacher feedback", async () => {
     const result = await handleTeacherFeedbackRequest(c);
     if (result instanceof Response) {
       return result;
     }
 
     return c.json(result.feedback);
+  }),
+);
+
+async function handleFeedbackRoute(
+  c: Context<{ Bindings: Env }>,
+  logContext: string,
+  handler: () => Promise<Response>,
+): Promise<Response> {
+  const authError = validateApiKey(c);
+  if (authError) return authError;
+
+  try {
+    return await handler();
   } catch (error) {
     const sanitized = sanitizeError(error);
-    safeLogError("Error getting Teacher feedback", sanitized);
+    safeLogError(logContext, sanitized);
     return errorResponse(500, "Internal server error", c);
   }
-});
+}

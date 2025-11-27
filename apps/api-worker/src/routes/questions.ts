@@ -6,6 +6,7 @@ import { safeLogError, sanitizeError } from "../utils/logging";
 import { validateText, validateRequestBodySize } from "../utils/validation";
 import { StorageService } from "../services/storage";
 import type { CreateQuestionRequest } from "@writeo/shared";
+import { MAX_REQUEST_BODY_SIZE, MAX_QUESTION_LENGTH } from "../utils/constants";
 
 export const questionsRouter = new Hono<{ Bindings: Env }>();
 
@@ -16,7 +17,7 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
   }
 
   try {
-    const sizeValidation = await validateRequestBodySize(c.req.raw, 1024 * 1024);
+    const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
     if (!sizeValidation.valid) {
       return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
     }
@@ -26,7 +27,7 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
       return errorResponse(400, "Missing or invalid 'text' field", c);
     }
 
-    const textValidation = validateText(body.text, 10000);
+    const textValidation = validateText(body.text, MAX_QUESTION_LENGTH);
     if (!textValidation.valid) {
       return errorResponse(400, textValidation.error || "Invalid text content", c);
     }
@@ -37,9 +38,17 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
     if (existing) {
       if (existing.text === body.text) {
         return new Response(null, { status: 204 });
-      } else {
-        return errorResponse(409, "Question already exists with different content", c);
       }
+      return c.json(
+        {
+          error: "Question already exists with different content",
+          existingQuestion: {
+            id: questionId,
+            text: existing.text,
+          },
+        },
+        { status: 409 },
+      );
     }
 
     await storage.putQuestion(questionId, body);
