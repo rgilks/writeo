@@ -4,10 +4,56 @@
 
 import type { LLMErrorInput } from "./validation";
 
+const NO_ERROR_TOKENS = ["no_errors", "no errors"];
+const IGNORE_LINE_PATTERNS = ["#", "format:", "example:"];
+const PIPE_FIELDS = [
+  "errorText",
+  "wordBefore",
+  "wordAfter",
+  "category",
+  "message",
+  "suggestions",
+  "errorType",
+  "explanation",
+  "severity",
+] as const;
+
+const EXPECTED_PART_COUNT = PIPE_FIELDS.length;
+
+const cleanOrNull = (value?: string): string | null => {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeSeverity = (value?: string): "warning" | "error" => {
+  return value?.trim().toLowerCase() === "warning" ? "warning" : "error";
+};
+
+const parseSuggestions = (suggestionsStr?: string): string[] => {
+  return (suggestionsStr ?? "")
+    .split(",")
+    .map((suggestion) => suggestion.trim())
+    .filter(Boolean);
+};
+
+const shouldIgnoreLine = (line: string): boolean => {
+  if (!line) {
+    return true;
+  }
+
+  const lowerLine = line.toLowerCase();
+  return IGNORE_LINE_PATTERNS.some((pattern) => lowerLine.startsWith(pattern));
+};
+
 export function parsePipeDelimitedResponse(text: string): LLMErrorInput[] {
   const trimmedText = text.trim();
 
-  if (trimmedText === "NO_ERRORS" || trimmedText.toLowerCase().includes("no errors")) {
+  if (!trimmedText) {
+    return [];
+  }
+
+  const normalizedText = trimmedText.toLowerCase();
+  if (NO_ERROR_TOKENS.some((token) => normalizedText.includes(token))) {
     return [];
   }
 
@@ -16,20 +62,15 @@ export function parsePipeDelimitedResponse(text: string): LLMErrorInput[] {
 
   for (const line of lines) {
     const trimmedLine = line.trim();
-    if (
-      !trimmedLine ||
-      trimmedLine.startsWith("#") ||
-      trimmedLine.toLowerCase().includes("format:") ||
-      trimmedLine.toLowerCase().includes("example:")
-    ) {
+    if (shouldIgnoreLine(trimmedLine)) {
       continue;
     }
 
     const parts = trimmedLine.split("|").map((p) => p.trim());
 
-    if (parts.length < 9) {
+    if (parts.length < EXPECTED_PART_COUNT) {
       console.warn(
-        `[getLLMAssessment] Skipping malformed line (expected 9 parts, got ${parts.length}):`,
+        `[getLLMAssessment] Skipping malformed line (expected ${EXPECTED_PART_COUNT} parts, got ${parts.length})`,
         trimmedLine.substring(0, 100),
       );
       continue;
@@ -47,29 +88,25 @@ export function parsePipeDelimitedResponse(text: string): LLMErrorInput[] {
       severity,
     ] = parts;
 
-    if (!errorText || errorText.trim().length === 0) {
+    const cleanErrorText = cleanOrNull(errorText);
+    if (!cleanErrorText) {
       console.warn(
-        `[getLLMAssessment] Skipping line with empty errorText:`,
+        "[getLLMAssessment] Skipping line with empty errorText",
         trimmedLine.substring(0, 100),
       );
       continue;
     }
 
-    const suggestions = (suggestionsStr || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
-
     errors.push({
-      errorText: errorText.trim(),
-      wordBefore: wordBefore && wordBefore.trim().length > 0 ? wordBefore.trim() : null,
-      wordAfter: wordAfter && wordAfter.trim().length > 0 ? wordAfter.trim() : null,
+      errorText: cleanErrorText,
+      wordBefore: cleanOrNull(wordBefore),
+      wordAfter: cleanOrNull(wordAfter),
       category: category || "GRAMMAR",
       message: message || "Error detected",
-      suggestions,
+      suggestions: parseSuggestions(suggestionsStr),
       errorType: errorType || "Grammar error",
       explanation: explanation || message || "Error detected",
-      severity: (severity === "warning" ? "warning" : "error") as "warning" | "error",
+      severity: normalizeSeverity(severity),
     });
   }
 

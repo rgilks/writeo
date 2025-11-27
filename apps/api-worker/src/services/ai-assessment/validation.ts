@@ -18,6 +18,50 @@ export interface LLMErrorInput {
   explanation?: string;
 }
 
+const DEFAULT_CATEGORY = "GRAMMAR";
+const DEFAULT_MESSAGE = "Error detected";
+const DEFAULT_RULE_PREFIX = "LLM";
+const DEFAULT_CONFIDENCE_SCORE = 0.75;
+const HIGH_CONFIDENCE_THRESHOLD = 0.85;
+const MEDIUM_CONFIDENCE_THRESHOLD = 0.5;
+
+const normalizeCategory = (category?: string): string => {
+  return (category || DEFAULT_CATEGORY).toUpperCase();
+};
+
+const formatRuleId = (errorType?: string): string => {
+  const normalized = errorType?.trim().replace(/\s+/g, "_").toUpperCase();
+  return `${DEFAULT_RULE_PREFIX}_${normalized || "ERROR"}`;
+};
+
+const getMessage = (message?: string): string => {
+  return message?.trim() || DEFAULT_MESSAGE;
+};
+
+const getExplanation = (explanation?: string, fallbackMessage?: string): string => {
+  return explanation?.trim() || fallbackMessage?.trim() || DEFAULT_MESSAGE;
+};
+
+const filterSuggestions = (actualText: string, rawSuggestions?: string[]): string[] => {
+  if (!Array.isArray(rawSuggestions)) {
+    return [];
+  }
+
+  const trimmedActual = actualText.trim();
+  return rawSuggestions
+    .map((suggestion) => suggestion?.trim())
+    .filter(
+      (suggestion): suggestion is string => Boolean(suggestion) && suggestion !== trimmedActual,
+    )
+    .slice(0, 5);
+};
+
+const deriveConfidence = (score: number) => ({
+  confidenceScore: score,
+  highConfidence: score >= HIGH_CONFIDENCE_THRESHOLD,
+  mediumConfidence: score >= MEDIUM_CONFIDENCE_THRESHOLD,
+});
+
 export function validateAndProcessError(
   err: LLMErrorInput,
   answerText: string,
@@ -82,27 +126,28 @@ export function validateAndProcessError(
 
   const actualErrorText = answerText.substring(validated.start, validated.end);
 
-  let suggestions = Array.isArray(err.suggestions) ? err.suggestions : [];
-  suggestions = suggestions.filter((s) => s && s.trim() !== actualErrorText.trim());
-
-  let message = err.message || "Error detected";
-  let explanation = err.explanation || err.message || "Error detected";
+  const suggestions = filterSuggestions(actualErrorText, err.suggestions);
+  const message = getMessage(err.message);
+  const explanation = getExplanation(err.explanation, err.message);
+  const category = normalizeCategory(err.category);
+  const ruleId = formatRuleId(err.errorType || err.category);
+  const confidence = deriveConfidence(DEFAULT_CONFIDENCE_SCORE);
 
   return {
     start: validated.start,
     end: validated.end,
     length: validated.end - validated.start,
-    category: (err.category || "GRAMMAR").toUpperCase(),
-    rule_id: `LLM_${err.errorType?.replace(/\s+/g, "_").toUpperCase() || "ERROR"}`,
-    message: message,
-    suggestions: suggestions.slice(0, 5),
+    category,
+    rule_id: ruleId,
+    message,
+    suggestions,
     source: "LLM" as const,
     severity: (err.severity || "error") as "warning" | "error",
-    confidenceScore: 0.75,
-    highConfidence: false,
-    mediumConfidence: true,
+    confidenceScore: confidence.confidenceScore,
+    highConfidence: confidence.highConfidence,
+    mediumConfidence: confidence.mediumConfidence,
     errorType: err.errorType || "Grammar error",
-    explanation: explanation,
+    explanation,
     example: suggestions[0] ? `Try: "${suggestions[0]}"` : undefined,
   };
 }
