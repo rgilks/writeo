@@ -20,6 +20,16 @@ if (!process.env.USE_MOCK_LLM) {
   process.env.USE_MOCK_LLM = "true";
 }
 
+const shouldSkipApiTests = process.env.SKIP_API_TESTS === "true";
+
+const buildExcludeList = (): string[] => {
+  const baseExclude = ["tests/e2e/**"];
+  if (!process.env.CI && shouldSkipApiTests) {
+    baseExclude.push("tests/api.test.ts");
+  }
+  return baseExclude;
+};
+
 export default defineConfig({
   test: {
     globals: true,
@@ -27,8 +37,7 @@ export default defineConfig({
     testTimeout: 60000,
     hookTimeout: 60000,
     include: ["tests/**/*.test.ts"],
-    // API tests excluded locally to save costs - run explicitly in CI with: npx vitest run tests/api.test.ts
-    exclude: process.env.CI ? ["tests/e2e/**"] : ["tests/e2e/**", "tests/api.test.ts"],
+    exclude: buildExcludeList(),
     pool: "threads",
     poolOptions: {
       threads: { maxThreads: 3, minThreads: 1 },

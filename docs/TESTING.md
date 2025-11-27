@@ -14,6 +14,10 @@ npm run test:watch    # Watch mode (API tests)
 npm run test:e2e:ui   # Playwright UI mode
 ```
 
+> Temporarily need the old lightweight run? Set `SKIP_API_TESTS=true` before invoking
+> Vitest (for example, `SKIP_API_TESTS=true npm test`) to skip the API suite. By default,
+> API tests now run locally.
+
 ---
 
 ## Test Structure
