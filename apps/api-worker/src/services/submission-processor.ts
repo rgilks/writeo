@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { Env } from "../types/env";
-import type { CreateSubmissionRequest } from "@writeo/shared";
+import type { CreateSubmissionRequest, AssessmentResults } from "@writeo/shared";
 import { StorageService } from "./storage";
 import { validateRequestBodySize } from "../utils/validation";
 import { errorResponse } from "../utils/errors";
@@ -20,8 +20,87 @@ import { extractEssayScores } from "./submission/results-scores";
 import { processRelevanceResults } from "./submission/results-relevance";
 import { buildMetadata, buildResponseHeaders } from "./submission/metadata";
 import { buildConfig } from "./config";
+import type { LLMProvider } from "./llm";
 import type { ModalRequest } from "@writeo/shared";
 import { uuidStringSchema, formatZodMessage } from "../utils/zod";
+import { MAX_REQUEST_BODY_SIZE } from "../utils/constants";
+
+/** Results storage TTL: 90 days */
+const RESULTS_TTL_SECONDS = 60 * 60 * 24 * 90;
+/** Retry configuration for combined feedback generation */
+const FEEDBACK_RETRY_OPTIONS = { maxAttempts: 3, baseDelayMs: 500 };
+
+interface FeedbackMaps {
+  llmFeedbackByAnswerId: Map<string, AIFeedback>;
+  teacherFeedbackByAnswerId: Map<string, TeacherFeedback>;
+}
+
+/**
+ * Generates combined AI feedback for all answers in parallel.
+ * Handles failures gracefully, logging errors but continuing with successful results.
+ */
+async function generateCombinedFeedback(
+  parts: ModalRequest["parts"],
+  essayScoresByAnswerId: Map<string, any>,
+  ltErrorsByAnswerId: Map<string, any>,
+  llmErrorsByAnswerId: Map<string, any>,
+  relevanceByAnswerId: Map<string, any>,
+  serviceRequests: { llmProvider: LLMProvider; apiKey: string; aiModel: string },
+): Promise<FeedbackMaps> {
+  const llmFeedbackByAnswerId = new Map<string, AIFeedback>();
+  const teacherFeedbackByAnswerId = new Map<string, TeacherFeedback>();
+
+  const combinedFeedbackPromises = Array.from(iterateAnswers(parts)).map(async (answer) => {
+    const feedback = await getCombinedFeedbackWithRetry(
+      {
+        llmProvider: serviceRequests.llmProvider,
+        apiKey: serviceRequests.apiKey,
+        questionText: answer.question_text,
+        answerText: answer.answer_text,
+        modelName: serviceRequests.aiModel,
+        essayScores: essayScoresByAnswerId.get(answer.id),
+        languageToolErrors: ltErrorsByAnswerId.get(answer.id),
+        llmErrors: llmErrorsByAnswerId.get(answer.id),
+        relevanceCheck: relevanceByAnswerId.get(answer.id),
+      },
+      FEEDBACK_RETRY_OPTIONS,
+    );
+    return { answerId: answer.id, feedback };
+  });
+
+  const results = await Promise.allSettled(combinedFeedbackPromises);
+  for (const result of results) {
+    if (result.status === "rejected") {
+      const errorMsg =
+        result.reason instanceof Error ? result.reason.message : String(result.reason);
+      safeLogError("Combined feedback generation failed", { error: errorMsg });
+    } else {
+      const { answerId, feedback } = result.value;
+      llmFeedbackByAnswerId.set(answerId, feedback.detailed);
+      teacherFeedbackByAnswerId.set(answerId, feedback.teacher);
+    }
+  }
+
+  return { llmFeedbackByAnswerId, teacherFeedbackByAnswerId };
+}
+
+/**
+ * Applies computed metadata (word count, error count, scores, timestamp) to assessment results.
+ */
+function applyMetadata(
+  mergedAssessment: AssessmentResults,
+  metadata: ReturnType<typeof buildMetadata>,
+): void {
+  if (!mergedAssessment.meta) {
+    mergedAssessment.meta = {};
+  }
+  mergedAssessment.meta.wordCount = metadata.wordCount;
+  mergedAssessment.meta.errorCount = metadata.errorCount;
+  if (metadata.overallScore !== undefined) {
+    mergedAssessment.meta.overallScore = metadata.overallScore;
+  }
+  mergedAssessment.meta.timestamp = metadata.timestamp;
+}
 
 /**
  * Processes a submission request, orchestrating all assessment services.
@@ -58,7 +137,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
   const timings: Record<string, number> = {};
 
   try {
-    const sizeValidation = await validateRequestBodySize(c.req.raw, 1024 * 1024);
+    const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
     if (!sizeValidation.valid) {
       return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
     }
@@ -140,54 +219,15 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     );
     timings["9_process_relevance"] = performance.now() - processRelevanceStartTime;
 
-    let llmFeedbackByAnswerId = new Map<string, AIFeedback>();
-    let teacherFeedbackByAnswerId = new Map<string, TeacherFeedback>();
-
     const aiFeedbackStartTime = performance.now();
-    const combinedFeedbackPromises: Array<
-      Promise<{ answerId: string; feedback: import("./feedback").CombinedFeedback }>
-    > = [];
-
-    for (const answer of iterateAnswers(modalRequest.parts)) {
-      const essayScores = essayScoresByAnswerId.get(answer.id);
-      const ltErrors = ltErrorsByAnswerId.get(answer.id);
-      const llmErrors = llmErrorsByAnswerId.get(answer.id);
-      const relevanceCheck = relevanceByAnswerId.get(answer.id);
-
-      combinedFeedbackPromises.push(
-        (async () => {
-          const feedback = await getCombinedFeedbackWithRetry(
-            {
-              llmProvider: serviceRequests.llmProvider,
-              apiKey: serviceRequests.apiKey,
-              questionText: answer.question_text,
-              answerText: answer.answer_text,
-              modelName: serviceRequests.aiModel,
-              essayScores,
-              languageToolErrors: ltErrors,
-              llmErrors,
-              relevanceCheck,
-            },
-            { maxAttempts: 3, baseDelayMs: 500 },
-          );
-          return { answerId: answer.id, feedback };
-        })(),
-      );
-    }
-
-    const combinedFeedbackResults = await Promise.allSettled(combinedFeedbackPromises);
-    for (const result of combinedFeedbackResults) {
-      if (result.status === "rejected") {
-        const errorMsg =
-          result.reason instanceof Error ? result.reason.message : String(result.reason);
-        safeLogError("Combined feedback generation failed", { error: errorMsg });
-      } else {
-        const { answerId, feedback } = result.value;
-        llmFeedbackByAnswerId.set(answerId, feedback.detailed);
-        teacherFeedbackByAnswerId.set(answerId, feedback.teacher);
-      }
-    }
-
+    const { llmFeedbackByAnswerId, teacherFeedbackByAnswerId } = await generateCombinedFeedback(
+      modalRequest.parts,
+      essayScoresByAnswerId,
+      ltErrorsByAnswerId,
+      llmErrorsByAnswerId,
+      relevanceByAnswerId,
+      serviceRequests,
+    );
     timings["8_ai_feedback"] = performance.now() - aiFeedbackStartTime;
 
     const mergeStartTime = performance.now();
@@ -213,21 +253,12 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       llmErrorsByAnswerId,
       essayAssessment,
     );
-
-    if (!mergedAssessment.meta) {
-      mergedAssessment.meta = {};
-    }
-    mergedAssessment.meta.wordCount = metadata.wordCount;
-    mergedAssessment.meta.errorCount = metadata.errorCount;
-    if (metadata.overallScore !== undefined) {
-      mergedAssessment.meta.overallScore = metadata.overallScore;
-    }
-    mergedAssessment.meta.timestamp = metadata.timestamp;
+    applyMetadata(mergedAssessment, metadata);
     timings["10a_metadata"] = performance.now() - metadataStartTime;
 
     if (storeResults) {
       const storeResultsStartTime = performance.now();
-      await storage.putResults(submissionId, mergedAssessment, 60 * 60 * 24 * 90);
+      await storage.putResults(submissionId, mergedAssessment, RESULTS_TTL_SECONDS);
       timings["11_store_results"] = performance.now() - storeResultsStartTime;
     }
 

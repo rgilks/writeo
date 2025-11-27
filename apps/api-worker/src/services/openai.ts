@@ -1,5 +1,28 @@
 import { fetchWithTimeout } from "../utils/fetch-with-timeout";
 
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const REQUEST_TIMEOUT_MS = 30000;
+const DEFAULT_TEMPERATURE = 0.3;
+const SSE_DATA_PREFIX = "data: ";
+const SSE_DONE_TOKEN = "[DONE]";
+
+interface OpenAIAPIResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+interface OpenAIStreamDelta {
+  choices?: Array<{ delta?: { content?: string } }>;
+}
+
 function shouldUseMock(apiKey: string): boolean {
   const globalProcess = (globalThis as any).process;
   // USE_MOCK_LLM enables deterministic mock responses (saves API costs)
@@ -8,95 +31,18 @@ function shouldUseMock(apiKey: string): boolean {
   return apiKey === "MOCK" || apiKey.startsWith("test_");
 }
 
-export async function callOpenAIAPI(
-  apiKey: string,
-  modelName: string,
-  messages: Array<{ role: string; content: string }>,
-  maxTokens: number,
-): Promise<string> {
-  if (shouldUseMock(apiKey)) {
-    const { mockCallLLMAPI } = await import("./llm.mock");
-    return mockCallLLMAPI(apiKey, modelName, messages, maxTokens);
+function parseAPIResponse(data: OpenAIAPIResponse): string {
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error(`Invalid OpenAI API response: missing content in ${JSON.stringify(data)}`);
   }
-
-  const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: modelName,
-      messages: messages,
-      max_tokens: maxTokens,
-      temperature: 0.3,
-    }),
-    timeout: 30000, // 30 seconds
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
-  }
-
-  const data = (await response.json()) as {
-    choices?: Array<{
-      message?: {
-        content?: string;
-      };
-    }>;
-    usage?: {
-      prompt_tokens: number;
-      completion_tokens: number;
-      total_tokens: number;
-    };
-  };
-
-  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-    throw new Error(`Invalid OpenAI API response: ${JSON.stringify(data)}`);
-  }
-
-  return data.choices[0].message.content || "";
+  return content;
 }
 
-export async function* streamOpenAIAPI(
-  apiKey: string,
-  modelName: string,
-  messages: Array<{ role: string; content: string }>,
-  maxTokens: number,
+async function* parseStreamResponse(
+  body: ReadableStream<Uint8Array>,
 ): AsyncGenerator<string, void, unknown> {
-  if (shouldUseMock(apiKey)) {
-    const { mockStreamLLMAPI } = await import("./llm.mock");
-    yield* mockStreamLLMAPI(apiKey, modelName, messages, maxTokens);
-    return;
-  }
-
-  const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: modelName,
-      messages: messages,
-      max_tokens: maxTokens,
-      temperature: 0.3,
-      stream: true,
-    }),
-    timeout: 30000,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
-  }
-
-  if (!response.body) {
-    throw new Error("OpenAI API response body is null");
-  }
-
-  const reader = response.body.getReader();
+  const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 
@@ -114,29 +60,112 @@ export async function* streamOpenAIAPI(
 
       for (const event of events) {
         if (!event.trim()) continue;
-        const lines = event.split("\n");
-        let dataLine = "";
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            dataLine = line.slice(6).trim();
-            break;
-          }
-        }
-        if (!dataLine || dataLine === "[DONE]") continue;
 
-        try {
-          const data = JSON.parse(dataLine) as {
-            choices?: Array<{ delta?: { content?: string } }>;
-          };
-          if (data.choices?.[0]?.delta?.content) {
-            yield data.choices[0].delta.content;
-          }
-        } catch {
-          // Skip malformed JSON
+        const dataLine = extractDataLine(event);
+        if (!dataLine || dataLine === SSE_DONE_TOKEN) continue;
+
+        const content = parseStreamDelta(dataLine);
+        if (content) {
+          yield content;
         }
       }
     }
   } finally {
     reader.releaseLock();
   }
+}
+
+function extractDataLine(event: string): string {
+  const lines = event.split("\n");
+  for (const line of lines) {
+    if (line.startsWith(SSE_DATA_PREFIX)) {
+      return line.slice(SSE_DATA_PREFIX.length).trim();
+    }
+  }
+  return "";
+}
+
+function parseStreamDelta(dataLine: string): string | null {
+  try {
+    const data = JSON.parse(dataLine) as OpenAIStreamDelta;
+    return data.choices?.[0]?.delta?.content || null;
+  } catch {
+    // Skip malformed JSON
+    return null;
+  }
+}
+
+export async function callOpenAIAPI(
+  apiKey: string,
+  modelName: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number,
+): Promise<string> {
+  if (shouldUseMock(apiKey)) {
+    const { mockCallLLMAPI } = await import("./llm.mock");
+    return mockCallLLMAPI(apiKey, modelName, messages, maxTokens);
+  }
+
+  const response = await fetchWithTimeout(OPENAI_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages,
+      max_tokens: maxTokens,
+      temperature: DEFAULT_TEMPERATURE,
+    }),
+    timeout: REQUEST_TIMEOUT_MS,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  const data = (await response.json()) as OpenAIAPIResponse;
+  return parseAPIResponse(data);
+}
+
+export async function* streamOpenAIAPI(
+  apiKey: string,
+  modelName: string,
+  messages: Array<{ role: string; content: string }>,
+  maxTokens: number,
+): AsyncGenerator<string, void, unknown> {
+  if (shouldUseMock(apiKey)) {
+    const { mockStreamLLMAPI } = await import("./llm.mock");
+    yield* mockStreamLLMAPI(apiKey, modelName, messages, maxTokens);
+    return;
+  }
+
+  const response = await fetchWithTimeout(OPENAI_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages,
+      max_tokens: maxTokens,
+      temperature: DEFAULT_TEMPERATURE,
+      stream: true,
+    }),
+    timeout: REQUEST_TIMEOUT_MS,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  if (!response.body) {
+    throw new Error("OpenAI API response body is null");
+  }
+
+  yield* parseStreamResponse(response.body);
 }

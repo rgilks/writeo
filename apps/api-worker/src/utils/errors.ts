@@ -1,6 +1,19 @@
 import type { Context } from "hono";
 import type { Env } from "../types/env";
 
+const SERVER_ERROR_THRESHOLD = 500;
+const SANITIZED_ERROR_MESSAGE = "An internal error occurred. Please try again later.";
+
+/**
+ * Detects production environment by checking if URL contains localhost/127.0.0.1.
+ * Defaults to production when context is unavailable (fail-safe).
+ */
+function isProduction(c?: Context<{ Bindings: Env }> | Context): boolean {
+  if (!c) return true;
+  const url = c.req.url;
+  return !url.includes("localhost") && !url.includes("127.0.0.1");
+}
+
 /**
  * Creates a standardized error response.
  *
@@ -23,11 +36,8 @@ export function errorResponse(
   message: string,
   c?: Context<{ Bindings: Env }> | Context,
 ): Response {
-  const isProduction = c
-    ? !c.req.url.includes("localhost") && !c.req.url.includes("127.0.0.1")
-    : true;
-  const safeMessage =
-    status >= 500 && isProduction ? "An internal error occurred. Please try again later." : message;
+  const shouldSanitize = status >= SERVER_ERROR_THRESHOLD && isProduction(c);
+  const safeMessage = shouldSanitize ? SANITIZED_ERROR_MESSAGE : message;
 
   return new Response(JSON.stringify({ error: safeMessage }), {
     status,

@@ -1,22 +1,31 @@
-/**
- * Fetch utility with timeout support to prevent hanging requests
- */
+const DEFAULT_TIMEOUT_MS = 30000;
 
 export interface FetchWithTimeoutOptions extends RequestInit {
-  timeout?: number; // Timeout in milliseconds
+  /** Timeout in milliseconds (default: DEFAULT_TIMEOUT_MS) */
+  timeout?: number;
 }
 
 /**
- * Fetches a resource with a configurable timeout
- * @param url The URL to fetch
- * @param options Fetch options including timeout
+ * Fetches a resource with a configurable timeout to prevent hanging requests.
+ *
+ * @param url - The URL to fetch
+ * @param options - Fetch options including optional timeout
  * @returns Promise that resolves to Response or rejects with timeout error
+ *
+ * @example
+ * ```typescript
+ * await fetchWithTimeout("https://api.example.com", {
+ *   method: "POST",
+ *   body: JSON.stringify(data),
+ *   timeout: 10000,
+ * });
+ * ```
  */
 export async function fetchWithTimeout(
   url: string,
   options: FetchWithTimeoutOptions = {},
 ): Promise<Response> {
-  const { timeout = 30000, ...fetchOptions } = options;
+  const { timeout = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -26,13 +35,13 @@ export async function fetchWithTimeout(
       ...fetchOptions,
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
     return response;
   } catch (error) {
-    clearTimeout(timeoutId);
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error(`Request timeout after ${timeout}ms: ${url}`);
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

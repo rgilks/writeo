@@ -1,22 +1,15 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { Env, ExecutionContext } from "./types/env";
+import type { Env } from "./types/env";
 import { authenticate } from "./middleware/auth";
 import { rateLimit } from "./middleware/rate-limit";
 import { securityHeaders, getCorsOrigin } from "./middleware/security";
 import { questionsRouter } from "./routes/questions";
 import { healthRouter } from "./routes/health";
 import { feedbackRouter } from "./routes/feedback";
-import { errorResponse } from "./utils/errors";
-import { safeLogError, sanitizeError } from "./utils/logging";
-import { StorageService } from "./services/storage";
-import { processSubmissionHandler } from "./routes/submissions";
-import { uuidStringSchema, formatZodMessage } from "./utils/zod";
+import { processSubmissionHandler, getSubmissionHandler } from "./routes/submissions";
 
-const app = new Hono<{
-  Bindings: Env;
-  Variables: { executionCtx?: ExecutionContext };
-}>();
+const app = new Hono<{ Bindings: Env }>();
 
 // CORS
 app.use(
@@ -32,14 +25,6 @@ app.use(
 // Security headers
 app.use("*", securityHeaders);
 
-// Execution context middleware
-// Note: Cloudflare Workers ExecutionContext is attached to env by the runtime
-app.use("*", async (_c, next) => {
-  // ExecutionContext is available via the fetch handler's third parameter
-  // This middleware is a no-op but kept for potential future use
-  await next();
-});
-
 // Public routes (before auth)
 app.route("/", healthRouter);
 
@@ -53,48 +38,9 @@ app.use("*", rateLimit);
 app.route("/", questionsRouter);
 app.route("/", feedbackRouter);
 
-// Submission routes
-// Note: PUT and GET routes must come AFTER feedbackRouter to avoid route conflicts
-// feedbackRouter has POST /text/submissions/:id/teacher-feedback which is more specific
+// Submission routes (must come after feedbackRouter to avoid route conflicts)
 app.put("/text/submissions/:submission_id", processSubmissionHandler);
-
-app.get("/text/submissions/:submission_id", async (c) => {
-  const submissionIdResult = uuidStringSchema("submission_id").safeParse(
-    c.req.param("submission_id"),
-  );
-  if (!submissionIdResult.success) {
-    return errorResponse(
-      400,
-      formatZodMessage(submissionIdResult.error, "Invalid submission_id format"),
-      c,
-    );
-  }
-  const submissionId = submissionIdResult.data;
-
-  try {
-    const storage = new StorageService(c.env.WRITEO_DATA, c.env.WRITEO_RESULTS);
-    const result = await storage.getResults(submissionId);
-
-    if (!result) {
-      // Check if submission exists (only if user opted in to server storage)
-      const submission = await storage.getSubmission(submissionId);
-      if (!submission) {
-        return errorResponse(
-          404,
-          "Submission not found. Results are stored in your browser by default. If you enabled server storage, the results may have expired (90-day retention).",
-          c,
-        );
-      }
-      return c.json({ status: "pending" });
-    }
-
-    return c.json(result);
-  } catch (error) {
-    const sanitized = sanitizeError(error);
-    safeLogError("Error fetching submission", sanitized);
-    return errorResponse(500, "Internal server error", c);
-  }
-});
+app.get("/text/submissions/:submission_id", getSubmissionHandler);
 
 export default {
   async fetch(

@@ -6,6 +6,125 @@ import type {
 } from "@writeo/shared";
 import { MAX_ESSAY_LENGTH, MAX_QUESTION_LENGTH } from "./constants";
 
+// Confidence calculation constants
+const BASE_CONFIDENCE = 0.5;
+const HIGH_CONFIDENCE_THRESHOLD = 0.8;
+const MEDIUM_CONFIDENCE_THRESHOLD = 0.6;
+const TENSE_ERROR_THRESHOLD = 0.7;
+
+// Confidence adjustments
+const CATEGORY_BONUS = {
+  GRAMMAR_OR_SPELLING: 0.3,
+  TYPOGRAPHY: 0.2,
+  STYLE_OR_PUNCTUATION: 0.1,
+};
+const TENSE_CONSISTENCY_BONUS = 0.25;
+const TENSE_EXPLICIT_BONUS = 0.15;
+const STRONG_PAST_INDICATOR_BONUS = 0.1;
+const SUBJECT_VERB_BONUS = 0.1;
+const ERROR_TYPE_BONUS = 0.15;
+const WARNING_TYPE_PENALTY = 0.1;
+const NO_SUGGESTIONS_PENALTY = 0.2;
+const SINGLE_SUGGESTION_BONUS = 0.1;
+const MULTIPLE_SUGGESTIONS_PENALTY = 0.1;
+const RULE_TYPE_BONUS = 0.05;
+
+// Position validation constants
+const CONTEXT_WINDOW_SIZE = 100;
+const MAX_SEARCH_DISTANCE = 200;
+const MAX_WORD_BOUNDARY_DISTANCE = 5;
+const MAX_EXPANSION_DISTANCE = 20;
+const FUZZY_SEARCH_WINDOW = 50;
+
+// Tense detection arrays
+const PRESENT_TENSE_VERBS = [
+  "go",
+  "come",
+  "see",
+  "do",
+  "have",
+  "eat",
+  "take",
+  "make",
+  "get",
+  "give",
+  "say",
+  "know",
+  "visit",
+  "enjoy",
+  "play",
+  "talk",
+] as const;
+
+const PAST_TENSE_VERBS = [
+  "went",
+  "came",
+  "saw",
+  "did",
+  "had",
+  "ate",
+  "took",
+  "made",
+  "got",
+  "gave",
+  "said",
+  "knew",
+  "visited",
+  "enjoyed",
+  "played",
+  "talked",
+] as const;
+
+const PAST_TENSE_INDICATORS = [
+  "yesterday",
+  "last week",
+  "last month",
+  "last year",
+  "last weekend",
+  "ago",
+  "was",
+  "were",
+  "went",
+  "came",
+  "saw",
+  "did",
+  "had",
+  "ate",
+  "took",
+  "made",
+  "got",
+  "gave",
+  "said",
+  "knew",
+  "visited",
+  "enjoyed",
+  "played",
+  "talked",
+  "before",
+  "earlier",
+  "previously",
+  "then",
+] as const;
+
+const STRONG_PAST_INDICATORS = [
+  "yesterday",
+  "last week",
+  "last month",
+  "ago",
+  "was",
+  "were",
+] as const;
+
+const ESSAY_TRUNCATION_NOTICE =
+  "\n\n[... essay continues but truncated for feedback generation ...]";
+
+/**
+ * Extracts and normalizes the category from a LanguageTool match.
+ */
+function getCategory(match: LanguageToolMatch): string {
+  return (match.rule?.category?.id || match.rule?.category?.name || "UNKNOWN").toUpperCase();
+}
+
 /**
  * Truncates essay text to the maximum allowed length for API processing.
  *
@@ -16,8 +135,7 @@ import { MAX_ESSAY_LENGTH, MAX_QUESTION_LENGTH } from "./constants";
  */
 export function truncateEssayText(text: string): string {
   return text.length > MAX_ESSAY_LENGTH
-    ? text.slice(0, MAX_ESSAY_LENGTH) +
-        "\n\n[... essay continues but truncated for feedback generation ...]"
+    ? text.slice(0, MAX_ESSAY_LENGTH) + ESSAY_TRUNCATION_NOTICE
     : text;
 }
 
@@ -31,6 +149,9 @@ export function truncateQuestionText(text: string): string {
   return text.length > MAX_QUESTION_LENGTH ? text.slice(0, MAX_QUESTION_LENGTH) + "..." : text;
 }
 
+/**
+ * Generates structured feedback (error type, explanation, example) from a LanguageTool match.
+ */
 export function generateStructuredFeedback(
   match: LanguageToolMatch,
   errorText: string,
@@ -39,11 +160,7 @@ export function generateStructuredFeedback(
   explanation: string;
   example: string;
 } {
-  const category = (
-    match.rule?.category?.id ||
-    match.rule?.category?.name ||
-    "UNKNOWN"
-  ).toUpperCase();
+  const category = getCategory(match);
 
   const ruleId = match.rule?.id || "";
   const message = match.message || match.shortMessage || "";
@@ -103,14 +220,14 @@ export function generateStructuredFeedback(
   return { errorType, explanation, example };
 }
 
+/**
+ * Checks if a LanguageTool match represents a tense consistency error.
+ * Detects mismatches between present tense verbs and past tense context indicators.
+ */
 export function isTenseConsistencyError(match: LanguageToolMatch, fullText: string): boolean {
   const ruleId = (match.rule?.id || "").toUpperCase();
   const message = (match.message || "").toLowerCase();
-  const category = (
-    match.rule?.category?.id ||
-    match.rule?.category?.name ||
-    "UNKNOWN"
-  ).toUpperCase();
+  const category = getCategory(match);
 
   if (
     ruleId.includes("TENSE") ||
@@ -124,89 +241,24 @@ export function isTenseConsistencyError(match: LanguageToolMatch, fullText: stri
     .substring(match.offset || 0, (match.offset || 0) + (match.length || 0))
     .toLowerCase();
 
-  const presentTenseVerbs = [
-    "go",
-    "come",
-    "see",
-    "do",
-    "have",
-    "eat",
-    "take",
-    "make",
-    "get",
-    "give",
-    "say",
-    "know",
-    "visit",
-    "enjoy",
-    "play",
-    "talk",
-  ];
-  const pastTenseVerbs = [
-    "went",
-    "came",
-    "saw",
-    "did",
-    "had",
-    "ate",
-    "took",
-    "made",
-    "got",
-    "gave",
-    "said",
-    "knew",
-    "visited",
-    "enjoyed",
-    "played",
-    "talked",
-  ];
-
   const errorTextLower = errorText.trim();
   if (
-    presentTenseVerbs.some(
+    PRESENT_TENSE_VERBS.some(
       (verb) =>
         errorTextLower === verb ||
         errorTextLower.startsWith(verb + " ") ||
         errorTextLower.endsWith(" " + verb),
     )
   ) {
-    const contextStart = Math.max(0, (match.offset || 0) - 100);
-    const contextEnd = Math.min(fullText.length, (match.offset || 0) + (match.length || 0) + 100);
+    const contextStart = Math.max(0, (match.offset || 0) - CONTEXT_WINDOW_SIZE);
+    const contextEnd = Math.min(
+      fullText.length,
+      (match.offset || 0) + (match.length || 0) + CONTEXT_WINDOW_SIZE,
+    );
     const context = fullText.substring(contextStart, contextEnd).toLowerCase();
 
-    const pastTenseIndicators = [
-      "yesterday",
-      "last week",
-      "last month",
-      "last year",
-      "last weekend",
-      "ago",
-      "was",
-      "were",
-      "went",
-      "came",
-      "saw",
-      "did",
-      "had",
-      "ate",
-      "took",
-      "made",
-      "got",
-      "gave",
-      "said",
-      "knew",
-      "visited",
-      "enjoyed",
-      "played",
-      "talked",
-      "before",
-      "earlier",
-      "previously",
-      "then",
-    ];
-
-    const hasPastTenseNearby = pastTenseVerbs.some((verb) => context.includes(verb));
-    const hasPastIndicator = pastTenseIndicators.some((indicator) => context.includes(indicator));
+    const hasPastTenseNearby = PAST_TENSE_VERBS.some((verb) => context.includes(verb));
+    const hasPastIndicator = PAST_TENSE_INDICATORS.some((indicator) => context.includes(indicator));
 
     if (hasPastIndicator || hasPastTenseNearby) {
       return true;
@@ -216,38 +268,40 @@ export function isTenseConsistencyError(match: LanguageToolMatch, fullText: stri
   return false;
 }
 
+/**
+ * Calculates a confidence score (0-1) for a LanguageTool match based on category,
+ * context, and other factors. Higher scores indicate more reliable error detection.
+ */
 export function calculateErrorConfidence(match: LanguageToolMatch, fullText?: string): number {
-  let confidence = 0.5;
+  let confidence = BASE_CONFIDENCE;
 
-  const category = (
-    match.rule?.category?.id ||
-    match.rule?.category?.name ||
-    "UNKNOWN"
-  ).toUpperCase();
+  const category = getCategory(match);
 
   if (category === "GRAMMAR" || category === "SPELLING") {
-    confidence += 0.3;
+    confidence += CATEGORY_BONUS.GRAMMAR_OR_SPELLING;
   } else if (category === "TYPOGRAPHY" || category === "TYPO") {
-    confidence += 0.2;
+    confidence += CATEGORY_BONUS.TYPOGRAPHY;
   } else if (category === "STYLE" || category === "PUNCTUATION") {
-    confidence += 0.1;
+    confidence += CATEGORY_BONUS.STYLE_OR_PUNCTUATION;
   }
 
   if (fullText && isTenseConsistencyError(match, fullText)) {
-    confidence += 0.25;
+    confidence += TENSE_CONSISTENCY_BONUS;
 
     const ruleId = (match.rule?.id || "").toUpperCase();
     const message = (match.message || "").toLowerCase();
     if (ruleId.includes("TENSE") || ruleId.includes("PAST") || message.includes("tense")) {
-      confidence += 0.15;
+      confidence += TENSE_EXPLICIT_BONUS;
     }
 
-    const contextStart = Math.max(0, (match.offset || 0) - 100);
-    const contextEnd = Math.min(fullText.length, (match.offset || 0) + (match.length || 0) + 100);
+    const contextStart = Math.max(0, (match.offset || 0) - CONTEXT_WINDOW_SIZE);
+    const contextEnd = Math.min(
+      fullText.length,
+      (match.offset || 0) + (match.length || 0) + CONTEXT_WINDOW_SIZE,
+    );
     const context = fullText.substring(contextStart, contextEnd).toLowerCase();
-    const strongPastIndicators = ["yesterday", "last week", "last month", "ago", "was", "were"];
-    if (strongPastIndicators.some((indicator) => context.includes(indicator))) {
-      confidence += 0.1;
+    if (STRONG_PAST_INDICATORS.some((indicator) => context.includes(indicator))) {
+      confidence += STRONG_PAST_INDICATOR_BONUS;
     }
   }
 
@@ -259,34 +313,34 @@ export function calculateErrorConfidence(match: LanguageToolMatch, fullText?: st
     ruleId.includes("AGREEMENT") ||
     (message.includes("subject") && message.includes("verb"))
   ) {
-    confidence += 0.1;
+    confidence += SUBJECT_VERB_BONUS;
   }
 
   if (match.issueType === "error") {
-    confidence += 0.15;
+    confidence += ERROR_TYPE_BONUS;
   } else {
-    confidence -= 0.1;
+    confidence += WARNING_TYPE_PENALTY;
   }
 
   const suggestionCount = match.replacements?.length || 0;
   if (suggestionCount === 0) {
-    confidence -= 0.2;
+    confidence += NO_SUGGESTIONS_PENALTY;
   } else if (suggestionCount === 1) {
-    confidence += 0.1;
+    confidence += SINGLE_SUGGESTION_BONUS;
   } else if (suggestionCount > 3) {
-    confidence -= 0.1;
+    confidence += MULTIPLE_SUGGESTIONS_PENALTY;
   }
 
   const ruleType = match.rule?.type || "";
   if (ruleType === "spelling" || ruleType === "grammar") {
-    confidence += 0.05;
+    confidence += RULE_TYPE_BONUS;
   }
 
   return Math.max(0, Math.min(1, confidence));
 }
 
 /**
- * Finds the start of a word boundary at or before the given position
+ * Finds the start of a word boundary at or before the given position.
  */
 function findWordStart(text: string, position: number): number {
   if (position <= 0) return 0;
@@ -294,10 +348,9 @@ function findWordStart(text: string, position: number): number {
 
   let pos = position;
 
-  // If we're already at a word character, move to the start of that word
   const charAtPos = text[pos];
   if (charAtPos !== undefined && /\w/.test(charAtPos)) {
-    // Move backwards to find the start of the word
+    // Move backwards to word start
     while (pos > 0) {
       const prevChar = text[pos - 1];
       if (prevChar !== undefined && /\w/.test(prevChar)) {
@@ -309,8 +362,7 @@ function findWordStart(text: string, position: number): number {
     return pos;
   }
 
-  // If we're at whitespace or punctuation, look for the nearest word
-  // First, try moving backwards to find a word
+  // Look for nearest word: try backwards first, then forwards
   let backPos = pos;
   while (backPos > 0) {
     const prevChar = text[backPos - 1];
@@ -323,7 +375,6 @@ function findWordStart(text: string, position: number): number {
   if (backPos > 0) {
     const prevChar = text[backPos - 1];
     if (prevChar !== undefined && /\w/.test(prevChar)) {
-      // Found a word character, move to its start
       while (backPos > 0) {
         const charBefore = text[backPos - 1];
         if (charBefore !== undefined && /\w/.test(charBefore)) {
@@ -336,7 +387,6 @@ function findWordStart(text: string, position: number): number {
     }
   }
 
-  // If no word found backwards, try forwards
   let forwardPos = pos;
   while (forwardPos < text.length) {
     const charAtForward = text[forwardPos];
@@ -350,17 +400,16 @@ function findWordStart(text: string, position: number): number {
 }
 
 /**
- * Finds the end of a word boundary at or after the given position
+ * Finds the end of a word boundary at or after the given position.
  */
 function findWordEnd(text: string, position: number): number {
   if (position >= text.length) return text.length;
 
   let pos = position;
 
-  // If we're already at a word character, move to the end of that word
   const charAtPos = text[pos];
   if (charAtPos !== undefined && /\w/.test(charAtPos)) {
-    // Move forwards to find the end of the word
+    // Move forwards to word end
     while (pos < text.length) {
       const char = text[pos];
       if (char !== undefined && /\w/.test(char)) {
@@ -372,8 +421,7 @@ function findWordEnd(text: string, position: number): number {
     return pos;
   }
 
-  // If we're at whitespace or punctuation, look for the nearest word
-  // First, try moving forwards to find a word
+  // Look for nearest word: try forwards first, then backwards
   let forwardPos = pos;
   while (forwardPos < text.length) {
     const char = text[forwardPos];
@@ -386,7 +434,6 @@ function findWordEnd(text: string, position: number): number {
   if (forwardPos < text.length) {
     const char = text[forwardPos];
     if (char !== undefined && /\w/.test(char)) {
-      // Found a word character, move to its end
       while (forwardPos < text.length) {
         const charAtForward = text[forwardPos];
         if (charAtForward !== undefined && /\w/.test(charAtForward)) {
@@ -399,7 +446,6 @@ function findWordEnd(text: string, position: number): number {
     }
   }
 
-  // If no word found forwards, try backwards
   let backPos = pos;
   while (backPos > 0) {
     const prevChar = text[backPos - 1];
@@ -412,7 +458,6 @@ function findWordEnd(text: string, position: number): number {
   if (backPos > 0) {
     const prevChar = text[backPos - 1];
     if (prevChar !== undefined && /\w/.test(prevChar)) {
-      // Found a word character, move to its end
       while (backPos < text.length) {
         const charAtBack = text[backPos];
         if (charAtBack !== undefined && /\w/.test(charAtBack)) {
@@ -432,11 +477,15 @@ function findWordEnd(text: string, position: number): number {
  * Finds a text snippet in the full text using fuzzy matching
  * Returns the position if found, or null if not found
  */
+/**
+ * Finds a text snippet in the full text using fuzzy matching.
+ * Returns the position if found, or null if not found.
+ */
 function findTextSnippet(
   snippet: string,
   fullText: string,
   expectedPosition: number,
-  maxDistance: number = 100,
+  maxDistance: number = CONTEXT_WINDOW_SIZE,
 ): { start: number; end: number } | null {
   if (!snippet || snippet.trim().length === 0) return null;
 
@@ -445,7 +494,6 @@ function findTextSnippet(
   const searchEnd = Math.min(fullText.length, expectedPosition + maxDistance + snippet.length);
   const searchArea = fullText.substring(searchStart, searchEnd);
 
-  // Try exact match first
   const exactIndex = searchArea.toLowerCase().indexOf(normalizedSnippet);
   if (exactIndex !== -1) {
     return {
@@ -454,11 +502,10 @@ function findTextSnippet(
     };
   }
 
-  // Try fuzzy match - find words that match
+  // Fuzzy match: find words that match
   const snippetWords = normalizedSnippet.split(/\s+/).filter((w) => w.length > 0);
   if (snippetWords.length === 0) return null;
 
-  // Find the first word
   const firstWord = snippetWords[0];
   if (!firstWord) return null;
   const firstWordIndex = searchArea.toLowerCase().indexOf(firstWord);
@@ -467,16 +514,14 @@ function findTextSnippet(
   const foundStart = searchStart + firstWordIndex;
   const foundEnd = findWordEnd(fullText, foundStart + firstWord.length);
 
-  // Check if the found text is reasonable
   const foundText = fullText.substring(foundStart, foundEnd).toLowerCase();
   if (foundText.includes(firstWord)) {
-    // Extend to include all words if possible
     let currentEnd = foundEnd;
     for (let i = 1; i < snippetWords.length; i++) {
       const nextWord = snippetWords[i];
       if (!nextWord) break;
       const nextIndex = fullText
-        .substring(currentEnd, currentEnd + 50)
+        .substring(currentEnd, currentEnd + FUZZY_SEARCH_WINDOW)
         .toLowerCase()
         .indexOf(nextWord);
       if (nextIndex !== -1) {
@@ -492,8 +537,14 @@ function findTextSnippet(
 }
 
 /**
- * Finds text in fullText using the error text and context words (before/after)
- * This is more reliable than trusting LLM-calculated positions
+ * Finds text in fullText using the error text and context words (before/after).
+ * This is more reliable than trusting LLM-calculated positions.
+ *
+ * @param errorText - The error text to find
+ * @param wordBefore - Optional word that should appear before the error
+ * @param wordAfter - Optional word that should appear after the error
+ * @param fullText - The full text to search in
+ * @returns Position of the error text, or null if not found
  */
 export function findTextWithContext(
   errorText: string,
@@ -507,47 +558,44 @@ export function findTextWithContext(
   const normalizedFullText = fullText.toLowerCase();
   const normalizedErrorLower = normalizedErrorText.toLowerCase();
 
-  // First, try to find error text with context (wordBefore and wordAfter)
   if (wordBefore || wordAfter) {
-    // Build a search pattern: [wordBefore] errorText [wordAfter]
     const beforeLower = wordBefore ? wordBefore.trim().toLowerCase() : null;
     const afterLower = wordAfter ? wordAfter.trim().toLowerCase() : null;
 
-    // Search for error text, then verify context
     let searchStart = 0;
     while (true) {
       const foundIndex = normalizedFullText.indexOf(normalizedErrorLower, searchStart);
       if (foundIndex === -1) break;
 
-      // Check wordBefore context
       let beforeMatches = true;
       if (beforeLower) {
-        const beforeArea = normalizedFullText.substring(Math.max(0, foundIndex - 50), foundIndex);
+        const beforeArea = normalizedFullText.substring(
+          Math.max(0, foundIndex - FUZZY_SEARCH_WINDOW),
+          foundIndex,
+        );
         beforeMatches = beforeArea.includes(beforeLower);
       }
 
-      // Check wordAfter context
       let afterMatches = true;
       if (afterLower && beforeMatches) {
         const afterStart = foundIndex + normalizedErrorLower.length;
-        const afterArea = normalizedFullText.substring(afterStart, afterStart + 50);
+        const afterArea = normalizedFullText.substring(
+          afterStart,
+          afterStart + FUZZY_SEARCH_WINDOW,
+        );
         afterMatches = afterArea.includes(afterLower);
       }
 
       if (beforeMatches && afterMatches) {
-        // Found with matching context!
         return {
           start: foundIndex,
           end: foundIndex + normalizedErrorText.length,
         };
       }
 
-      // Continue searching from after this match
       searchStart = foundIndex + 1;
     }
   }
-
-  // Fallback: find error text without context (or if context matching failed)
   const simpleIndex = normalizedFullText.indexOf(normalizedErrorLower);
   if (simpleIndex !== -1) {
     return {
@@ -583,20 +631,16 @@ export function validateAndCorrectErrorPosition(
 
   // If errorText is provided, try to find it in the text
   if (error.errorText && error.errorText.trim().length > 0) {
-    const found = findTextSnippet(error.errorText, fullText, start, 200);
+    const found = findTextSnippet(error.errorText, fullText, start, MAX_SEARCH_DISTANCE);
     if (found) {
       start = found.start;
       end = found.end;
     }
   }
 
-  // Get the text at the current position
   const currentText = fullText.substring(start, end);
 
-  // Check if the current position splits a word
-  // A word is split if:
-  // - The character before start is a word char AND start is a word char (we're in middle of word at start)
-  // - The character at end-1 is a word char AND end is a word char (we're in middle of word at end)
+  // Check if position splits a word (word char before start AND at start, or before end AND at end)
   const charBeforeStart = start > 0 ? fullText[start - 1] : undefined;
   const charAtStart = fullText[start];
   const charBeforeEnd = end > 0 ? fullText[end - 1] : undefined;
@@ -613,31 +657,27 @@ export function validateAndCorrectErrorPosition(
     /\w/.test(charAtEnd);
   const splitsWord = splitsWordAtStart || splitsWordAtEnd;
 
-  // If the position splits a word or is very close to word boundaries, align to word boundaries
-  // This handles cases where positions are slightly off or split words
   const wordStart = findWordStart(fullText, start);
   const wordEnd = findWordEnd(fullText, end);
 
-  // Align to word boundaries if:
-  // 1. The position splits a word, OR
-  // 2. We're very close to word boundaries (within 5 characters), OR
-  // 3. The current text doesn't contain a complete word
+  // Align to word boundaries if splitting a word, close to boundaries, or no complete word
   const distanceToWordStart = Math.abs(start - wordStart);
   const distanceToWordEnd = Math.abs(end - wordEnd);
   const hasCompleteWord = /\w+/.test(currentText.trim());
 
-  if (splitsWord || (distanceToWordStart <= 5 && distanceToWordEnd <= 5) || !hasCompleteWord) {
-    // Only align if it makes sense (don't expand too far)
-    const maxExpansion = 20; // Don't expand more than 20 characters
-    if (wordStart <= start + maxExpansion && wordEnd >= end - maxExpansion) {
+  if (
+    splitsWord ||
+    (distanceToWordStart <= MAX_WORD_BOUNDARY_DISTANCE &&
+      distanceToWordEnd <= MAX_WORD_BOUNDARY_DISTANCE) ||
+    !hasCompleteWord
+  ) {
+    if (wordStart <= start + MAX_EXPANSION_DISTANCE && wordEnd >= end - MAX_EXPANSION_DISTANCE) {
       start = wordStart;
       end = wordEnd;
     }
   }
 
-  // Ensure we don't have an empty range
   if (start >= end) {
-    // Try to find a reasonable word boundary
     const newStart = findWordStart(fullText, error.start);
     const newEnd = findWordEnd(fullText, error.start + 1);
     if (newStart < newEnd) {
@@ -648,14 +688,11 @@ export function validateAndCorrectErrorPosition(
     }
   }
 
-  // Final validation: ensure the position makes sense
-  // Check that we're not highlighting only whitespace
   const finalText = fullText.substring(start, end).trim();
   if (finalText.length === 0) {
     return { start: 0, end: 0, valid: false };
   }
 
-  // Check that we're highlighting at least part of a word
   const hasWordChar = /\w/.test(finalText);
   if (!hasWordChar && error.errorType !== "Punctuation") {
     return { start: 0, end: 0, valid: false };
@@ -682,10 +719,6 @@ export function transformLanguageToolResponse(
     return [];
   }
 
-  const HIGH_CONFIDENCE_THRESHOLD = 0.8;
-  const MEDIUM_CONFIDENCE_THRESHOLD = 0.6;
-  const TENSE_ERROR_THRESHOLD = 0.7;
-
   const errors: LanguageToolError[] = [];
   for (const match of ltResponse.matches) {
     const start = match.offset || 0;
@@ -707,7 +740,7 @@ export function transformLanguageToolResponse(
           start,
           end,
           errorText: errorText || fullText.substring(start, end),
-          errorType: match.rule?.category?.id || match.rule?.category?.name,
+          errorType: getCategory(match),
         },
         fullText,
       );
@@ -743,7 +776,7 @@ export function transformLanguageToolResponse(
       end: validatedEnd,
       length: validatedEnd - validatedStart,
       sentenceIndex: undefined,
-      category: (match.rule?.category?.id || match.rule?.category?.name || "UNKNOWN").toUpperCase(),
+      category: getCategory(match),
       rule_id: match.rule?.id || "UNKNOWN",
       message: match.message || match.shortMessage || match.rule?.description || "Error detected",
       suggestions:

@@ -3,8 +3,15 @@ import { callOpenAIAPI } from "./openai";
 
 export type LLMProvider = "groq" | "openai";
 
+const DEFAULT_MODELS: Record<LLMProvider, string> = {
+  groq: "llama-3.3-70b-versatile",
+  openai: "gpt-4o-mini",
+};
+
+const GROQ_FALLBACK_STREAM_DELAY_MS = 10;
+
 export function getDefaultModel(provider: LLMProvider): string {
-  return provider === "groq" ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
+  return DEFAULT_MODELS[provider];
 }
 
 export function getAPIKey(
@@ -14,7 +21,10 @@ export function getAPIKey(
     OPENAI_API_KEY?: string;
   },
 ): string {
-  return provider === "groq" ? env.GROQ_API_KEY || "" : env.OPENAI_API_KEY || "";
+  if (provider === "groq") {
+    return env.GROQ_API_KEY || "";
+  }
+  return env.OPENAI_API_KEY || "";
 }
 
 export async function callLLMAPI(
@@ -24,13 +34,25 @@ export async function callLLMAPI(
   messages: Array<{ role: string; content: string }>,
   maxTokens: number,
 ): Promise<string> {
-  return provider === "groq"
-    ? callGroqAPI(apiKey, modelName, messages, maxTokens)
-    : callOpenAIAPI(apiKey, modelName, messages, maxTokens);
+  if (provider === "groq") {
+    return callGroqAPI(apiKey, modelName, messages, maxTokens);
+  }
+  return callOpenAIAPI(apiKey, modelName, messages, maxTokens);
 }
 
 export function parseLLMProvider(provider?: string): LLMProvider {
-  return provider?.toLowerCase().trim() === "groq" ? "groq" : "openai";
+  const normalized = provider?.toLowerCase().trim();
+  return normalized === "groq" ? "groq" : "openai";
+}
+
+function simulateStreaming(text: string): AsyncGenerator<string, void, unknown> {
+  return (async function* () {
+    const words = text.match(/\S+|\s+/g) || [];
+    for (const word of words) {
+      yield word;
+      await new Promise((resolve) => setTimeout(resolve, GROQ_FALLBACK_STREAM_DELAY_MS));
+    }
+  })();
 }
 
 export async function* streamLLMAPI(
@@ -45,12 +67,9 @@ export async function* streamLLMAPI(
     yield* streamOpenAIAPI(apiKey, modelName, messages, maxTokens);
     return;
   }
-  // Groq streaming not yet implemented, fall back to non-streaming
+
+  // Groq streaming not yet implemented, fall back to non-streaming with simulated streaming
   const { callGroqAPI } = await import("./groq");
   const response = await callGroqAPI(apiKey, modelName, messages, maxTokens);
-  const words = response.match(/\S+|\s+/g) || [];
-  for (const word of words) {
-    yield word;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
+  yield* simulateStreaming(response);
 }

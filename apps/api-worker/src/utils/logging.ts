@@ -10,7 +10,33 @@ const SENSITIVE_PATTERNS = [
   /eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/gi,
 ];
 
-function sanitizeValue(value: any): any {
+const MAX_STRING_LENGTH = 500;
+const TRUNCATE_TO_LENGTH = 100;
+const REDACT_PREVIEW_LENGTH = 20;
+
+const REDACTED_PLACEHOLDER = "[REDACTED]";
+const TRUNCATED_SUFFIX = "...[TRUNCATED]";
+const REDACTED_SUFFIX = "...[REDACTED]";
+
+/**
+ * Redacts a sensitive string value, showing only a short preview.
+ */
+function redactString(value: string): string {
+  const previewLength = Math.min(value.length, REDACT_PREVIEW_LENGTH);
+  return "*".repeat(previewLength) + REDACTED_SUFFIX;
+}
+
+/**
+ * Truncates a long string value.
+ */
+function truncateString(value: string): string {
+  return value.substring(0, TRUNCATE_TO_LENGTH) + TRUNCATED_SUFFIX;
+}
+
+/**
+ * Recursively sanitizes values to remove sensitive data and truncate long strings.
+ */
+function sanitizeValue(value: unknown): unknown {
   if (value === null || value === undefined) {
     return value;
   }
@@ -18,11 +44,11 @@ function sanitizeValue(value: any): any {
   if (typeof value === "string") {
     for (const pattern of SENSITIVE_PATTERNS) {
       if (pattern.test(value)) {
-        return value.replace(/./g, "*").substring(0, Math.min(value.length, 20)) + "...[REDACTED]";
+        return redactString(value);
       }
     }
-    if (value.length > 500) {
-      return value.substring(0, 100) + "...[TRUNCATED]";
+    if (value.length > MAX_STRING_LENGTH) {
+      return truncateString(value);
     }
     return value;
   }
@@ -32,10 +58,10 @@ function sanitizeValue(value: any): any {
       return value.map(sanitizeValue);
     }
 
-    const sanitized: Record<string, any> = {};
+    const sanitized: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value)) {
       const isSensitiveKey = SENSITIVE_PATTERNS.some((pattern) => pattern.test(key));
-      sanitized[key] = isSensitiveKey ? "[REDACTED]" : sanitizeValue(val);
+      sanitized[key] = isSensitiveKey ? REDACTED_PLACEHOLDER : sanitizeValue(val);
     }
     return sanitized;
   }
@@ -43,21 +69,39 @@ function sanitizeValue(value: any): any {
   return value;
 }
 
-export function safeLogError(message: string, data?: any): void {
+/**
+ * Internal logging helper that sanitizes data before logging.
+ */
+function safeLog(level: "error" | "warn" | "info", message: string, data?: unknown): void {
   const sanitizedData = data ? sanitizeValue(data) : undefined;
-  console.error(message, sanitizedData);
+  const logFn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+  logFn(message, sanitizedData);
 }
 
-export function safeLogWarn(message: string, data?: any): void {
-  const sanitizedData = data ? sanitizeValue(data) : undefined;
-  console.warn(message, sanitizedData);
+/**
+ * Logs an error with sanitized data.
+ */
+export function safeLogError(message: string, data?: unknown): void {
+  safeLog("error", message, data);
 }
 
-export function safeLogInfo(message: string, data?: any): void {
-  const sanitizedData = data ? sanitizeValue(data) : undefined;
-  console.log(message, sanitizedData);
+/**
+ * Logs a warning with sanitized data.
+ */
+export function safeLogWarn(message: string, data?: unknown): void {
+  safeLog("warn", message, data);
 }
 
+/**
+ * Logs an info message with sanitized data.
+ */
+export function safeLogInfo(message: string, data?: unknown): void {
+  safeLog("info", message, data);
+}
+
+/**
+ * Sanitizes an error object, extracting message and name while removing sensitive data.
+ */
 export function sanitizeError(error: unknown): {
   message: string;
   name?: string;

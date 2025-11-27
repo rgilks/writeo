@@ -35,45 +35,49 @@ export interface AppConfig {
   allowedOrigins?: string;
 }
 
+const DEFAULT_LT_LANGUAGE = "en-GB";
+
+function requireEnv(key: string, value: string | undefined): string {
+  if (!value) {
+    throw new Error(`${key} is required`);
+  }
+  return value;
+}
+
+function buildLLMConfig(env: Env): { provider: LLMProvider; model: string; apiKey: string } {
+  const provider = parseLLMProvider(env.LLM_PROVIDER);
+  const apiKey = getAPIKey(provider, {
+    GROQ_API_KEY: env.GROQ_API_KEY,
+    OPENAI_API_KEY: env.OPENAI_API_KEY,
+  });
+
+  if (!apiKey) {
+    const envKey = provider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY";
+    throw new Error(`API key not found for provider: ${provider}. Please set ${envKey}`);
+  }
+
+  return {
+    provider,
+    model: env.AI_MODEL || getDefaultModel(provider),
+    apiKey,
+  };
+}
+
 /**
  * Validates and builds configuration from environment variables
  * Throws on missing required values (fail-fast)
  */
 export function buildConfig(env: Env): AppConfig {
-  if (!env.API_KEY) {
-    throw new Error("API_KEY is required");
-  }
-
-  if (!env.MODAL_GRADE_URL) {
-    throw new Error("MODAL_GRADE_URL is required");
-  }
-
-  const llmProvider = parseLLMProvider(env.LLM_PROVIDER);
-  const llmApiKey = getAPIKey(llmProvider, {
-    GROQ_API_KEY: env.GROQ_API_KEY,
-    OPENAI_API_KEY: env.OPENAI_API_KEY,
-  });
-
-  if (!llmApiKey) {
-    throw new Error(
-      `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`,
-    );
-  }
-
   return {
     api: {
-      key: env.API_KEY,
+      key: requireEnv("API_KEY", env.API_KEY),
       testKey: env.TEST_API_KEY,
     },
     modal: {
-      gradeUrl: env.MODAL_GRADE_URL,
+      gradeUrl: requireEnv("MODAL_GRADE_URL", env.MODAL_GRADE_URL),
       ltUrl: env.MODAL_LT_URL,
     },
-    llm: {
-      provider: llmProvider,
-      model: env.AI_MODEL || getDefaultModel(llmProvider),
-      apiKey: llmApiKey,
-    },
+    llm: buildLLMConfig(env),
     storage: {
       r2Bucket: env.WRITEO_DATA,
       kvNamespace: env.WRITEO_RESULTS,
@@ -81,7 +85,7 @@ export function buildConfig(env: Env): AppConfig {
     features: {
       languageTool: {
         enabled: !!env.MODAL_LT_URL,
-        language: env.LT_LANGUAGE || "en-GB",
+        language: env.LT_LANGUAGE || DEFAULT_LT_LANGUAGE,
       },
     },
     allowedOrigins: env.ALLOWED_ORIGINS,
