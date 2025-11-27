@@ -6,15 +6,14 @@ import { countWords } from "@writeo/shared";
 import type { EssayScores, FeedbackError, RelevanceCheck } from "./types";
 
 export function buildEssayContext(essayScores?: EssayScores): string {
-  const normalized = normalizeEssayScores(essayScores);
-  if (!normalized) return "";
+  if (!essayScores) return "";
   return `\n\nAssessment Results:
-- Overall Score: ${normalized.overall ?? "N/A"} / 9.0
-- CEFR Level: ${normalized.label ?? "N/A"}
-- Task Achievement (TA): ${normalized.dimensions?.TA ?? "N/A"} / 9.0
-- Coherence & Cohesion (CC): ${normalized.dimensions?.CC ?? "N/A"} / 9.0
-- Vocabulary: ${normalized.dimensions?.Vocab ?? "N/A"} / 9.0
-- Grammar: ${normalized.dimensions?.Grammar ?? "N/A"} / 9.0`;
+- Overall Score: ${essayScores.overall ?? "N/A"} / 9.0
+- CEFR Level: ${essayScores.label ?? "N/A"}
+- Task Achievement (TA): ${essayScores.dimensions?.TA ?? "N/A"} / 9.0
+- Coherence & Cohesion (CC): ${essayScores.dimensions?.CC ?? "N/A"} / 9.0
+- Vocabulary: ${essayScores.dimensions?.Vocab ?? "N/A"} / 9.0
+- Grammar: ${essayScores.dimensions?.Grammar ?? "N/A"} / 9.0`;
 }
 
 export function buildGrammarContext(
@@ -55,12 +54,9 @@ export function buildRelevanceContext(relevanceCheck?: RelevanceCheck): string {
 }
 
 export function buildTeacherScoreContext(essayScores?: EssayScores): string {
-  const normalized = normalizeEssayScores(essayScores);
-  if (!normalized) return "";
-  const overall = normalized.overall ?? 0;
-  const lowestDim = Object.entries(normalized.dimensions || {}).sort(
-    ([, a], [, b]) => (a ?? 0) - (b ?? 0),
-  )[0];
+  if (!essayScores) return "";
+  const overall = essayScores.overall ?? 0;
+  const lowestDim = getLowestDimension(essayScores);
   return `\n\nStudent's performance:\n- Overall score: ${overall.toFixed(1)} / 9.0${
     lowestDim ? `\n- Weakest area: ${lowestDim[0]} (${lowestDim[1]?.toFixed(1)} / 9.0)` : ""
   }`;
@@ -106,11 +102,19 @@ export function buildWordCountContext(answerText: string): string {
 }
 
 export function getLowestDimension(essayScores?: EssayScores): [string, number] | undefined {
-  const normalized = normalizeEssayScores(essayScores);
-  if (!normalized?.dimensions) return undefined;
-  return Object.entries(normalized.dimensions).sort(([, a], [, b]) => (a ?? 0) - (b ?? 0))[0] as
-    | [string, number]
-    | undefined;
+  const dimensions = essayScores?.dimensions;
+  if (!dimensions) return undefined;
+
+  let lowest: [string, number] | undefined;
+  for (const [key, rawValue] of Object.entries(dimensions)) {
+    if (key === "Overall") continue;
+    const value = rawValue ?? 0;
+    if (!lowest || value < lowest[1]) {
+      lowest = [key, value];
+    }
+  }
+
+  return lowest;
 }
 
 export function getFocusArea(dimension?: string): string {

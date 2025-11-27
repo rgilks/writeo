@@ -8,7 +8,7 @@ import {
   MAX_TOKENS_TEACHER_FEEDBACK_EXPLANATION,
 } from "../../utils/constants";
 import { buildTeacherFeedbackPrompt } from "./prompts-teacher";
-import { getLowestDimension, getFocusArea } from "./context";
+import { getLowestDimension, getFocusArea, normalizeEssayScores } from "./context";
 import type { TeacherFeedback, EssayScores, FeedbackError, RelevanceCheck } from "./types";
 
 export async function getTeacherFeedback(
@@ -23,11 +23,13 @@ export async function getTeacherFeedback(
   llmErrors?: FeedbackError[],
   relevanceCheck?: RelevanceCheck,
 ): Promise<TeacherFeedback> {
+  const normalizedScores = normalizeEssayScores(essayScores);
+
   const prompt = buildTeacherFeedbackPrompt(
     questionText,
     answerText,
     mode,
-    essayScores,
+    normalizedScores,
     languageToolErrors,
     llmErrors,
     relevanceCheck,
@@ -60,8 +62,8 @@ export async function getTeacherFeedback(
   const trimmedResponseText = responseText.trim();
 
   let focusArea: string | undefined;
-  if (mode === "initial" && essayScores?.dimensions) {
-    const lowestDim = getLowestDimension(essayScores);
+  if (mode === "initial" && normalizedScores?.dimensions) {
+    const lowestDim = getLowestDimension(normalizedScores);
     focusArea = lowestDim ? getFocusArea(lowestDim[0]) : undefined;
   }
 

@@ -4,7 +4,11 @@
 
 import { callLLMAPI, streamLLMAPI, type LLMProvider } from "../../services/llm";
 import { truncateEssayText, truncateQuestionText } from "../../utils/text-processing";
-import { buildEssayContext, buildGrammarContext } from "../../services/feedback/context";
+import {
+  buildEssayContext,
+  buildGrammarContext,
+  normalizeEssayScores,
+} from "../../services/feedback/context";
 import type { FeedbackData } from "./storage";
 
 type EssayScores = FeedbackData["essayScores"];
@@ -20,9 +24,10 @@ export function buildStreamingPrompt(
   essayScores?: EssayScores,
   ltErrors?: GrammarErrors,
 ): string {
+  const normalizedScores = normalizeEssayScores(essayScores);
   const truncatedAnswerText = truncateEssayText(answerText);
   const truncatedQuestionText = truncateQuestionText(questionText);
-  const essayContext = buildEssayContext(essayScores);
+  const essayContext = buildEssayContext(normalizedScores);
   const grammarContext = buildGrammarContext(ltErrors, undefined);
 
   return `You are an expert English language tutor specializing in academic argumentative writing. Analyze the following essay answer and provide detailed, contextual feedback.
