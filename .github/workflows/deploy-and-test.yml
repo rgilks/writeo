@@ -103,20 +103,10 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run integration tests against production
-        # Integration tests verify the deployed API works correctly
-        run: npm run test:integration
-        env:
-          CI: true
-          API_BASE: ${{ env.PRODUCTION_API_URL }}
-          API_BASE_FORCE_REMOTE: "true"
-          API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
-
-      - name: Run API tests against production
-        # Note: API tests are excluded from local runs (npm test) to save costs.
-        # They only run in CI to verify production deployments.
+        # Integration tests (including api.test.ts) verify the deployed API works correctly
         # IMPORTANT: These tests use REAL APIs (not mocks) to verify production functionality.
         # The production worker must have USE_MOCK_LLM unset or false in Cloudflare secrets.
-        run: npx vitest run tests/api.test.ts
+        run: npm run test:integration
         env:
           CI: true
           API_BASE: ${{ env.PRODUCTION_API_URL }}
