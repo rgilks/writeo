@@ -1,7 +1,3 @@
-/**
- * Teacher feedback request handler
- */
-
 import { errorResponse } from "../../utils/errors";
 import { validateText, validateRequestBodySize } from "../../utils/validation";
 import {

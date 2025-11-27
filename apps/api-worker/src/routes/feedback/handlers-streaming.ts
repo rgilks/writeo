@@ -1,7 +1,3 @@
-/**
- * Streaming request handler
- */
-
 import { errorResponse } from "../../utils/errors";
 import { parseLLMProvider, getDefaultModel, getAPIKey, type LLMProvider } from "../../services/llm";
 import { getServices } from "../../utils/context";
