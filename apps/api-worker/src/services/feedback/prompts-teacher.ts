@@ -9,24 +9,16 @@ import {
   buildTeacherRelevanceContext,
   buildWordCountContext,
 } from "./context";
+import type { EssayScores, FeedbackError, RelevanceCheck } from "./types";
 
 export function buildTeacherFeedbackPrompt(
   questionText: string,
   answerText: string,
   mode: "initial" | "clues" | "explanation",
-  essayScores?: {
-    overall?: number;
-    dimensions?: { TA?: number; CC?: number; Vocab?: number; Grammar?: number; Overall?: number };
-  },
-  languageToolErrors?: Array<{
-    errorType?: string;
-    category: string;
-  }>,
-  llmErrors?: Array<{
-    errorType?: string;
-    category: string;
-  }>,
-  relevanceCheck?: { addressesQuestion: boolean; score: number },
+  essayScores?: EssayScores,
+  languageToolErrors?: Array<Pick<FeedbackError, "errorType" | "category">>,
+  llmErrors?: Array<Pick<FeedbackError, "errorType" | "category">>,
+  relevanceCheck?: Pick<RelevanceCheck, "addressesQuestion" | "score">,
 ): string {
   const truncatedAnswerText = truncateEssayText(answerText);
   const scoreContext = buildTeacherScoreContext(essayScores);

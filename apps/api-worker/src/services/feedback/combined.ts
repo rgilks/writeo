@@ -6,40 +6,39 @@ import { callLLMAPI, type LLMProvider } from "../llm";
 import { MAX_TOKENS_DETAILED_FEEDBACK } from "../../utils/constants";
 import { buildCombinedFeedbackPrompt } from "./prompts-combined";
 import { parseFeedbackResponse } from "./parser";
-import type { CombinedFeedback } from "./types";
+import { normalizeEssayScores } from "./context";
+import type { CombinedFeedback, EssayScores, FeedbackError, RelevanceCheck } from "./types";
 
-export async function getCombinedFeedback(
-  llmProvider: LLMProvider,
-  apiKey: string,
-  questionText: string,
-  answerText: string,
-  modelName: string,
-  essayScores?: {
-    overall?: number;
-    dimensions?: { TA?: number; CC?: number; Vocab?: number; Grammar?: number; Overall?: number };
-    label?: string;
-  },
-  languageToolErrors?: Array<{
-    message: string;
-    category: string;
-    suggestions?: string[];
-    start: number;
-    end: number;
-  }>,
-  llmErrors?: Array<{
-    message: string;
-    category: string;
-    suggestions?: string[];
-    start: number;
-    end: number;
-    errorType?: string;
-  }>,
-  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number },
-): Promise<CombinedFeedback> {
+const COMBINED_FEEDBACK_SYSTEM_PROMPT =
+  "You are an expert English language tutor specializing in academic argumentative writing. Always respond with valid JSON only, no markdown, no explanations. Focus on helping students improve their essay writing skills without mentioning technical terms like CEFR or band scores.";
+
+export interface CombinedFeedbackParams {
+  llmProvider: LLMProvider;
+  apiKey: string;
+  questionText: string;
+  answerText: string;
+  modelName: string;
+  essayScores?: EssayScores;
+  languageToolErrors?: FeedbackError[];
+  llmErrors?: FeedbackError[];
+  relevanceCheck?: RelevanceCheck;
+}
+
+export async function getCombinedFeedback({
+  llmProvider,
+  apiKey,
+  questionText,
+  answerText,
+  modelName,
+  essayScores,
+  languageToolErrors,
+  llmErrors,
+  relevanceCheck,
+}: CombinedFeedbackParams): Promise<CombinedFeedback> {
   const prompt = buildCombinedFeedbackPrompt(
     questionText,
     answerText,
-    essayScores,
+    normalizeEssayScores(essayScores),
     languageToolErrors,
     llmErrors,
     relevanceCheck,
@@ -52,8 +51,7 @@ export async function getCombinedFeedback(
     [
       {
         role: "system",
-        content:
-          "You are an expert English language tutor specializing in academic argumentative writing. Always respond with valid JSON only, no markdown, no explanations. Focus on helping students improve their essay writing skills without mentioning technical terms like , CEFR, or band scores.",
+        content: COMBINED_FEEDBACK_SYSTEM_PROMPT,
       },
       {
         role: "user",
@@ -63,5 +61,16 @@ export async function getCombinedFeedback(
     MAX_TOKENS_DETAILED_FEEDBACK,
   );
 
-  return parseFeedbackResponse(responseText);
+  const trimmedResponse = responseText.trim();
+  if (!trimmedResponse) {
+    throw new Error("LLM returned an empty response for combined feedback");
+  }
+
+  try {
+    return parseFeedbackResponse(trimmedResponse);
+  } catch (error) {
+    throw new Error(
+      `Combined feedback parsing failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }

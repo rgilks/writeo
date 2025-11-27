@@ -10,26 +10,15 @@ import {
   getLowestDimension,
   getFocusArea,
 } from "./context";
+import type { EssayScores, FeedbackError, RelevanceCheck } from "./types";
 
 export function buildCombinedFeedbackPrompt(
   questionText: string,
   answerText: string,
-  essayScores?: {
-    overall?: number;
-    dimensions?: { TA?: number; CC?: number; Vocab?: number; Grammar?: number; Overall?: number };
-    label?: string;
-  },
-  languageToolErrors?: Array<{
-    message: string;
-    category: string;
-    suggestions?: string[];
-  }>,
-  llmErrors?: Array<{
-    message: string;
-    category: string;
-    suggestions?: string[];
-  }>,
-  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number },
+  essayScores?: EssayScores,
+  languageToolErrors?: FeedbackError[],
+  llmErrors?: FeedbackError[],
+  relevanceCheck?: RelevanceCheck,
 ): string {
   const truncatedAnswerText = truncateEssayText(answerText);
   const truncatedQuestionText = truncateQuestionText(questionText);

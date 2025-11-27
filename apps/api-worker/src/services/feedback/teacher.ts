@@ -9,7 +9,7 @@ import {
 } from "../../utils/constants";
 import { buildTeacherFeedbackPrompt } from "./prompts-teacher";
 import { getLowestDimension, getFocusArea } from "./context";
-import type { TeacherFeedback } from "./types";
+import type { TeacherFeedback, EssayScores, FeedbackError, RelevanceCheck } from "./types";
 
 export async function getTeacherFeedback(
   llmProvider: LLMProvider,
@@ -18,27 +18,10 @@ export async function getTeacherFeedback(
   answerText: string,
   modelName: string,
   mode: "initial" | "clues" | "explanation" = "initial",
-  essayScores?: {
-    overall?: number;
-    dimensions?: { TA?: number; CC?: number; Vocab?: number; Grammar?: number; Overall?: number };
-  },
-  languageToolErrors?: Array<{
-    message: string;
-    category: string;
-    suggestions?: string[];
-    start: number;
-    end: number;
-    errorType?: string;
-  }>,
-  llmErrors?: Array<{
-    message: string;
-    category: string;
-    suggestions?: string[];
-    start: number;
-    end: number;
-    errorType?: string;
-  }>,
-  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number },
+  essayScores?: EssayScores,
+  languageToolErrors?: FeedbackError[],
+  llmErrors?: FeedbackError[],
+  relevanceCheck?: RelevanceCheck,
 ): Promise<TeacherFeedback> {
   const prompt = buildTeacherFeedbackPrompt(
     questionText,
