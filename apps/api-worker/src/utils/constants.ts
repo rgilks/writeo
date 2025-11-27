@@ -9,3 +9,20 @@ export const MAX_TOKENS_TEACHER_FEEDBACK_INITIAL = 150;
 export const MAX_TOKENS_TEACHER_FEEDBACK_EXPLANATION = 800;
 export const MAX_REQUEST_BODY_SIZE = 1024 * 1024;
 export const MAX_ANSWER_TEXT_LENGTH = 50000;
+
+// Public paths that don't require authentication or rate limiting
+export const PUBLIC_PATHS = ["/health", "/docs", "/openapi.json"] as const;
+
+// API key owner types
+export const KEY_OWNER = {
+  ADMIN: "admin",
+  TEST_RUNNER: "test-runner",
+  UNKNOWN: "unknown",
+} as const;
+
+/**
+ * Checks if a path is a public path that doesn't require authentication.
+ */
+export function isPublicPath(path: string): boolean {
+  return PUBLIC_PATHS.includes(path as (typeof PUBLIC_PATHS)[number]);
+}

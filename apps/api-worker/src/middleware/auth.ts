@@ -1,10 +1,65 @@
 import type { Context } from "hono";
+import type { Env } from "../types/env";
 import { errorResponse } from "../utils/errors";
 import { safeLogError } from "../utils/logging";
+import { KEY_OWNER, isPublicPath } from "../utils/constants";
 
-export async function authenticate(c: Context, next: () => Promise<void>) {
+// Authorization header format: "Token <key>"
+const AUTH_HEADER_REGEX = /^Token\s+(.+)$/;
+
+interface KeyInfo {
+  owner?: string;
+}
+
+/**
+ * Validates an API key and sets authentication context.
+ * Checks in order: admin key, test key, then user keys in KV store.
+ */
+async function validateApiKey(
+  providedKey: string,
+  adminKey: string,
+  testKey: string | undefined,
+  kvStore: KVNamespace,
+): Promise<{ owner: string; isTestKey: boolean } | null> {
+  if (providedKey === adminKey) {
+    return { owner: KEY_OWNER.ADMIN, isTestKey: false };
+  }
+
+  if (testKey && providedKey === testKey) {
+    return { owner: KEY_OWNER.TEST_RUNNER, isTestKey: true };
+  }
+
+  try {
+    const keyInfoStr = await kvStore.get(`apikey:${providedKey}`);
+    if (keyInfoStr) {
+      try {
+        const keyInfo: KeyInfo = JSON.parse(keyInfoStr);
+        return {
+          owner: keyInfo.owner || KEY_OWNER.UNKNOWN,
+          isTestKey: false,
+        };
+      } catch (parseError) {
+        safeLogError("Failed to parse API key info from KV", parseError);
+        // Invalid JSON in KV - treat as invalid key
+        return null;
+      }
+    }
+  } catch (error) {
+    // KV lookup failed (network error, etc.) - log but don't expose to user
+    safeLogError("Error checking API key in KV store", error);
+    return null;
+  }
+
+  return null;
+}
+
+export async function authenticate(
+  c: Context<{ Bindings: Env; Variables: { apiKeyOwner?: string; isTestKey?: boolean } }>,
+  next: () => Promise<void>,
+) {
   const path = new URL(c.req.url).pathname;
-  if (path === "/health" || path === "/docs" || path === "/openapi.json") {
+
+  if (isPublicPath(path)) {
     return next();
   }
 
@@ -13,46 +68,28 @@ export async function authenticate(c: Context, next: () => Promise<void>) {
     return errorResponse(401, "Missing Authorization header", c);
   }
 
-  const match = authHeader.match(/^Token\s+(.+)$/);
-  if (!match) {
+  const match = authHeader.match(AUTH_HEADER_REGEX);
+  if (!match || !match[1]) {
     return errorResponse(401, "Invalid Authorization header format. Expected: 'Token <key>'", c);
   }
 
   const providedKey = match[1];
-  const expectedKey = c.env.API_KEY;
-  const testApiKey = c.env.TEST_API_KEY;
+  const adminKey = c.env.API_KEY;
 
-  if (!expectedKey) {
+  if (!adminKey) {
     safeLogError("API_KEY not configured in environment");
     return errorResponse(500, "Server configuration error", c);
   }
 
-  // 1. Check Standard Env Keys (Admin/Test)
-  if (providedKey === expectedKey) {
-    c.set("apiKeyOwner", "admin");
-    c.set("isTestKey", false);
-    return next();
+  const testKey = c.env.TEST_API_KEY;
+  const authResult = await validateApiKey(providedKey, adminKey, testKey, c.env.WRITEO_RESULTS);
+
+  if (!authResult) {
+    return errorResponse(401, "Invalid API key", c);
   }
 
-  if (testApiKey && providedKey === testApiKey) {
-    c.set("apiKeyOwner", "test-runner");
-    c.set("isTestKey", true);
-    return next();
-  }
+  c.set("apiKeyOwner", authResult.owner);
+  c.set("isTestKey", authResult.isTestKey);
 
-  // 2. Check KV for User Keys
-  try {
-    const keyInfoStr = await c.env.WRITEO_RESULTS.get(`apikey:${providedKey}`);
-    if (keyInfoStr) {
-      const keyInfo = JSON.parse(keyInfoStr);
-      c.set("apiKeyOwner", keyInfo.owner || "unknown");
-      c.set("isTestKey", false); // User keys are production by default
-      return next();
-    }
-  } catch (error) {
-    safeLogError("Error checking API key in KV", error);
-    // Continue to failure
-  }
-
-  return errorResponse(401, "Invalid API key", c);
+  return next();
 }

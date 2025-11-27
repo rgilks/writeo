@@ -28,7 +28,7 @@ export default defineConfig({
     hookTimeout: 60000,
     include: ["tests/**/*.test.ts"],
     // API tests excluded locally to save costs - run explicitly in CI with: npx vitest run tests/api.test.ts
-    exclude: ["tests/e2e/**", "tests/api.test.ts"],
+    exclude: process.env.CI ? ["tests/e2e/**"] : ["tests/e2e/**", "tests/api.test.ts"],
     pool: "threads",
     poolOptions: {
       threads: { maxThreads: 3, minThreads: 1 },
