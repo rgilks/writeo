@@ -499,6 +499,14 @@ button:not(.btn) {
   }
 }
 
+.task-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  z-index: 1;
+}
+
 .task-card {
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -513,7 +521,7 @@ button:not(.btn) {
   height: 100%;
 }
 
-.task-card:hover {
+.task-card-link:hover .task-card {
   box-shadow: var(--shadow-md);
   border-color: var(--primary-color);
   transform: translateY(-4px);

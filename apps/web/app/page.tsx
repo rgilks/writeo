@@ -110,7 +110,11 @@ export default function HomePage() {
 
         <motion.div className="grid" layout transition={{ duration: 0.5, ease: "easeInOut" }}>
           <div>
-            <Link href="/write/custom" style={{ textDecoration: "none" }}>
+            <Link
+              href="/write/custom"
+              style={{ textDecoration: "none", display: "block" }}
+              className="task-card-link"
+            >
               <div className="task-card">
                 <div className="task-header">
                   <div className="task-title">Custom Question</div>
@@ -127,7 +131,11 @@ export default function HomePage() {
           </div>
           {tasks.map((task) => (
             <div key={task.id}>
-              <Link href={`/write/${task.id}`} style={{ textDecoration: "none" }}>
+              <Link
+                href={`/write/${task.id}`}
+                style={{ textDecoration: "none", display: "block" }}
+                className="task-card-link"
+              >
                 <div className="task-card">
                   <div className="task-header">
                     <div className="task-title">{task.title}</div>

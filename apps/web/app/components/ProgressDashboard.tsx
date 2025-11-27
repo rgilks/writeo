@@ -454,11 +454,20 @@ export function ProgressDashboard() {
               You haven't written anything yet. Start practicing to see your progress, streaks, and
               achievements here!
             </p>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link href="/write/1" className="btn btn-primary" lang="en">
+            <Link
+              href="/write/1"
+              className="btn btn-primary"
+              lang="en"
+              style={{ display: "inline-block" }}
+            >
+              <motion.span
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{ display: "block" }}
+              >
                 Start Writing →
-              </Link>
-            </motion.div>
+              </motion.span>
+            </Link>
           </motion.div>
         )}
       </AnimatePresence>

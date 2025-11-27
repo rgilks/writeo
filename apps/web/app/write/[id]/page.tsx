@@ -82,7 +82,9 @@ export default function WritePage() {
       };
 
   // Use draft store content, but only after hydration
-  const answer = isHydrated ? currentContent : "";
+  // Track textarea value directly for immediate word count updates
+  const [localAnswer, setLocalAnswer] = useState("");
+  const answer = isHydrated ? localAnswer || currentContent : localAnswer;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selfEval, setSelfEval] = useState({
@@ -107,6 +109,9 @@ export default function WritePage() {
   const handleAnswerChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
+      // Update local state immediately for word count
+      setLocalAnswer(newValue);
+      // Update store for persistence
       updateContent(newValue);
 
       // Clear existing timeout
@@ -128,17 +133,25 @@ export default function WritePage() {
   useEffect(() => {
     if (useDraftStore.persist.hasHydrated()) {
       setIsHydrated(true);
+      // Initialize localAnswer from store if available
+      if (currentContent && !localAnswer) {
+        setLocalAnswer(currentContent);
+      }
       return;
     }
 
     const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
       setIsHydrated(true);
+      // Initialize localAnswer from store after hydration
+      if (currentContent && !localAnswer) {
+        setLocalAnswer(currentContent);
+      }
     });
 
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [currentContent, localAnswer]);
 
   // Load active draft after hydration if currentContent is empty but activeDraftId exists
   useEffect(() => {
@@ -152,6 +165,13 @@ export default function WritePage() {
       }
     }
   }, [isHydrated, currentContent, activeDraftId, contentDrafts, loadContentDraft]);
+
+  // Sync local state with store content after hydration (only once)
+  useEffect(() => {
+    if (isHydrated && currentContent && !localAnswer) {
+      setLocalAnswer(currentContent);
+    }
+  }, [isHydrated, currentContent, localAnswer]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -622,8 +642,12 @@ export default function WritePage() {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={loading || !answer.trim()}
-                  title="We value your privacy – see our policy"
+                  disabled={loading || !answer.trim() || wordCount < MIN_WORDS}
+                  title={
+                    wordCount < MIN_WORDS
+                      ? `Please write at least ${MIN_WORDS} words (currently ${wordCount} words)`
+                      : "We value your privacy – see our policy"
+                  }
                 >
                   {loading ? (
                     <span
