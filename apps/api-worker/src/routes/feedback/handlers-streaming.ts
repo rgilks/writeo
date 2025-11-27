@@ -8,33 +8,21 @@ import { StorageService } from "../../services/storage";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
 import type { AssessmentResults, LanguageToolError } from "@writeo/shared";
+import {
+  AssessmentDataSchema,
+  StreamingFeedbackRequestSchema,
+  type AssessmentDataInput,
+  formatZodError,
+} from "./validation";
 
-interface EssayScores {
-  overall?: number;
-  dimensions?: {
-    TA?: number;
-    CC?: number;
-    Vocab?: number;
-    Grammar?: number;
-    Overall?: number;
-  };
-}
-
-interface RequestBody {
-  answerId: string;
-  answerText: string;
-  questionText?: string;
-  assessmentData?: {
-    essayScores?: EssayScores;
-    ltErrors?: LanguageToolError[];
-  };
-}
+type EssayScores = AssessmentDataInput["essayScores"];
+type GrammarErrors = AssessmentDataInput["ltErrors"];
 
 interface StreamingRequestData {
   questionText: string;
   answerText: string;
   essayScores?: EssayScores;
-  ltErrors?: LanguageToolError[];
+  ltErrors?: GrammarErrors;
   llmProvider: LLMProvider;
   apiKey: string;
   aiModel: string;
@@ -45,10 +33,10 @@ interface StreamingRequestData {
  */
 function extractAssessmentData(results: AssessmentResults): {
   essayScores?: EssayScores;
-  ltErrors?: LanguageToolError[];
+  ltErrors?: GrammarErrors;
 } {
   let essayScores: EssayScores | undefined;
-  let ltErrors: LanguageToolError[] | undefined;
+  let ltErrors: GrammarErrors;
 
   for (const part of results.results?.parts || []) {
     for (const answer of part.answers || []) {
@@ -127,11 +115,11 @@ export async function handleStreamingRequest(
   c: Context<{ Bindings: Env }>,
 ): Promise<StreamingRequestData | Response> {
   const submissionId = c.req.param("submission_id");
-  const body = (await c.req.json()) as RequestBody;
-
-  if (!body.answerId || !body.answerText) {
-    return errorResponse(400, "Missing required fields: answerId, answerText", c);
+  const parsedBody = StreamingFeedbackRequestSchema.safeParse(await c.req.json());
+  if (!parsedBody.success) {
+    return errorResponse(400, `Invalid request body: ${formatZodError(parsedBody.error)}`, c);
   }
+  const body = parsedBody.data;
 
   let questionText = body.questionText || "";
   let essayScores = body.assessmentData?.essayScores;

@@ -11,31 +11,9 @@ import {
   getRelevanceCheckAssessorResult,
   findAssessorResultById,
 } from "@writeo/shared";
+import { AssessmentDataSchema, type AssessmentDataInput } from "./validation";
 
-export interface FeedbackData {
-  questionText: string;
-  essayScores?: {
-    overall?: number;
-    dimensions?: {
-      TA?: number;
-      CC?: number;
-      Vocab?: number;
-      Grammar?: number;
-      Overall?: number;
-    };
-  };
-  ltErrors?: LanguageToolError[];
-  llmErrors?: LanguageToolError[];
-  relevanceCheck?: {
-    addressesQuestion: boolean;
-    score: number;
-    threshold: number;
-  };
-}
-
-type AssessmentDataInput = Partial<
-  Pick<FeedbackData, "essayScores" | "ltErrors" | "llmErrors" | "relevanceCheck">
->;
+export type FeedbackData = { questionText: string } & AssessmentDataInput;
 
 /**
  * Loads feedback data (question text, assessment data) from storage.
@@ -53,7 +31,11 @@ export async function loadFeedbackDataFromStorage(
 
   const questionText = await resolveQuestionText(storage, results, answerId, providedQuestionText);
 
-  const assessmentData = mergeAssessmentData(results, providedAssessmentData);
+  const safeAssessmentData = providedAssessmentData
+    ? AssessmentDataSchema.parse(providedAssessmentData)
+    : undefined;
+
+  const assessmentData = mergeAssessmentData(results, safeAssessmentData);
 
   return {
     questionText,

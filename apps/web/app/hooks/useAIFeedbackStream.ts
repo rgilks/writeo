@@ -1,12 +1,29 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { z } from "zod";
 
-interface StreamEvent {
-  type: "start" | "chunk" | "done" | "error";
-  message?: string;
-  text?: string;
-}
+const StreamEventSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("start"),
+    message: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal("chunk"),
+    text: z.string().min(1),
+    message: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal("done"),
+    message: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal("error"),
+    message: z.string().optional(),
+  }),
+]);
+
+type StreamEvent = z.infer<typeof StreamEventSchema>;
 
 interface UseAIFeedbackStreamReturn {
   feedback: string;
@@ -141,7 +158,7 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
                   const jsonStr = line.slice(6).trim();
                   if (!jsonStr) continue;
 
-                  const data = JSON.parse(jsonStr) as StreamEvent;
+                  const data = StreamEventSchema.parse(JSON.parse(jsonStr));
 
                   if (data.type === "start") {
                     setFeedback("");

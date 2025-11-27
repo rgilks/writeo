@@ -9,6 +9,19 @@ import { apiRequest } from "../utils/api-client";
 import { getErrorMessage, makeSerializableError } from "../utils/error-handling";
 import { retryWithBackoff } from "@writeo/shared";
 import { getApiBase, getApiKey } from "../api-config";
+import { z } from "zod";
+
+const SubmissionEnvelopeSchema = z.object({
+  status: z.string(),
+  results: z
+    .object({
+      status: z.string(),
+      results: z.unknown(),
+    })
+    .optional(),
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
 
 export async function createSubmission(
   questionText: string,
@@ -90,15 +103,13 @@ export async function getSubmissionResults(submissionId: string) {
   }
 
   const data = await response.json();
+  const parsed = SubmissionEnvelopeSchema.safeParse(data);
 
-  if (
-    data.status === "success" &&
-    data.results &&
-    typeof data.results === "object" &&
-    "status" in data.results &&
-    "results" in data.results
-  ) {
-    return data.results;
+  if (parsed.success) {
+    if (parsed.data.status === "success" && parsed.data.results) {
+      return parsed.data.results;
+    }
+    return parsed.data;
   }
 
   return data;

@@ -19,18 +19,11 @@ import {
   getCachedTeacherFeedback,
   type FeedbackData,
 } from "./storage";
+import { TeacherFeedbackRequestSchema, formatZodError } from "./validation";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
 
 type FeedbackMode = "clues" | "explanation";
-
-interface RequestBody {
-  answerId: string;
-  mode: FeedbackMode;
-  answerText: string;
-  questionText?: string;
-  assessmentData?: Partial<FeedbackData>;
-}
 
 interface TeacherFeedbackResponse {
   cached: boolean;
@@ -151,19 +144,11 @@ export async function handleTeacherFeedbackRequest(
     return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
   }
 
-  const body = (await c.req.json()) as RequestBody;
-
-  if (!body.answerId || !body.mode || !body.answerText) {
-    return errorResponse(400, "Missing required fields: answerId, mode, answerText", c);
+  const parsedBody = TeacherFeedbackRequestSchema.safeParse(await c.req.json());
+  if (!parsedBody.success) {
+    return errorResponse(400, `Invalid request body: ${formatZodError(parsedBody.error)}`, c);
   }
-
-  if (!isValidUUID(body.answerId)) {
-    return errorResponse(400, "Invalid answerId format", c);
-  }
-
-  if (body.mode !== "clues" && body.mode !== "explanation") {
-    return errorResponse(400, "Mode must be 'clues' or 'explanation'", c);
-  }
+  const body = parsedBody.data;
 
   const textValidation = validateText(body.answerText, MAX_ANSWER_TEXT_LENGTH);
   if (!textValidation.valid) {
