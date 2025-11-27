@@ -143,6 +143,9 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
   }
 
   const isTest = (c.get("isTestKey") as boolean) || false;
+  if (isTest) {
+    return next();
+  }
   const apiKeyOwner = (c.get("apiKeyOwner") as string) || KEY_OWNER.UNKNOWN;
 
   const config = getRateLimitConfig(path, c.req.method, isTest);

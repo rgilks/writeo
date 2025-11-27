@@ -222,8 +222,10 @@ fi
 # Step 2: Start web app with local API configuration (if not already running)
 # Load API_KEY early so we can pass it to web app
 if [ -f "$ROOT_DIR/apps/api-worker/.dev.vars" ]; then
+  TEST_API_KEY_FOR_WEB=$(grep "^TEST_API_KEY=" "$ROOT_DIR/apps/api-worker/.dev.vars" | cut -d'=' -f2 | tr -d '"' | tr -d "'" | head -1)
   API_KEY_FOR_WEB=$(grep "^API_KEY=" "$ROOT_DIR/apps/api-worker/.dev.vars" | cut -d'=' -f2 | tr -d '"' | tr -d "'" | head -1)
 fi
+API_KEY_ENV_VALUE="${TEST_API_KEY_FOR_WEB:-$API_KEY_FOR_WEB}"
 
 if [ "$WEB_RUNNING" = false ]; then
   show_time
@@ -231,7 +233,7 @@ if [ "$WEB_RUNNING" = false ]; then
   echo "${CYAN}  Logs: /tmp/writeo-web.log${NC}"
   cd "$ROOT_DIR/apps/web"
   # Set API configuration for server actions (API_BASE_URL, API_KEY) and client (NEXT_PUBLIC_API_BASE)
-  API_BASE_URL="$API_URL" API_KEY="${API_KEY_FOR_WEB:-}" NEXT_PUBLIC_API_BASE="$API_URL" npm run dev > /tmp/writeo-web.log 2>&1 &
+  API_BASE_URL="$API_URL" API_KEY="${API_KEY_ENV_VALUE:-}" NEXT_PUBLIC_API_BASE="$API_URL" npm run dev > /tmp/writeo-web.log 2>&1 &
   WEB_PID=$!
   cd "$ROOT_DIR"
   show_time
@@ -324,9 +326,11 @@ echo ""
 
 # Load API_KEY from .dev.vars if it exists (for tests)
 if [ -f "$ROOT_DIR/apps/api-worker/.dev.vars" ]; then
-  # Extract API_KEY from .dev.vars file
+  TEST_API_KEY_FROM_FILE=$(grep "^TEST_API_KEY=" "$ROOT_DIR/apps/api-worker/.dev.vars" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
   API_KEY_FROM_FILE=$(grep "^API_KEY=" "$ROOT_DIR/apps/api-worker/.dev.vars" | cut -d'=' -f2 | tr -d '"' | tr -d "'")
-  if [ ! -z "$API_KEY_FROM_FILE" ]; then
+  if [ ! -z "$TEST_API_KEY_FROM_FILE" ]; then
+    export API_KEY="$TEST_API_KEY_FROM_FILE"
+  elif [ ! -z "$API_KEY_FROM_FILE" ]; then
     export API_KEY="$API_KEY_FROM_FILE"
   fi
 fi
