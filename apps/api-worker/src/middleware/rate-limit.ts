@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import type { Env } from "../types/env";
 import { errorResponse } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
 import { KEY_OWNER, isPublicPath } from "../utils/constants";
@@ -88,6 +89,7 @@ async function getRateLimitState(
       return { count: data.count, resetTime: data.resetTime };
     }
   } catch (error) {
+    // Log error without context (this function doesn't have access to context)
     safeLogError("Failed to parse rate limit data from KV", error);
   }
 
@@ -135,7 +137,13 @@ async function checkDailyLimit(
   return { exceeded: false, count: dailyCount + 1 };
 }
 
-export async function rateLimit(c: Context, next: () => Promise<void>) {
+export async function rateLimit(
+  c: Context<{
+    Bindings: Env;
+    Variables: { requestId?: string; apiKeyOwner?: string; isTestKey?: boolean };
+  }>,
+  next: () => Promise<void>,
+) {
   const path = new URL(c.req.url).pathname;
 
   if (isPublicPath(path)) {
@@ -192,7 +200,7 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
     return next();
   } catch (error) {
     const sanitized = sanitizeError(error);
-    safeLogError("Rate limiting error", sanitized);
+    safeLogError("Rate limiting error", sanitized, c);
     // Fail open to avoid blocking legitimate traffic
     return next();
   }

@@ -39,14 +39,14 @@ async function validateApiKey(
           isTestKey: false,
         };
       } catch (parseError) {
-        safeLogError("Failed to parse API key info from KV", parseError);
+        safeLogError("Failed to parse API key info from KV", parseError, undefined);
         // Invalid JSON in KV - treat as invalid key
         return null;
       }
     }
   } catch (error) {
     // KV lookup failed (network error, etc.) - log but don't expose to user
-    safeLogError("Error checking API key in KV store", error);
+    safeLogError("Error checking API key in KV store", error, undefined);
     return null;
   }
 
@@ -54,7 +54,10 @@ async function validateApiKey(
 }
 
 export async function authenticate(
-  c: Context<{ Bindings: Env; Variables: { apiKeyOwner?: string; isTestKey?: boolean } }>,
+  c: Context<{
+    Bindings: Env;
+    Variables: { apiKeyOwner?: string; isTestKey?: boolean; requestId?: string };
+  }>,
   next: () => Promise<void>,
 ) {
   const path = new URL(c.req.url).pathname;
@@ -77,7 +80,7 @@ export async function authenticate(
   const adminKey = c.env.API_KEY;
 
   if (!adminKey) {
-    safeLogError("API_KEY not configured in environment");
+    safeLogError("API_KEY not configured in environment", undefined, c);
     return errorResponse(500, "Server configuration error", c);
   }
 

@@ -6,11 +6,15 @@ import { safeLogError, sanitizeError } from "../utils/logging";
 import { getServices } from "../utils/context";
 import { uuidStringSchema, formatZodMessage } from "../utils/zod";
 
-export async function processSubmissionHandler(c: Context<{ Bindings: Env }>) {
+export async function processSubmissionHandler(
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+) {
   return processSubmission(c);
 }
 
-export async function getSubmissionHandler(c: Context<{ Bindings: Env }>) {
+export async function getSubmissionHandler(
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+) {
   const submissionIdResult = uuidStringSchema("submission_id").safeParse(
     c.req.param("submission_id"),
   );
@@ -42,7 +46,7 @@ export async function getSubmissionHandler(c: Context<{ Bindings: Env }>) {
     return c.json(result);
   } catch (error) {
     const sanitized = sanitizeError(error);
-    safeLogError("Error fetching submission", sanitized);
+    safeLogError("Error fetching submission", sanitized, c);
     return errorResponse(500, "Internal server error", c);
   }
 }

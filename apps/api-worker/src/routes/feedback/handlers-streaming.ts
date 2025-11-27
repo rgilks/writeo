@@ -112,7 +112,7 @@ function setupLLMConfig(env: Env): { provider: LLMProvider; apiKey: string; mode
  * @returns Request data for streaming or error response
  */
 export async function handleStreamingRequest(
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<StreamingRequestData | Response> {
   const submissionId = c.req.param("submission_id");
   const parsedBody = StreamingFeedbackRequestSchema.safeParse(await c.req.json());

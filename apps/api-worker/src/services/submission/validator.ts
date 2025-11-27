@@ -113,7 +113,7 @@ const submissionSchema = z
 
 export function validateSubmissionBody(
   body: CreateSubmissionRequest,
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): ValidationResult | Response {
   const parsed = submissionSchema.safeParse(body);
   if (!parsed.success) {

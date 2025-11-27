@@ -70,33 +70,82 @@ function sanitizeValue(value: unknown): unknown {
 }
 
 /**
+ * Gets the request ID from context if available.
+ * Used internally to include request ID in logs.
+ */
+function getRequestId(context?: { get?: (key: string) => unknown }): string | undefined {
+  if (context && typeof context.get === "function") {
+    return context.get("requestId") as string | undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Formats a log message with optional request ID prefix.
+ */
+function formatLogMessage(message: string, requestId?: string): string {
+  if (requestId) {
+    return `[req-${requestId}] ${message}`;
+  }
+  return message;
+}
+
+/**
  * Internal logging helper that sanitizes data before logging.
  */
-function safeLog(level: "error" | "warn" | "info", message: string, data?: unknown): void {
+function safeLog(
+  level: "error" | "warn" | "info",
+  message: string,
+  data?: unknown,
+  context?: { get?: (key: string) => unknown },
+): void {
+  const requestId = getRequestId(context);
+  const formattedMessage = formatLogMessage(message, requestId);
   const sanitizedData = data ? sanitizeValue(data) : undefined;
   const logFn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
-  logFn(message, sanitizedData);
+  logFn(formattedMessage, sanitizedData);
 }
 
 /**
  * Logs an error with sanitized data.
+ * @param message - Error message
+ * @param data - Optional data to log (will be sanitized)
+ * @param context - Optional Hono context to extract request ID
  */
-export function safeLogError(message: string, data?: unknown): void {
-  safeLog("error", message, data);
+export function safeLogError(
+  message: string,
+  data?: unknown,
+  context?: { get?: (key: string) => unknown },
+): void {
+  safeLog("error", message, data, context);
 }
 
 /**
  * Logs a warning with sanitized data.
+ * @param message - Warning message
+ * @param data - Optional data to log (will be sanitized)
+ * @param context - Optional Hono context to extract request ID
  */
-export function safeLogWarn(message: string, data?: unknown): void {
-  safeLog("warn", message, data);
+export function safeLogWarn(
+  message: string,
+  data?: unknown,
+  context?: { get?: (key: string) => unknown },
+): void {
+  safeLog("warn", message, data, context);
 }
 
 /**
  * Logs an info message with sanitized data.
+ * @param message - Info message
+ * @param data - Optional data to log (will be sanitized)
+ * @param context - Optional Hono context to extract request ID
  */
-export function safeLogInfo(message: string, data?: unknown): void {
-  safeLog("info", message, data);
+export function safeLogInfo(
+  message: string,
+  data?: unknown,
+  context?: { get?: (key: string) => unknown },
+): void {
+  safeLog("info", message, data, context);
 }
 
 /**

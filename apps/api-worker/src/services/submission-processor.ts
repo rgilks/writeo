@@ -3,7 +3,7 @@ import type { Env } from "../types/env";
 import type { CreateSubmissionRequest, AssessmentResults } from "@writeo/shared";
 import { validateRequestBodySize } from "../utils/validation";
 import { errorResponse } from "../utils/errors";
-import { safeLogError, sanitizeError } from "../utils/logging";
+import { safeLogError, safeLogInfo, sanitizeError } from "../utils/logging";
 import { getCombinedFeedbackWithRetry } from "./feedback";
 import { mergeAssessmentResults } from "./merge-results";
 import type { AIFeedback, TeacherFeedback } from "./feedback";
@@ -45,6 +45,7 @@ async function generateCombinedFeedback(
   llmErrorsByAnswerId: Map<string, any>,
   relevanceByAnswerId: Map<string, any>,
   serviceRequests: { llmProvider: LLMProvider; apiKey: string; aiModel: string },
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<FeedbackMaps> {
   const llmFeedbackByAnswerId = new Map<string, AIFeedback>();
   const teacherFeedbackByAnswerId = new Map<string, TeacherFeedback>();
@@ -72,7 +73,7 @@ async function generateCombinedFeedback(
     if (result.status === "rejected") {
       const errorMsg =
         result.reason instanceof Error ? result.reason.message : String(result.reason);
-      safeLogError("Combined feedback generation failed", { error: errorMsg });
+      safeLogError("Combined feedback generation failed", { error: errorMsg }, c);
     } else {
       const { answerId, feedback } = result.value;
       llmFeedbackByAnswerId.set(answerId, feedback.detailed);
@@ -105,7 +106,7 @@ function applyMetadata(
  * Validates and parses the submission request.
  */
 async function validateAndParseSubmission(
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
   timings: Record<string, number>,
 ): Promise<{ body: CreateSubmissionRequest; validation: ValidationResult } | Response> {
   const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
@@ -137,7 +138,7 @@ async function loadSubmissionData(
   submissionId: string,
   storage: ReturnType<typeof getServices>["storage"],
   config: ReturnType<typeof getServices>["config"],
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
   timings: Record<string, number>,
 ): Promise<
   | { modalRequest: ModalRequest; serviceRequests: ReturnType<typeof prepareServiceRequests> }
@@ -238,7 +239,9 @@ async function processServiceResults(
  * app.put("/text/submissions/:submission_id", processSubmission);
  * ```
  */
-export async function processSubmission(c: Context<{ Bindings: Env }>) {
+export async function processSubmission(
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+) {
   const submissionIdResult = uuidStringSchema("submission_id").safeParse(
     c.req.param("submission_id"),
   );
@@ -310,6 +313,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       processedResults.llmErrorsByAnswerId,
       processedResults.relevanceByAnswerId,
       serviceRequests,
+      c,
     );
     timings["8_ai_feedback"] = performance.now() - aiFeedbackStartTime;
 
@@ -350,14 +354,31 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     timings["0_total"] = performance.now() - requestStartTime;
     const headersObj = buildResponseHeaders(timings);
 
+    // Log performance metrics with request ID
+    safeLogInfo(
+      "Request completed",
+      {
+        submissionId,
+        endpoint: c.req.path,
+        method: c.req.method,
+        timings,
+        totalMs: timings["0_total"]?.toFixed(2),
+      },
+      c,
+    );
+
     return c.json(mergedAssessment, 200, headersObj);
   } catch (error) {
     const sanitized = sanitizeError(error);
-    safeLogError("Error creating submission", {
-      submissionId,
-      error: sanitized.message,
-      name: sanitized.name,
-    });
+    safeLogError(
+      "Error creating submission",
+      {
+        submissionId,
+        error: sanitized.message,
+        name: sanitized.name,
+      },
+      c,
+    );
     return errorResponse(500, "Internal server error", c);
   }
 }

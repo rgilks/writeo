@@ -9,7 +9,10 @@ import { MAX_REQUEST_BODY_SIZE, MAX_QUESTION_LENGTH } from "../utils/constants";
 import { z } from "zod";
 import { formatZodMessage, uuidStringSchema } from "../utils/zod";
 
-export const questionsRouter = new Hono<{ Bindings: Env }>();
+export const questionsRouter = new Hono<{
+  Bindings: Env;
+  Variables: { requestId?: string };
+}>();
 
 const questionIdSchema = uuidStringSchema("question_id");
 
@@ -73,7 +76,7 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
     return new Response(null, { status: 201 });
   } catch (error) {
     const sanitized = sanitizeError(error);
-    safeLogError("Error creating question", sanitized);
+    safeLogError("Error creating question", sanitized, c);
     return errorResponse(500, "Internal server error", c);
   }
 });

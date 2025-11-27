@@ -3,13 +3,14 @@ import { cors } from "hono/cors";
 import type { Env } from "./types/env";
 import { authenticate } from "./middleware/auth";
 import { rateLimit } from "./middleware/rate-limit";
+import { requestId } from "./middleware/request-id";
 import { securityHeaders, getCorsOrigin } from "./middleware/security";
 import { questionsRouter } from "./routes/questions";
 import { healthRouter } from "./routes/health";
 import { feedbackRouter } from "./routes/feedback";
 import { processSubmissionHandler, getSubmissionHandler } from "./routes/submissions";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { requestId?: string } }>();
 
 // CORS
 app.use(
@@ -24,6 +25,9 @@ app.use(
 
 // Security headers
 app.use("*", securityHeaders);
+
+// Request ID tracking (early in chain for all requests)
+app.use("*", requestId);
 
 // Public routes (before auth)
 app.route("/", healthRouter);

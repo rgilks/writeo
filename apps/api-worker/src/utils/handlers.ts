@@ -13,15 +13,15 @@ import { safeLogError, sanitizeError } from "./logging";
  * Logs errors and returns consistent error responses.
  */
 export function withErrorHandling(
-  handler: (c: Context<{ Bindings: Env }>) => Promise<Response>,
+  handler: (c: Context<{ Bindings: Env; Variables: { requestId?: string } }>) => Promise<Response>,
   logContext: string,
 ) {
-  return async (c: Context<{ Bindings: Env }>) => {
+  return async (c: Context<{ Bindings: Env; Variables: { requestId?: string } }>) => {
     try {
       return await handler(c);
     } catch (error) {
       const sanitized = sanitizeError(error);
-      safeLogError(logContext, sanitized);
+      safeLogError(logContext, sanitized, c);
       return errorResponse(500, "Internal server error", c);
     }
   };

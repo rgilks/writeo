@@ -9,7 +9,10 @@ import {
   createStreamingResponse,
 } from "./feedback/handlers";
 
-export const feedbackRouter = new Hono<{ Bindings: Env }>();
+export const feedbackRouter = new Hono<{
+  Bindings: Env;
+  Variables: { requestId?: string };
+}>();
 
 feedbackRouter.post(
   "/text/submissions/:submission_id/ai-feedback/stream",

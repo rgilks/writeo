@@ -45,7 +45,7 @@ export async function buildModalRequest(
   body: CreateSubmissionRequest,
   storeResults: boolean,
   storage: StorageService,
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<ModalRequest | Response> {
   const modalParts: ModalRequest["parts"] = [];
   const questionTextCache = new Map<string, string>();

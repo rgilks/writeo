@@ -11,14 +11,17 @@ import type { ValidationResult } from "./validator";
 
 type StorageConflict = Response & { status: 409 };
 
-function conflictResponse(message: string, c: Context<{ Bindings: Env }>): StorageConflict {
+function conflictResponse(
+  message: string,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+): StorageConflict {
   return errorResponse(409, message, c) as StorageConflict;
 }
 
 async function storeQuestions(
   storage: StorageService,
   questionsToCreate: Array<{ id: string; text: string }>,
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<Response | null> {
   const existingQuestions = new Map<string, Awaited<ReturnType<StorageService["getQuestion"]>>>();
 
@@ -50,7 +53,7 @@ async function storeAnswers(
   storage: StorageService,
   answersToCreate: Array<{ id: string; questionId: string; answerText: string }>,
   createdQuestionIds: Set<string>,
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<Response | null> {
   const existingAnswers = new Map<string, Awaited<ReturnType<StorageService["getAnswer"]>>>();
   const questionExistenceCache = new Map<string, boolean>();
@@ -99,7 +102,7 @@ export async function storeSubmissionEntities(
   validation: ValidationResult,
   submissionId: string,
   body: CreateSubmissionRequest,
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<Response | null> {
   const { questionsToCreate, answersToCreate } = validation;
 

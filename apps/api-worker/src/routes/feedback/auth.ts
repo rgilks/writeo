@@ -13,7 +13,9 @@ import type { Env } from "../../types/env";
  * @param c - Hono context with environment bindings
  * @returns Error response if unauthorized, null if valid
  */
-export function validateApiKey(c: Context<{ Bindings: Env }>): Response | null {
+export function validateApiKey(
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+): Response | null {
   const authHeader = c.req.header("Authorization");
   if (!authHeader) {
     return errorResponse(401, "Unauthorized", c);

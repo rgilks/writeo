@@ -309,9 +309,54 @@ Some functions lack parameter descriptions or examples.
 ### Low Priority
 
 1. **Add request tracing** for distributed debugging
-2. **Consider using a DI container** for larger scale
-3. **Add performance metrics** collection
-4. **Improve JSDoc coverage**
+2. **Add performance metrics** collection (partially implemented - timing data exists but could be more comprehensive)
+3. **Improve JSDoc coverage**
+
+#### What are Request Tracing and Performance Metrics?
+
+**Request Tracing** (also called "distributed tracing"):
+
+- **What it is**: A unique ID (like `req-abc123`) assigned to each incoming request that gets passed through all services, logs, and external API calls
+- **How it helps**:
+  - When a user reports an error, you can search logs by the request ID to see the entire request lifecycle
+  - Track a request across multiple services (e.g., API worker → R2 storage → LLM API → KV store)
+  - Correlate errors with specific requests even when logs are scattered
+  - Example: "Request `req-xyz789` failed at LanguageTool API after 2.3s" - you can find all logs for that request
+
+**Performance Metrics**:
+
+- **What it is**: Systematic collection of timing data, resource usage, and throughput statistics
+- **Current state**: You already have timing data in `submission-processor.ts` (e.g., `timings["0_total"]`, `timings["5_parallel_services_total"]`)
+- **How it helps**:
+  - Identify slow endpoints or operations (e.g., "LLM assessment takes 5s on average")
+  - Track performance over time (e.g., "submission processing got 20% slower this week")
+  - Set up alerts for performance degradation
+  - Optimize bottlenecks (e.g., if "parallel_services_total" is slow, maybe services aren't truly parallel)
+  - Monitor resource usage (memory, CPU, KV/R2 operations)
+- **What's missing**:
+  - Aggregation/collection (metrics are logged but not aggregated)
+  - Historical tracking (no time-series data)
+  - Alerting (no automated alerts for slow requests)
+  - Resource metrics (memory, CPU, storage operations)
+
+**Example Implementation**:
+
+```typescript
+// Request tracing
+const requestId = crypto.randomUUID();
+c.set("requestId", requestId);
+// All logs include: `[req-abc123] Processing submission...`
+
+// Performance metrics (enhanced)
+const metrics = {
+  endpoint: "/text/submissions/123",
+  method: "PUT",
+  duration: 2345,
+  services: { llm: 1200, essay: 800, languagetool: 300 },
+  resources: { kvReads: 3, r2Reads: 1, r2Writes: 1 },
+};
+// Send to metrics service (e.g., Cloudflare Analytics, Datadog, etc.)
+```
 
 ## Code Quality Metrics
 

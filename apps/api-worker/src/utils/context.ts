@@ -12,7 +12,7 @@ import { StorageService } from "../services/storage";
  * Gets initialized services for a request context.
  * Reduces duplication across route handlers.
  */
-export function getServices(c: Context<{ Bindings: Env }>) {
+export function getServices(c: Context<{ Bindings: Env; Variables: { requestId?: string } }>) {
   const config = buildConfig(c.env);
   return {
     config,

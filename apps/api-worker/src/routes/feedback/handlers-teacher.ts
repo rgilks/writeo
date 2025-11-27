@@ -133,7 +133,7 @@ function validateQuestionText(
  * @returns Teacher feedback response or error response
  */
 export async function handleTeacherFeedbackRequest(
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<TeacherFeedbackResponse | Response> {
   const submissionIdResult = uuidStringSchema("submission_id").safeParse(
     c.req.param("submission_id"),
