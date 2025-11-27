@@ -21,7 +21,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -49,7 +49,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -77,7 +77,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -109,7 +109,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -166,7 +166,7 @@ describe("API Tests", () => {
       {
         submission: [
           {
-            part: 1,
+            part: "1",
             answers: [
               {
                 id: answerId,
@@ -243,7 +243,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -319,7 +319,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -397,7 +397,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -454,7 +454,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -539,7 +539,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -632,7 +632,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -736,7 +736,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -765,7 +765,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -837,7 +837,7 @@ describe("API Tests", () => {
     const { status } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -868,7 +868,7 @@ describe("API Tests", () => {
     const { status } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -892,7 +892,7 @@ describe("API Tests", () => {
     const { status } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -918,7 +918,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -948,7 +948,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -974,7 +974,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -1012,7 +1012,7 @@ describe("API Tests", () => {
       {
         submission: [
           {
-            part: 1,
+            part: "1",
             answers: [
               {
                 id: answerId,
@@ -1044,7 +1044,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -1078,7 +1078,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -1127,7 +1127,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,
@@ -1186,7 +1186,7 @@ describe("API Tests", () => {
     const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
       submission: [
         {
-          part: 1,
+          part: "1",
           answers: [
             {
               id: answerId,

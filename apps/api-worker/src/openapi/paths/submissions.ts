@@ -27,8 +27,8 @@ const PUT_DESCRIPTION = `Creates a submission and processes it synchronously for
 **Example with inline question:**
 \`\`\`json
 {
-  "submission": [{
-    "part": 1,
+    "submission": [{
+    "part": "1",
     "answers": [{
       "id": "answer-uuid",
       "question-number": 1,
@@ -44,8 +44,8 @@ const PUT_DESCRIPTION = `Creates a submission and processes it synchronously for
 **Example with referenced question:**
 \`\`\`json
 {
-  "submission": [{
-    "part": 1,
+    "submission": [{
+    "part": "1",
     "answers": [{
       "id": "answer-uuid",
       "question-number": 1,
@@ -85,10 +85,9 @@ export const submissionsPath = {
                     required: ["part", "answers"],
                     properties: {
                       part: {
-                        type: "integer" as const,
-                        description: "Part number (typically 1 or 2)",
-                        example: 1,
-                        minimum: 1,
+                        type: "string" as const,
+                        description: 'Part identifier (typically "1" or "2")',
+                        example: "1",
                       },
                       answers: {
                         type: "array",
@@ -318,8 +317,8 @@ export const submissionsPath = {
                   status: "success",
                   results: {
                     parts: [
-                      {
-                        part: 1,
+                    {
+                      part: "1",
                         status: "success",
                         answers: [
                           {
@@ -549,7 +548,7 @@ export const submissionsPath = {
                     results: {
                       parts: [
                         {
-                          part: 1,
+                          part: "1",
                           status: "success",
                           answers: [
                             {

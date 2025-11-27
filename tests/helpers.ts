@@ -1,6 +1,15 @@
 import { randomUUID } from "crypto";
 
-export const API_BASE = process.env.API_BASE || process.env.API_BASE_URL || "http://localhost:8787";
+const DEFAULT_LOCAL_API_BASE = process.env.LOCAL_API_BASE || "http://localhost:8787";
+const forceRemote = process.env.API_BASE_FORCE_REMOTE === "true";
+const shouldPreferLocal = !forceRemote && process.env.API_BASE_PREFER_LOCAL !== "false";
+
+export const API_BASE =
+  process.env.API_BASE_OVERRIDE ||
+  (shouldPreferLocal ? DEFAULT_LOCAL_API_BASE : undefined) ||
+  process.env.API_BASE ||
+  process.env.API_BASE_URL ||
+  DEFAULT_LOCAL_API_BASE;
 // Always prefer TEST_API_KEY for tests (higher rate limits)
 export const API_KEY = process.env.TEST_API_KEY || process.env.API_KEY || "";
 

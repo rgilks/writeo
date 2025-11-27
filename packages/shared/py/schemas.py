@@ -100,7 +100,7 @@ class ModalRequest(BaseModel):
                 "template": {"name": "essay-task-2", "version": 1},
                 "parts": [
                     {
-                        "part": 1,
+                        "part": "1",
                         "answers": [
                             {
                                 "id": "550e8400-e29b-41d4-a716-446655440000",

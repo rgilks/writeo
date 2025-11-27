@@ -75,8 +75,9 @@ const submissionSchema = z
       .array(submissionPartSchema, { required_error: "Submission array is required" })
       .min(1, "Submission must include at least one part"),
     template: templateSchema,
+    storeResults: z.boolean().optional(),
   })
-  .strict()
+  .passthrough()
   .superRefine((data, ctx) => {
     const answerIds = new Set<string>();
     const questionsById = new Map<string, string>();

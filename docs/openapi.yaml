@@ -153,7 +153,7 @@ paths:
         ```json
         {
           "submission": [{
-            "part": 1,
+            "part": "1",
             "answers": [{
               "id": "answer-uuid",
               "question-number": 1,
@@ -170,7 +170,7 @@ paths:
         ```json
         {
           "submission": [{
-            "part": 1,
+            "part": "1",
             "answers": [{
               "id": "answer-uuid",
               "question-number": 1,
@@ -186,7 +186,7 @@ paths:
         ```json
         {
           "submission": [{
-            "part": 1,
+            "part": "1",
             "answers": [{
               "id": "answer-uuid",
               "question-number": 1,
@@ -247,10 +247,6 @@ paths:
                               type: string
                               format: uuid
                               description: Answer ID (will be created)
-                            question-number:
-                              type: integer
-                              description: Question number within the part
-                            question-id:
                               type: string
                               format: uuid
                               description: Question ID (required - will auto-create question if question-text is provided and non-empty, otherwise question must exist; empty question-text "" allowed for free writing)
@@ -290,7 +286,7 @@ paths:
                 status: "success"
                 results:
                   parts:
-                    - part: 1
+                    - part: "1"
                       status: "success"
                       answers:
                         - id: "550e8400-e29b-41d4-a716-446655440000"
@@ -768,7 +764,7 @@ paths:
                 status: "success"
                 results:
                   parts:
-                    - part: 1
+                    - part: "1"
                       status: "success"
                       assessor-results:
                         - id: "T-AES-ESSAY"

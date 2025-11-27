@@ -105,7 +105,7 @@ test.concurrent("test name", async () => {
   const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
     submission: [
       {
-        part: 1,
+        part: "1",
         answers: [
           {
             id: answerId,

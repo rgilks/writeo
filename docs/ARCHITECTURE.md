@@ -302,7 +302,7 @@ sequenceDiagram
   "results": {
     "parts": [
       {
-        "part": 1,
+        "part": "1",
         "status": "success",
         "assessor-results": [
           {

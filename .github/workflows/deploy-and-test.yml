@@ -87,6 +87,7 @@ jobs:
         env:
           CI: true
           API_BASE: ${{ env.PRODUCTION_API_URL }}
+          API_BASE_FORCE_REMOTE: "true"
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
           # Tests call production API with real API keys - no mocks used
           # Production worker must have USE_MOCK_LLM unset/false to use real LLM APIs
@@ -98,6 +99,7 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: ${{ env.PRODUCTION_WEB_URL }}
           API_BASE: ${{ env.PRODUCTION_API_URL }}
+          API_BASE_FORCE_REMOTE: "true"
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
           TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
           CI: true

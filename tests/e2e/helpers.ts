@@ -71,13 +71,15 @@ export async function createTestSubmission(
       body: JSON.stringify({
         submission: [
           {
-            part: 1,
+            part: "1",
             answers: [
               {
                 id: answerId,
                 "question-number": 1,
                 "question-id": questionId,
-                "question-text": questionText,
+                ...(questionText?.trim()
+                  ? { "question-text": questionText.trim() }
+                  : {}),
                 text: answerText,
               },
             ],

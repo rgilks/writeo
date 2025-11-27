@@ -14,6 +14,11 @@ if (process.env.NO_COLOR && process.env.FORCE_COLOR) {
 config({ path: resolve(process.cwd(), ".env") });
 config({ path: resolve(process.cwd(), ".env.local"), override: true });
 
+if (process.env.API_BASE_OVERRIDE) {
+  process.env.API_BASE = process.env.API_BASE_OVERRIDE;
+  process.env.API_BASE_URL = process.env.API_BASE_OVERRIDE;
+}
+
 // Enable LLM mocking by default to avoid API costs
 // Override with USE_MOCK_LLM=false to use real APIs
 if (!process.env.USE_MOCK_LLM) {

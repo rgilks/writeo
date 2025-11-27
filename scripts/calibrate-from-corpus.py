@@ -47,7 +47,7 @@ def score_essay(question: str, answer: str) -> Dict:
         "template": {"name": "essay-task-2", "version": 1},
         "parts": [
             {
-                "part": 1,
+                "part": "1",
                 "answers": [
                     {
                         "id": str(uuid.uuid4()),

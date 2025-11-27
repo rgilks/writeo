@@ -32,18 +32,25 @@ export async function createSubmission(
   const questionId = generateUUID();
   const answerId = generateUUID();
 
+  const trimmedQuestionText = questionText?.trim();
+
+  const answerPayload: Record<string, unknown> = {
+    id: answerId,
+    "question-number": 1,
+    "question-id": questionId,
+    text: answerText,
+  };
+
+  if (trimmedQuestionText) {
+    answerPayload["question-text"] = trimmedQuestionText;
+  }
+
   const body: any = {
     submission: [
       {
-        part: 1,
+        part: "1",
         answers: [
-          {
-            id: answerId,
-            "question-number": 1,
-            "question-id": questionId,
-            "question-text": questionText,
-            text: answerText,
-          },
+          answerPayload,
         ],
       },
     ],

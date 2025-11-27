@@ -67,7 +67,7 @@ Creates a submission and triggers assessment. The `submission_id` must be a vali
 {
   "submission": [
     {
-      "part": 1,
+      "part": "1",
       "answers": [
         {
           "id": "answer-uuid",
@@ -92,7 +92,7 @@ Creates a submission and triggers assessment. The `submission_id` must be a vali
 {
   "submission": [
     {
-      "part": 1,
+      "part": "1",
       "answers": [
         {
           "id": "answer-uuid",
@@ -115,7 +115,7 @@ Creates a submission and triggers assessment. The `submission_id` must be a vali
 {
   "submission": [
     {
-      "part": 1,
+      "part": "1",
       "answers": [
         {
           "id": "answer-uuid",
@@ -161,7 +161,7 @@ Retrieves assessment results for a submission. **Note:** This endpoint only work
   "results": {
     "parts": [
       {
-        "part": 1,
+        "part": "1",
         "status": "success",
         "assessor-results": [
           {
