@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspace=@writeo/shared && npm run build --workspaces --if-present",
+    "build:test": "npm run test:unit && npm run build",
     "deploy": "npm run deploy --workspaces",
     "deploy:all": "./scripts/deploy-all.sh",
     "deploy:modal": "./scripts/deploy-modal.sh",
