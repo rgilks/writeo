@@ -2,12 +2,17 @@
  * Submissions endpoint paths
  */
 
-export const submissionsPath = {
-  "/text/submissions/{submission_id}": {
-    put: {
-      tags: ["Submissions"],
-      summary: "Create a submission for assessment",
-      description: `Creates a submission and processes it synchronously for assessment. Results are returned immediately in the response body.
+import {
+  submissionIdParam,
+  badRequestResponse,
+  conflictResponse,
+  payloadTooLargeResponse,
+  notFoundResponse,
+  internalServerErrorResponse,
+} from "../utils";
+
+// Descriptions
+const PUT_DESCRIPTION = `Creates a submission and processes it synchronously for assessment. Results are returned immediately in the response body.
 
 **Processing Mode:**
 - **Synchronous**: API processes the submission immediately and returns results in the PUT response
@@ -53,27 +58,22 @@ export const submissionsPath = {
 \`\`\`
 
 **Response:**
-Returns \`200 OK\` with assessment results in the response body. Results include band scores, CEFR levels, grammar errors, and AI feedback.`,
+Returns \`200 OK\` with assessment results in the response body. Results include band scores, CEFR levels, grammar errors, and AI feedback.`;
+
+export const submissionsPath = {
+  "/text/submissions/{submission_id}": {
+    put: {
+      tags: ["Submissions"],
+      summary: "Create a submission for assessment",
+      description: PUT_DESCRIPTION,
       operationId: "createSubmission",
-      parameters: [
-        {
-          name: "submission_id",
-          in: "path",
-          required: true,
-          description: "Unique identifier for the submission (UUID format)",
-          schema: {
-            type: "string",
-            format: "uuid",
-            example: "770e8400-e29b-41d4-a716-446655440000",
-          },
-        },
-      ],
+      parameters: [submissionIdParam],
       requestBody: {
         required: true,
         content: {
           "application/json": {
             schema: {
-              type: "object",
+              type: "object" as const,
               required: ["submission", "template"],
               properties: {
                 submission: {
@@ -81,11 +81,11 @@ Returns \`200 OK\` with assessment results in the response body. Results include
                   description:
                     "Array of submission parts. Answers must always be sent inline with the submission (using the text field). Questions can be sent inline (with question-text) or referenced by ID (question must already exist).",
                   items: {
-                    type: "object",
+                    type: "object" as const,
                     required: ["part", "answers"],
                     properties: {
                       part: {
-                        type: "integer",
+                        type: "integer" as const,
                         description: "Part number (typically 1 or 2)",
                         example: 1,
                         minimum: 1,
@@ -95,35 +95,35 @@ Returns \`200 OK\` with assessment results in the response body. Results include
                         description:
                           "Array of answers. Each answer must include: id, question-number, question-id, and text. Optionally include question-text to create/update the question inline.",
                         items: {
-                          type: "object",
+                          type: "object" as const,
                           required: ["id", "question-number", "question-id", "text"],
                           properties: {
                             id: {
-                              type: "string",
-                              format: "uuid",
+                              type: "string" as const,
+                              format: "uuid" as const,
                               description: "Answer ID (UUID format)",
                               example: "660e8400-e29b-41d4-a716-446655440000",
                             },
                             "question-number": {
-                              type: "integer",
+                              type: "integer" as const,
                               description: "Question number within the part",
                               example: 1,
                             },
                             "question-id": {
-                              type: "string",
-                              format: "uuid",
+                              type: "string" as const,
+                              format: "uuid" as const,
                               description:
                                 "Question ID (required - will auto-create question if question-text is provided, otherwise question must exist)",
                               example: "550e8400-e29b-41d4-a716-446655440000",
                             },
                             "question-text": {
-                              type: "string",
+                              type: "string" as const,
                               description:
                                 "Question text (optional - if provided, will create/update question; if omitted, question must exist)",
                               example: "Describe your weekend. What did you do?",
                             },
                             text: {
-                              type: "string",
+                              type: "string" as const,
                               description:
                                 "Answer text (required - answers must always be sent inline)",
                               example:
@@ -136,16 +136,16 @@ Returns \`200 OK\` with assessment results in the response body. Results include
                   },
                 },
                 template: {
-                  type: "object",
+                  type: "object" as const,
                   required: ["name", "version"],
                   properties: {
                     name: {
-                      type: "string",
+                      type: "string" as const,
                       description: "Template name",
                       example: "essay-task-2",
                     },
                     version: {
-                      type: "integer",
+                      type: "integer" as const,
                       description: "Template version",
                       example: 1,
                     },
@@ -163,16 +163,16 @@ Returns \`200 OK\` with assessment results in the response body. Results include
           content: {
             "application/json": {
               schema: {
-                type: "object",
+                type: "object" as const,
                 required: ["status", "template"],
                 properties: {
                   status: {
-                    type: "string",
+                    type: "string" as const,
                     enum: ["success", "error", "pending", "bypassed"],
                     example: "success",
                   },
                   results: {
-                    type: "object",
+                    type: "object" as const,
                     properties: {
                       parts: {
                         type: "array",
@@ -284,29 +284,29 @@ Returns \`200 OK\` with assessment results in the response body. Results include
                       },
                     },
                     template: {
-                      type: "object",
+                      type: "object" as const,
                       required: ["name", "version"],
                       properties: {
-                        name: { type: "string", example: "essay-task-2" },
-                        version: { type: "integer", example: 1 },
+                        name: { type: "string" as const, example: "essay-task-2" },
+                        version: { type: "integer" as const, example: 1 },
                       },
                     },
                     error_message: {
-                      type: "string",
+                      type: "string" as const,
                       description: "Error message if status is 'error'",
                       example: "Assessment failed",
                     },
                     meta: {
-                      type: "object",
+                      type: "object" as const,
                       description:
                         "Additional metadata (wordCount, errorCount, overallScore, timestamp, etc.)",
                       properties: {
-                        wordCount: { type: "integer", example: 150 },
-                        errorCount: { type: "integer", example: 3 },
-                        overallScore: { type: "number", example: 6.5 },
+                        wordCount: { type: "integer" as const, example: 150 },
+                        errorCount: { type: "integer" as const, example: 3 },
+                        overallScore: { type: "number" as const, example: 6.5 },
                         timestamp: {
-                          type: "string",
-                          format: "date-time",
+                          type: "string" as const,
+                          format: "date-time" as const,
                           example: "2025-01-18T16:00:00Z",
                         },
                       },
@@ -363,71 +363,16 @@ Returns \`200 OK\` with assessment results in the response body. Results include
         "204": {
           description: "Submission already exists with identical content",
         },
-        "400": {
-          description: "Bad request - invalid format or missing required fields",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  error: {
-                    type: "string",
-                    example:
-                      "Answer text is required. Answers must be sent inline with the submission.",
-                  },
-                },
-              },
-            },
-          },
-        },
-        "409": {
-          description: "Conflict - submission exists with different content",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  error: {
-                    type: "string",
-                    example: "Submission already exists with different content",
-                  },
-                },
-              },
-            },
-          },
-        },
-        "413": {
-          description: "Payload too large (max 1MB)",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  error: {
-                    type: "string",
-                    example: "Request body too large (max 1MB)",
-                  },
-                },
-              },
-            },
-          },
-        },
-        "500": {
-          description: "Internal server error or assessment failed",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  error: {
-                    type: "string",
-                    example: "Internal server error",
-                  },
-                },
-              },
-            },
-          },
-        },
+        "400": badRequestResponse(
+          "invalid format or missing required fields",
+          "Answer text is required. Answers must be sent inline with the submission.",
+        ),
+        "409": conflictResponse(
+          "submission exists with different content",
+          "Submission already exists with different content",
+        ),
+        "413": payloadTooLargeResponse,
+        "500": internalServerErrorResponse,
       },
     },
     get: {
@@ -436,19 +381,7 @@ Returns \`200 OK\` with assessment results in the response body. Results include
       description:
         "Retrieves stored assessment results for a submission. Note: PUT endpoint returns results immediately, so GET is primarily useful for retrieving previously stored results or checking status.",
       operationId: "getSubmissionResults",
-      parameters: [
-        {
-          name: "submission_id",
-          in: "path",
-          required: true,
-          description: "Unique identifier for the submission (UUID format)",
-          schema: {
-            type: "string",
-            format: "uuid",
-            example: "770e8400-e29b-41d4-a716-446655440000",
-          },
-        },
-      ],
+      parameters: [submissionIdParam],
       responses: {
         "200": {
           description: "Submission results (success, error, or pending)",
@@ -457,25 +390,25 @@ Returns \`200 OK\` with assessment results in the response body. Results include
               schema: {
                 oneOf: [
                   {
-                    type: "object",
+                    type: "object" as const,
                     properties: {
                       status: {
-                        type: "string",
+                        type: "string" as const,
                         enum: ["pending"],
                         example: "pending",
                       },
                     },
                   },
                   {
-                    type: "object",
+                    type: "object" as const,
                     properties: {
                       status: {
-                        type: "string",
+                        type: "string" as const,
                         enum: ["success", "error", "bypassed"],
                         example: "success",
                       },
                       results: {
-                        type: "object",
+                        type: "object" as const,
                         properties: {
                           parts: {
                             type: "array",
@@ -570,30 +503,30 @@ Returns \`200 OK\` with assessment results in the response body. Results include
                           },
                         },
                         template: {
-                          type: "object",
+                          type: "object" as const,
                           required: ["name", "version"],
                           properties: {
-                            name: { type: "string", example: "generic" },
-                            version: { type: "integer", example: 1 },
+                            name: { type: "string" as const, example: "generic" },
+                            version: { type: "integer" as const, example: 1 },
                           },
                           example: { name: "generic", version: 1 },
                         },
                         error_message: {
-                          type: "string",
+                          type: "string" as const,
                           description: "Error message if status is 'error'",
                           example: "Assessment failed",
                         },
                         meta: {
-                          type: "object",
+                          type: "object" as const,
                           description:
                             "Additional metadata (wordCount, errorCount, overallScore, timestamp, etc.)",
                           properties: {
-                            wordCount: { type: "integer", example: 150 },
-                            errorCount: { type: "integer", example: 3 },
-                            overallScore: { type: "number", example: 6.5 },
+                            wordCount: { type: "integer" as const, example: 150 },
+                            errorCount: { type: "integer" as const, example: 3 },
+                            overallScore: { type: "number" as const, example: 6.5 },
                             timestamp: {
-                              type: "string",
-                              format: "date-time",
+                              type: "string" as const,
+                              format: "date-time" as const,
                               example: "2025-01-18T16:00:00Z",
                             },
                           },
@@ -655,55 +588,13 @@ Returns \`200 OK\` with assessment results in the response body. Results include
             },
           },
         },
-        "400": {
-          description: "Bad request - invalid submission_id format",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  error: {
-                    type: "string",
-                    example: "Invalid submission_id format",
-                  },
-                },
-              },
-            },
-          },
-        },
-        "404": {
-          description: "Submission not found",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  error: {
-                    type: "string",
-                    example: "Submission not found",
-                  },
-                },
-              },
-            },
-          },
-        },
-        "500": {
-          description: "Internal server error",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  error: {
-                    type: "string",
-                    example: "Internal server error",
-                  },
-                },
-              },
-            },
-          },
-        },
+        "400": badRequestResponse(
+          "invalid format or missing required fields",
+          "Invalid submission_id format",
+        ),
+        "404": notFoundResponse("Submission"),
+        "500": internalServerErrorResponse,
       },
     },
   },
-};
+} as const;

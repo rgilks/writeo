@@ -1,13 +1,10 @@
 /**
  * OpenAPI metadata and configuration
+ *
+ * Note: Server URLs are dynamically set in routes/health.ts based on the request
  */
 
-export const openApiMetadata = {
-  openapi: "3.0.0",
-  info: {
-    title: "Writeo Text API",
-    version: "1.0.0",
-    description: `## Writeo Text API
+const API_DESCRIPTION = `## Writeo Text API
 
 A modern, scalable API for essay assessment and scoring.
 
@@ -26,7 +23,7 @@ A modern, scalable API for essay assessment and scoring.
 ### Authentication
 All endpoints (except /health, /docs, /openapi.json) require API key authentication via the Authorization header:
 
-Authorization: Token <your_api_key>
+\`Authorization: Token <your_api_key>\`
 
 For API access, please contact the project maintainer via GitHub (https://github.com/rgilks/writeo) or Discord (https://discord.gg/9rtwCKp2).
 
@@ -38,7 +35,14 @@ For API access, please contact the project maintainer via GitHub (https://github
 
 ### Support
 - Documentation: Available at /docs (Swagger UI)
-- Health Check: GET /health`,
+- Health Check: GET /health`;
+
+export const openApiMetadata = {
+  openapi: "3.0.0",
+  info: {
+    title: "Writeo Text API",
+    version: "1.0.0",
+    description: API_DESCRIPTION,
     contact: {
       name: "Robert Gilks",
       url: "https://tre.systems",
@@ -48,16 +52,7 @@ For API access, please contact the project maintainer via GitHub (https://github
       url: "https://www.apache.org/licenses/LICENSE-2.0",
     },
   },
-  servers: [
-    {
-      url: "https://your-api-worker.workers.dev",
-      description: "Production server (configured dynamically)",
-    },
-    {
-      url: "http://localhost:8787",
-      description: "Local development server",
-    },
-  ],
+  // Servers are dynamically set in routes/health.ts based on the request
   components: {
     securitySchemes: {
       ApiKeyAuth: {
@@ -81,4 +76,4 @@ For API access, please contact the project maintainer via GitHub (https://github
       description: "Health check endpoints (no authentication required)",
     },
   ],
-};
+} as const;

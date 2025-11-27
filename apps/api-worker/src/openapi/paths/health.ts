@@ -2,6 +2,8 @@
  * Health endpoint paths
  */
 
+import { noAuth } from "../utils";
+
 export const healthPaths = {
   "/health": {
     get: {
@@ -9,17 +11,17 @@ export const healthPaths = {
       summary: "Health check",
       description: "Returns the health status of the API. No authentication required.",
       operationId: "healthCheck",
-      security: [],
+      security: noAuth,
       responses: {
         "200": {
           description: "Service is healthy",
           content: {
             "application/json": {
               schema: {
-                type: "object",
+                type: "object" as const,
                 properties: {
                   status: {
-                    type: "string",
+                    type: "string" as const,
                     example: "ok",
                   },
                 },
@@ -36,7 +38,12 @@ export const healthPaths = {
       summary: "API Documentation",
       description: "Swagger UI documentation for the API. No authentication required.",
       operationId: "getDocs",
-      security: [],
+      security: noAuth,
+      responses: {
+        "200": {
+          description: "Swagger UI HTML page",
+        },
+      },
     },
   },
-};
+} as const;
