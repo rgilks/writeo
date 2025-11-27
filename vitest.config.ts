@@ -32,6 +32,18 @@ const buildExcludeList = (): string[] => {
   if (!process.env.CI && shouldSkipApiTests) {
     baseExclude.push("tests/api.test.ts");
   }
+  // Exclude integration tests from unit test runs
+  if (process.env.TEST_TYPE === "unit") {
+    baseExclude.push("tests/**/integration.*.test.ts");
+    baseExclude.push("tests/api.test.ts"); // api.test.ts requires running server
+  }
+  // Exclude unit tests from integration test runs
+  if (process.env.TEST_TYPE === "integration") {
+    baseExclude.push("tests/**/middleware.*.test.ts");
+    baseExclude.push("tests/**/utils.*.test.ts");
+    // Include api.test.ts in integration tests (requires running server)
+    // This is handled by not excluding it when TEST_TYPE=integration
+  }
   return baseExclude;
 };
 

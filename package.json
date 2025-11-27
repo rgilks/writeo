@@ -13,6 +13,8 @@
     "deploy:all": "./scripts/deploy-all.sh",
     "deploy:modal": "./scripts/deploy-modal.sh",
     "test": "vitest run",
+    "test:unit": "TEST_TYPE=unit vitest run",
+    "test:integration": "TEST_TYPE=integration vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",

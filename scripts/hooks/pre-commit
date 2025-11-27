@@ -75,6 +75,15 @@ if ! npm run type-check; then
   exit 1
 fi
 
+# Step 3.5: Run unit tests (fast, catches issues early)
+echo "${YELLOW}Running unit tests...${NC}"
+if ! npm run test:unit; then
+  echo "${RED}Unit tests failed. Please fix the errors above.${NC}"
+  echo "${YELLOW}To skip this check, use: git commit --no-verify${NC}"
+  exit 1
+fi
+echo "${GREEN}Unit tests passed.${NC}"
+
 # Step 4: Check for Python files and run Python checks
 PYTHON_FILES=$(echo "$STAGED_FILES" | grep -E "\.py$" || true)
 if [ -n "$PYTHON_FILES" ]; then

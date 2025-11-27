@@ -318,7 +318,7 @@ show_time
 echo "${CYAN}Running unit tests...${NC}"
 echo ""
 set +e  # Temporarily disable exit on error to capture test result
-npm test 2>&1
+npm run test:unit 2>&1
 UNIT_TEST_EXIT_CODE=$?
 set -e  # Re-enable exit on error
 if [ $UNIT_TEST_EXIT_CODE -ne 0 ]; then
@@ -330,6 +330,35 @@ if [ $UNIT_TEST_EXIT_CODE -ne 0 ]; then
 fi
 show_time
 echo "${GREEN}✓ Unit tests passed${NC}"
+
+echo ""
+# Run integration tests (unless skipped)
+if [ "$SKIP_E2E" = "true" ]; then
+  show_time
+  echo "${YELLOW}⏭️  Skipping integration tests${NC}"
+  if [ "$CHECK_DOCS_ONLY" = "true" ]; then
+    echo "  (docs-only changes detected)"
+  else
+    echo "  (quick mode enabled)"
+  fi
+else
+  show_time
+  echo "${CYAN}Running integration tests...${NC}"
+  echo ""
+  set +e  # Temporarily disable exit on error to capture test result
+  npm run test:integration 2>&1
+  INTEGRATION_TEST_EXIT_CODE=$?
+  set -e  # Re-enable exit on error
+  if [ $INTEGRATION_TEST_EXIT_CODE -ne 0 ]; then
+    echo ""
+    show_time
+    echo "${RED}✗ Integration tests failed (exit code: $INTEGRATION_TEST_EXIT_CODE)!${NC}"
+    echo "${YELLOW}Stopping pre-push hook. To skip this check, use: git push --no-verify${NC}"
+    exit 1
+  fi
+  show_time
+  echo "${GREEN}✓ Integration tests passed${NC}"
+fi
 
 echo ""
 # Run e2e tests with list reporter (non-interactive) - unless skipped
