@@ -2,9 +2,11 @@
 
 import time
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config import DEFAULT_MODEL
 from model_loader import get_model
@@ -18,7 +20,7 @@ from .routes import handle_health
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> Any:
     """Lifespan context manager for FastAPI app."""
     startup_start = time.time()
     try:
@@ -139,17 +141,19 @@ def register_routes(api: FastAPI) -> None:
             description="Model to use: 'engessay' (default), 'distilbert', or 'fallback'",
             example="engessay",
         ),
-    ):
+    ) -> dict[str, Any] | JSONResponse:
         return await handle_grade_impl(request, model_key)
 
     @api.get("/health", tags=["Health"], summary="Health check")
-    async def health():
+    async def health() -> dict[str, Any]:
         return await handle_health()
 
     @api.get("/models", tags=["Models"], summary="List available models")
-    async def list_models():
-        return await handle_list_models_impl()
+    async def list_models() -> dict[str, Any]:
+        result = await handle_list_models_impl()
+        return dict(result)  # type: ignore[arg-type]
 
     @api.post("/grade/compare", tags=["Models"], summary="Compare models on same submission")
-    async def compare_models(request: ModalRequest):
-        return await handle_compare_models_impl(request)
+    async def compare_models(request: ModalRequest) -> dict[str, Any]:
+        result = await handle_compare_models_impl(request)
+        return dict(result)  # type: ignore[arg-type]

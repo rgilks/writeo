@@ -1,8 +1,9 @@
 """Modal FastAPI service for essay scoring."""
 
 import os
+from typing import Any
 
-import modal  # type: ignore
+import modal
 
 # Modal app and image setup
 app = modal.App("writeo-essay")
@@ -49,7 +50,7 @@ image = image.add_local_dir(os.path.dirname(__file__), remote_path="/app", copy=
     secrets=[modal.Secret.from_name("api-key")],
 )
 @modal.asgi_app()
-def fastapi_app():
+def fastapi_app() -> Any:
     """FastAPI app for grading endpoint."""
     import sys
 

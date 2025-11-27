@@ -4,14 +4,14 @@ import os
 import time
 from typing import TYPE_CHECKING, Any
 
-import torch  # type: ignore
-from huggingface_hub import list_repo_files, snapshot_download  # type: ignore
-from transformers import AutoModelForSequenceClassification, AutoTokenizer  # type: ignore
+import torch
+from huggingface_hub import list_repo_files, snapshot_download
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from config import DEFAULT_MODEL, MODEL_CONFIGS, MODEL_PATH
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore
+    from transformers import PreTrainedModel, PreTrainedTokenizer
 
     ModelType = PreTrainedModel
     TokenizerType = PreTrainedTokenizer
@@ -30,13 +30,15 @@ def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
         tokenizer_path = os.path.join(model_path, "tokenizer_config.json")
         if os.path.exists(tokenizer_path) or os.path.exists(os.path.join(model_path, "vocab.json")):
             print(f"📥 Loading tokenizer from cache: {model_path}")
-            tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+            tokenizer: TokenizerType = AutoTokenizer.from_pretrained(
+                model_path, local_files_only=True
+            )  # type: ignore[no-untyped-call]
             tokenizer_time = time.time() - tokenizer_start
             print(f"✅ Tokenizer loaded from cache in {tokenizer_time:.2f}s")
             return tokenizer
         else:
             print("📥 Loading tokenizer from HuggingFace...")
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
+            tokenizer = AutoTokenizer.from_pretrained(model_name)  # type: ignore[no-untyped-call]
             tokenizer_time = time.time() - tokenizer_start
             print(f"✅ Tokenizer loaded from HuggingFace in {tokenizer_time:.2f}s")
             return tokenizer
@@ -45,7 +47,7 @@ def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
         if "distilbert" in model_name.lower():
             print("⚠️ Attempting workaround: using base DistilBERT tokenizer...")
             try:
-                tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+                tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")  # type: ignore[no-untyped-call]
                 print("✅ Using base DistilBERT tokenizer (workaround)")
                 return tokenizer
             except Exception as e2:
@@ -85,7 +87,7 @@ def download_model(model_name: str, model_path: str) -> None:
 
 def load_model_from_hf(model_name: str) -> ModelType:
     """Load model from HuggingFace, trying safetensors first."""
-    model = None
+    model: ModelType | None = None
     for use_safetensors in [True, False]:
         try:
             print(f"Attempting to load model {model_name} (safetensors={use_safetensors})...")
@@ -101,12 +103,14 @@ def load_model_from_hf(model_name: str) -> ModelType:
             print(f"Loading with safetensors={use_safetensors} failed: {load_error}")
             if not use_safetensors:
                 raise
+    if model is None:
+        raise RuntimeError(f"Failed to load model {model_name}")
     return model
 
 
 def save_model_to_cache(
-    model: ModelType,  # type: ignore
-    tokenizer: TokenizerType,  # type: ignore
+    model: ModelType,
+    tokenizer: TokenizerType,
     model_path: str,
 ) -> None:
     """Save model and tokenizer to cache volume."""
@@ -118,7 +122,7 @@ def save_model_to_cache(
     print(f"💾 Model saved to cache in {save_time:.2f}s")
 
 
-def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:  # type: ignore
+def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:
     """Move model to GPU and warm up if available."""
     gpu_start = time.time()
     if torch.cuda.is_available():
@@ -130,7 +134,9 @@ def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:  # 
             dummy_input_ids = torch.randint(0, 1000, (1, 10), device="cuda")
             dummy_attention_mask = torch.ones(1, 10, device="cuda")
             with torch.no_grad():
-                _ = model(input_ids=dummy_input_ids, attention_mask=dummy_attention_mask)
+                _ = model(  # type: ignore[call-arg]
+                    input_ids=dummy_input_ids, attention_mask=dummy_attention_mask
+                )
             torch.cuda.empty_cache()
             warmup_time = time.time() - warmup_start
             total_load_time = time.time() - load_start
@@ -139,7 +145,7 @@ def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:  # 
         except Exception as warmup_error:
             total_load_time = time.time() - load_start
             print(f"⚠️  GPU warmup failed (non-critical): {warmup_error}")
-            print(f"✅ Model {model_name} loaded on GPU in {total_load_time:.2f}s (warmup skipped)")
+            print(f"✅ Model {model_name} loaded on GPU in {total_load_time:.2f}s (warmup skipped)")  # noqa: F841
     else:
         total_load_time = time.time() - load_start
         print(f"✅ Model {model_name} loaded successfully (CPU mode) in {total_load_time:.2f}s")
@@ -152,7 +158,8 @@ def load_model(model_key: str | None = None) -> tuple[ModelType, TokenizerType]:
         model_key = DEFAULT_MODEL
 
     if model_key == "fallback":
-        return None, None
+        # Fallback mode returns None - callers should handle this case
+        return None, None  # type: ignore[return-value]
 
     if model_key not in MODEL_CONFIGS:
         raise ValueError(f"Unknown model key: {model_key}")

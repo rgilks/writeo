@@ -28,23 +28,25 @@ class ModalAnswer(BaseModel):
     id: str = Field(
         ...,
         description="Unique identifier for the answer (UUID)",
-        example="550e8400-e29b-41d4-a716-446655440000",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
     question_id: str = Field(
         ...,
         description="Unique identifier for the question (UUID)",
-        example="660e8400-e29b-41d4-a716-446655440000",
+        examples=["660e8400-e29b-41d4-a716-446655440000"],
     )
     question_text: str = Field(
         ...,
         description="The question text that the answer responds to",
-        example="Describe your weekend. What did you do?",
+        examples=["Describe your weekend. What did you do?"],
         max_length=10000,
     )
     answer_text: str = Field(
         ...,
         description="The student's answer text to be scored",
-        example="I went to the park yesterday and played football with my friends. It was a beautiful sunny day.",
+        examples=[
+            "I went to the park yesterday and played football with my friends. It was a beautiful sunny day."
+        ],
         max_length=50000,
     )
 
@@ -63,7 +65,7 @@ class ModalAnswer(BaseModel):
 class ModalPart(BaseModel):
     """A part of the submission containing multiple answers."""
 
-    part: int = Field(..., description="Part number (typically 1 or 2)", example=1, ge=1)
+    part: int = Field(..., description="Part number (typically 1 or 2)", examples=[1], ge=1)
     answers: list[ModalAnswer] = Field(
         ..., description="List of answers in this part", min_length=1
     )
@@ -75,12 +77,12 @@ class ModalRequest(BaseModel):
     submission_id: str = Field(
         ...,
         description="Unique identifier for the submission (UUID)",
-        example="770e8400-e29b-41d4-a716-446655440000",
+        examples=["770e8400-e29b-41d4-a716-446655440000"],
     )
     template: dict[str, Any] = Field(
         ...,
         description="Template metadata with name and version",
-        example={"name": "essay-task-2", "version": 1},
+        examples=[{"name": "essay-task-2", "version": 1}],
     )
     parts: list[ModalPart] = Field(
         ..., description="List of submission parts to be scored", min_length=1
@@ -118,49 +120,49 @@ class ModalRequest(BaseModel):
 class LanguageToolError(BaseModel):
     """LanguageTool error structure."""
 
-    start: int = Field(..., description="Character offset (0-based)", example=10)
-    end: int = Field(..., description="Character offset (exclusive)", example=14)
-    length: int = Field(..., description="end - start (for convenience)", example=4)
+    start: int = Field(..., description="Character offset (0-based)", examples=[10])
+    end: int = Field(..., description="Character offset (exclusive)", examples=[14])
+    length: int = Field(..., description="end - start (for convenience)", examples=[4])
     sentenceIndex: int | None = Field(
-        None, description="Optional: sentence number (0-based)", example=0
+        None, description="Optional: sentence number (0-based)", examples=[0]
     )
     category: str = Field(
-        ..., description="Error category (e.g., GRAMMAR, TYPOGRAPHY, STYLE)", example="GRAMMAR"
+        ..., description="Error category (e.g., GRAMMAR, TYPOGRAPHY, STYLE)", examples=["GRAMMAR"]
     )
-    rule_id: str = Field(..., description="LanguageTool rule identifier", example="SVA")
+    rule_id: str = Field(..., description="LanguageTool rule identifier", examples=["SVA"])
     message: str = Field(
         ...,
         description="Human-readable error message",
-        example="Possible subject–verb agreement error.",
+        examples=["Possible subject–verb agreement error."],
     )
     suggestions: list[str] | None = Field(
-        None, description="Array of suggested corrections (top 3-5)", example=["go", "went"]
+        None, description="Array of suggested corrections (top 3-5)", examples=[["go", "went"]]
     )
     source: Literal["LT"] = Field("LT", description="Always 'LT' for LanguageTool")
     severity: Literal["warning", "error"] = Field(
-        ..., description="Error severity level", example="warning"
+        ..., description="Error severity level", examples=["warning"]
     )
 
 
 class AssessorResult(BaseModel):
     """Result from an assessor (scoring model)."""
 
-    id: str = Field(..., description="Assessor identifier", example="T-AES-ESSAY")
-    name: str = Field(..., description="Human-readable assessor name", example="Essay scorer")
+    id: str = Field(..., description="Assessor identifier", examples=["T-AES-ESSAY"])
+    name: str = Field(..., description="Human-readable assessor name", examples=["Essay scorer"])
     type: Literal["grader", "conf", "ard", "feedback"] = Field(
         ...,
         description="Type of assessor: grader (scores essays), conf (confidence), ard (automated response detection), feedback (grammar errors)",
     )
     overall: float | None = Field(
-        None, description="Overall band score (0-9, 0.5 increments)", example=7.5, ge=0.0, le=9.0
+        None, description="Overall band score (0-9, 0.5 increments)", examples=[7.5], ge=0.0, le=9.0
     )
     label: str | None = Field(
-        None, description="CEFR level label (A2, B1, B2, C1, C2)", example="C1"
+        None, description="CEFR level label (A2, B1, B2, C1, C2)", examples=["C1"]
     )
     dimensions: DimensionsDict | None = Field(
         None,
         description="Detailed scores by dimension (TA, CC, Vocab, Grammar, Overall)",
-        example={"TA": 7.5, "CC": 7.0, "Vocab": 8.0, "Grammar": 7.5, "Overall": 7.5},
+        examples=[{"TA": 7.5, "CC": 7.0, "Vocab": 8.0, "Grammar": 7.5, "Overall": 7.5}],
     )
     errors: list[LanguageToolError] | None = Field(
         None, description="LanguageTool errors (for type: 'feedback')"
@@ -176,7 +178,7 @@ class AnswerResult(BaseModel):
     )  # Allow using field name (assessor_results) or alias (assessor-results)
 
     id: str = Field(
-        ..., description="Answer ID (UUID)", example="550e8400-e29b-41d4-a716-446655440000"
+        ..., description="Answer ID (UUID)", examples=["550e8400-e29b-41d4-a716-446655440000"]
     )
     assessor_results: list[AssessorResult] = Field(
         ...,
@@ -190,7 +192,7 @@ class AnswerResult(BaseModel):
 class AssessmentPart(BaseModel):
     """Assessment results for a single part of the submission."""
 
-    part: int = Field(..., description="Part number", example=1, ge=1)
+    part: int = Field(..., description="Part number", examples=[1], ge=1)
     status: Literal["success", "error"] = Field(..., description="Processing status for this part")
     answers: list[AnswerResult] = Field(
         ..., description="List of answer results with assessor results", min_length=1
@@ -213,12 +215,12 @@ class AssessmentResults(BaseModel):
     template: dict[str, Any] = Field(
         ...,
         description="Template metadata (echoed from request)",
-        example={"name": "essay-task-2", "version": 1},
+        examples=[{"name": "essay-task-2", "version": 1}],
     )
     error_message: str | None = Field(
         None,
         description="Error message if status is 'error'",
-        example="RuntimeError: Failed to load model engessay",
+        examples=["RuntimeError: Failed to load model engessay"],
     )
     meta: dict[str, Any] | None = Field(
         None, description="Metadata (e.g., answer texts for frontend)"

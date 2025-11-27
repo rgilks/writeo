@@ -18,7 +18,7 @@ from .logits_processing import (
 from .quality_analysis import analyze_essay_quality
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore
+    from transformers import PreTrainedModel, PreTrainedTokenizer
 
     ModelType = PreTrainedModel
     TokenizerType = PreTrainedTokenizer
@@ -50,7 +50,7 @@ def process_engessay_scoring(logits_np: np.ndarray, answer_text: str) -> Dimensi
         base_scores.append(base_score)
 
     avg_base_score = sum(base_scores) / len(base_scores)
-    calibrated_avg = calibrate_from_corpus(avg_base_score, word_count, vocab_diversity)
+    calibrated_avg = calibrate_from_corpus(avg_base_score, int(word_count), float(vocab_diversity))
 
     scores, _ = map_engessay_to_assessment(raw_scores, calibrated_avg, avg_base_score)
     print(f"Final scores: {scores}")

@@ -1,6 +1,6 @@
 """Model management handlers."""
 
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from config import DEFAULT_MODEL, MODEL_CONFIGS
 from model_loader import get_model
@@ -26,7 +26,7 @@ class ModelsResponseDict(TypedDict):
 
 async def handle_list_models() -> ModelsResponseDict:
     """Handle list models endpoint."""
-    models_status = {}
+    models_status: dict[str, ModelStatusDict] = {}
     for key, config in MODEL_CONFIGS.items():
         status = "unknown"
         try:
@@ -38,12 +38,14 @@ async def handle_list_models() -> ModelsResponseDict:
         except Exception as e:
             status = f"error: {str(e)[:50]}"
 
-        models_status[key] = {
-            "name": config["name"],
-            "type": config["type"],
+        config_dict: dict[str, Any] = dict(config)  # type: ignore[call-overload]
+        model_status: ModelStatusDict = {
+            "name": str(config_dict.get("name", "")),
+            "type": str(config_dict.get("type", "")),
             "status": status,
             "is_default": key == DEFAULT_MODEL,
         }
+        models_status[key] = model_status
 
     return {"models": models_status, "default": DEFAULT_MODEL}
 
@@ -75,7 +77,10 @@ async def handle_compare_models(request: ModalRequest) -> ComparisonResponseDict
 
         try:
             model, tokenizer = get_model(model_key)
+            # Check for None (can happen with fallback model when model_key == "fallback")
+            # Skip comparison for models that didn't load
             if model is None or tokenizer is None:
+                results[model_key] = {"error": "Model or tokenizer is None"}
                 continue
 
             if request.parts and request.parts[0].answers:

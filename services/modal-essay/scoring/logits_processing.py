@@ -1,8 +1,8 @@
 """Logits processing utilities for different model types."""
 
 import numpy as np
-import torch  # type: ignore
-import torch.nn.functional as F  # type: ignore
+import torch
+import torch.nn.functional as F
 
 
 def process_1d_logits(logits_np: np.ndarray, length: int) -> list[float]:
@@ -22,14 +22,14 @@ def process_1d_logits(logits_np: np.ndarray, length: int) -> list[float]:
         max_val = float(torch.max(logits_tensor))
         min_val = float(torch.min(logits_tensor))
         if min_val >= -2 and max_val <= 10 and abs(max_val - min_val) < 5:
-            return np.clip(logits_np, 1.0, 5.0).tolist()
+            return list(np.clip(logits_np, 1.0, 5.0).tolist())
         else:
-            return np.clip(logits_np, 1.0, 5.0).tolist()
+            return list(np.clip(logits_np, 1.0, 5.0).tolist())
     else:
         if length > 6:
-            return np.clip(logits_np[:6], 1.0, 5.0).tolist()
+            return list(np.clip(logits_np[:6], 1.0, 5.0).tolist())
         else:
-            return (np.clip(logits_np, 1.0, 5.0).tolist() * 6)[:6]
+            return list((np.clip(logits_np, 1.0, 5.0).tolist() * 6)[:6])
 
 
 def process_2d_logits(logits_np: np.ndarray) -> list[float]:
@@ -54,7 +54,7 @@ def process_2d_logits(logits_np: np.ndarray) -> list[float]:
             raw_scores.append(float(weighted_score))
         return raw_scores
     elif logits_np.shape[0] == 1 and logits_np.shape[1] == 6:
-        return np.clip(logits_np[0], 1.0, 5.0).tolist()
+        return list(np.clip(logits_np[0], 1.0, 5.0).tolist())
     else:
         flat = logits_np.flatten()
         if len(flat) >= 36:
@@ -68,7 +68,8 @@ def process_2d_logits(logits_np: np.ndarray) -> list[float]:
                 raw_scores.append(float(weighted_score))
             return raw_scores
         else:
-            return np.clip(flat[:6], 1.0, 5.0).tolist()
+            clipped = np.clip(flat[:6], 1.0, 5.0)
+            return [float(x) for x in clipped.tolist()]
 
 
 def process_engessay_logits(logits_np: np.ndarray) -> list[float]:
@@ -92,7 +93,8 @@ def process_engessay_logits(logits_np: np.ndarray) -> list[float]:
                 raw_scores.append(float(weighted_score))
             return raw_scores
         else:
-            return np.clip(flat[:6], 1.0, 5.0).tolist()
+            clipped = np.clip(flat[:6], 1.0, 5.0)
+            return [float(x) for x in clipped.tolist()]
 
 
 def process_distilbert_logits(logits_np: np.ndarray) -> float:
@@ -104,7 +106,7 @@ def process_distilbert_logits(logits_np: np.ndarray) -> float:
             return float(logits_np[0])
         else:
             probs = F.softmax(torch.tensor(logits_np), dim=0).numpy()
-            return sum(i * probs[i] for i in range(len(probs)))
+            return float(sum(i * probs[i] for i in range(len(probs))))
     else:
         return float(np.mean(logits_np))
 

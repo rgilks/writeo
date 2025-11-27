@@ -1,6 +1,7 @@
 """Grade endpoint handler."""
 
 import time
+from typing import Any
 
 from fastapi.responses import JSONResponse
 
@@ -10,7 +11,9 @@ from schemas import AssessmentResults, ModalRequest
 from .handlers_submission import process_submission
 
 
-async def handle_grade(request: ModalRequest, model_key: str | None = None) -> dict | JSONResponse:
+async def handle_grade(
+    request: ModalRequest, model_key: str | None = None
+) -> dict[str, Any] | JSONResponse:
     """Handle grade endpoint request."""
     request_start = time.time()
     print(f"\n{'=' * 60}")
@@ -26,7 +29,7 @@ async def handle_grade(request: ModalRequest, model_key: str | None = None) -> d
         print(f"✅ Request completed in {request_time:.2f}s")
         print(f"{'=' * 60}\n")
 
-        return result_dict
+        return result_dict  # type: ignore[no-any-return]
     except Exception as e:
         import traceback
 

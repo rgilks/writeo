@@ -3,10 +3,10 @@
 from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
-import torch  # type: ignore
+import torch
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore
+    from transformers import PreTrainedModel, PreTrainedTokenizer
 
     TokenizerType = PreTrainedTokenizer
 else:
@@ -18,7 +18,10 @@ def encode_input(
 ) -> dict[str, torch.Tensor]:
     """Encode input text for model inference."""
     input_text = f"{question_text}\n\n{answer_text}"
-    return tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+    result = tokenizer(  # type: ignore[no-untyped-call]
+        input_text, return_tensors="pt", padding=True, truncation=True, max_length=512
+    )
+    return dict(result)  # type: ignore[arg-type]
 
 
 def run_model_inference(
@@ -34,7 +37,9 @@ def run_model_inference(
         outputs = model(**encoded_input)
         logits = outputs.logits.squeeze()
 
-    logits_np = logits.cpu().numpy() if hasattr(logits, "cpu") else logits.numpy()
+    logits_np: np.ndarray[Any, Any] = (
+        logits.cpu().numpy() if hasattr(logits, "cpu") else logits.numpy()
+    )
     print(f"Model output shape: {logits_np.shape}, dtype: {logits_np.dtype}")
     print(f"Model output sample: {logits_np.flatten()[:10]}")
     print(

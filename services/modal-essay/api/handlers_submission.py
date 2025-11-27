@@ -17,7 +17,7 @@ from schemas import (
 from scoring import score_essay
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore
+    from transformers import PreTrainedModel, PreTrainedTokenizer
 
     ModelType = PreTrainedModel
     TokenizerType = PreTrainedTokenizer
@@ -62,7 +62,7 @@ def create_assessor_result(
 
 
 def process_answer(
-    answer: ModalAnswer,  # type: ignore
+    answer: ModalAnswer,
     model: ModelType | None,
     tokenizer: TokenizerType | None,
     model_key: str,
@@ -73,6 +73,8 @@ def process_answer(
         scores = get_fallback_scores(answer.answer_text)
         model_name = "Fallback heuristic scorer"
     else:
+        if model is None or tokenizer is None:
+            raise RuntimeError(f"Model or tokenizer is None for model_key: {model_key}")
         scores = score_essay(
             answer.question_text, answer.answer_text, model, tokenizer, model_key=model_key
         )

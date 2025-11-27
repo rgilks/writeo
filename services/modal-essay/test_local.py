@@ -11,7 +11,7 @@ import sys
 from typing import Any
 from uuid import uuid4
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 # Add the current directory to the path so we can import the modules
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -94,13 +94,14 @@ def test_local_processing(model_key: str = "engessay") -> dict[str, Any]:
         else:
             print("  ⚠️ No results found!")
 
-        return result_dict
+        return result_dict  # type: ignore[no-any-return]
     except Exception as e:
         print(f"❌ Error during processing: {e}")
         import traceback
 
         traceback.print_exc()
-        return {"error": str(e)}
+        error_dict: dict[str, Any] = {"error": str(e)}
+        return error_dict
 
 
 def test_remote_endpoint(url: str, api_key: str, model_key: str = "engessay") -> dict[str, Any]:
@@ -148,11 +149,15 @@ def test_remote_endpoint(url: str, api_key: str, model_key: str = "engessay") ->
                 print("  ⚠️ No results found!")
                 print(f"  Full response: {json.dumps(result, indent=2)}")
 
-            return result
+            return result  # type: ignore[no-any-return]
         else:
             print(f"❌ Request failed with status {response.status_code}")
             print(f"   Response: {response.text}")
-            return {"error": f"HTTP {response.status_code}", "response": response.text}
+            error_dict: dict[str, Any] = {
+                "error": f"HTTP {response.status_code}",
+                "response": response.text,
+            }
+            return error_dict
 
     except Exception as e:
         print(f"❌ Error during request: {e}")
@@ -162,7 +167,7 @@ def test_remote_endpoint(url: str, api_key: str, model_key: str = "engessay") ->
         return {"error": str(e)}
 
 
-def run_local_server(port: int = 8000):
+def run_local_server(port: int = 8000) -> None:
     """Run the FastAPI server locally using uvicorn."""
     import uvicorn
 
@@ -185,7 +190,7 @@ def run_local_server(port: int = 8000):
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
 
 
-def main():
+def main() -> None:
     """Main test function."""
     import argparse
 
