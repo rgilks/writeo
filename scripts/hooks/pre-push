@@ -109,51 +109,21 @@ echo ""
 show_time
 echo "${CYAN}This hook will:${NC}"
 if [ "$CHECK_DOCS_ONLY" = "true" ]; then
-  echo "  0. Reset API rate limits"
   echo "  📄 Docs-only changes detected - skipping tests"
   echo "  1. Run unit tests (quick check)"
   SKIP_E2E=true
 elif [ "$SKIP_E2E" = "true" ]; then
-  echo "  0. Reset API rate limits"
   echo "  ⚡ Quick mode - skipping E2E tests"
   echo "  1. Check/start API worker (port 8787)"
   echo "  2. Check/start web app (port 3000)"
   echo "  3. Wait for servers to be ready"
   echo "  4. Run unit tests"
 else
-  echo "  0. Reset API rate limits"
   echo "  1. Check/start API worker (port 8787)"
   echo "  2. Check/start web app (port 3000)"
   echo "  3. Wait for servers to be ready"
   echo "  4. Run unit tests"
   echo "  5. Run E2E tests"
-fi
-echo ""
-
-# Step 0: Reset rate limits before running tests
-RESET_LOG="/tmp/writeo-reset-rate-limits.log"
-show_time
-echo "${CYAN}Resetting API rate limits before tests...${NC}"
-if [ -x "$ROOT_DIR/scripts/reset-rate-limits.sh" ]; then
-  if command -v wrangler > /dev/null 2>&1; then
-    set +e
-    "$ROOT_DIR/scripts/reset-rate-limits.sh" --yes > "$RESET_LOG" 2>&1
-    RESET_EXIT_CODE=$?
-    set -e
-    if [ $RESET_EXIT_CODE -eq 0 ]; then
-      show_time
-      echo "${GREEN}✓ Rate limits cleared${NC}"
-    else
-      show_time
-      echo "${YELLOW}⚠️  Failed to reset rate limits. See $RESET_LOG for details. Continuing without reset.${NC}"
-    fi
-  else
-    show_time
-    echo "${YELLOW}⚠️  Wrangler not available. Skipping rate-limit reset.${NC}"
-  fi
-else
-  show_time
-  echo "${YELLOW}Warning: reset-rate-limits.sh not found or not executable. Continuing without reset.${NC}"
 fi
 echo ""
 
