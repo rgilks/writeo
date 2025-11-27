@@ -83,8 +83,9 @@ export default function WritePage() {
 
   // Use draft store content, but only after hydration
   // Track textarea value directly for immediate word count updates
-  const [localAnswer, setLocalAnswer] = useState("");
-  const answer = isHydrated ? localAnswer || currentContent : localAnswer;
+  const [localAnswer, setLocalAnswer] = useState<string | null>(null);
+  // Use localAnswer if it's been set (even if empty string), otherwise use currentContent after hydration
+  const answer = localAnswer !== null ? localAnswer : isHydrated ? currentContent : "";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selfEval, setSelfEval] = useState({
@@ -134,7 +135,7 @@ export default function WritePage() {
     if (useDraftStore.persist.hasHydrated()) {
       setIsHydrated(true);
       // Initialize localAnswer from store if available
-      if (currentContent && !localAnswer) {
+      if (currentContent && localAnswer === null) {
         setLocalAnswer(currentContent);
       }
       return;
@@ -143,7 +144,7 @@ export default function WritePage() {
     const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
       setIsHydrated(true);
       // Initialize localAnswer from store after hydration
-      if (currentContent && !localAnswer) {
+      if (currentContent && localAnswer === null) {
         setLocalAnswer(currentContent);
       }
     });
@@ -168,7 +169,7 @@ export default function WritePage() {
 
   // Sync local state with store content after hydration (only once)
   useEffect(() => {
-    if (isHydrated && currentContent && !localAnswer) {
+    if (isHydrated && currentContent && localAnswer === null) {
       setLocalAnswer(currentContent);
     }
   }, [isHydrated, currentContent, localAnswer]);

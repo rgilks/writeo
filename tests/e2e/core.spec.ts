@@ -134,10 +134,33 @@ test.describe("Essay Submission", () => {
   test("word count validation prevents short essays", async ({ writePage, page }) => {
     await writePage.goto("1");
     await writePage.typeEssay("This is too short.");
-    await writePage.clickSubmit();
 
-    // Should stay on write page
+    // Wait for word count to appear in UI and be less than 250
+    await expect(async () => {
+      const wordCount = await writePage.getWordCount();
+      expect(wordCount).toBeGreaterThan(0);
+      expect(wordCount).toBeLessThan(250);
+    }).toPass({ timeout: 5000 });
+
+    // Try to submit - should stay on write page due to validation
+    // Note: Button may or may not be disabled depending on React state timing,
+    // but form submission should be prevented by validation
+    const submitButton = page.locator('button[type="submit"]').first();
+    const initialUrl = page.url();
+
+    // Try clicking submit - if button is enabled, form validation should prevent navigation
+    try {
+      await submitButton.click({ timeout: 1000 });
+    } catch (e) {
+      // Button might be disabled, which is fine
+    }
+
+    // Wait a bit to see if navigation happens
+    await page.waitForTimeout(1000);
+
+    // Should stay on write page (validation prevents submission)
     await expect(page).toHaveURL(/\/write\/1/);
+    expect(page.url()).toBe(initialUrl);
   });
 
   test("full submission flow works", async ({ writePage, resultsPage, page }) => {

@@ -208,8 +208,13 @@ export class WritePage {
   async typeEssay(text: string) {
     const textarea = this.page.locator("textarea#answer");
     await textarea.waitFor({ state: "visible", timeout: 10000 });
+    // Use fill() for better performance, especially for long essays
+    // Then trigger input event to ensure React state updates
     await textarea.fill(text);
-    await textarea.evaluate((el) => el.dispatchEvent(new Event("input", { bubbles: true })));
+    await textarea.evaluate((el) => {
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    });
   }
 
   async getWordCount() {
