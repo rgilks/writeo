@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Test Coverage:** ~85 tests (25 API + 60 E2E) covering critical functionality
+**Test Coverage:** ~58 tests (38 API + 20 E2E) covering critical functionality
 
 ---
 
@@ -38,7 +38,7 @@ npm run test:e2e:ui   # Playwright UI mode
 - Relevance checking
 - Cost controls (essay truncation)
 
-**Total:** ~25 test cases covering critical API functionality
+**Total:** 38 test cases covering critical API functionality
 
 ### E2E Tests (`tests/e2e/*.spec.ts` - Playwright)
 
@@ -55,7 +55,7 @@ npm run test:e2e:ui   # Playwright UI mode
 - `visual.spec.ts` - Visual design verification
 - `responsive.spec.ts` - Responsive layouts (mobile/tablet/desktop)
 
-**Total:** ~65 test cases covering critical user flows (including custom question feature)
+**Total:** 20 test cases covering critical user flows
 
 ---
 
@@ -160,13 +160,17 @@ Some visual and subjective aspects require manual browser verification:
 
 **Pre-commit hook:**
 
-- Formats code with Prettier
+- Security check (prevents committing sensitive files)
+- Formats code with Prettier (only staged files for speed)
 - Runs linting
 - Type checking
+- Commit message format hints
 
 **Pre-push hook:**
 
-- Runs all tests against local servers
+- Checks/starts local dev servers (reuses if already running)
+- Runs unit tests
+- Runs E2E tests (can be skipped in quick mode)
 
 **Install hooks:**
 
@@ -175,6 +179,14 @@ npm run install-hooks
 # or
 ./scripts/install-hooks.sh
 ```
+
+**Quick push mode (skip E2E tests):**
+
+```bash
+QUICK_PUSH=true git push  # Saves ~20 seconds by skipping E2E tests
+```
+
+The hook automatically detects docs-only changes and skips E2E tests in that case.
 
 **Bypass hooks (if needed):**
 

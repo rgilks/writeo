@@ -2,6 +2,23 @@
 
 Utility scripts for deployment and operations.
 
+## Git Hooks
+
+**Install git hooks:**
+
+```bash
+npm run install-hooks
+# or
+./scripts/install-hooks.sh
+```
+
+This installs:
+
+- `pre-commit` - Formats code, runs linting and type checking
+- `pre-push` - Runs all tests against local servers
+
+See [TESTING.md](TESTING.md) for details on hook features including quick mode.
+
 ## Deployment Scripts
 
 - `deploy-all.sh` - Deploy all services (Modal + API + Web)

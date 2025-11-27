@@ -60,7 +60,7 @@ Writeo uses a serverless edge architecture:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/writeo.git
+git clone https://github.com/rgilks/writeo.git
 cd writeo
 
 # Install dependencies
@@ -124,6 +124,19 @@ This starts:
 - Frontend at `http://localhost:3000`
 - API Worker at `http://localhost:8787`
 
+### 5. Development Workflow
+
+**Install git hooks** (recommended):
+
+```bash
+npm run install-hooks
+```
+
+Hooks provide:
+
+- Pre-commit: Auto-formatting, linting, type checking
+- Pre-push: Full test suite (use `QUICK_PUSH=true git push` to skip E2E tests)
+
 ## 🎛️ Operational Modes
 
 Writeo can run in two modes to optimize for cost or speed:
@@ -149,9 +162,14 @@ Run the test suite:
 # Run all tests
 npm test
 
+# Run E2E tests
+npm run test:e2e
+
 # Run specific test file
 npx vitest tests/api.test.ts
 ```
+
+**Git Hooks:** Pre-commit and pre-push hooks are installed automatically. Use `QUICK_PUSH=true git push` to skip E2E tests for faster pushes.
 
 See **[TESTING.md](docs/TESTING.md)** for more info.
 

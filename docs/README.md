@@ -45,7 +45,7 @@ This directory contains all documentation for the Writeo project.
 
 ## 🔗 Quick Links
 
-**API:** [SPEC.md](SPEC.md) | [Interactive Docs](https://your-api-worker.workers.dev/docs)  
+**API:** [SPEC.md](SPEC.md) | [Interactive Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs)  
 **Status & Roadmap:** [STATUS.md](STATUS.md)  
 **Cost Analysis:** [COST_REVIEW.md](COST_REVIEW.md)  
 **Testing:** [TESTING.md](TESTING.md)  
