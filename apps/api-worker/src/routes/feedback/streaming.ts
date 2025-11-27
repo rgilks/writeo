@@ -9,7 +9,7 @@ export function buildStreamingPrompt(
   questionText: string,
   answerText: string,
   essayScores?: any,
-  ltErrors?: any[]
+  ltErrors?: any[],
 ): string {
   const truncatedAnswerText = truncateEssayText(answerText);
   const truncatedQuestionText = truncateQuestionText(questionText);
@@ -30,7 +30,7 @@ export function buildStreamingPrompt(
       .slice(0, 10)
       .map(
         (err, idx) =>
-          `${idx + 1}. ${err.message} (${err.category})${err.suggestions ? ` - Suggestions: ${err.suggestions.slice(0, 2).join(", ")}` : ""}`
+          `${idx + 1}. ${err.message} (${err.category})${err.suggestions ? ` - Suggestions: ${err.suggestions.slice(0, 2).join(", ")}` : ""}`,
       )
       .join("\n");
     grammarContext = `\n\nGrammar & Language Issues Found (${ltErrors.length} total):\n${errorSummary}${ltErrors.length > 10 ? `\n... and ${ltErrors.length - 10} more issues` : ""}`;
@@ -83,7 +83,7 @@ export async function createStreamingResponse(
   llmProvider: LLMProvider,
   apiKey: string,
   aiModel: string,
-  prompt: string
+  prompt: string,
 ): Promise<ReadableStream> {
   return new ReadableStream({
     async start(controller) {
@@ -91,8 +91,8 @@ export async function createStreamingResponse(
       try {
         controller.enqueue(
           encoder.encode(
-            `data: ${JSON.stringify({ type: "start", message: "Starting AI feedback generation..." })}\n\n`
-          )
+            `data: ${JSON.stringify({ type: "start", message: "Starting AI feedback generation..." })}\n\n`,
+          ),
         );
 
         let hasContent = false;
@@ -109,11 +109,11 @@ export async function createStreamingResponse(
               },
               { role: "user", content: prompt },
             ],
-            1000
+            1000,
           )) {
             hasContent = true;
             controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: chunk })}\n\n`)
+              encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: chunk })}\n\n`),
             );
           }
         } catch (streamError) {
@@ -130,7 +130,7 @@ export async function createStreamingResponse(
               },
               { role: "user", content: prompt },
             ],
-            1000
+            1000,
           );
 
           if (responseText && responseText.trim().length > 0) {
@@ -138,12 +138,14 @@ export async function createStreamingResponse(
             const words = responseText.match(/\S+|\s+/g) || [];
             if (words.length === 0) {
               controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: responseText })}\n\n`)
+                encoder.encode(
+                  `data: ${JSON.stringify({ type: "chunk", text: responseText })}\n\n`,
+                ),
               );
             } else {
               for (const word of words) {
                 controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: word })}\n\n`)
+                  encoder.encode(`data: ${JSON.stringify({ type: "chunk", text: word })}\n\n`),
                 );
                 await new Promise((resolve) => setTimeout(resolve, 20));
               }
@@ -154,21 +156,21 @@ export async function createStreamingResponse(
         if (!hasContent) {
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ type: "chunk", text: "Unable to generate feedback at this time. Please try again." })}\n\n`
-            )
+              `data: ${JSON.stringify({ type: "chunk", text: "Unable to generate feedback at this time. Please try again." })}\n\n`,
+            ),
           );
         }
 
         controller.enqueue(
           encoder.encode(
-            `data: ${JSON.stringify({ type: "done", message: "Feedback generation complete" })}\n\n`
-          )
+            `data: ${JSON.stringify({ type: "done", message: "Feedback generation complete" })}\n\n`,
+          ),
         );
       } catch (error) {
         controller.enqueue(
           encoder.encode(
-            `data: ${JSON.stringify({ type: "error", message: error instanceof Error ? error.message : String(error) })}\n\n`
-          )
+            `data: ${JSON.stringify({ type: "error", message: error instanceof Error ? error.message : String(error) })}\n\n`,
+          ),
         );
       } finally {
         controller.close();

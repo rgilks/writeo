@@ -34,7 +34,7 @@ export function HeatMapText({
     mediumConfidenceErrors,
     lowConfidenceErrors,
     showMediumConfidenceErrors,
-    showExperimentalSuggestions
+    showExperimentalSuggestions,
   );
 
   if (!errors || errors.length === 0 || !text) {

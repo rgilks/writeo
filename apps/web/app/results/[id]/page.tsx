@@ -28,7 +28,7 @@ export default function ResultsPage() {
     return null;
   });
   const [status, setStatus] = useState<"pending" | "success" | "error">(
-    data ? "success" : "pending"
+    data ? "success" : "pending",
   );
   const [error, setError] = useState<string | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
@@ -64,7 +64,7 @@ export default function ResultsPage() {
         // In local-only mode, results should be in store
         if (!storeResults) {
           throw new Error(
-            "Results not found in local storage. In local-only mode, results are only stored in your browser."
+            "Results not found in local storage. In local-only mode, results are only stored in your browser.",
           );
         }
 

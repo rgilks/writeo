@@ -50,8 +50,6 @@ venv/
 ENV/
 env/
 *.egg-info/
-dist/
-build/
 *.egg
 
 # uv
@@ -64,7 +62,6 @@ uv.lock
 *.swp
 *.swo
 *~
-.DS_Store
 *.sublime-project
 *.sublime-workspace
 
@@ -84,9 +81,8 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+playwright/.cache/
 
 # Playwright
 test-results/
 playwright-report/
-playwright/.cache/
-

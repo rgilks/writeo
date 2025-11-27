@@ -12,7 +12,7 @@ export function getAPIKey(
   env: {
     GROQ_API_KEY?: string;
     OPENAI_API_KEY?: string;
-  }
+  },
 ): string {
   return provider === "groq" ? env.GROQ_API_KEY || "" : env.OPENAI_API_KEY || "";
 }
@@ -22,7 +22,7 @@ export async function callLLMAPI(
   apiKey: string,
   modelName: string,
   messages: Array<{ role: string; content: string }>,
-  maxTokens: number
+  maxTokens: number,
 ): Promise<string> {
   return provider === "groq"
     ? callGroqAPI(apiKey, modelName, messages, maxTokens)
@@ -38,7 +38,7 @@ export async function* streamLLMAPI(
   apiKey: string,
   modelName: string,
   messages: Array<{ role: string; content: string }>,
-  maxTokens: number
+  maxTokens: number,
 ): AsyncGenerator<string, void, unknown> {
   if (provider === "openai") {
     const { streamOpenAIAPI } = await import("./openai");

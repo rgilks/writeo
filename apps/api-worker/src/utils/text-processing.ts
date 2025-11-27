@@ -33,7 +33,7 @@ export function truncateQuestionText(text: string): string {
 
 export function generateStructuredFeedback(
   match: LanguageToolMatch,
-  errorText: string
+  errorText: string,
 ): {
   errorType: string;
   explanation: string;
@@ -167,7 +167,7 @@ export function isTenseConsistencyError(match: LanguageToolMatch, fullText: stri
       (verb) =>
         errorTextLower === verb ||
         errorTextLower.startsWith(verb + " ") ||
-        errorTextLower.endsWith(" " + verb)
+        errorTextLower.endsWith(" " + verb),
     )
   ) {
     const contextStart = Math.max(0, (match.offset || 0) - 100);
@@ -436,7 +436,7 @@ function findTextSnippet(
   snippet: string,
   fullText: string,
   expectedPosition: number,
-  maxDistance: number = 100
+  maxDistance: number = 100,
 ): { start: number; end: number } | null {
   if (!snippet || snippet.trim().length === 0) return null;
 
@@ -499,7 +499,7 @@ export function findTextWithContext(
   errorText: string,
   wordBefore: string | null,
   wordAfter: string | null,
-  fullText: string
+  fullText: string,
 ): { start: number; end: number } | null {
   if (!errorText || errorText.trim().length === 0) return null;
 
@@ -571,7 +571,7 @@ export function validateAndCorrectErrorPosition(
     message?: string;
     errorType?: string;
   },
-  fullText: string
+  fullText: string,
 ): { start: number; end: number; valid: boolean } {
   // Basic bounds checking
   if (error.start < 0 || error.end > fullText.length || error.start >= error.end) {
@@ -676,7 +676,7 @@ export function validateAndCorrectErrorPosition(
  */
 export function transformLanguageToolResponse(
   ltResponse: LanguageToolResponse,
-  fullText?: string
+  fullText?: string,
 ): LanguageToolError[] {
   if (!ltResponse?.matches || !Array.isArray(ltResponse.matches)) {
     return [];
@@ -699,7 +699,7 @@ export function transformLanguageToolResponse(
       const errorText =
         match.context?.text?.substring(
           match.context.offset || 0,
-          (match.context.offset || 0) + (match.context.length || 0)
+          (match.context.offset || 0) + (match.context.length || 0),
         ) || "";
 
       const validated = validateAndCorrectErrorPosition(
@@ -709,7 +709,7 @@ export function transformLanguageToolResponse(
           errorText: errorText || fullText.substring(start, end),
           errorType: match.rule?.category?.id || match.rule?.category?.name,
         },
-        fullText
+        fullText,
       );
 
       if (!validated.valid) {
@@ -733,7 +733,7 @@ export function transformLanguageToolResponse(
     const errorText =
       match.context?.text?.substring(
         match.context.offset || 0,
-        (match.context.offset || 0) + (match.context.length || 0)
+        (match.context.offset || 0) + (match.context.length || 0),
       ) || "";
 
     const structuredFeedback = generateStructuredFeedback(match, errorText);

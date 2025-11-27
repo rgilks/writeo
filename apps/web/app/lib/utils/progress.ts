@@ -3,7 +3,7 @@ import type { LanguageToolError } from "@writeo/shared";
 
 export function calculateErrorReduction(
   previousDraft: DraftHistory | null,
-  currentDraft: DraftHistory
+  currentDraft: DraftHistory,
 ): number | null {
   if (
     !previousDraft ||
@@ -17,7 +17,7 @@ export function calculateErrorReduction(
 
 export function calculateScoreImprovement(
   previousDraft: DraftHistory | null,
-  currentDraft: DraftHistory
+  currentDraft: DraftHistory,
 ): number | null {
   if (
     !previousDraft ||
@@ -34,7 +34,7 @@ export function calculateScoreImprovement(
  */
 export function calculateWordCountChange(
   previousDraft: DraftHistory | null,
-  currentDraft: DraftHistory
+  currentDraft: DraftHistory,
 ): number | null {
   if (
     !previousDraft ||
@@ -50,7 +50,7 @@ export function calculateWordCountChange(
  * Analyze error type frequency from an array of errors
  */
 export function analyzeErrorTypeFrequency(
-  errors: LanguageToolError[]
+  errors: LanguageToolError[],
 ): Array<{ type: string; count: number }> {
   const frequency = new Map<string, number>();
 
@@ -69,7 +69,7 @@ export function analyzeErrorTypeFrequency(
  */
 export function getTopErrorTypes(
   errors: LanguageToolError[],
-  limit: number = 3
+  limit: number = 3,
 ): Array<{ type: string; count: number }> {
   return analyzeErrorTypeFrequency(errors).slice(0, limit);
 }

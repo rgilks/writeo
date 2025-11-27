@@ -38,7 +38,7 @@ export async function getTeacherFeedback(
     end: number;
     errorType?: string;
   }>,
-  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number }
+  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number },
 ): Promise<TeacherFeedback> {
   const prompt = buildTeacherFeedbackPrompt(
     questionText,
@@ -47,7 +47,7 @@ export async function getTeacherFeedback(
     essayScores,
     languageToolErrors,
     llmErrors,
-    relevanceCheck
+    relevanceCheck,
   );
 
   const systemMessage =
@@ -71,7 +71,7 @@ export async function getTeacherFeedback(
     ],
     mode === "explanation"
       ? MAX_TOKENS_TEACHER_FEEDBACK_EXPLANATION
-      : MAX_TOKENS_TEACHER_FEEDBACK_INITIAL
+      : MAX_TOKENS_TEACHER_FEEDBACK_INITIAL,
   );
 
   const trimmedResponseText = responseText.trim();

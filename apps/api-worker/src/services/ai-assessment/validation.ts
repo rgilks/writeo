@@ -20,7 +20,7 @@ export interface LLMErrorInput {
 
 export function validateAndProcessError(
   err: LLMErrorInput,
-  answerText: string
+  answerText: string,
 ): LanguageToolError | null {
   if (!err.errorText || err.errorText.trim().length === 0) {
     console.warn(`[getLLMAssessment] Skipping error with empty errorText`);
@@ -48,7 +48,7 @@ export function validateAndProcessError(
           wordBefore,
           wordAfter,
           category: err.category,
-        }
+        },
       );
       return null;
     }

@@ -77,7 +77,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
         validation,
         submissionId,
         body,
-        c
+        c,
       );
       if (storageResult) {
         return storageResult;
@@ -98,7 +98,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       modalRequest,
       serviceRequests,
       config,
-      timings
+      timings,
     );
 
     const processEssayStartTime = performance.now();
@@ -110,7 +110,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       ltResults,
       serviceRequests.ltRequests,
       modalRequest.parts,
-      config.features.languageTool.enabled
+      config.features.languageTool.enabled,
     );
     timings["7_process_languagetool"] = performance.now() - processLTStartTime;
 
@@ -119,7 +119,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       llmResults,
       serviceRequests.llmAssessmentRequests,
       serviceRequests.llmProvider,
-      serviceRequests.aiModel
+      serviceRequests.aiModel,
     );
     timings["7b_process_ai_assessment"] = performance.now() - processLLMStartTime;
 
@@ -128,7 +128,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
     const processRelevanceStartTime = performance.now();
     const relevanceByAnswerId = processRelevanceResults(
       relevanceResults,
-      serviceRequests.relevanceRequests
+      serviceRequests.relevanceRequests,
     );
     timings["9_process_relevance"] = performance.now() - processRelevanceStartTime;
 
@@ -161,10 +161,10 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
                 llmErrors,
                 relevanceCheck,
               },
-              { maxAttempts: 3, baseDelayMs: 500 }
+              { maxAttempts: 3, baseDelayMs: 500 },
             );
             return { answerId: answer.id, feedback };
-          })()
+          })(),
         );
       }
     }
@@ -203,7 +203,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       serviceRequests.llmProvider,
       llmFeedbackByAnswerId,
       relevanceByAnswerId,
-      teacherFeedbackByAnswerId
+      teacherFeedbackByAnswerId,
     );
     timings["10_merge_results"] = performance.now() - mergeStartTime;
 
@@ -212,7 +212,7 @@ export async function processSubmission(c: Context<{ Bindings: Env }>) {
       answerTextsByAnswerId,
       ltErrorsByAnswerId,
       llmErrorsByAnswerId,
-      essayAssessment
+      essayAssessment,
     );
 
     if (!mergedAssessment.meta) {

@@ -26,7 +26,7 @@ export function buildTeacherFeedbackPrompt(
     errorType?: string;
     category: string;
   }>,
-  relevanceCheck?: { addressesQuestion: boolean; score: number }
+  relevanceCheck?: { addressesQuestion: boolean; score: number },
 ): string {
   const truncatedAnswerText = truncateEssayText(answerText);
   const scoreContext = buildTeacherScoreContext(essayScores);

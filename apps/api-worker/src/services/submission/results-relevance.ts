@@ -6,7 +6,7 @@ import type { RelevanceCheck } from "../relevance";
 
 export function processRelevanceResults(
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>,
-  relevanceRequests: Array<{ answerId: string }>
+  relevanceRequests: Array<{ answerId: string }>,
 ): Map<string, RelevanceCheck> {
   const relevanceByAnswerId = new Map<string, RelevanceCheck>();
   if (relevanceResults.status === "fulfilled" && Array.isArray(relevanceResults.value)) {

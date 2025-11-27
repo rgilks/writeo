@@ -63,7 +63,7 @@ export async function handleStreamingRequest(c: Context<{ Bindings: Env }>) {
       return errorResponse(
         400,
         "questionText is required when submission is not stored. Please provide questionText in the request body.",
-        c
+        c,
       );
     }
   }
@@ -80,7 +80,7 @@ export async function handleStreamingRequest(c: Context<{ Bindings: Env }>) {
     return errorResponse(
       500,
       `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`,
-      c
+      c,
     );
   }
 

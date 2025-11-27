@@ -10,7 +10,7 @@ export function useDraftNavigation(
   submissionId: string | undefined,
   parentSubmissionId: string | undefined,
   rootDraft: DraftHistory | undefined,
-  getDraftHistory: (id: string) => DraftHistory[]
+  getDraftHistory: (id: string) => DraftHistory[],
 ) {
   // Use the draft's submissionId directly if available
   let draftSubmissionId = draft.submissionId;

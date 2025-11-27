@@ -14,7 +14,7 @@ export async function getTeacherFeedback(
   mode: "clues" | "explanation",
   answerText: string,
   questionText?: string,
-  assessmentData?: any
+  assessmentData?: any,
 ): Promise<{ message: string; focusArea?: string }> {
   try {
     if (!submissionId || !answerId || !mode || !answerText) {

@@ -12,7 +12,7 @@ import type { ValidationResult } from "./validator";
 async function storeQuestions(
   storage: StorageService,
   questionsToCreate: Array<{ id: string; text: string }>,
-  c: Context<{ Bindings: Env }>
+  c: Context<{ Bindings: Env }>,
 ): Promise<Response | null> {
   const questionPromises = questionsToCreate.map(async (question) => {
     const existing = await storage.getQuestion(question.id);
@@ -31,7 +31,7 @@ async function storeQuestions(
       return errorResponse(
         409,
         result.reason instanceof Error ? result.reason.message : String(result.reason),
-        c
+        c,
       );
     }
   }
@@ -42,7 +42,7 @@ async function storeAnswers(
   storage: StorageService,
   answersToCreate: Array<{ id: string; questionId: string; answerText: string }>,
   createdQuestionIds: Set<string>,
-  c: Context<{ Bindings: Env }>
+  c: Context<{ Bindings: Env }>,
 ): Promise<Response | null> {
   const answerPromises = answersToCreate.map(async (answer) => {
     const existing = await storage.getAnswer(answer.id);
@@ -70,7 +70,7 @@ async function storeAnswers(
       return errorResponse(
         409,
         result.reason instanceof Error ? result.reason.message : String(result.reason),
-        c
+        c,
       );
     }
   }
@@ -82,7 +82,7 @@ export async function storeSubmissionEntities(
   validation: ValidationResult,
   submissionId: string,
   body: CreateSubmissionRequest,
-  c: Context<{ Bindings: Env }>
+  c: Context<{ Bindings: Env }>,
 ): Promise<Response | null> {
   const { questionsToCreate, answersToCreate } = validation;
 

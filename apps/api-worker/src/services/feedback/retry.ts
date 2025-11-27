@@ -26,7 +26,7 @@ export interface FeedbackRetryParams {
 
 export async function getCombinedFeedbackWithRetry(
   params: FeedbackRetryParams,
-  options?: { maxAttempts?: number; baseDelayMs?: number }
+  options?: { maxAttempts?: number; baseDelayMs?: number },
 ): Promise<CombinedFeedback> {
   return retryWithBackoff(
     async () => {
@@ -39,7 +39,7 @@ export async function getCombinedFeedbackWithRetry(
         params.essayScores,
         params.languageToolErrors,
         params.llmErrors,
-        params.relevanceCheck
+        params.relevanceCheck,
       );
 
       if (!feedback?.detailed || !feedback?.teacher) {
@@ -51,6 +51,6 @@ export async function getCombinedFeedbackWithRetry(
     {
       maxAttempts: options?.maxAttempts ?? 3,
       baseDelayMs: options?.baseDelayMs ?? 300,
-    }
+    },
   );
 }

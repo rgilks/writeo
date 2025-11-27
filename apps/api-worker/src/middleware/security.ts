@@ -10,7 +10,7 @@ export async function securityHeaders(c: Context, next: () => Promise<void>) {
 
 function getAllowedOrigin(
   origin: string | null,
-  allowedOrigins?: string
+  allowedOrigins?: string,
 ): string | null | undefined {
   if (!origin) {
     return origin;

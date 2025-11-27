@@ -20,13 +20,22 @@ MODAL_LT_URL=https://your-username--writeo-lt-fastapi-app.modal.run
 # Optional: Default language for LanguageTool
 LT_LANGUAGE=en-GB
 
-# Optional: AI Model for feedback (defaults to llama-3.3-70b-versatile)
+# LLM Provider: "groq" (Turbo Mode) or "openai" (Cheap Mode)
+# Default: "openai" if not set
+LLM_PROVIDER=groq
+
+# AI Model for feedback
+# Groq default: llama-3.3-70b-versatile
+# OpenAI default: gpt-4o-mini
 AI_MODEL=llama-3.3-70b-versatile
 
-# Groq API key for AI feedback
+# Groq API key (required if LLM_PROVIDER=groq)
 # Get your API key from: https://console.groq.com
 GROQ_API_KEY=your-groq-api-key-here
 
+# OpenAI API key (required if LLM_PROVIDER=openai)
+# Get your API key from: https://platform.openai.com
+OPENAI_API_KEY=your-openai-api-key-here
+
 # Optional: CORS origins (defaults to allow all in dev)
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-

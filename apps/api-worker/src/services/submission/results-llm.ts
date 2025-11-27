@@ -9,13 +9,13 @@ export function processLLMResults(
   llmResults: PromiseSettledResult<any[]>,
   llmAssessmentRequests: Array<{ answerId: string }>,
   llmProvider: string,
-  aiModel: string
+  aiModel: string,
 ): Map<string, LanguageToolError[]> {
   const llmErrorsByAnswerId = new Map<string, LanguageToolError[]>();
   if (llmResults.status === "fulfilled" && Array.isArray(llmResults.value)) {
     const llmResponses = llmResults.value;
     console.log(
-      `[LLM Assessment] Processing ${llmResponses.length} responses for ${llmAssessmentRequests.length} requests`
+      `[LLM Assessment] Processing ${llmResponses.length} responses for ${llmAssessmentRequests.length} requests`,
     );
     for (let i = 0; i < llmAssessmentRequests.length; i++) {
       const request = llmAssessmentRequests[i];
@@ -25,11 +25,11 @@ export function processLLMResults(
       llmErrorsByAnswerId.set(answerId, llmErrors);
       if (llmErrors.length === 0) {
         console.log(
-          `[LLM Assessment] No errors found for answer ${answerId} (provider: ${llmProvider}, model: ${aiModel})`
+          `[LLM Assessment] No errors found for answer ${answerId} (provider: ${llmProvider}, model: ${aiModel})`,
         );
       } else {
         console.log(
-          `[LLM Assessment] Found ${llmErrors.length} errors for answer ${answerId} (provider: ${llmProvider}, model: ${aiModel})`
+          `[LLM Assessment] Found ${llmErrors.length} errors for answer ${answerId} (provider: ${llmProvider}, model: ${aiModel})`,
         );
       }
     }

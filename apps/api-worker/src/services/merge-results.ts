@@ -20,7 +20,7 @@ export function mergeAssessmentResults(
   llmProvider: string = "openai",
   llmFeedback: Map<string, AIFeedback> = new Map(),
   relevanceChecks: Map<string, RelevanceCheck> = new Map(),
-  teacherFeedback: Map<string, TeacherFeedback> = new Map()
+  teacherFeedback: Map<string, TeacherFeedback> = new Map(),
 ): AssessmentResults {
   const parts: AssessmentPart[] = [];
 
@@ -29,21 +29,21 @@ export function mergeAssessmentResults(
     const essayAssessorResults: AssessorResult[] = [];
     if (!essay) {
       console.warn(
-        `[merge-results] Essay assessment is null for part ${part.part} - essay assessor results will be missing`
+        `[merge-results] Essay assessment is null for part ${part.part} - essay assessor results will be missing`,
       );
     } else if (!essay.results?.parts) {
       console.warn(
-        `[merge-results] Essay assessment has no results.parts for part ${part.part} - essay assessor results will be missing`
+        `[merge-results] Essay assessment has no results.parts for part ${part.part} - essay assessor results will be missing`,
       );
     } else {
       const essayPart = essay.results.parts.find((p) => p.part === part.part);
       if (!essayPart) {
         console.warn(
-          `[merge-results] Essay part ${part.part} not found in essay assessment - essay assessor results will be missing`
+          `[merge-results] Essay part ${part.part} not found in essay assessment - essay assessor results will be missing`,
         );
       } else if (!essayPart.answers || essayPart.answers.length === 0) {
         console.warn(
-          `[merge-results] Essay part ${part.part} has no answers - essay assessor results will be missing`
+          `[merge-results] Essay part ${part.part} has no answers - essay assessor results will be missing`,
         );
       } else {
         // Extract assessor-results from the first answer (scores are typically the same for all answers in a part)
@@ -51,11 +51,11 @@ export function mergeAssessmentResults(
         if (firstAnswer?.["assessor-results"]) {
           essayAssessorResults.push(...firstAnswer["assessor-results"]);
           console.log(
-            `[merge-results] Extracted ${essayAssessorResults.length} essay assessor result(s) for part ${part.part}`
+            `[merge-results] Extracted ${essayAssessorResults.length} essay assessor result(s) for part ${part.part}`,
           );
         } else {
           console.warn(
-            `[merge-results] Essay answer ${firstAnswer?.id} has no assessor-results - essay assessor results will be missing`
+            `[merge-results] Essay answer ${firstAnswer?.id} has no assessor-results - essay assessor results will be missing`,
           );
         }
       }
@@ -123,7 +123,7 @@ export function mergeAssessmentResults(
       } else {
         // Log when LLM assessor is not added due to empty errors
         console.log(
-          `[merge-results] LLM assessor not added for answer ${answer.id}: no errors found (provider: ${llmProvider})`
+          `[merge-results] LLM assessor not added for answer ${answer.id}: no errors found (provider: ${llmProvider})`,
         );
       }
 

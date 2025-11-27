@@ -15,7 +15,7 @@ export async function getLLMAssessment(
   apiKey: string,
   questionText: string,
   answerText: string,
-  modelName: string
+  modelName: string,
 ): Promise<LanguageToolError[]> {
   const prompt = buildAssessmentPrompt(questionText, answerText);
 
@@ -36,8 +36,8 @@ export async function getLLMAssessment(
             content: prompt,
           },
         ],
-        MAX_TOKENS_GRAMMAR_CHECK
-      )
+        MAX_TOKENS_GRAMMAR_CHECK,
+      ),
     );
 
     if (!text) {
@@ -49,7 +49,7 @@ export async function getLLMAssessment(
     if (errors.length === 0 && llmProvider === "groq") {
       console.log(
         `[getLLMAssessment] Groq returned empty errors array. Response preview:`,
-        text.trim().substring(0, 200)
+        text.trim().substring(0, 200),
       );
     }
 
@@ -62,11 +62,11 @@ export async function getLLMAssessment(
       const firstHalf = processedErrors.filter((e) => e.start < textLength / 2).length;
       const secondHalf = processedErrors.length - firstHalf;
       console.log(
-        `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors) - Distribution: ${firstHalf} in first half, ${secondHalf} in second half (text length: ${textLength} chars)`
+        `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors) - Distribution: ${firstHalf} in first half, ${secondHalf} in second half (text length: ${textLength} chars)`,
       );
     } else {
       console.log(
-        `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors)`
+        `[getLLMAssessment] ${llmProvider} processed ${processedErrors.length} valid errors (from ${errors.length} raw errors)`,
       );
     }
 

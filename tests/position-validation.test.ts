@@ -14,7 +14,7 @@ describe("Position Validation and Correction", () => {
         errorText: "lie",
         errorType: "GRAMMAR",
       },
-      sampleText
+      sampleText,
     );
 
     expect(result.valid).toBe(true);
@@ -36,7 +36,7 @@ describe("Position Validation and Correction", () => {
         errorText: "bel",
         errorType: "GRAMMAR",
       },
-      sampleText
+      sampleText,
     );
 
     expect(result.valid).toBe(true);
@@ -54,7 +54,7 @@ describe("Position Validation and Correction", () => {
         errorText: "believe", // Correct text snippet
         errorType: "GRAMMAR",
       },
-      sampleText
+      sampleText,
     );
 
     expect(result.valid).toBe(true);
@@ -71,7 +71,7 @@ describe("Position Validation and Correction", () => {
         errorText: "test",
         errorType: "GRAMMAR",
       },
-      sampleText
+      sampleText,
     );
 
     expect(result.valid).toBe(false);
@@ -85,7 +85,7 @@ describe("Position Validation and Correction", () => {
         errorText: "test",
         errorType: "GRAMMAR",
       },
-      sampleText
+      sampleText,
     );
 
     expect(result.valid).toBe(false);
@@ -100,7 +100,7 @@ describe("Position Validation and Correction", () => {
         errorText: "   ",
         errorType: "GRAMMAR",
       },
-      textWithSpaces
+      textWithSpaces,
     );
 
     // The validation will try to expand to word boundaries
@@ -125,7 +125,7 @@ describe("Position Validation and Correction", () => {
         errorText: ",",
         errorType: "PUNCTUATION",
       },
-      textWithPunctuation
+      textWithPunctuation,
     );
 
     expect(result.valid).toBe(true);
@@ -144,7 +144,7 @@ describe("Position Validation and Correction", () => {
         errorText: "lie",
         errorType: "GRAMMAR",
       },
-      text
+      text,
     );
 
     expect(result.valid).toBe(true);
@@ -162,7 +162,7 @@ describe("Position Validation and Correction", () => {
         errorText: "believe universities",
         errorType: "GRAMMAR",
       },
-      text
+      text,
     );
 
     expect(result.valid).toBe(true);
@@ -181,7 +181,7 @@ describe("Position Validation and Correction", () => {
         errorType: "Verb tense",
         message: "Should be past tense",
       },
-      text
+      text,
     );
 
     expect(result.valid).toBe(true);

@@ -14,7 +14,7 @@ export function useDraftStorage(
   draftNumber: number,
   grammarErrors: any[],
   finalAnswerText: string,
-  parentSubmissionId: string | undefined
+  parentSubmissionId: string | undefined,
 ) {
   const addDraft = useDraftStore((state) => state.addDraft);
   const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
@@ -76,7 +76,7 @@ export function useDraftStorage(
         // Fallback: if we still don't have a root, use submissionId (shouldn't happen)
         if (!rootSubmissionId) {
           console.warn(
-            "Cannot add draft: no root submission ID found, using submissionId as fallback"
+            "Cannot add draft: no root submission ID found, using submissionId as fallback",
           );
           rootSubmissionId = submissionId;
         }

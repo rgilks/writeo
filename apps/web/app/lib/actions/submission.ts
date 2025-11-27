@@ -13,7 +13,7 @@ import { getApiBase, getApiKey } from "../api-config";
 export async function createSubmission(
   questionText: string,
   answerText: string,
-  storeResults: boolean = false
+  storeResults: boolean = false,
 ): Promise<{ submissionId: string; results: any }> {
   const submissionId = generateUUID();
   const questionId = generateUUID();
@@ -108,7 +108,7 @@ export async function pollSubmissionResults(
   submissionId: string,
   maxAttempts: number = 20,
   initialIntervalMs: number = 1000,
-  parentSubmissionId?: string
+  parentSubmissionId?: string,
 ): Promise<any> {
   for (let attempts = 0; attempts < maxAttempts; attempts++) {
     try {

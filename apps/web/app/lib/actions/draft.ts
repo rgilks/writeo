@@ -9,7 +9,7 @@ import { getSubmissionResults } from "./submission";
 export async function getDraftInfo(
   parentSubmissionId: string,
   storeResults: boolean = false,
-  parentResults?: any
+  parentResults?: any,
 ): Promise<{
   draftNumber: number;
   parentSubmissionId: string;
@@ -54,7 +54,7 @@ export async function getDraftInfo(
         const firstAnswer = firstPart?.answers?.[0];
         const assessorResults = firstAnswer?.["assessor-results"] || [];
         const essayAssessor = assessorResults.find(
-          (r: any) => r.assessor === "essay-assessor" || r.assessor === "modal-essay-assessor"
+          (r: any) => r.assessor === "essay-assessor" || r.assessor === "modal-essay-assessor",
         );
         overallScore = essayAssessor?.result?.overall;
       } catch {
@@ -71,7 +71,7 @@ export async function getDraftInfo(
         const firstAnswer = firstPart?.answers?.[0];
         const assessorResults = firstAnswer?.["assessor-results"] || [];
         const ltAssessor = assessorResults.find(
-          (r: any) => r.assessor === "languagetool-assessor" || r.assessor === "modal-lt-assessor"
+          (r: any) => r.assessor === "languagetool-assessor" || r.assessor === "modal-lt-assessor",
         );
         const llmAssessor = assessorResults.find((r: any) => r.assessor === "llm-error-assessor");
         errorCount =
@@ -83,7 +83,7 @@ export async function getDraftInfo(
 
     // Check if the parent's entry already exists in the history
     const parentAlreadyInHistory = parentHistory.some(
-      (h: any) => h.draftNumber === parentDraftNumber
+      (h: any) => h.draftNumber === parentDraftNumber,
     );
 
     const draftHistory = parentAlreadyInHistory
@@ -117,7 +117,7 @@ export async function getSubmissionResultsWithDraftTracking(
   submissionId: string,
   parentSubmissionId?: string,
   storeResults: boolean = false,
-  parentResults?: any
+  parentResults?: any,
 ): Promise<any> {
   const results = await getSubmissionResults(submissionId);
 

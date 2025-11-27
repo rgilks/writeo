@@ -7,7 +7,7 @@ import { safeLogError } from "../../utils/logging";
 
 export async function processEssayResult(
   essayResult: PromiseSettledResult<Response>,
-  submissionId: string
+  submissionId: string,
 ): Promise<AssessmentResults | null> {
   let essayAssessment: AssessmentResults | null = null;
   if (essayResult.status === "fulfilled") {
@@ -21,7 +21,7 @@ export async function processEssayResult(
             hasResults: !!essayAssessment?.results,
             hasParts: !!essayAssessment?.results?.parts,
             partsCount: essayAssessment?.results?.parts?.length ?? 0,
-          }
+          },
         );
         // Log assessor results for debugging
         if (essayAssessment?.results?.parts) {
@@ -36,7 +36,7 @@ export async function processEssayResult(
                 {
                   assessorIds: assessorResults?.map((ar) => ar.id) ?? [],
                   assessorNames: assessorResults?.map((ar) => ar.name) ?? [],
-                }
+                },
               );
             }
           }

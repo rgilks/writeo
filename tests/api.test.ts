@@ -96,7 +96,7 @@ describe("API Tests", () => {
     expect(json.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json.results.parts[0]).find(
-      (a: any) => a.id === "T-GEC-LT"
+      (a: any) => a.id === "T-GEC-LT",
     );
     expect(ltAssessor).toBeDefined();
     expect(ltAssessor.errors.length).toBeGreaterThan(0);
@@ -128,7 +128,7 @@ describe("API Tests", () => {
     expect(json.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json.results.parts[0]).find(
-      (a: any) => a.id === "T-GEC-LT"
+      (a: any) => a.id === "T-GEC-LT",
     );
     expect(ltAssessor).toBeDefined();
     expect(ltAssessor.errors.length).toBeGreaterThan(0);
@@ -180,13 +180,13 @@ describe("API Tests", () => {
         ],
         template: { name: "generic", version: 1 },
         storeResults: false, // No server storage for tests
-      }
+      },
     );
     expect(status2).toBe(200);
     expect(json2.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json2.results.parts[0]).find(
-      (a: any) => a.id === "T-GEC-LT"
+      (a: any) => a.id === "T-GEC-LT",
     );
     expect(ltAssessor).toBeDefined();
 
@@ -222,7 +222,7 @@ describe("API Tests", () => {
 
       // Verify that tense errors have at least medium confidence (60%)
       const tenseErrorsWithMediumConfidence = tenseErrors.filter(
-        (e: any) => e.confidenceScore >= 0.6
+        (e: any) => e.confidenceScore >= 0.6,
       );
       // At least some tense errors should have medium or high confidence
       expect(tenseErrorsWithMediumConfidence.length).toBeGreaterThan(0);
@@ -373,7 +373,7 @@ describe("API Tests", () => {
         if (error.errorType !== "Punctuation" && error.category !== "PUNCTUATION") {
           if (splitsWordAtStart || splitsWordAtEnd) {
             console.warn(
-              `Warning: Error at position ${error.start}-${error.end} splits a word: "${highlightedText}" (${error.errorType})`
+              `Warning: Error at position ${error.start}-${error.end} splits a word: "${highlightedText}" (${error.errorType})`,
             );
             // Count these as issues but don't fail - we're improving, not perfect yet
             // In production, these should be rare
@@ -492,7 +492,7 @@ describe("API Tests", () => {
             if (error.errorType !== "Punctuation" && error.category !== "PUNCTUATION") {
               // This is a problem - position splits a word
               console.warn(
-                `Warning: Error at position ${error.start}-${error.end} splits a word: "${highlightedText}"`
+                `Warning: Error at position ${error.start}-${error.end} splits a word: "${highlightedText}"`,
               );
             }
           }
@@ -508,7 +508,7 @@ describe("API Tests", () => {
             if (error.errorType !== "Punctuation" && error.category !== "PUNCTUATION") {
               // This is a problem - position splits a word
               console.warn(
-                `Warning: Error at position ${error.start}-${error.end} splits a word: "${highlightedText}"`
+                `Warning: Error at position ${error.start}-${error.end} splits a word: "${highlightedText}"`,
               );
             }
           }
@@ -565,7 +565,7 @@ describe("API Tests", () => {
         answerId,
         mode: "clues",
         answerText: "Last weekend I go to the park with my friend. We was playing football.",
-      }
+      },
     );
     expect(cluesResponse.status).toBe(200);
     expect(cluesResponse.json.message).toBeDefined();
@@ -579,7 +579,7 @@ describe("API Tests", () => {
         answerId,
         mode: "clues",
         answerText: "Last weekend I go to the park with my friend. We was playing football.",
-      }
+      },
     );
     expect(cluesResponse2.status).toBe(200);
     expect(cluesResponse2.json.message).toBe(cluesMessage1); // Should be identical (stored)
@@ -592,7 +592,7 @@ describe("API Tests", () => {
         answerId,
         mode: "explanation",
         answerText: "Last weekend I go to the park with my friend. We was playing football.",
-      }
+      },
     );
     expect(explanationResponse.status).toBe(200);
     expect(explanationResponse.json.message).toBeDefined();
@@ -606,7 +606,7 @@ describe("API Tests", () => {
         answerId,
         mode: "explanation",
         answerText: "Last weekend I go to the park with my friend. We was playing football.",
-      }
+      },
     );
     expect(explanationResponse2.status).toBe(200);
     expect(explanationResponse2.json.message).toBe(explanationMessage1); // Should be identical (stored)
@@ -615,7 +615,7 @@ describe("API Tests", () => {
     const results = await apiRequest("GET", `/text/submissions/${submissionId}`);
     expect(results.status).toBe(200);
     const teacherAssessor = getAssessorResults(results.json.results.parts[0]).find(
-      (a: any) => a.id === "T-TEACHER-FEEDBACK"
+      (a: any) => a.id === "T-TEACHER-FEEDBACK",
     );
     expect(teacherAssessor).toBeDefined();
     expect(teacherAssessor.meta).toBeDefined();
@@ -685,7 +685,7 @@ describe("API Tests", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
-      }
+      },
     );
 
     if (!response.body) {
@@ -1026,7 +1026,7 @@ describe("API Tests", () => {
         ],
         template: { name: "generic", version: 1 },
         storeResults: false, // No server storage for tests
-      }
+      },
     );
     const duration = Date.now() - start;
 
@@ -1171,7 +1171,7 @@ describe("API Tests", () => {
       // If submission fails due to size limits, that's okay - truncation still works in feedback
       // The important thing is that truncation exists to prevent excessive API costs
       console.log(
-        "Long essay submission failed (possibly due to size limits), but truncation still works in feedback generation"
+        "Long essay submission failed (possibly due to size limits), but truncation still works in feedback generation",
       );
     }
   });
@@ -1251,7 +1251,7 @@ describe("API Tests", () => {
     const teacherResponse = await apiRequest(
       "POST",
       `/text/submissions/${submissionId}/teacher-feedback`,
-      requestBody
+      requestBody,
     );
 
     // Debug: log error if not 200

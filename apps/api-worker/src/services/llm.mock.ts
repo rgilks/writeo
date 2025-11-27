@@ -7,7 +7,7 @@ export async function mockCallLLMAPI(
   _apiKey: string,
   _modelName: string,
   messages: Array<{ role: string; content: string }>,
-  _maxTokens: number
+  _maxTokens: number,
 ): Promise<string> {
   await new Promise((resolve) => setTimeout(resolve, Math.random() * 40 + 10));
 
@@ -88,7 +88,7 @@ export async function* mockStreamLLMAPI(
   apiKey: string,
   modelName: string,
   messages: Array<{ role: string; content: string }>,
-  maxTokens: number
+  maxTokens: number,
 ): AsyncGenerator<string, void, unknown> {
   const fullResponse = await mockCallLLMAPI(apiKey, modelName, messages, maxTokens);
   const words = fullResponse.match(/\S+|\s+/g) || [];

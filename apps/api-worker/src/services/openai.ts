@@ -12,7 +12,7 @@ export async function callOpenAIAPI(
   apiKey: string,
   modelName: string,
   messages: Array<{ role: string; content: string }>,
-  maxTokens: number
+  maxTokens: number,
 ): Promise<string> {
   if (shouldUseMock(apiKey)) {
     const { mockCallLLMAPI } = await import("./llm.mock");
@@ -63,7 +63,7 @@ export async function* streamOpenAIAPI(
   apiKey: string,
   modelName: string,
   messages: Array<{ role: string; content: string }>,
-  maxTokens: number
+  maxTokens: number,
 ): AsyncGenerator<string, void, unknown> {
   if (shouldUseMock(apiKey)) {
     const { mockStreamLLMAPI } = await import("./llm.mock");

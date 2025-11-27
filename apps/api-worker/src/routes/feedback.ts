@@ -23,14 +23,14 @@ feedbackRouter.post("/text/submissions/:submission_id/ai-feedback/stream", async
       requestData.questionText,
       requestData.answerText,
       requestData.essayScores,
-      requestData.ltErrors
+      requestData.ltErrors,
     );
 
     const stream = await createStreamingResponse(
       requestData.llmProvider,
       requestData.apiKey,
       requestData.aiModel,
-      prompt
+      prompt,
     );
 
     return new Response(stream, {

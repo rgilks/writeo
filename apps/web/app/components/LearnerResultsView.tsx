@@ -64,7 +64,7 @@ export function LearnerResultsView({
     draftNumber,
     grammarErrors,
     finalAnswerText,
-    parentSubmissionId
+    parentSubmissionId,
   );
 
   const { displayDraftHistory } = useDraftHistory(
@@ -73,7 +73,7 @@ export function LearnerResultsView({
     overall,
     grammarErrors,
     finalAnswerText,
-    parentSubmissionId
+    parentSubmissionId,
   );
 
   const { handleResubmit, isResubmitting } = useResubmit();

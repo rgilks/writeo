@@ -34,7 +34,7 @@ export abstract class BaseServiceClient {
    */
   protected async request(
     endpoint: string,
-    options: RequestInit & { timeout?: number }
+    options: RequestInit & { timeout?: number },
   ): Promise<Response> {
     const url = `${this.baseUrl}${endpoint}`;
     const { timeout, ...fetchOptions } = options;

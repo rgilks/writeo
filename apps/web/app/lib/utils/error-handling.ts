@@ -58,7 +58,7 @@ export function makeSerializableError(error: unknown): Error {
     return new Error(
       errorStr && errorStr !== "{}"
         ? `Error: ${errorStr.substring(0, 200)}`
-        : "An unexpected error occurred"
+        : "An unexpected error occurred",
     );
   } catch {
     return new Error("An unexpected error occurred");

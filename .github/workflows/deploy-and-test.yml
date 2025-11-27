@@ -48,12 +48,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Wait for deployment
-        run: |
-          echo "Waiting for deployments to be ready..."
-          sleep 30
-          echo "Deployment complete"
-
   test:
     name: Test Deployed Site
     runs-on: ubuntu-latest
@@ -76,11 +70,15 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run API tests against production
-        run: npm test
+        # Note: API tests are excluded from local runs (npm test) to save costs.
+        # They only run in CI to verify production deployments.
+        run: npx vitest run tests/api.test.ts
         env:
           API_BASE: ${{ env.PRODUCTION_API_URL }}
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
-          # API tests use real services in CI - no mocking
+          # Note: Tests call production API. The production worker must have USE_MOCK_LLM
+          # unset or false in Cloudflare secrets to use real LLM APIs. If USE_MOCK_LLM=true
+          # is set in the worker environment, tests will use mocked LLM responses.
 
       - name: Run E2E tests against deployed site
         run: npm run test:e2e -- --reporter=github
@@ -90,7 +88,9 @@ jobs:
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
           TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
           CI: true
-          # E2E tests use real services in CI - no mocking
+          # Note: Tests call production API. The production worker must have USE_MOCK_LLM
+          # unset or false in Cloudflare secrets to use real LLM APIs. If USE_MOCK_LLM=true
+          # is set in the worker environment, tests will use mocked LLM responses.
 
       - name: Upload test results
         if: always()

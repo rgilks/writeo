@@ -9,7 +9,7 @@ export function buildMetadata(
   answerTextsByAnswerId: Map<string, string>,
   ltErrorsByAnswerId: Map<string, LanguageToolError[]>,
   llmErrorsByAnswerId: Map<string, LanguageToolError[]>,
-  essayAssessment: AssessmentResults | null
+  essayAssessment: AssessmentResults | null,
 ): {
   wordCount: number;
   errorCount: number;

@@ -63,7 +63,7 @@ export function DraftHistorySection({
             submissionId,
             parentSubmissionId,
             rootDraft,
-            getDraftHistory
+            getDraftHistory,
           );
 
           return (

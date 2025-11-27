@@ -91,7 +91,7 @@ export async function rateLimit(c: Context, next: () => Promise<void>) {
         return errorResponse(
           429,
           "Daily submission limit reached for this account. Please try again tomorrow.",
-          c
+          c,
         );
       }
 

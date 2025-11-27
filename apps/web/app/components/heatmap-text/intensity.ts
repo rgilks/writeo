@@ -21,7 +21,7 @@ function calculateLocalIntensity(
   position: number,
   errorStart: number,
   errorEnd: number,
-  intensity: number
+  intensity: number,
 ): number {
   const distFromStart = errorStart - position;
   const distFromEnd = position - errorEnd;

@@ -30,7 +30,7 @@ export function parsePipeDelimitedResponse(text: string): LLMErrorInput[] {
     if (parts.length < 9) {
       console.warn(
         `[getLLMAssessment] Skipping malformed line (expected 9 parts, got ${parts.length}):`,
-        trimmedLine.substring(0, 100)
+        trimmedLine.substring(0, 100),
       );
       continue;
     }
@@ -50,7 +50,7 @@ export function parsePipeDelimitedResponse(text: string): LLMErrorInput[] {
     if (!errorText || errorText.trim().length === 0) {
       console.warn(
         `[getLLMAssessment] Skipping line with empty errorText:`,
-        trimmedLine.substring(0, 100)
+        trimmedLine.substring(0, 100),
       );
       continue;
     }

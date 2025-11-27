@@ -1,7 +1,7 @@
 import type { LanguageToolError } from "@writeo/shared";
 
 export function groupErrorsByType(
-  errors: LanguageToolError[]
+  errors: LanguageToolError[],
 ): Record<string, LanguageToolError[]> {
   const grouped: Record<string, LanguageToolError[]> = {};
 

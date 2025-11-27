@@ -11,7 +11,7 @@ export async function processLanguageToolResults(
   ltResults: PromiseSettledResult<Response[]>,
   ltRequests: Array<{ answerId: string; request: Promise<Response> }>,
   modalParts: ModalRequest["parts"],
-  languageToolEnabled: boolean
+  languageToolEnabled: boolean,
 ): Promise<{
   ltErrorsByAnswerId: Map<string, LanguageToolError[]>;
   answerTextsByAnswerId: Map<string, string>;
@@ -34,11 +34,11 @@ export async function processLanguageToolResults(
           if (!res.ok) {
             const errorText = await res.text().catch(() => res.statusText);
             throw new Error(
-              `LanguageTool request failed: ${res.status} ${res.statusText} - ${errorText}`
+              `LanguageTool request failed: ${res.status} ${res.statusText} - ${errorText}`,
             );
           }
           return await res.json();
-        })
+        }),
       );
 
       for (let i = 0; i < ltResponses.length; i++) {
@@ -64,7 +64,7 @@ export async function processLanguageToolResults(
             }
             const errors = transformLanguageToolResponse(
               (result as PromiseFulfilledResult<LanguageToolResponse>).value,
-              fullText
+              fullText,
             );
             ltErrorsByAnswerId.set(answerId, errors);
           }

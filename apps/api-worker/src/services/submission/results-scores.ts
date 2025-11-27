@@ -7,7 +7,7 @@ import type { ModalRequest } from "@writeo/shared";
 
 export function extractEssayScores(
   essayAssessment: AssessmentResults | null,
-  modalParts: ModalRequest["parts"]
+  modalParts: ModalRequest["parts"],
 ): Map<
   string,
   {
@@ -42,7 +42,7 @@ export function extractEssayScores(
       const matchingPart = modalParts.find((p) => p.part === essayPart.part);
       if (matchingPart) {
         const essayAssessor = essayPart.answers?.[0]?.["assessor-results"]?.find(
-          (a: AssessorResult) => a.id === "T-AES-ESSAY"
+          (a: AssessorResult) => a.id === "T-AES-ESSAY",
         );
         if (essayAssessor) {
           for (const answer of matchingPart.answers) {

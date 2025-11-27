@@ -12,7 +12,7 @@ export async function buildModalRequest(
   body: CreateSubmissionRequest,
   storeResults: boolean,
   storage: StorageService,
-  c: Context<{ Bindings: Env }>
+  c: Context<{ Bindings: Env }>,
 ): Promise<ModalRequest | Response> {
   const modalParts: ModalRequest["parts"] = [];
 

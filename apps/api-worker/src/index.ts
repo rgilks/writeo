@@ -26,7 +26,7 @@ app.use(
     allowMethods: ["GET", "PUT", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400,
-  })
+  }),
 );
 
 // Security headers
@@ -75,7 +75,7 @@ app.get("/text/submissions/:submission_id", async (c) => {
         return errorResponse(
           404,
           "Submission not found. Results are stored in your browser by default. If you enabled server storage, the results may have expired (90-day retention).",
-          c
+          c,
         );
       }
       return c.json({ status: "pending" });
@@ -93,7 +93,7 @@ export default {
   async fetch(
     request: Request,
     env: Env,
-    ctx: import("@cloudflare/workers-types").ExecutionContext
+    ctx: import("@cloudflare/workers-types").ExecutionContext,
   ): Promise<Response> {
     return app.fetch(request, env, ctx);
   },

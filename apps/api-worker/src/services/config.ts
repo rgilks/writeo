@@ -56,7 +56,7 @@ export function buildConfig(env: Env): AppConfig {
 
   if (!llmApiKey) {
     throw new Error(
-      `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`
+      `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`,
     );
   }
 

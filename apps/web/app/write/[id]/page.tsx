@@ -121,7 +121,7 @@ export default function WritePage() {
         }
       }, AUTO_SAVE_DELAY);
     },
-    [updateContent, saveDraft]
+    [updateContent, saveDraft],
   );
 
   // Listen for hydration completion
@@ -188,14 +188,14 @@ export default function WritePage() {
     // Validate word count
     if (wordCount < MIN_WORDS) {
       setError(
-        `Your essay is too short. Please write at least ${MIN_WORDS} words (currently ${wordCount} words).`
+        `Your essay is too short. Please write at least ${MIN_WORDS} words (currently ${wordCount} words).`,
       );
       return;
     }
 
     if (wordCount > MAX_WORDS) {
       setError(
-        `Your essay is too long. Please keep it under ${MAX_WORDS} words (currently ${wordCount} words).`
+        `Your essay is too long. Please keep it under ${MAX_WORDS} words (currently ${wordCount} words).`,
       );
       return;
     }

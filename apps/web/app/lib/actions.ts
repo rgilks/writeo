@@ -20,7 +20,7 @@ export async function submitEssay(
   answerText: string,
   parentSubmissionId?: string,
   storeResults: boolean = false,
-  parentResults?: any
+  parentResults?: any,
 ): Promise<{ submissionId: string; results: any }> {
   try {
     // Allow empty question text for free writing - send empty string to API
@@ -36,7 +36,7 @@ export async function submitEssay(
     const { submissionId, results } = await createSubmission(
       finalQuestionText,
       answerText,
-      storeResults
+      storeResults,
     );
 
     // Always set draft metadata - even for first draft

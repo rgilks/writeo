@@ -184,7 +184,7 @@ set((state) => {
 set(
   produce((draft) => {
     draft.property = newValue;
-  })
+  }),
 );
 ```
 
@@ -345,10 +345,10 @@ export const useDraftStore = create<DraftStore>()(
       {
         name: "writeo-draft-store",
         storage: storageWithSetHandling, // Custom adapter for Set serialization
-      }
+      },
     ),
-    { name: "DraftStore" }
-  )
+    { name: "DraftStore" },
+  ),
 );
 ```
 
@@ -373,10 +373,10 @@ export const usePreferencesStore = create<PreferencesStore>()(
       {
         name: "writeo-preferences",
         storage: createJSONStorage(() => createSafeStorage()),
-      }
+      },
     ),
-    { name: "PreferencesStore" }
-  )
+    { name: "PreferencesStore" },
+  ),
 );
 ```
 

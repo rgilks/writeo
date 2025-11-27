@@ -60,7 +60,7 @@ export function EditableEssay({
   const handleSubmit = async () => {
     if (!hasChanges) {
       alert(
-        "Please make some changes to your essay before resubmitting. Fix the highlighted errors to improve your score."
+        "Please make some changes to your essay before resubmitting. Fix the highlighted errors to improve your score.",
       );
       return;
     }
@@ -68,14 +68,14 @@ export function EditableEssay({
     // Validate word count
     if (wordCount < MIN_WORDS) {
       alert(
-        `Your essay is too short. Please write at least ${MIN_WORDS} words (currently ${wordCount} words).`
+        `Your essay is too short. Please write at least ${MIN_WORDS} words (currently ${wordCount} words).`,
       );
       return;
     }
 
     if (wordCount > MAX_WORDS) {
       alert(
-        `Your essay is too long. Please keep it under ${MAX_WORDS} words (currently ${wordCount} words).`
+        `Your essay is too long. Please keep it under ${MAX_WORDS} words (currently ${wordCount} words).`,
       );
       return;
     }

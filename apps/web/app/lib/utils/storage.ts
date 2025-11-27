@@ -8,7 +8,7 @@ import { StateStorage } from "zustand/middleware";
 export class StorageError extends Error {
   constructor(
     message: string,
-    public code: "QUOTA_EXCEEDED" | "DISABLED" | "INVALID_DATA" | "PARSE_ERROR" | "UNKNOWN"
+    public code: "QUOTA_EXCEEDED" | "DISABLED" | "INVALID_DATA" | "PARSE_ERROR" | "UNKNOWN",
   ) {
     super(message);
     this.name = "StorageError";
@@ -118,7 +118,7 @@ export function createSafeStorage(): StateStorage {
               console.error(`Failed to set item ${name} after cleanup:`, retryError);
               throw new StorageError(
                 `Storage quota exceeded. Please clear some data or use incognito mode.`,
-                "QUOTA_EXCEEDED"
+                "QUOTA_EXCEEDED",
               );
             }
           } else if (error.name === "SecurityError" || error.code === 18) {

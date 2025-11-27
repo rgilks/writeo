@@ -61,7 +61,7 @@ export async function checkAnswerRelevance(
   ai: Ai,
   questionText: string,
   answerText: string,
-  threshold: number = 0.5
+  threshold: number = 0.5,
 ): Promise<RelevanceCheck> {
   const embeddingModel = "@cf/baai/bge-base-en-v1.5";
 

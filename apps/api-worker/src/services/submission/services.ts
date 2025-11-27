@@ -31,7 +31,7 @@ export interface ServiceRequests {
 export function prepareServiceRequests(
   modalParts: ModalRequest["parts"],
   config: AppConfig,
-  ai: Ai
+  ai: Ai,
 ): ServiceRequests {
   const language = config.features.languageTool.language;
 
@@ -93,7 +93,7 @@ export function prepareServiceRequests(
           config.llm.apiKey,
           answer.question_text,
           answer.answer_text,
-          config.llm.model
+          config.llm.model,
         ),
       });
     }
@@ -113,7 +113,7 @@ export async function executeServiceRequests(
   modalRequest: ModalRequest,
   serviceRequests: ServiceRequests,
   config: AppConfig,
-  timings: Record<string, number>
+  timings: Record<string, number>,
 ): Promise<{
   essayResult: PromiseSettledResult<Response>;
   ltResults: PromiseSettledResult<Response[]>;

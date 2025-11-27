@@ -55,7 +55,7 @@ export function TeacherFeedback({
   // Initialize from stored feedback if available
   const [feedbackMode, setFeedbackMode] = useState<"initial" | "explanation">("initial");
   const [explanation, setExplanation] = useState<string | null>(
-    aiFeedback?.explanationMessage || null
+    aiFeedback?.explanationMessage || null,
   );
   const [initialMessage, setInitialMessage] = useState<string | null>(aiFeedback?.message || null);
   const [initialLoading, setInitialLoading] = useState(false);
@@ -163,7 +163,7 @@ export function TeacherFeedback({
     if (!submissionId || !answerId || !answerText) {
       console.error("Missing required data:", { submissionId, answerId, answerText: !!answerText });
       alert(
-        "Cannot get feedback: Missing required information. Please ensure the essay was submitted correctly."
+        "Cannot get feedback: Missing required information. Please ensure the essay was submitted correctly.",
       );
       return;
     }
@@ -197,7 +197,7 @@ export function TeacherFeedback({
       // Show error to user with more details
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       alert(
-        `Failed to get feedback: ${errorMessage}\n\nPlease check the browser console for more details.`
+        `Failed to get feedback: ${errorMessage}\n\nPlease check the browser console for more details.`,
       );
       setLoading(false);
       setShowTryAgain(true);

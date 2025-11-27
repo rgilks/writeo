@@ -8,7 +8,7 @@ import type {
 export class StorageService {
   constructor(
     private r2: R2Bucket,
-    private kv: KVNamespace
+    private kv: KVNamespace,
   ) {}
 
   async getQuestion(id: string): Promise<CreateQuestionRequest | null> {
@@ -57,7 +57,7 @@ export class StorageService {
     await this.kv.put(
       `submission:${submissionId}`,
       JSON.stringify(results),
-      ttl ? { expirationTtl: ttl } : undefined
+      ttl ? { expirationTtl: ttl } : undefined,
     );
   }
 }

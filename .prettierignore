@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-**/node_modules/
 
 # Build outputs
 dist/
@@ -19,7 +18,7 @@ playwright-report/
 test-results/
 coverage/
 
-# Lock files
+# Lock files (generated, don't format)
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
@@ -29,12 +28,11 @@ pnpm-lock.yaml
 .env.local
 .env.*.local
 
-# Python
+# Python (Prettier doesn't format Python, but ignore for safety)
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
@@ -54,8 +52,3 @@ env/
 
 # Logs
 *.log
-
-# OS
-.DS_Store
-Thumbs.db
-

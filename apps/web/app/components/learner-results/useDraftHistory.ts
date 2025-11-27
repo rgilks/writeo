@@ -14,7 +14,7 @@ export function useDraftHistory(
   overall: number,
   grammarErrors: any[],
   finalAnswerText: string,
-  parentSubmissionId?: string
+  parentSubmissionId?: string,
 ) {
   // Subscribe to drafts state so component re-renders when drafts change
   const drafts = useDraftStore((state) => state.drafts);
@@ -118,7 +118,7 @@ export function useDraftHistory(
     // Convert back to array and sort by draft number
     if (mergedDrafts.size > storedDraftHistory.length) {
       storedDraftHistory = Array.from(mergedDrafts.values()).sort(
-        (a, b) => a.draftNumber - b.draftNumber
+        (a, b) => a.draftNumber - b.draftNumber,
       );
     }
 
@@ -126,7 +126,7 @@ export function useDraftHistory(
     const allStoredDrafts = [
       ...storedDraftHistory,
       ...currentDraftHistory.filter(
-        (d) => !storedDraftHistory.some((sd) => sd.submissionId === d.submissionId)
+        (d) => !storedDraftHistory.some((sd) => sd.submissionId === d.submissionId),
       ),
     ];
 
@@ -192,7 +192,7 @@ export function useDraftHistory(
     });
 
     const finalResult = Array.from(finalDraftMap.values()).sort(
-      (a, b) => a.draftNumber - b.draftNumber
+      (a, b) => a.draftNumber - b.draftNumber,
     );
 
     return finalResult;

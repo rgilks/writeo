@@ -191,7 +191,7 @@ export type AssessorResultId =
  */
 export function isAssessorResultWithId(
   result: AssessorResult,
-  id: AssessorResultId
+  id: AssessorResultId,
 ): result is AssessorResult & { id: typeof id } {
   return result.id === id;
 }
@@ -201,7 +201,7 @@ export function isAssessorResultWithId(
  */
 export function findAssessorResultById(
   results: AssessorResult[],
-  id: AssessorResultId
+  id: AssessorResultId,
 ): AssessorResult | undefined {
   return results.find((r) => r.id === id);
 }
@@ -243,7 +243,7 @@ export function getEssayAssessorResult(results: AssessorResult[]):
  * @returns LanguageTool assessor result with guaranteed errors array, or undefined if not found
  */
 export function getLanguageToolAssessorResult(
-  results: AssessorResult[]
+  results: AssessorResult[],
 ): (AssessorResult & { id: "T-GEC-LT"; errors: LanguageToolError[] }) | undefined {
   const result = findAssessorResultById(results, "T-GEC-LT");
   if (result && Array.isArray(result.errors)) {
@@ -259,7 +259,7 @@ export function getLanguageToolAssessorResult(
  * @returns LLM assessor result with guaranteed errors array, or undefined if not found
  */
 export function getLLMAssessorResult(
-  results: AssessorResult[]
+  results: AssessorResult[],
 ): (AssessorResult & { id: "T-GEC-LLM"; errors: LanguageToolError[] }) | undefined {
   const result = findAssessorResultById(results, "T-GEC-LLM");
   if (result && Array.isArray(result.errors)) {

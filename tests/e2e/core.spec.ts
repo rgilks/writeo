@@ -106,7 +106,7 @@ test.describe("Essay Submission", () => {
         const textarea = document.querySelector("textarea#answer") as HTMLTextAreaElement;
         return textarea && textarea.value.length > 0;
       },
-      { timeout: 10000 }
+      { timeout: 10000 },
     );
 
     // Verify content is restored after refresh
@@ -169,7 +169,7 @@ test.describe("Results Page", () => {
 
     // Wait for either loading state or error - page should show something meaningful
     await expect(
-      page.getByText("Loading Results").or(page.getByText("Results Not Available"))
+      page.getByText("Loading Results").or(page.getByText("Results Not Available")),
     ).toBeVisible({ timeout: 5000 });
 
     // Wait for error to appear (may take a moment after loading)
@@ -314,7 +314,7 @@ test.describe("Progress Dashboard", () => {
     // The dashboard shows "Writings Completed" stat when count > 0
     // Use .first() to handle strict mode when both locators match
     await expect(
-      page.locator("text=Writings Completed").or(page.locator("text=Total Drafts")).first()
+      page.locator("text=Writings Completed").or(page.locator("text=Total Drafts")).first(),
     ).toBeVisible({ timeout: 5000 });
   });
 });

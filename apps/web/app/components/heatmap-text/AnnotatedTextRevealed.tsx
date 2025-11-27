@@ -52,7 +52,7 @@ export function AnnotatedTextRevealed({
       elements.push(
         <span key={`text-${lastIndex}`} translate="no" lang="en">
           {text.slice(lastIndex, error.start)}
-        </span>
+        </span>,
       );
     }
 
@@ -74,7 +74,7 @@ export function AnnotatedTextRevealed({
         onActivate={() => setActiveErrorKey(errorKey)}
         onDeactivate={() => setActiveErrorKey(null)}
         error={error}
-      />
+      />,
     );
 
     lastIndex = error.end;
@@ -84,7 +84,7 @@ export function AnnotatedTextRevealed({
     elements.push(
       <span key={`text-${lastIndex}`} translate="no" lang="en">
         {text.slice(lastIndex)}
-      </span>
+      </span>,
     );
   }
 

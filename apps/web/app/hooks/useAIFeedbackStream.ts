@@ -30,7 +30,7 @@ interface UseAIFeedbackStreamReturn {
       };
       ltErrors?: any[];
       llmErrors?: any[];
-    }
+    },
   ) => Promise<void>;
   stopStream: () => void;
 }
@@ -63,7 +63,7 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
         };
         ltErrors?: any[];
         llmErrors?: any[];
-      }
+      },
     ) => {
       // Stop any existing stream
       if (abortControllerRef.current) {
@@ -182,7 +182,7 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
         setIsStreaming(false);
       }
     },
-    []
+    [],
   );
 
   const stopStream = useCallback(() => {

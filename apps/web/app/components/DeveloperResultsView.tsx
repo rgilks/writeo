@@ -464,7 +464,7 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
                                       </div>
                                     )}
                                   </div>
-                                )
+                                ),
                               )}
                             </div>
                           </div>

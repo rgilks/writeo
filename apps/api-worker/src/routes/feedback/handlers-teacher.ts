@@ -49,7 +49,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     return errorResponse(
       400,
       `Invalid answerText: ${textValidation.error || "Invalid content"}`,
-      c
+      c,
     );
   }
 
@@ -60,7 +60,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
   if (cachedMessage) {
     const firstPart = results?.results?.parts?.[0];
     const teacherAssessor = firstPart?.answers?.[0]?.["assessor-results"]?.find(
-      (a: any) => a.id === "T-TEACHER-FEEDBACK"
+      (a: any) => a.id === "T-TEACHER-FEEDBACK",
     );
     const existingMeta = (teacherAssessor?.meta || {}) as Record<string, any>;
     return {
@@ -78,14 +78,14 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     submissionId,
     body.answerId,
     body.questionText,
-    body.assessmentData
+    body.assessmentData,
   );
 
   if (!feedbackData?.questionText && !body.questionText) {
     return errorResponse(
       400,
       "questionText is required when submission is not stored. Please provide questionText in the request body.",
-      c
+      c,
     );
   }
 
@@ -94,7 +94,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     return errorResponse(
       400,
       "questionText is required. Please provide questionText in the request body.",
-      c
+      c,
     );
   }
 
@@ -110,7 +110,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     return errorResponse(
       500,
       `API key not found for provider: ${llmProvider}. Please set ${llmProvider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"}`,
-      c
+      c,
     );
   }
 
@@ -124,7 +124,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
     feedbackData?.essayScores || body.assessmentData?.essayScores,
     feedbackData?.ltErrors || body.assessmentData?.ltErrors,
     feedbackData?.llmErrors || body.assessmentData?.llmErrors,
-    feedbackData?.relevanceCheck || body.assessmentData?.relevanceCheck
+    feedbackData?.relevanceCheck || body.assessmentData?.relevanceCheck,
   );
 
   if (results) {
@@ -135,7 +135,7 @@ export async function handleTeacherFeedbackRequest(c: Context<{ Bindings: Env }>
       teacherFeedback,
       body.mode,
       llmProvider,
-      aiModel
+      aiModel,
     );
   }
 
@@ -156,12 +156,12 @@ async function saveTeacherFeedbackToStorage(
   teacherFeedback: any,
   mode: string,
   llmProvider: string,
-  aiModel: string
+  aiModel: string,
 ): Promise<void> {
   const firstPart = results.results?.parts?.[0];
   if (firstPart) {
     let teacherAssessor = firstPart.answers?.[0]?.["assessor-results"]?.find(
-      (a: any) => a.id === "T-TEACHER-FEEDBACK"
+      (a: any) => a.id === "T-TEACHER-FEEDBACK",
     );
 
     if (!teacherAssessor) {

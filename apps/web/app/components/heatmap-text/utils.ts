@@ -8,7 +8,7 @@ export function filterErrorsByConfidence(errors: LanguageToolError[]) {
   const highConfidenceErrors = errors.filter((e) => e.highConfidence === true);
   const mediumConfidenceErrors = errors.filter((e) => e.mediumConfidence === true);
   const lowConfidenceErrors = errors.filter(
-    (e) => e.highConfidence === false && e.mediumConfidence !== true
+    (e) => e.highConfidence === false && e.mediumConfidence !== true,
   );
 
   return {
@@ -23,7 +23,7 @@ export function buildFilteredErrors(
   mediumConfidenceErrors: LanguageToolError[],
   lowConfidenceErrors: LanguageToolError[],
   showMediumConfidence: boolean,
-  showExperimental: boolean
+  showExperimental: boolean,
 ) {
   let filteredErrors = [...highConfidenceErrors];
   if (showMediumConfidence) {
@@ -82,7 +82,7 @@ export function deduplicateErrors(errors: LanguageToolError[]): LanguageToolErro
 export function getErrorColor(
   isExperimental: boolean,
   isMediumConfidence: boolean,
-  severity: string
+  severity: string,
 ): string {
   if (isExperimental) return "#d97706";
   if (isMediumConfidence) return "#ea580c";

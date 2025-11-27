@@ -25,7 +25,7 @@ export function parseFeedbackResponse(responseText: string): CombinedFeedback {
       return parsed;
     } catch (parseError) {
       throw new Error(
-        `Failed to parse AI JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`
+        `Failed to parse AI JSON response: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
       );
     }
   }

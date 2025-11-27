@@ -97,7 +97,7 @@ interface DraftStore {
   trackFixedErrors: (
     submissionId: string,
     previousErrorIds: string[],
-    currentErrorIds: string[]
+    currentErrorIds: string[],
   ) => void;
   getFixedErrors: (submissionId: string) => string[];
 
@@ -135,7 +135,7 @@ const CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"] as const;
 
 function findRootSubmissionId(
   submissionId: string,
-  drafts: Record<string, DraftHistory[]>
+  drafts: Record<string, DraftHistory[]>,
 ): string | null {
   if (drafts[submissionId]) {
     return submissionId;
@@ -182,7 +182,7 @@ function checkAchievements(
   existingAchievements: Achievement[],
   progress: ProgressMetrics | undefined,
   totalFixedErrors: number,
-  currentStreak: number
+  currentStreak: number,
 ): Achievement[] {
   const existingIds = new Set(existingAchievements.map((a) => a.id));
   const achievements: Achievement[] = [];
@@ -271,7 +271,7 @@ function checkAchievements(
 function calculateNewStreak(
   lastDate: string | "",
   currentStreak: number,
-  longestStreak: number
+  longestStreak: number,
 ): StreakData {
   const today = new Date().toISOString().split("T")[0];
 
@@ -342,7 +342,7 @@ export const useDraftStore = create<DraftStore>()(
 
           set((draft) => {
             const existingIndex = draft.contentDrafts.findIndex(
-              (d) => d.id === draft.activeDraftId
+              (d) => d.id === draft.activeDraftId,
             );
 
             if (existingIndex !== -1 && draft.activeDraftId) {
@@ -435,7 +435,7 @@ export const useDraftStore = create<DraftStore>()(
 
             const draftArray = state.drafts[rootSubmissionId];
             const existingIndex = draftArray.findIndex(
-              (d) => d.submissionId === draft.submissionId
+              (d) => d.submissionId === draft.submissionId,
             );
 
             if (existingIndex >= 0) {
@@ -453,14 +453,14 @@ export const useDraftStore = create<DraftStore>()(
             const newStreak = calculateNewStreak(
               state.streak.lastActivityDate,
               state.streak.currentStreak,
-              state.streak.longestStreak
+              state.streak.longestStreak,
             );
             state.streak = newStreak;
 
             const allDrafts = Object.values(state.drafts).flat();
             const totalFixedErrors = Object.values(state.fixedErrors).reduce(
               (sum, errors) => sum + errors.length,
-              0
+              0,
             );
 
             newAchievements = checkAchievements(
@@ -469,7 +469,7 @@ export const useDraftStore = create<DraftStore>()(
               state.achievements,
               progress,
               totalFixedErrors,
-              newStreak.currentStreak
+              newStreak.currentStreak,
             );
 
             if (newAchievements.length > 0) {
@@ -518,7 +518,7 @@ export const useDraftStore = create<DraftStore>()(
             state.streak = calculateNewStreak(
               state.streak.lastActivityDate,
               state.streak.currentStreak,
-              state.streak.longestStreak
+              state.streak.longestStreak,
             );
           });
         },
@@ -585,8 +585,8 @@ export const useDraftStore = create<DraftStore>()(
       {
         name: STORAGE_KEY,
         storage: createJSONStorage(() => createSafeStorage()),
-      }
+      },
     ),
-    { name: "DraftStore" }
-  )
+    { name: "DraftStore" },
+  ),
 );

@@ -21,7 +21,7 @@ export function useResubmit() {
     editedText: string,
     questionText: string,
     submissionId: string,
-    parentSubmissionId?: string
+    parentSubmissionId?: string,
   ) => {
     if (!submissionId) {
       throw new Error("Cannot resubmit: Submission ID not available");
@@ -47,7 +47,7 @@ export function useResubmit() {
         editedText,
         parentId,
         storeResults,
-        parentResults
+        parentResults,
       );
       if (!newSubmissionId || !results) {
         throw new Error("No submission ID or results returned");

@@ -25,7 +25,7 @@ function validateAnswer(
   answerIds: string[],
   questionsToCreate: Array<{ id: string; text: string }>,
   answersToCreate: Array<{ id: string; questionId: string; answerText: string }>,
-  c: Context<{ Bindings: Env }>
+  c: Context<{ Bindings: Env }>,
 ): Response | null {
   if (!answer.id || !isValidUUID(answer.id)) {
     return errorResponse(400, `Invalid answer id: ${answer.id}`, c);
@@ -37,7 +37,7 @@ function validateAnswer(
     return errorResponse(
       400,
       `Answer text is required. Answers must be sent inline with the submission.`,
-      c
+      c,
     );
   }
 
@@ -55,7 +55,7 @@ function validateAnswer(
     return errorResponse(
       400,
       `Invalid answer text: ${answerTextValidation.error || "Invalid content"}`,
-      c
+      c,
     );
   }
 
@@ -66,7 +66,7 @@ function validateAnswer(
       return errorResponse(
         400,
         `Invalid question-text: ${questionTextValidation.error || "Invalid content"}`,
-        c
+        c,
       );
     }
     questionsToCreate.push({ id: questionId, text: questionText });
@@ -83,7 +83,7 @@ function validateAnswer(
 
 export function validateSubmissionBody(
   body: CreateSubmissionRequest,
-  c: Context<{ Bindings: Env }>
+  c: Context<{ Bindings: Env }>,
 ): ValidationResult | Response {
   if (!body.submission || !Array.isArray(body.submission)) {
     return errorResponse(400, "Missing or invalid 'submission' array", c);

@@ -13,7 +13,7 @@ export const TEST_ESSAYS = {
     "I went to the park yesterday. The dog was happy and we played together. He was very nice. I had a good time.",
   long: Array(50)
     .fill(
-      "This is a test sentence with multiple words to create a longer essay for testing purposes. "
+      "This is a test sentence with multiple words to create a longer essay for testing purposes. ",
     )
     .join(""),
   standard:
@@ -37,7 +37,7 @@ const MIN_DELAY_MS = 100; // Reduced from 200ms - only needed for rate limiting
 export async function createTestSubmission(
   questionText: string,
   answerText: string,
-  retries = 3
+  retries = 3,
 ): Promise<{ submissionId: string; results: any }> {
   if (!API_KEY) {
     throw new Error("TEST_API_KEY or API_KEY environment variable required for E2E tests");
@@ -114,7 +114,7 @@ export async function createTestSubmission(
           ? waitSeconds * 1000
           : Math.min(1000 * Math.pow(2, attempt), 10000);
         console.log(
-          `Rate limited, retrying after ${waitMs}ms (attempt ${attempt + 1}/${retries + 1})`
+          `Rate limited, retrying after ${waitMs}ms (attempt ${attempt + 1}/${retries + 1})`,
         );
         await new Promise((resolve) => setTimeout(resolve, waitMs));
         continue;
@@ -122,7 +122,7 @@ export async function createTestSubmission(
 
       // Last attempt failed
       throw new Error(
-        `Failed to create submission after ${retries + 1} attempts: ${response.status} ${errorText}`
+        `Failed to create submission after ${retries + 1} attempts: ${response.status} ${errorText}`,
       );
     }
 
@@ -152,7 +152,7 @@ export async function waitForResults(page: Page, timeout = 30000): Promise<void>
 
   // Wait for at least one of these to appear
   await Promise.race(
-    selectors.map((selector) => page.waitForSelector(selector, { timeout }).catch(() => {}))
+    selectors.map((selector) => page.waitForSelector(selector, { timeout }).catch(() => {})),
   );
   // No arbitrary wait needed - selectors are sufficient
 }
@@ -250,7 +250,7 @@ export class WritePage {
       .or(
         this.page
           .locator('[role="alert"]')
-          .or(this.page.locator("text=/too short|too long|at least|maximum|need.*words|minimum/i"))
+          .or(this.page.locator("text=/too short|too long|at least|maximum|need.*words|minimum/i")),
       );
   }
 
@@ -285,8 +285,8 @@ export class ResultsPage {
       .locator("text=/\\b(A1|A2|B1|B2|C1|C2)\\b/")
       .or(
         this.page.locator(
-          "text=/CEFR|Level|Proficient|Independent|Basic|Elementary|Intermediate|Advanced/"
-        )
+          "text=/CEFR|Level|Proficient|Independent|Basic|Elementary|Intermediate|Advanced/",
+        ),
       );
   }
 
@@ -313,8 +313,8 @@ export class ResultsPage {
           .or(
             this.page
               .locator("text=Common Areas to Improve")
-              .or(this.page.locator("text=No high-confidence errors"))
-          )
+              .or(this.page.locator("text=No high-confidence errors")),
+          ),
       );
   }
 
@@ -328,7 +328,7 @@ export class ResultsPage {
       .or(
         this.page
           .locator('[data-testid="teacher-feedback"]')
-          .or(this.page.locator("text=/Teacher.*Feedback|Preparing feedback/i"))
+          .or(this.page.locator("text=/Teacher.*Feedback|Preparing feedback/i")),
       );
   }
 
@@ -483,7 +483,7 @@ export class ResultsPage {
         }
       },
       submissionId,
-      { timeout }
+      { timeout },
     );
   }
 
@@ -524,7 +524,7 @@ export class ResultsPage {
           return false;
         }
       },
-      { timeout }
+      { timeout },
     );
     // No arbitrary wait - the function condition is sufficient
   }

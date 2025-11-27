@@ -29,7 +29,7 @@ export function buildGrammarContext(
     message: string;
     category: string;
     suggestions?: string[];
-  }>
+  }>,
 ): string {
   const allErrors = [...(languageToolErrors || []), ...(llmErrors || [])];
   if (allErrors.length > 0) {
@@ -70,7 +70,7 @@ export function buildTeacherScoreContext(essayScores?: {
 
 export function buildTeacherErrorContext(
   languageToolErrors?: Array<{ errorType?: string; category: string }>,
-  llmErrors?: Array<{ errorType?: string; category: string }>
+  llmErrors?: Array<{ errorType?: string; category: string }>,
 ): string {
   const allErrors = [...(languageToolErrors || []), ...(llmErrors || [])];
   if (allErrors.length > 0) {

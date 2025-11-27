@@ -13,7 +13,7 @@ export async function streamAIFeedback(
   answerId: string,
   answerText: string,
   questionText?: string,
-  assessmentData?: any
+  assessmentData?: any,
 ): Promise<Response> {
   try {
     if (!submissionId || !answerId || !answerText) {

@@ -42,7 +42,7 @@ export function HeatMapRenderer({ text, normalizedIntensity, revealed }: HeatMap
             }}
           >
             {currentSpan}
-          </span>
+          </span>,
         );
       }
 

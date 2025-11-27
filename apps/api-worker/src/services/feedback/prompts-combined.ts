@@ -29,7 +29,7 @@ export function buildCombinedFeedbackPrompt(
     category: string;
     suggestions?: string[];
   }>,
-  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number }
+  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number },
 ): string {
   const truncatedAnswerText = truncateEssayText(answerText);
   const truncatedQuestionText = truncateQuestionText(questionText);

@@ -21,7 +21,7 @@ import type { Env } from "../types/env";
 export function errorResponse(
   status: number,
   message: string,
-  c?: Context<{ Bindings: Env }> | Context
+  c?: Context<{ Bindings: Env }> | Context,
 ): Response {
   const isProduction = c
     ? !c.req.url.includes("localhost") && !c.req.url.includes("127.0.0.1")

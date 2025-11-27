@@ -14,7 +14,7 @@ export interface FetchWithTimeoutOptions extends RequestInit {
  */
 export async function fetchWithTimeout(
   url: string,
-  options: FetchWithTimeoutOptions = {}
+  options: FetchWithTimeoutOptions = {},
 ): Promise<Response> {
   const { timeout = 30000, ...fetchOptions } = options;
 

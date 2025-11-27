@@ -34,7 +34,7 @@ export async function getCombinedFeedback(
     end: number;
     errorType?: string;
   }>,
-  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number }
+  relevanceCheck?: { addressesQuestion: boolean; score: number; threshold: number },
 ): Promise<CombinedFeedback> {
   const prompt = buildCombinedFeedbackPrompt(
     questionText,
@@ -42,7 +42,7 @@ export async function getCombinedFeedback(
     essayScores,
     languageToolErrors,
     llmErrors,
-    relevanceCheck
+    relevanceCheck,
   );
 
   const responseText = await callLLMAPI(
@@ -60,7 +60,7 @@ export async function getCombinedFeedback(
         content: prompt,
       },
     ],
-    MAX_TOKENS_DETAILED_FEEDBACK
+    MAX_TOKENS_DETAILED_FEEDBACK,
   );
 
   return parseFeedbackResponse(responseText);

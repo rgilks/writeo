@@ -28,13 +28,14 @@
     "type-check": "npm run type-check --workspaces --if-present",
     "type-check:py": "mypy services/modal-essay --config-file services/modal-essay/pyproject.toml && mypy services/modal-lt --config-file services/modal-lt/pyproject.toml && mypy packages/shared/py --config-file packages/shared/py/pyproject.toml",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
-    "nuke": "find . -name 'node_modules' -type d -prune -exec rm -rf '{}' + && find . -name 'package-lock.json' -type f -delete && find . -name 'dist' -type d -prune -exec rm -rf '{}' + && find . -name '.next' -type d -prune -exec rm -rf '{}' + && find . -name '.wrangler' -type d -prune -exec rm -rf '{}' + && find . -name '.wrangler-*' -type d -prune -exec rm -rf '{}' + && find . -name '__pycache__' -type d -prune -exec rm -rf '{}' + && find . -name '*.tsbuildinfo' -type f -delete && find . -name 'test-results' -type d -prune -exec rm -rf '{}' + && find . -name 'playwright-report' -type d -prune -exec rm -rf '{}' + && find . -name '.cache' -type d -prune -exec rm -rf '{}' + && find . -name '.open-next' -type d -prune -exec rm -rf '{}' + && find . -name '.opennext' -type d -prune -exec rm -rf '{}' + && find . -name 'out' -type d -prune -exec rm -rf '{}' + && find . -name 'build' -type d -prune -exec rm -rf '{}' + && find . -name '.modal' -type d -prune -exec rm -rf '{}' + && find . -name '*.egg-info' -type d -prune -exec rm -rf '{}' + && find . -name '.pytest_cache' -type d -prune -exec rm -rf '{}' + && find . -name '.coverage' -type f -delete && find . -name '.coverage.*' -type f -delete",
+    "nuke": "./scripts/nuke.sh",
     "setup": "./scripts/setup.sh",
     "install-hooks": "./scripts/install-hooks.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
     "dotenv": "^17.2.3",
+    "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.2.5",
     "tsx": "^4.7.0",
     "vitest": "^4.0.9"

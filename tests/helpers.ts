@@ -31,7 +31,7 @@ export async function apiRequest(method: string, path: string, body?: object) {
   if (response.status >= 500) {
     console.error(
       `[API Error ${response.status}] ${method} ${path}:`,
-      JSON.stringify(json, null, 2)
+      JSON.stringify(json, null, 2),
     );
   }
 

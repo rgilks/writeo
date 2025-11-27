@@ -31,7 +31,7 @@ export async function loadFeedbackDataFromStorage(
   submissionId: string,
   answerId: string,
   providedQuestionText?: string,
-  providedAssessmentData?: any
+  providedAssessmentData?: any,
 ): Promise<FeedbackData | null> {
   const results = await storage.getResults(submissionId);
   if (!results) return null;
@@ -94,12 +94,12 @@ export async function loadFeedbackDataFromStorage(
 
 export function getCachedTeacherFeedback(
   results: AssessmentResults | null,
-  mode: "clues" | "explanation"
+  mode: "clues" | "explanation",
 ): string | undefined {
   if (!results) return undefined;
   const firstPart = results.results?.parts?.[0];
   const teacherAssessor = firstPart?.answers?.[0]?.["assessor-results"]?.find(
-    (a: any) => a.id === "T-TEACHER-FEEDBACK"
+    (a: any) => a.id === "T-TEACHER-FEEDBACK",
   );
   if (!teacherAssessor) return undefined;
   const meta = (teacherAssessor.meta || {}) as Record<string, any>;

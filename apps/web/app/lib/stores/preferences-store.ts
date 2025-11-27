@@ -39,8 +39,8 @@ export const usePreferencesStore = create<PreferencesStore>()(
       {
         name: STORAGE_KEY,
         storage: createJSONStorage(() => createSafeStorage()),
-      }
+      },
     ),
-    { name: "PreferencesStore" }
-  )
+    { name: "PreferencesStore" },
+  ),
 );

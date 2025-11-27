@@ -1,6 +1,6 @@
 export function validateText(
   text: string,
-  maxLength: number = 50000
+  maxLength: number = 50000,
 ): { valid: boolean; error?: string } {
   if (!text || typeof text !== "string") {
     return { valid: false, error: "Text must be a non-empty string" };
@@ -78,7 +78,7 @@ export function validateText(
   const bracketDepth = Math.max(
     (normalizedText.match(/\(/g) || []).length,
     (normalizedText.match(/\[/g) || []).length,
-    (normalizedText.match(/\{/g) || []).length
+    (normalizedText.match(/\{/g) || []).length,
   );
   if (bracketDepth > 100) {
     return {
@@ -96,7 +96,7 @@ export function validateText(
 export async function validateRequestBodySize(
   request: Request,
   maxSizeBytes: number = 1024 * 1024,
-  maxJsonDepth: number = 10
+  maxJsonDepth: number = 10,
 ): Promise<{ valid: boolean; error?: string; size?: number }> {
   const contentLength = request.headers.get("content-length");
 

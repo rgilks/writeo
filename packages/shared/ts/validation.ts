@@ -28,7 +28,7 @@ export interface WordCountValidation {
 export function validateWordCount(
   wordCount: number,
   min: number = MIN_ESSAY_WORDS,
-  max: number = MAX_ESSAY_WORDS
+  max: number = MAX_ESSAY_WORDS,
 ): WordCountValidation {
   if (wordCount < min) {
     return {
