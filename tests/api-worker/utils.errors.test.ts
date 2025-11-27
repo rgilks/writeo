@@ -42,7 +42,10 @@ describe("errorResponse", () => {
   });
 
   it("does not sanitize errors in development", async () => {
-    const devContext = createContext({ url: "http://localhost:8787/health" });
+    const devContext = createContext({
+      url: "http://localhost:8787/health",
+      env: { ENVIRONMENT: "development" } as any,
+    });
     const response = errorResponse(500, "Database connection failed", devContext);
     const body = await response.json();
     expect(body).toEqual({ error: "Database connection failed" });

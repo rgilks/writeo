@@ -18,7 +18,12 @@ function isProduction(c?: Context<{ Bindings: Env }> | Context): boolean {
   if ("env" in c && c.env && typeof c.env === "object") {
     const env = c.env as { ENVIRONMENT?: string };
     // Only use ENVIRONMENT env var - no URL fallback
-    return env.ENVIRONMENT !== "development" && env.ENVIRONMENT !== "staging";
+    // If ENVIRONMENT is explicitly set to "development" or "staging", return false
+    // Otherwise (including undefined), default to production (fail-safe)
+    if (env.ENVIRONMENT === "development" || env.ENVIRONMENT === "staging") {
+      return false;
+    }
+    return true;
   }
 
   // Default to production when context/env is unavailable (fail-safe)
