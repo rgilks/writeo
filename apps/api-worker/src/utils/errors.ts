@@ -5,9 +5,11 @@ const SERVER_ERROR_THRESHOLD = 500;
 const SANITIZED_ERROR_MESSAGE = "An internal error occurred. Please try again later.";
 
 /**
- * Detects production environment.
- * Checks ENVIRONMENT env var first, falls back to URL-based detection.
+ * Detects production environment using ENVIRONMENT environment variable.
  * Defaults to production when context is unavailable (fail-safe).
+ *
+ * @param c - Optional Hono context with environment bindings
+ * @returns true if production, false otherwise
  */
 function isProduction(c?: Context<{ Bindings: Env }> | Context): boolean {
   if (!c) return true;
@@ -15,14 +17,12 @@ function isProduction(c?: Context<{ Bindings: Env }> | Context): boolean {
   // Check environment variable if available
   if ("env" in c && c.env && typeof c.env === "object") {
     const env = c.env as { ENVIRONMENT?: string };
-    if (env.ENVIRONMENT) {
-      return env.ENVIRONMENT === "production";
-    }
+    // Only use ENVIRONMENT env var - no URL fallback
+    return env.ENVIRONMENT !== "development" && env.ENVIRONMENT !== "staging";
   }
 
-  // Fallback to URL-based detection
-  const url = c.req.url;
-  return !url.includes("localhost") && !url.includes("127.0.0.1");
+  // Default to production when context/env is unavailable (fail-safe)
+  return true;
 }
 
 /**

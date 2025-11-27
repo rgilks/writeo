@@ -137,6 +137,79 @@ async function checkDailyLimit(
   return { exceeded: false, count: dailyCount + 1 };
 }
 
+/**
+ * Checks if the rate limit has been exceeded and returns an error response if so.
+ */
+async function checkRateLimitExceeded(
+  c: Context<{
+    Bindings: Env;
+    Variables: { requestId?: string; apiKeyOwner?: string; isTestKey?: boolean };
+  }>,
+  config: RateLimitConfig,
+  count: number,
+  resetTime: number,
+): Promise<Response | null> {
+  if (count >= config.maxRequests) {
+    const message =
+      config.limitType === "submissions"
+        ? "Too many essay submissions from this network. Please wait a moment before trying again."
+        : "Too many requests. Please wait a moment and try again.";
+
+    setRateLimitHeaders(c, config.maxRequests, count, resetTime);
+    return errorResponse(429, message, c);
+  }
+  return null;
+}
+
+/**
+ * Checks daily submission limit and returns an error response if exceeded.
+ */
+async function checkDailyLimitExceeded(
+  c: Context<{
+    Bindings: Env;
+    Variables: { requestId?: string; apiKeyOwner?: string; isTestKey?: boolean };
+  }>,
+  identifier: string,
+  isTest: boolean,
+): Promise<Response | null> {
+  const dailyCheck = await checkDailyLimit(c.env.WRITEO_RESULTS, identifier, isTest);
+  if (dailyCheck.exceeded) {
+    return errorResponse(
+      429,
+      "Daily submission limit reached for this account. Please try again tomorrow.",
+      c,
+    );
+  }
+  return null;
+}
+
+/**
+ * Updates the rate limit state in KV store and sets response headers.
+ */
+async function updateRateLimitState(
+  c: Context<{
+    Bindings: Env;
+    Variables: { requestId?: string; apiKeyOwner?: string; isTestKey?: boolean };
+  }>,
+  rateLimitKey: string,
+  count: number,
+  resetTime: number,
+  now: number,
+  config: RateLimitConfig,
+): Promise<void> {
+  const newCount = count + 1;
+  const ttlSeconds = Math.max(MIN_KV_TTL_SECONDS, Math.ceil((resetTime - now) / 1000));
+  await c.env.WRITEO_RESULTS.put(rateLimitKey, JSON.stringify({ count: newCount, resetTime }), {
+    expirationTtl: ttlSeconds,
+  });
+
+  setRateLimitHeaders(c, config.maxRequests, newCount, resetTime);
+}
+
+/**
+ * Rate limiting middleware.
+ * Checks request rate limits and daily submission limits based on API key owner or IP.
+ */
 export async function rateLimit(
   c: Context<{
     Bindings: Env;
@@ -154,13 +227,11 @@ export async function rateLimit(
   if (isTest) {
     return next();
   }
+
   const apiKeyOwner = (c.get("apiKeyOwner") as string) || KEY_OWNER.UNKNOWN;
-
   const config = getRateLimitConfig(path, c.req.method, isTest);
-
   const ip = c.req.header("CF-Connecting-IP") || c.req.header("X-Forwarded-For") || "unknown";
   const identifier = getRateLimitIdentifier(apiKeyOwner, ip);
-
   const keyPrefix = isTest ? "test" : "prod";
   const rateLimitKey = `rate_limit:${keyPrefix}:${config.limitType}:${identifier}`;
   const now = Date.now();
@@ -168,34 +239,22 @@ export async function rateLimit(
   try {
     const { count, resetTime } = await getRateLimitState(c.env.WRITEO_RESULTS, rateLimitKey, now);
 
-    if (count >= config.maxRequests) {
-      const message =
-        config.limitType === "submissions"
-          ? "Too many essay submissions from this network. Please wait a moment before trying again."
-          : "Too many requests. Please wait a moment and try again.";
-
-      setRateLimitHeaders(c, config.maxRequests, count, resetTime);
-      return errorResponse(429, message, c);
+    // Check if rate limit exceeded
+    const rateLimitError = await checkRateLimitExceeded(c, config, count, resetTime);
+    if (rateLimitError) {
+      return rateLimitError;
     }
 
+    // Check daily limit if required
     if (config.checkDailyLimit) {
-      const dailyCheck = await checkDailyLimit(c.env.WRITEO_RESULTS, identifier, isTest);
-      if (dailyCheck.exceeded) {
-        return errorResponse(
-          429,
-          "Daily submission limit reached for this account. Please try again tomorrow.",
-          c,
-        );
+      const dailyLimitError = await checkDailyLimitExceeded(c, identifier, isTest);
+      if (dailyLimitError) {
+        return dailyLimitError;
       }
     }
 
-    const newCount = count + 1;
-    const ttlSeconds = Math.max(MIN_KV_TTL_SECONDS, Math.ceil((resetTime - now) / 1000));
-    await c.env.WRITEO_RESULTS.put(rateLimitKey, JSON.stringify({ count: newCount, resetTime }), {
-      expirationTtl: ttlSeconds,
-    });
-
-    setRateLimitHeaders(c, config.maxRequests, newCount, resetTime);
+    // Update rate limit state
+    await updateRateLimitState(c, rateLimitKey, count, resetTime, now, config);
 
     return next();
   } catch (error) {
