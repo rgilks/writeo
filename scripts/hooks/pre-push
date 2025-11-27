@@ -35,13 +35,32 @@ if [ "$QUICK_PUSH" = "true" ]; then
   SKIP_E2E=true
 fi
 
-# Optionally check if only docs changed in recent commits (heuristic)
-RECENT_COMMITS=$(git log --oneline -5 --name-only --pretty=format:"" 2>/dev/null | grep -vE "^\s*$" | sort -u || echo "")
-if [ -n "$RECENT_COMMITS" ]; then
-  CODE_FILES=$(echo "$RECENT_COMMITS" | grep -vE "\.(md|txt|yml|yaml)$|^docs/|^README|^\.github/" || true)
-  if [ -z "$CODE_FILES" ]; then
-    CHECK_DOCS_ONLY=true
-    SKIP_E2E=true
+# Check if only docs changed in commits being pushed
+# Pre-push hook receives: $1 = remote name, $2 = remote URL
+if [ "$SKIP_E2E" != "true" ]; then
+  REMOTE_NAME="${1:-origin}"
+  CURRENT_BRANCH=$(git symbolic-ref -q HEAD | sed 's|^refs/heads/||' || echo "")
+  REMOTE_REF="$REMOTE_NAME/$CURRENT_BRANCH"
+  
+  # Get files changed between remote and local (what's being pushed)
+  CHANGED_FILES=""
+  if git rev-parse --verify "$REMOTE_REF" > /dev/null 2>&1; then
+    # Compare with remote branch
+    CHANGED_FILES=$(git diff --name-only "$REMOTE_REF"..HEAD 2>/dev/null || echo "")
+  fi
+  
+  # Fallback: check last commit if we can't compare with remote
+  if [ -z "$CHANGED_FILES" ]; then
+    CHANGED_FILES=$(git log -1 --name-only --pretty=format:"" 2>/dev/null | grep -vE "^\s*$" || echo "")
+  fi
+  
+  if [ -n "$CHANGED_FILES" ]; then
+    # Check if any non-docs files changed (exclude markdown, yaml, docs dir, README, etc.)
+    CODE_FILES=$(echo "$CHANGED_FILES" | grep -vE "\.(md|txt|yml|yaml)$|^docs/|^README|^\.github/|^\.gitignore|^LICENSE" || true)
+    if [ -z "$CODE_FILES" ]; then
+      CHECK_DOCS_ONLY=true
+      SKIP_E2E=true
+    fi
   fi
 fi
 
