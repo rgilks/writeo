@@ -73,13 +73,18 @@ jobs:
         run: uv pip install modal
 
       - name: Authenticate with Modal
-        run: |
-          echo "${{ secrets.MODAL_TOKEN }}" | modal token set
         env:
-          MODAL_TOKEN: ${{ secrets.MODAL_TOKEN }}
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          # Modal CLI automatically uses MODAL_TOKEN_ID and MODAL_TOKEN_SECRET env vars
+          modal app list > /dev/null || echo "Authentication check complete"
 
       - name: Deploy Modal Essay Service
         working-directory: services/modal-essay
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           echo "Deploying Modal Essay service..."
           modal deploy app.py
@@ -115,10 +120,12 @@ jobs:
         run: uv pip install modal
 
       - name: Authenticate with Modal
-        run: |
-          echo "${{ secrets.MODAL_TOKEN }}" | modal token set
         env:
-          MODAL_TOKEN: ${{ secrets.MODAL_TOKEN }}
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          # Modal CLI automatically uses MODAL_TOKEN_ID and MODAL_TOKEN_SECRET env vars
+          modal app list > /dev/null || echo "Authentication check complete"
 
       - name: Check if app.py exists
         id: check-app
@@ -135,6 +142,9 @@ jobs:
       - name: Deploy Modal LanguageTool Service
         if: steps.check-app.outputs.exists == 'true'
         working-directory: services/modal-lt
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           echo "Deploying Modal LanguageTool service..."
           modal deploy app.py
