@@ -1,10 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useMemo, useCallback } from "react";
 import { TeacherFeedback } from "./TeacherFeedback";
-import { HeatMapText } from "./HeatMapText";
-import { EditableEssay } from "./EditableEssay";
 import { CelebrationMessage } from "./CelebrationMessage";
 import type { AssessmentResults } from "@writeo/shared";
 import { ScoreDisplay } from "./learner-results/ScoreDisplay";
@@ -23,7 +20,6 @@ import { useDraftStore } from "@/app/lib/stores/draft-store";
 interface LearnerResultsViewProps {
   data: AssessmentResults;
   answerText: string;
-  processingTime?: number | null;
   submissionId?: string;
   onDraftSwitch?: (submissionId: string, parentId?: string) => boolean;
 }
@@ -55,8 +51,11 @@ export function LearnerResultsView({
     relevanceCheck,
   } = useDataExtraction(data, propSubmissionId);
 
-  const answerTexts = data.meta?.answerTexts as Record<string, string> | undefined;
-  const finalAnswerText = answerText || (answerTexts && answerId ? answerTexts[answerId] : "");
+  const finalAnswerText = useMemo(() => {
+    if (answerText) return answerText;
+    const answerTexts = data.meta?.answerTexts as Record<string, string> | undefined;
+    return answerTexts && answerId ? answerTexts[answerId] : "";
+  }, [answerText, data.meta, answerId]);
 
   useDraftStorage(
     submissionId,
@@ -76,20 +75,25 @@ export function LearnerResultsView({
     parentSubmissionId,
   );
 
-  const { handleResubmit, isResubmitting } = useResubmit();
+  const { handleResubmit } = useResubmit();
 
-  const handleResubmitWrapper = async (editedText: string) => {
-    if (!submissionId) {
-      throw new Error("Cannot resubmit: Missing submission ID");
-    }
-    // Use question text if available, otherwise use empty string for free writing
-    const finalQuestionText = questionText || "";
-    await handleResubmit(editedText, finalQuestionText, submissionId);
-  };
+  const handleResubmitWrapper = useCallback(
+    async (editedText: string) => {
+      if (!submissionId) {
+        throw new Error("Cannot resubmit: Missing submission ID");
+      }
+      await handleResubmit(editedText, questionText || "", submissionId);
+    },
+    [submissionId, questionText, handleResubmit],
+  );
+
+  const handleReveal = useCallback(() => {
+    setIsFeedbackRevealed(true);
+  }, []);
 
   return (
     <div className="container" lang="en">
-      <div style={{ marginBottom: "var(--spacing-xl)" }} lang="en">
+      <div style={{ marginBottom: "var(--spacing-xl)" }}>
         <h1 className="page-title">Your Writing Feedback</h1>
         <p className="page-subtitle">
           Review your results and see where you can improve. Try another draft to practice more.
@@ -131,7 +135,7 @@ export function LearnerResultsView({
         grammarErrors={grammarErrors}
         finalAnswerText={finalAnswerText}
         isFeedbackRevealed={isFeedbackRevealed}
-        onReveal={() => setIsFeedbackRevealed(true)}
+        onReveal={handleReveal}
       />
 
       <EditableEssaySection

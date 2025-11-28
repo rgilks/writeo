@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 
 export function ModeSwitcher() {
@@ -7,9 +8,9 @@ export function ModeSwitcher() {
   const setMode = usePreferencesStore((state) => state.setViewMode);
   const isDeveloper = mode === "developer";
 
-  const toggleMode = () => {
+  const toggleMode = useCallback(() => {
     setMode(isDeveloper ? "learner" : "developer");
-  };
+  }, [isDeveloper, setMode]);
 
   return (
     <button

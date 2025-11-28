@@ -1,23 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import type { Achievement } from "@/app/lib/stores/draft-store";
 
+const SPARKLE_VARIANTS = ["✨", "⭐"] as const;
+const SPARKLE_COUNT = 5;
+
 /**
- * Sparkle - Enhanced sparkle effect that randomly appears across the entire card area
+ * Sparkle effect that randomly appears across the card
  */
 function Sparkle() {
-  const sparkleVariants = ["✨", "⭐"];
   // Randomly select a sparkle variant, position, size, and timing (stable per instance)
-  const [sparkleData] = useState(() => {
+  const sparkleData = useMemo(() => {
     const top = Math.random() * 90 + 5; // 5% to 95%
     const left = Math.random() * 90 + 5; // 5% to 95%
     const size = Math.random() * 6 + 10; // 10px to 16px
     const initialDelay = Math.random() * 2; // 0 to 2 seconds
     const duration = Math.random() * 1.5 + 2; // 2 to 3.5 seconds
     const repeatDelay = Math.random() * 3 + 1; // 1 to 4 seconds
-    const sparkle = sparkleVariants[Math.floor(Math.random() * sparkleVariants.length)];
+    const sparkle = SPARKLE_VARIANTS[Math.floor(Math.random() * SPARKLE_VARIANTS.length)];
     const xOffset = (Math.random() - 0.5) * 12; // -6px to 6px horizontal drift
     const yOffset = (Math.random() - 0.5) * 12; // -6px to 6px vertical drift
 
@@ -32,7 +34,7 @@ function Sparkle() {
       xOffset,
       yOffset,
     };
-  });
+  }, []);
 
   return (
     <motion.div
@@ -74,6 +76,39 @@ interface AchievementBadgeProps {
   animated?: boolean;
 }
 
+const SIZE_CONFIG = {
+  small: {
+    icon: "24px",
+    fontSize: "12px",
+    padding: "var(--spacing-xs) var(--spacing-sm)",
+    width: "90px",
+    height: "90px",
+  },
+  medium: {
+    icon: "32px",
+    fontSize: "14px",
+    padding: "var(--spacing-sm) var(--spacing-md)",
+    width: "140px",
+    height: "140px",
+  },
+  large: {
+    icon: "48px",
+    fontSize: "16px",
+    padding: "var(--spacing-md) var(--spacing-lg)",
+    width: "180px",
+    height: "180px",
+  },
+} as const;
+
+const ABSOLUTE_FILL = {
+  position: "absolute" as const,
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  pointerEvents: "none" as const,
+};
+
 /**
  * AchievementBadge - Displays an achievement badge with icon and name
  */
@@ -83,22 +118,7 @@ export function AchievementBadge({
   showDescription = false,
   animated = false,
 }: AchievementBadgeProps) {
-  const sizeStyles = {
-    small: { icon: "24px", fontSize: "12px", padding: "var(--spacing-xs) var(--spacing-sm)" },
-    medium: { icon: "32px", fontSize: "14px", padding: "var(--spacing-sm) var(--spacing-md)" },
-    large: { icon: "48px", fontSize: "16px", padding: "var(--spacing-md) var(--spacing-lg)" },
-  };
-
-  const style = sizeStyles[size];
-
-  // Fixed dimensions for consistent sizing
-  const dimensions = {
-    small: { width: "90px", height: "90px" },
-    medium: { width: "140px", height: "140px" },
-    large: { width: "180px", height: "180px" },
-  };
-
-  const dims = dimensions[size];
+  const config = SIZE_CONFIG[size];
 
   const badgeContent = (
     <motion.div
@@ -108,13 +128,13 @@ export function AchievementBadge({
         alignItems: "center",
         justifyContent: "center",
         gap: "var(--spacing-xs)",
-        padding: style.padding,
+        padding: config.padding,
         background:
           "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%)",
         border: "2px solid rgba(102, 126, 234, 0.4)",
         borderRadius: "var(--border-radius-lg)",
-        width: dims.width,
-        height: dims.height,
+        width: config.width,
+        height: config.height,
         boxShadow: "var(--shadow-sm)",
         position: "relative",
         overflow: "hidden",
@@ -136,15 +156,10 @@ export function AchievementBadge({
       {/* Animated gradient overlay on hover */}
       <motion.div
         style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          ...ABSOLUTE_FILL,
           background:
             "linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(147, 51, 234, 0.2) 50%, rgba(236, 72, 153, 0.2) 100%)",
           opacity: 0,
-          pointerEvents: "none",
         }}
         whileHover={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
@@ -153,13 +168,11 @@ export function AchievementBadge({
       {/* Shine effect overlay */}
       <motion.div
         style={{
-          position: "absolute",
-          top: 0,
+          ...ABSOLUTE_FILL,
           left: "-100%",
           width: "100%",
           height: "100%",
           background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent)",
-          pointerEvents: "none",
         }}
         animate={{
           left: ["-100%", "200%"],
@@ -171,7 +184,6 @@ export function AchievementBadge({
           ease: "easeInOut",
         }}
         whileHover={{
-          left: ["-100%", "200%"],
           transition: {
             duration: 0.8,
             repeat: Infinity,
@@ -205,7 +217,7 @@ export function AchievementBadge({
       />
 
       {/* Sparkles randomly appearing across the entire card */}
-      {Array.from({ length: 5 }).map((_, i) => (
+      {Array.from({ length: SPARKLE_COUNT }).map((_, i) => (
         <Sparkle key={i} />
       ))}
 
@@ -225,10 +237,9 @@ export function AchievementBadge({
       >
         <motion.div
           style={{
-            fontSize: style.icon,
+            fontSize: config.icon,
             lineHeight: 1,
           }}
-          lang="en"
           whileHover={{
             scale: 1.15,
           }}
@@ -242,13 +253,12 @@ export function AchievementBadge({
         </motion.div>
         <div
           style={{
-            fontSize: style.fontSize,
+            fontSize: config.fontSize,
             fontWeight: 600,
             textAlign: "center",
             color: "var(--text-primary)",
             lineHeight: 1.2,
           }}
-          lang="en"
           suppressHydrationWarning
         >
           {achievement.name}
@@ -262,7 +272,6 @@ export function AchievementBadge({
               lineHeight: "1.3",
               padding: "0 var(--spacing-xs)",
             }}
-            lang="en"
             suppressHydrationWarning
           >
             {achievement.description}
@@ -316,7 +325,7 @@ export function AchievementList({ achievements, maxDisplay }: AchievementListPro
         }}
         lang="en"
       >
-        <p lang="en">No achievements yet. Keep practicing to unlock badges!</p>
+        <p>No achievements yet. Keep practicing to unlock badges!</p>
       </motion.div>
     );
   }

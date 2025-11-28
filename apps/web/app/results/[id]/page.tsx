@@ -224,7 +224,6 @@ export default function ResultsPage() {
                   data={data}
                   answerText={answerText}
                   submissionId={submissionId}
-                  processingTime={processingTime}
                   onDraftSwitch={switchDraft}
                 />
               </ErrorBoundary>

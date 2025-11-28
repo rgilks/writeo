@@ -1,12 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useMemo } from "react";
+import { pluralize } from "@/app/lib/utils/text-utils";
 
 interface CelebrationMessageProps {
   scoreDiff?: number | null;
   errorCountDiff?: number | null;
   draftNumber: number;
 }
+
+const ENCOURAGEMENT_MESSAGES: Record<number, string> = {
+  2: " Keep revising to improve further.",
+  3: " Continue practicing to maintain your progress.",
+};
 
 /**
  * CelebrationMessage - Shows celebratory feedback when learners improve between drafts
@@ -16,43 +23,42 @@ export function CelebrationMessage({
   errorCountDiff,
   draftNumber,
 }: CelebrationMessageProps) {
-  // Only show if there's improvement
-  const hasScoreImprovement = scoreDiff !== null && scoreDiff !== undefined && scoreDiff > 0;
-  const hasErrorReduction =
-    errorCountDiff !== null && errorCountDiff !== undefined && errorCountDiff < 0;
+  const hasScoreImprovement = (scoreDiff ?? 0) > 0;
+  const hasErrorReduction = (errorCountDiff ?? 0) < 0;
 
   if (!hasScoreImprovement && !hasErrorReduction) {
     return null;
   }
 
-  const errorReductionCount = errorCountDiff ? Math.abs(errorCountDiff) : 0;
-  const scoreImprovement = scoreDiff || 0;
+  const { message, emoji } = useMemo(() => {
+    const errorReductionCount = errorCountDiff ? Math.abs(errorCountDiff) : 0;
+    const scoreImprovement = scoreDiff || 0;
 
-  // Determine celebration message
-  let message = "";
-  let emoji = "🎉";
+    if (hasScoreImprovement && hasErrorReduction) {
+      return {
+        message: `Great! You fixed ${errorReductionCount} ${pluralize(errorReductionCount, "mistake")} and improved your score by ${scoreImprovement.toFixed(1)} ${pluralize(scoreImprovement, "point")}!`,
+        emoji: "🌟",
+      };
+    }
 
-  if (hasScoreImprovement && hasErrorReduction) {
-    // Both improved
-    message = `Great! You fixed ${errorReductionCount} mistake${errorReductionCount !== 1 ? "s" : ""} and improved your score by ${scoreImprovement.toFixed(1)} point${scoreImprovement !== 1 ? "s" : ""}!`;
-    emoji = "🌟";
-  } else if (hasErrorReduction) {
-    // Only errors fixed
-    message = `🎉 Great! You fixed ${errorReductionCount} mistake${errorReductionCount !== 1 ? "s" : ""} in this draft!`;
-    emoji = "🎉";
-  } else if (hasScoreImprovement) {
-    // Only score improved
-    message = `📈 Your score improved by ${scoreImprovement.toFixed(1)} point${scoreImprovement !== 1 ? "s" : ""}!`;
-    emoji = "📈";
-  }
+    if (hasErrorReduction) {
+      return {
+        message: `Great! You fixed ${errorReductionCount} ${pluralize(errorReductionCount, "mistake")} in this draft!`,
+        emoji: "🎉",
+      };
+    }
 
-  // Additional encouragement for multiple drafts
-  let encouragement = "";
-  if (draftNumber >= 3) {
-    encouragement = " Continue practicing to maintain your progress.";
-  } else if (draftNumber === 2) {
-    encouragement = " Keep revising to improve further.";
-  }
+    return {
+      message: `Your score improved by ${scoreImprovement.toFixed(1)} ${pluralize(scoreImprovement, "point")}!`,
+      emoji: "📈",
+    };
+  }, [hasScoreImprovement, hasErrorReduction, scoreDiff, errorCountDiff]);
+
+  const encouragement = useMemo(() => {
+    return (
+      ENCOURAGEMENT_MESSAGES[draftNumber] || (draftNumber >= 3 ? ENCOURAGEMENT_MESSAGES[3] : "")
+    );
+  }, [draftNumber]);
 
   return (
     <motion.div
@@ -74,7 +80,6 @@ export function CelebrationMessage({
           fontSize: "48px",
           marginBottom: "var(--spacing-sm)",
         }}
-        lang="en"
       >
         {emoji}
       </div>
@@ -85,7 +90,6 @@ export function CelebrationMessage({
           marginBottom: "var(--spacing-xs)",
           color: "var(--text-primary)",
         }}
-        lang="en"
       >
         {message}
       </h3>
@@ -96,7 +100,6 @@ export function CelebrationMessage({
             color: "var(--text-secondary)",
             marginTop: "var(--spacing-sm)",
           }}
-          lang="en"
         >
           {encouragement}
         </p>

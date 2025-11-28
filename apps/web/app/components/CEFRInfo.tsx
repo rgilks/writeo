@@ -3,12 +3,22 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+type CEFRLevel = "A2" | "B1" | "B2" | "C1" | "C2";
+
 interface CEFRInfoProps {
   level: string;
   showFullInfo?: boolean;
 }
 
-const CEFR_DESCRIPTIONS: Record<string, { label: string; description: string; tips: string[] }> = {
+interface CEFRDescription {
+  label: string;
+  description: string;
+  tips: string[];
+}
+
+const CEFR_LEVELS: readonly CEFRLevel[] = ["A2", "B1", "B2", "C1", "C2"] as const;
+
+const CEFR_DESCRIPTIONS: Record<CEFRLevel, CEFRDescription> = {
   A2: {
     label: "Elementary",
     description: "You can write simple connected text on familiar topics.",
@@ -62,12 +72,9 @@ const CEFR_DESCRIPTIONS: Record<string, { label: string; description: string; ti
   },
 };
 
-/**
- * CEFRInfo - Displays CEFR level information with descriptions and tips
- */
 export function CEFRInfo({ level, showFullInfo = false }: CEFRInfoProps) {
   const [isExpanded, setIsExpanded] = useState(showFullInfo);
-  const info = CEFR_DESCRIPTIONS[level.toUpperCase()];
+  const info = CEFR_DESCRIPTIONS[level.toUpperCase() as CEFRLevel];
 
   if (!info) {
     return null;
@@ -99,7 +106,6 @@ export function CEFRInfo({ level, showFullInfo = false }: CEFRInfoProps) {
               color: "var(--text-primary)",
               marginBottom: "var(--spacing-xs)",
             }}
-            lang="en"
           >
             CEFR {level} - {info.label}
           </h3>
@@ -109,7 +115,6 @@ export function CEFRInfo({ level, showFullInfo = false }: CEFRInfoProps) {
               color: "var(--text-secondary)",
               lineHeight: "1.5",
             }}
-            lang="en"
           >
             {info.description}
           </p>
@@ -130,7 +135,6 @@ export function CEFRInfo({ level, showFullInfo = false }: CEFRInfoProps) {
             whiteSpace: "nowrap",
             flexShrink: 0,
           }}
-          lang="en"
         >
           {isExpanded ? "Show Less" : "Show Tips"}
         </button>
@@ -158,7 +162,6 @@ export function CEFRInfo({ level, showFullInfo = false }: CEFRInfoProps) {
                   color: "var(--text-primary)",
                   marginBottom: "var(--spacing-sm)",
                 }}
-                lang="en"
               >
                 Tips to Reach {getNextLevel(level)}
               </h4>
@@ -170,12 +173,9 @@ export function CEFRInfo({ level, showFullInfo = false }: CEFRInfoProps) {
                   fontSize: "14px",
                   lineHeight: "1.5",
                 }}
-                lang="en"
               >
-                {info.tips.map((tip, index) => (
-                  <li key={index} lang="en">
-                    {tip}
-                  </li>
+                {info.tips.map((tip: string, index: number) => (
+                  <li key={index}>{tip}</li>
                 ))}
               </ul>
             </div>
@@ -187,19 +187,20 @@ export function CEFRInfo({ level, showFullInfo = false }: CEFRInfoProps) {
 }
 
 function getNextLevel(level: string): string {
-  const levels = ["A2", "B1", "B2", "C1", "C2"];
-  const currentIndex = levels.indexOf(level.toUpperCase());
-  if (currentIndex >= 0 && currentIndex < levels.length - 1) {
-    return levels[currentIndex + 1];
-  }
-  return "the next level";
+  const index = CEFR_LEVELS.indexOf(level.toUpperCase() as CEFRLevel);
+  return index >= 0 && index < CEFR_LEVELS.length - 1 ? CEFR_LEVELS[index + 1] : "the next level";
+}
+
+interface CEFRBadgeProps {
+  level: string;
+  showLabel?: boolean;
 }
 
 /**
  * CEFRBadge - Simple badge showing CEFR level
  */
-export function CEFRBadge({ level, showLabel = true }: { level: string; showLabel?: boolean }) {
-  const info = CEFR_DESCRIPTIONS[level.toUpperCase()];
+export function CEFRBadge({ level, showLabel = true }: CEFRBadgeProps) {
+  const info = CEFR_DESCRIPTIONS[level.toUpperCase() as CEFRLevel];
 
   return (
     <div
@@ -220,7 +221,6 @@ export function CEFRBadge({ level, showLabel = true }: { level: string; showLabe
           fontWeight: 600,
           color: "var(--primary-color)",
         }}
-        lang="en"
       >
         {level}
       </span>
@@ -230,7 +230,6 @@ export function CEFRBadge({ level, showLabel = true }: { level: string; showLabe
             fontSize: "14px",
             color: "var(--text-secondary)",
           }}
-          lang="en"
         >
           {info.label}
         </span>

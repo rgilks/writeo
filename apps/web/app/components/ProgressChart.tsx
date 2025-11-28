@@ -1,65 +1,76 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import type { DraftHistory } from "@/app/lib/stores/draft-store";
+
+const CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"] as const;
 
 interface ProgressChartProps {
   draftHistory: DraftHistory[];
   type?: "score" | "errors" | "cefr";
 }
 
+const MIN_DRAFTS_FOR_PROGRESS = 2;
+const CHART_MIN = 0;
+const CHART_MAX = 9;
+const CHART_RANGE = CHART_MAX - CHART_MIN;
+const SCORE_CHART_HEIGHT = "200px";
+const ERROR_CHART_HEIGHT = "120px";
+const ANIMATION_DELAY_STEP = 0.1;
+const GRID_LINE_RATIOS = [0, 0.5, 1] as const;
+
+const CONTAINER_STYLE = {
+  padding: "var(--spacing-md)",
+  backgroundColor: "var(--bg-secondary)",
+  borderRadius: "var(--border-radius)",
+} as const;
+
+const HEADING_STYLE = {
+  fontSize: "16px",
+  fontWeight: 600,
+  marginBottom: "var(--spacing-md)",
+  color: "var(--text-primary)",
+} as const;
+
+const GRID_LINE_STYLE = {
+  width: "100%",
+  height: "1px",
+  backgroundColor: "rgba(0, 0, 0, 0.1)",
+} as const;
+
 /**
  * ProgressChart - Visualizes progress across drafts
  */
 export function ProgressChart({ draftHistory, type = "score" }: ProgressChartProps) {
-  if (draftHistory.length < 2) {
-    return null; // Need at least 2 drafts to show progress
+  if (draftHistory.length < MIN_DRAFTS_FOR_PROGRESS) {
+    return null;
   }
 
-  const maxScore = Math.max(...draftHistory.map((d) => d.overallScore || 0).filter((s) => s > 0));
-  const minScore = Math.min(...draftHistory.map((d) => d.overallScore || 0).filter((s) => s > 0));
-  const scoreRange = maxScore - minScore || 1;
-
-  const maxErrors = Math.max(...draftHistory.map((d) => d.errorCount || 0));
+  const maxErrors = useMemo(
+    () => Math.max(...draftHistory.map((d) => d.errorCount || 0)),
+    [draftHistory],
+  );
 
   if (type === "score") {
-    // Calculate score differences for trend indicators
-    const scoresWithTrends = draftHistory.map((draft, index) => {
-      const score = draft.overallScore || 0;
-      const prevScore = index > 0 ? draftHistory[index - 1].overallScore || 0 : null;
-      const diff = prevScore !== null ? score - prevScore : null;
-      return { draft, score, diff, index };
-    });
-
-    // Use a fixed scale from 0 to 9 for better comparison
-    const chartMin = 0;
-    const chartMax = 9;
-    const chartRange = chartMax - chartMin;
+    const scoresWithTrends = useMemo(
+      () =>
+        draftHistory.map((draft, index) => {
+          const score = draft.overallScore || 0;
+          const prevScore = index > 0 ? draftHistory[index - 1].overallScore || 0 : null;
+          const diff = prevScore !== null ? score - prevScore : null;
+          return { draft, score, diff, index };
+        }),
+      [draftHistory],
+    );
 
     return (
-      <div
-        lang="en"
-        style={{
-          padding: "var(--spacing-md)",
-          backgroundColor: "var(--bg-secondary)",
-          borderRadius: "var(--border-radius)",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "16px",
-            fontWeight: 600,
-            marginBottom: "var(--spacing-md)",
-            color: "var(--text-primary)",
-          }}
-          lang="en"
-        >
-          Score Progress Across Drafts
-        </h3>
+      <div lang="en" style={CONTAINER_STYLE}>
+        <h3 style={HEADING_STYLE}>Score Progress Across Drafts</h3>
         <div
           style={{
             position: "relative",
-            height: "200px",
+            height: SCORE_CHART_HEIGHT,
             padding: "var(--spacing-md)",
             paddingBottom: "40px",
           }}
@@ -79,9 +90,9 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
               color: "var(--text-secondary)",
             }}
           >
-            <span>{chartMax.toFixed(1)}</span>
-            <span>{((chartMax + chartMin) / 2).toFixed(1)}</span>
-            <span>{chartMin.toFixed(1)}</span>
+            <span>{CHART_MAX.toFixed(1)}</span>
+            <span>{((CHART_MAX + CHART_MIN) / 2).toFixed(1)}</span>
+            <span>{CHART_MIN.toFixed(1)}</span>
           </div>
 
           {/* Chart area */}
@@ -104,15 +115,8 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                 justifyContent: "space-between",
               }}
             >
-              {[0, 0.5, 1].map((ratio) => (
-                <div
-                  key={ratio}
-                  style={{
-                    width: "100%",
-                    height: "1px",
-                    backgroundColor: "rgba(0, 0, 0, 0.1)",
-                  }}
-                />
+              {GRID_LINE_RATIOS.map((ratio) => (
+                <div key={ratio} style={GRID_LINE_STYLE} />
               ))}
             </div>
 
@@ -129,7 +133,7 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
             >
               {/* Bars with scores */}
               {scoresWithTrends.map(({ draft, score, diff, index }) => {
-                const height = score > 0 ? ((score - chartMin) / chartRange) * 100 : 0;
+                const height = score > 0 ? ((score - CHART_MIN) / CHART_RANGE) * 100 : 0;
                 const isImproving = diff !== null && diff > 0;
                 const isDeclining = diff !== null && diff < 0;
 
@@ -150,7 +154,7 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: `${height}%`, opacity: 1 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                      transition={{ duration: 0.5, delay: index * ANIMATION_DELAY_STEP }}
                       style={{
                         width: "100%",
                         backgroundColor: isImproving
@@ -177,7 +181,6 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                           marginBottom: "2px",
                           whiteSpace: "nowrap",
                         }}
-                        lang="en"
                       >
                         {score > 0 ? score.toFixed(1) : "-"}
                       </span>
@@ -192,7 +195,6 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                           fontWeight: 600,
                           marginTop: "4px",
                         }}
-                        lang="en"
                       >
                         {diff > 0 ? "+" : ""}
                         {diff.toFixed(1)}
@@ -207,7 +209,6 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                         marginTop: "8px",
                         fontWeight: 500,
                       }}
-                      lang="en"
                     >
                       Draft {draft.draftNumber}
                     </div>
@@ -223,31 +224,14 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
 
   if (type === "errors") {
     return (
-      <div
-        lang="en"
-        style={{
-          padding: "var(--spacing-md)",
-          backgroundColor: "var(--bg-secondary)",
-          borderRadius: "var(--border-radius)",
-        }}
-      >
-        <h3
-          style={{
-            fontSize: "16px",
-            fontWeight: 600,
-            marginBottom: "var(--spacing-md)",
-            color: "var(--text-primary)",
-          }}
-          lang="en"
-        >
-          Error Reduction
-        </h3>
+      <div lang="en" style={CONTAINER_STYLE}>
+        <h3 style={HEADING_STYLE}>Error Reduction</h3>
         <div
           style={{
             display: "flex",
             alignItems: "flex-end",
             gap: "var(--spacing-sm)",
-            height: "120px",
+            height: ERROR_CHART_HEIGHT,
             padding: "var(--spacing-sm)",
           }}
         >
@@ -261,7 +245,11 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                 key={draft.submissionId}
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: `${height}%`, opacity: 1 }}
-                transition={{ duration: 0.6, delay: index * 0.1, ease: [0.4, 0, 0.2, 1] }}
+                transition={{
+                  duration: 0.6,
+                  delay: index * ANIMATION_DELAY_STEP,
+                  ease: [0.4, 0, 0.2, 1],
+                }}
                 style={{
                   flex: 1,
                   backgroundColor: isImproving ? "var(--secondary-accent)" : "var(--error-color)",
@@ -281,7 +269,6 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                     fontWeight: 600,
                     marginBottom: "var(--spacing-xs)",
                   }}
-                  lang="en"
                 >
                   {errorCount}
                 </span>
@@ -290,7 +277,6 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                     fontSize: "14px",
                     color: "rgba(255, 255, 255, 0.8)",
                   }}
-                  lang="en"
                 >
                   D{draft.draftNumber}
                 </span>
@@ -303,32 +289,16 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
   }
 
   // CEFR level progress
-  const cefrLevels = ["A2", "B1", "B2", "C1", "C2"];
   const getCefrIndex = (level?: string): number => {
     if (!level) return 0;
-    return cefrLevels.indexOf(level) + 1;
+    return CEFR_LEVELS.indexOf(level as (typeof CEFR_LEVELS)[number]) + 1;
   };
 
+  const lastDraft = useMemo(() => draftHistory[draftHistory.length - 1], [draftHistory]);
+
   return (
-    <div
-      lang="en"
-      style={{
-        padding: "var(--spacing-md)",
-        backgroundColor: "var(--bg-secondary)",
-        borderRadius: "var(--border-radius)",
-      }}
-    >
-      <h3
-        style={{
-          fontSize: "16px",
-          fontWeight: 600,
-          marginBottom: "var(--spacing-md)",
-          color: "var(--text-primary)",
-        }}
-        lang="en"
-      >
-        CEFR Level Progress
-      </h3>
+    <div lang="en" style={CONTAINER_STYLE}>
+      <h3 style={HEADING_STYLE}>CEFR Level Progress</h3>
       <div
         style={{
           display: "flex",
@@ -337,9 +307,9 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
           padding: "var(--spacing-sm)",
         }}
       >
-        {cefrLevels.map((level, index) => {
+        {CEFR_LEVELS.map((level, index) => {
           const hasReached = draftHistory.some((d) => getCefrIndex(d.cefrLevel) >= index + 1);
-          const isCurrent = draftHistory[draftHistory.length - 1]?.cefrLevel === level;
+          const isCurrent = lastDraft?.cefrLevel === level;
 
           return (
             <div
@@ -358,7 +328,6 @@ export function ProgressChart({ draftHistory, type = "score" }: ProgressChartPro
                 fontWeight: isCurrent ? 600 : 400,
                 fontSize: "14px",
               }}
-              lang="en"
             >
               {level}
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { AssessmentResults, LanguageToolError, AssessmentPart } from "@writeo/shared";
 
@@ -9,14 +9,52 @@ interface DeveloperResultsViewProps {
   answerText: string;
 }
 
-function CopyButton({ text, label }: { text: string; label?: string }) {
+interface CopyButtonProps {
+  text: string;
+  label?: string;
+}
+
+const COPY_RESET_DELAY = 2000;
+
+const STATUS_COLORS = {
+  success: { bg: "#d1fae5", text: "#065f46" },
+  error: { bg: "#fef2f2", text: "#991b1b" },
+  default: { bg: "var(--bg-secondary)", text: "var(--text-primary)" },
+} as const;
+
+const ERROR_COLORS = {
+  bg: "#fef2f2",
+  border: "#fecaca",
+  text: "#991b1b",
+} as const;
+
+const SUCCESS_COLOR = "#10b981";
+const ERROR_COLOR = "#dc2626";
+
+const CODE_BLOCK_STYLES = {
+  padding: "12px",
+  backgroundColor: "var(--bg-secondary)",
+  borderRadius: "6px",
+  fontSize: "13px",
+  overflow: "auto",
+  margin: 0,
+} as const;
+
+const SECTION_HEADER_STYLES = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: "16px",
+} as const;
+
+function CopyButton({ text, label }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), COPY_RESET_DELAY);
     } catch (err) {
       console.error("Failed to copy:", err);
     }
@@ -28,7 +66,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
       style={{
         padding: "6px 12px",
         fontSize: "12px",
-        backgroundColor: copied ? "#10b981" : "var(--bg-secondary)",
+        backgroundColor: copied ? SUCCESS_COLOR : "var(--bg-secondary)",
         color: copied ? "white" : "var(--text-primary)",
         border: "1px solid var(--border-color)",
         borderRadius: "4px",
@@ -43,6 +81,259 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
   );
 }
 
+interface StatusBadgeProps {
+  status: string;
+  label?: string;
+}
+
+function StatusBadge({ status, label }: StatusBadgeProps) {
+  const colors = STATUS_COLORS[status as keyof typeof STATUS_COLORS] || STATUS_COLORS.default;
+
+  return (
+    <code
+      style={{
+        padding: "8px 12px",
+        backgroundColor: colors.bg,
+        color: colors.text,
+        borderRadius: "6px",
+        fontSize: "14px",
+        display: "inline-block",
+        fontWeight: 600,
+      }}
+    >
+      {label ? `${label}: ${status}` : status}
+    </code>
+  );
+}
+
+interface CodeBlockProps {
+  content: string | object;
+  maxHeight?: string;
+  fontSize?: string;
+}
+
+function CodeBlock({ content, maxHeight, fontSize = "13px" }: CodeBlockProps) {
+  const jsonString = typeof content === "string" ? content : JSON.stringify(content, null, 2);
+
+  return (
+    <pre
+      style={{
+        ...CODE_BLOCK_STYLES,
+        fontSize,
+        ...(maxHeight && { maxHeight }),
+      }}
+    >
+      {jsonString}
+    </pre>
+  );
+}
+
+interface SectionHeaderProps {
+  title: string;
+  copyText?: string;
+  copyLabel?: string;
+}
+
+function SectionHeader({ title, copyText, copyLabel }: SectionHeaderProps) {
+  return (
+    <div style={SECTION_HEADER_STYLES}>
+      <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>{title}</h3>
+      {copyText && <CopyButton text={copyText} label={copyLabel} />}
+    </div>
+  );
+}
+
+interface StatItemProps {
+  label: string;
+  value: string | number;
+  color?: string;
+  monospace?: boolean;
+}
+
+function StatItem({ label, value, color, monospace }: StatItemProps) {
+  return (
+    <div>
+      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}>
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: "18px",
+          fontWeight: 600,
+          ...(color && { color }),
+          ...(monospace && { fontFamily: "monospace", fontSize: "14px" }),
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+interface ErrorDisplayProps {
+  error: LanguageToolError;
+}
+
+function ErrorDisplay({ error }: ErrorDisplayProps) {
+  return (
+    <div
+      style={{
+        padding: "8px",
+        marginBottom: "4px",
+        backgroundColor: "var(--bg-secondary)",
+        borderRadius: "4px",
+        fontSize: "12px",
+      }}
+    >
+      <div>
+        <strong>
+          [{error.start}-{error.end}]
+        </strong>{" "}
+        {error.category} ({error.severity})
+      </div>
+      <div style={{ color: "var(--text-secondary)", marginTop: "4px" }}>{error.message}</div>
+      {error.suggestions && error.suggestions.length > 0 && (
+        <div style={{ marginTop: "4px", color: SUCCESS_COLOR }}>
+          Suggestions: {error.suggestions.join(", ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface AssessorDisplayProps {
+  assessor: Record<string, unknown>;
+  assessorIndex: number;
+}
+
+function AssessorDisplay({ assessor, assessorIndex }: AssessorDisplayProps) {
+  const assessorId = assessor.id as string;
+  const assessorName = (assessor.name as string) || assessorId;
+  const assessorType = assessor.type as string;
+  const overall = assessor.overall as number | undefined;
+  const label = assessor.label as string | undefined;
+  const dimensions = assessor.dimensions;
+  const errors = assessor.errors as LanguageToolError[] | undefined;
+  const meta = assessor.meta;
+
+  return (
+    <div
+      style={{
+        padding: "20px",
+        backgroundColor: "var(--bg-secondary)",
+        borderRadius: "8px",
+        border: "1px solid var(--border-color)",
+        marginBottom: "12px",
+      }}
+    >
+      <div style={{ marginBottom: "16px" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            alignItems: "center",
+            marginBottom: "8px",
+          }}
+        >
+          <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>{assessorName}</h3>
+          <code
+            style={{
+              padding: "4px 8px",
+              backgroundColor: "white",
+              borderRadius: "4px",
+              fontSize: "11px",
+              fontWeight: 600,
+            }}
+          >
+            {assessorId}
+          </code>
+          <code
+            style={{
+              padding: "4px 8px",
+              backgroundColor: "white",
+              borderRadius: "4px",
+              fontSize: "11px",
+            }}
+          >
+            Type: {assessorType}
+          </code>
+        </div>
+      </div>
+
+      {overall !== undefined && (
+        <div style={{ marginBottom: "12px" }}>
+          <strong>Overall Score:</strong> {overall}
+        </div>
+      )}
+
+      {label && (
+        <div style={{ marginBottom: "12px" }}>
+          <strong>CEFR Label:</strong> {label}
+        </div>
+      )}
+
+      {dimensions != null && (
+        <div style={{ marginBottom: "12px" }}>
+          <strong>Dimensions:</strong>
+          <CodeBlock content={dimensions as object} />
+        </div>
+      )}
+
+      {errors && Array.isArray(errors) && errors.length > 0 && (
+        <div style={{ marginBottom: "12px" }}>
+          <strong>Errors ({errors.length}):</strong>
+          <div
+            style={{
+              marginTop: "8px",
+              maxHeight: "300px",
+              overflowY: "auto",
+              padding: "8px",
+              backgroundColor: "white",
+              borderRadius: "4px",
+            }}
+          >
+            {errors.map((error, errorIndex) => (
+              <ErrorDisplay key={errorIndex} error={error} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {meta != null && (
+        <div>
+          <strong>Metadata:</strong>
+          <CodeBlock content={meta as object} maxHeight="200px" />
+        </div>
+      )}
+
+      {/* Full Assessor Object */}
+      <details style={{ marginTop: "12px" }}>
+        <summary
+          style={{
+            cursor: "pointer",
+            fontSize: "13px",
+            fontWeight: 500,
+            color: "var(--text-secondary)",
+          }}
+        >
+          View Full JSON
+        </summary>
+        <div style={{ position: "relative", marginTop: "8px" }}>
+          <div style={{ position: "absolute", top: "8px", right: "8px", zIndex: 1 }}>
+            <CopyButton text={JSON.stringify(assessor, null, 2)} />
+          </div>
+          <CodeBlock content={assessor} maxHeight="400px" fontSize="11px" />
+        </div>
+      </details>
+    </div>
+  );
+}
+
+interface AnswerWithAssessors {
+  id?: string;
+  "assessor-results"?: unknown[];
+}
+
 export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewProps) {
   const parts: AssessmentPart[] = data.results?.parts || [];
 
@@ -52,14 +343,28 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
   const errorCount = meta.errorCount as number | undefined;
   const overallScore = meta.overallScore as number | undefined;
   const timestamp = meta.timestamp as string | undefined;
-  const totalAssessors = parts.reduce((acc, part) => {
+
+  const totalAssessors = useMemo(() => {
+    return parts.reduce((acc, part) => {
+      return (
+        acc +
+        (part.answers || []).reduce((sum, answer) => {
+          const answerWithAssessors = answer as AnswerWithAssessors;
+          return sum + (answerWithAssessors["assessor-results"] || []).length;
+        }, 0)
+      );
+    }, 0);
+  }, [parts]);
+
+  const hasQuickStats = useMemo(() => {
     return (
-      acc +
-      (part.answers || []).reduce((sum, answer) => {
-        return sum + ((answer as any)["assessor-results"] || []).length;
-      }, 0)
+      wordCount !== undefined ||
+      errorCount !== undefined ||
+      overallScore !== undefined ||
+      timestamp ||
+      totalAssessors > 0
     );
-  }, 0);
+  }, [wordCount, errorCount, overallScore, timestamp, totalAssessors]);
 
   return (
     <div className="container">
@@ -69,11 +374,7 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
       </div>
 
       {/* Quick Stats */}
-      {(wordCount !== undefined ||
-        errorCount !== undefined ||
-        overallScore !== undefined ||
-        timestamp ||
-        totalAssessors > 0) && (
+      {hasQuickStats && (
         <div className="card" style={{ marginBottom: "24px" }}>
           <h3 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "16px" }}>Quick Stats</h3>
           <div
@@ -83,203 +384,58 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
               gap: "16px",
             }}
           >
-            {timestamp && (
-              <div>
-                <div
-                  style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}
-                >
-                  Timestamp
-                </div>
-                <div style={{ fontSize: "14px", fontFamily: "monospace" }}>{timestamp}</div>
-              </div>
-            )}
-            {wordCount !== undefined && (
-              <div>
-                <div
-                  style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}
-                >
-                  Word Count
-                </div>
-                <div style={{ fontSize: "18px", fontWeight: 600 }}>{wordCount}</div>
-              </div>
-            )}
+            {timestamp && <StatItem label="Timestamp" value={timestamp} monospace />}
+            {wordCount !== undefined && <StatItem label="Word Count" value={wordCount} />}
             {errorCount !== undefined && (
-              <div>
-                <div
-                  style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}
-                >
-                  Errors
-                </div>
-                <div
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 600,
-                    color: errorCount > 0 ? "#dc2626" : "#10b981",
-                  }}
-                >
-                  {errorCount}
-                </div>
-              </div>
+              <StatItem
+                label="Errors"
+                value={errorCount}
+                color={errorCount > 0 ? ERROR_COLOR : SUCCESS_COLOR}
+              />
             )}
             {overallScore !== undefined && (
-              <div>
-                <div
-                  style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}
-                >
-                  Overall Score
-                </div>
-                <div style={{ fontSize: "18px", fontWeight: 600 }}>{overallScore.toFixed(1)}</div>
-              </div>
+              <StatItem label="Overall Score" value={overallScore.toFixed(1)} />
             )}
-            {totalAssessors > 0 && (
-              <div>
-                <div
-                  style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}
-                >
-                  Total Assessors
-                </div>
-                <div style={{ fontSize: "18px", fontWeight: 600 }}>{totalAssessors}</div>
-              </div>
-            )}
-            <div>
-              <div
-                style={{ fontSize: "12px", color: "var(--text-secondary)", marginBottom: "4px" }}
-              >
-                Parts
-              </div>
-              <div style={{ fontSize: "18px", fontWeight: 600 }}>{parts.length}</div>
-            </div>
+            {totalAssessors > 0 && <StatItem label="Total Assessors" value={totalAssessors} />}
+            <StatItem label="Parts" value={parts.length} />
           </div>
         </div>
       )}
 
       {/* Raw Data Section */}
       <div className="card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "16px",
-          }}
-        >
+        <div style={SECTION_HEADER_STYLES}>
           <h2 style={{ fontSize: "24px", fontWeight: 600, margin: 0 }}>Raw Assessment Data</h2>
           <CopyButton text={JSON.stringify(data, null, 2)} label="Copy All JSON" />
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "8px",
-            }}
-          >
-            <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>Status</h3>
-          </div>
-          <code
-            style={{
-              padding: "8px 12px",
-              backgroundColor:
-                data.status === "success"
-                  ? "#d1fae5"
-                  : data.status === "error"
-                    ? "#fef2f2"
-                    : "var(--bg-secondary)",
-              color:
-                data.status === "success"
-                  ? "#065f46"
-                  : data.status === "error"
-                    ? "#991b1b"
-                    : "var(--text-primary)",
-              borderRadius: "6px",
-              fontSize: "14px",
-              display: "inline-block",
-              fontWeight: 600,
-            }}
-          >
-            {data.status}
-          </code>
+          <SectionHeader title="Status" />
+          <StatusBadge status={data.status} />
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "8px",
-            }}
-          >
-            <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>Template</h3>
-            <CopyButton text={JSON.stringify(data.template, null, 2)} />
-          </div>
-          <pre
-            style={{
-              padding: "12px",
-              backgroundColor: "var(--bg-secondary)",
-              borderRadius: "6px",
-              fontSize: "13px",
-              overflow: "auto",
-              margin: 0,
-            }}
-          >
-            {JSON.stringify(data.template, null, 2)}
-          </pre>
+          <SectionHeader title="Template" copyText={JSON.stringify(data.template, null, 2)} />
+          <CodeBlock content={data.template} />
         </div>
 
         {data.meta && (
           <div style={{ marginBottom: "24px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "8px",
-              }}
-            >
-              <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>Metadata</h3>
-              <CopyButton text={JSON.stringify(data.meta, null, 2)} />
-            </div>
-            <pre
-              style={{
-                padding: "12px",
-                backgroundColor: "var(--bg-secondary)",
-                borderRadius: "6px",
-                fontSize: "13px",
-                overflow: "auto",
-                maxHeight: "300px",
-                margin: 0,
-              }}
-            >
-              {JSON.stringify(data.meta, null, 2)}
-            </pre>
+            <SectionHeader title="Metadata" copyText={JSON.stringify(data.meta, null, 2)} />
+            <CodeBlock content={data.meta} maxHeight="300px" />
           </div>
         )}
 
         {data.error_message && (
           <div style={{ marginBottom: "24px" }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "8px",
-              }}
-            >
-              <h3 style={{ fontSize: "18px", fontWeight: 600, color: "#dc2626", margin: 0 }}>
-                Error Message
-              </h3>
-              <CopyButton text={data.error_message} />
-            </div>
+            <SectionHeader title="Error Message" copyText={data.error_message} />
             <div
               style={{
                 padding: "12px",
-                backgroundColor: "#fef2f2",
-                border: "1px solid #fecaca",
+                backgroundColor: ERROR_COLORS.bg,
+                border: `1px solid ${ERROR_COLORS.border}`,
                 borderRadius: "6px",
-                color: "#991b1b",
+                color: ERROR_COLORS.text,
                 fontFamily: "monospace",
                 fontSize: "13px",
               }}
@@ -308,24 +464,15 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
           </div>
 
           <div style={{ marginBottom: "16px" }}>
-            <code
-              style={{
-                padding: "6px 10px",
-                backgroundColor: part.status === "success" ? "#d1fae5" : "#fef2f2",
-                color: part.status === "success" ? "#065f46" : "#991b1b",
-                borderRadius: "4px",
-                fontSize: "12px",
-                fontWeight: 600,
-              }}
-            >
-              Status: {part.status}
-            </code>
+            <StatusBadge status={part.status} label="Status" />
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {/* answers array with assessor-results nested under each answer */}
-            {(part.answers || []).map((answer: any, answerIndex: number) => {
-              const assessorResults = answer["assessor-results"] || [];
+            {(part.answers || []).map((answer: AnswerWithAssessors, answerIndex: number) => {
+              const assessorResults = (answer["assessor-results"] || []) as Record<
+                string,
+                unknown
+              >[];
               const answerId = answer.id;
 
               return (
@@ -343,186 +490,12 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
                       </strong>
                     </div>
                   )}
-                  {assessorResults.map((assessor: any, assessorIndex: number) => (
-                    <div
+                  {assessorResults.map((assessor, assessorIndex) => (
+                    <AssessorDisplay
                       key={assessorIndex}
-                      style={{
-                        padding: "20px",
-                        backgroundColor: "var(--bg-secondary)",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-color)",
-                        marginBottom: answerId ? "12px" : "0",
-                      }}
-                    >
-                      <div style={{ marginBottom: "16px" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "12px",
-                            alignItems: "center",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          <h3 style={{ fontSize: "18px", fontWeight: 600, margin: 0 }}>
-                            {assessor.name || assessor.id}
-                          </h3>
-                          <code
-                            style={{
-                              padding: "4px 8px",
-                              backgroundColor: "white",
-                              borderRadius: "4px",
-                              fontSize: "11px",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {assessor.id}
-                          </code>
-                          <code
-                            style={{
-                              padding: "4px 8px",
-                              backgroundColor: "white",
-                              borderRadius: "4px",
-                              fontSize: "11px",
-                            }}
-                          >
-                            Type: {assessor.type}
-                          </code>
-                        </div>
-                      </div>
-
-                      {assessor.overall !== undefined && (
-                        <div style={{ marginBottom: "12px" }}>
-                          <strong>Overall Score:</strong> {assessor.overall}
-                        </div>
-                      )}
-
-                      {assessor.label && (
-                        <div style={{ marginBottom: "12px" }}>
-                          <strong>CEFR Label:</strong> {assessor.label}
-                        </div>
-                      )}
-
-                      {assessor.dimensions && (
-                        <div style={{ marginBottom: "12px" }}>
-                          <strong>Dimensions:</strong>
-                          <pre
-                            style={{
-                              marginTop: "8px",
-                              padding: "8px",
-                              backgroundColor: "white",
-                              borderRadius: "4px",
-                              fontSize: "12px",
-                              overflow: "auto",
-                            }}
-                          >
-                            {JSON.stringify(assessor.dimensions, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-
-                      {assessor.errors &&
-                        Array.isArray(assessor.errors) &&
-                        assessor.errors.length > 0 && (
-                          <div style={{ marginBottom: "12px" }}>
-                            <strong>Errors ({assessor.errors.length}):</strong>
-                            <div
-                              style={{
-                                marginTop: "8px",
-                                maxHeight: "300px",
-                                overflowY: "auto",
-                                padding: "8px",
-                                backgroundColor: "white",
-                                borderRadius: "4px",
-                              }}
-                            >
-                              {assessor.errors.map(
-                                (error: LanguageToolError, errorIndex: number) => (
-                                  <div
-                                    key={errorIndex}
-                                    style={{
-                                      padding: "8px",
-                                      marginBottom: "4px",
-                                      backgroundColor: "var(--bg-secondary)",
-                                      borderRadius: "4px",
-                                      fontSize: "12px",
-                                    }}
-                                  >
-                                    <div>
-                                      <strong>
-                                        [{error.start}-{error.end}]
-                                      </strong>{" "}
-                                      {error.category} ({error.severity})
-                                    </div>
-                                    <div
-                                      style={{ color: "var(--text-secondary)", marginTop: "4px" }}
-                                    >
-                                      {error.message}
-                                    </div>
-                                    {error.suggestions && error.suggestions.length > 0 && (
-                                      <div style={{ marginTop: "4px", color: "#059669" }}>
-                                        Suggestions: {error.suggestions.join(", ")}
-                                      </div>
-                                    )}
-                                  </div>
-                                ),
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                      {assessor.meta && (
-                        <div>
-                          <strong>Metadata:</strong>
-                          <pre
-                            style={{
-                              marginTop: "8px",
-                              padding: "8px",
-                              backgroundColor: "white",
-                              borderRadius: "4px",
-                              fontSize: "12px",
-                              overflow: "auto",
-                              maxHeight: "200px",
-                            }}
-                          >
-                            {JSON.stringify(assessor.meta, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-
-                      {/* Full Assessor Object */}
-                      <details style={{ marginTop: "12px" }}>
-                        <summary
-                          style={{
-                            cursor: "pointer",
-                            fontSize: "13px",
-                            fontWeight: 500,
-                            color: "var(--text-secondary)",
-                          }}
-                        >
-                          View Full JSON
-                        </summary>
-                        <div style={{ position: "relative", marginTop: "8px" }}>
-                          <div
-                            style={{ position: "absolute", top: "8px", right: "8px", zIndex: 1 }}
-                          >
-                            <CopyButton text={JSON.stringify(assessor, null, 2)} />
-                          </div>
-                          <pre
-                            style={{
-                              padding: "12px",
-                              backgroundColor: "white",
-                              borderRadius: "4px",
-                              fontSize: "11px",
-                              overflow: "auto",
-                              maxHeight: "400px",
-                              margin: 0,
-                            }}
-                          >
-                            {JSON.stringify(assessor, null, 2)}
-                          </pre>
-                        </div>
-                      </details>
-                    </div>
+                      assessor={assessor}
+                      assessorIndex={assessorIndex}
+                    />
                   ))}
                 </div>
               );
@@ -534,28 +507,18 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
       {/* Answer Text */}
       {answerText && (
         <div className="card">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "16px",
-            }}
-          >
+          <div style={SECTION_HEADER_STYLES}>
             <h2 style={{ fontSize: "24px", fontWeight: 600, margin: 0 }}>Answer Text</h2>
             <CopyButton text={answerText} />
           </div>
           <pre
             style={{
+              ...CODE_BLOCK_STYLES,
               padding: "16px",
-              backgroundColor: "var(--bg-secondary)",
-              borderRadius: "8px",
               fontSize: "14px",
               whiteSpace: "pre-wrap",
               wordWrap: "break-word",
               maxHeight: "500px",
-              overflow: "auto",
-              margin: 0,
             }}
           >
             {answerText}
@@ -580,19 +543,7 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
             <span>Complete JSON Response</span>
             <CopyButton text={JSON.stringify(data, null, 2)} />
           </summary>
-          <pre
-            style={{
-              padding: "16px",
-              backgroundColor: "var(--bg-secondary)",
-              borderRadius: "8px",
-              fontSize: "12px",
-              overflow: "auto",
-              maxHeight: "600px",
-              margin: 0,
-            }}
-          >
-            {JSON.stringify(data, null, 2)}
-          </pre>
+          <CodeBlock content={data} maxHeight="600px" fontSize="12px" />
         </details>
       </div>
 

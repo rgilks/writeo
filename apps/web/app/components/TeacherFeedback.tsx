@@ -1,39 +1,214 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import type { LanguageToolError } from "@writeo/shared";
 import { getTeacherFeedback } from "@/app/lib/actions";
 import { useAIFeedbackStream } from "@/app/hooks/useAIFeedbackStream";
 
+type FeedbackMode = "initial" | "explanation";
+
+interface Dimensions {
+  TA: number;
+  CC: number;
+  Vocab: number;
+  Grammar: number;
+  Overall: number;
+}
+
+interface AIFeedback {
+  message: string;
+  focusArea?: string;
+  cluesMessage?: string;
+  explanationMessage?: string;
+}
+
+interface RelevanceCheck {
+  addressesQuestion: boolean;
+  score: number;
+  threshold: number;
+}
+
 interface TeacherFeedbackProps {
   overall: number;
-  dimensions: {
-    TA: number;
-    CC: number;
-    Vocab: number;
-    Grammar: number;
-    Overall: number;
-  };
+  dimensions: Dimensions;
   errorCount: number;
-  aiFeedback?: {
-    message: string;
-    focusArea?: string;
-    cluesMessage?: string;
-    explanationMessage?: string;
-  };
+  aiFeedback?: AIFeedback;
   submissionId?: string;
   answerId?: string;
   answerText?: string;
   questionText?: string;
-  ltErrors?: any[];
-  llmErrors?: any[];
-  relevanceCheck?: {
-    addressesQuestion: boolean;
-    score: number;
-    threshold: number;
-  };
+  ltErrors?: LanguageToolError[];
+  llmErrors?: LanguageToolError[];
+  relevanceCheck?: RelevanceCheck;
 }
+
+const CONTAINER_STYLES = {
+  padding: "var(--spacing-lg)",
+  backgroundColor: "rgba(139, 69, 19, 0.05)",
+  border: "2px solid rgba(139, 69, 19, 0.2)",
+  borderRadius: "var(--border-radius-lg)",
+  marginBottom: "var(--spacing-lg)",
+  position: "relative" as const,
+};
+
+const TEXT_STYLES = {
+  fontSize: "16px",
+  lineHeight: "1.6",
+  color: "var(--text-primary)",
+};
+
+const FOCUS_AREA_STYLES = {
+  padding: "var(--spacing-md)",
+  backgroundColor: "rgba(102, 126, 234, 0.1)",
+  borderLeft: "4px solid var(--primary-color)",
+  borderRadius: "var(--spacing-xs)",
+  fontSize: "14px",
+  marginBottom: "var(--spacing-md)",
+  lineHeight: "1.5",
+};
+
+const BUTTON_STYLES = {
+  fontSize: "14px",
+  padding: "var(--spacing-sm) var(--spacing-md)",
+  minHeight: "44px",
+};
+
+const SPINNER_STYLES = {
+  display: "inline-block" as const,
+  borderRadius: "50%",
+  animation: "spin 0.6s linear infinite",
+};
+
+const LOADING_MESSAGES = {
+  PREPARING: "Preparing feedback...",
+  LOADING: "Loading feedback...",
+  GENERATING: "Generating detailed analysis...",
+} as const;
+
+const ANIMATION_TRANSITION = { duration: 0.3, ease: [0.4, 0, 0.2, 1] as const };
+const BUTTON_TRANSITION = { duration: 0.2 };
+
+/**
+ * Spinner component for loading states
+ */
+function Spinner({
+  size = 20,
+  color = "rgba(139, 69, 19, 0.8)",
+}: {
+  size?: number;
+  color?: string;
+}) {
+  return (
+    <span
+      className="spinner"
+      style={{
+        ...SPINNER_STYLES,
+        width: `${size}px`,
+        height: `${size}px`,
+        border: `${Math.max(2, size / 10)}px solid ${color.replace("0.8", "0.2")}`,
+        borderTopColor: color,
+      }}
+    />
+  );
+}
+
+/**
+ * Loading indicator component
+ */
+function LoadingIndicator({ message }: { message: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--spacing-md)",
+        padding: "var(--spacing-lg)",
+        justifyContent: "center",
+      }}
+    >
+      <Spinner size={20} />
+      <span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>{message}</span>
+    </div>
+  );
+}
+
+/**
+ * ReactMarkdown custom components with consistent styling
+ */
+const markdownComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
+  p: ({ children }) => (
+    <p style={{ ...TEXT_STYLES, marginBottom: "var(--spacing-md)" }}>{children}</p>
+  ),
+  strong: ({ children }) => (
+    <strong style={{ fontWeight: 600, color: "var(--text-primary)" }}>{children}</strong>
+  ),
+  ul: ({ children }) => (
+    <ul
+      style={{
+        ...TEXT_STYLES,
+        marginBottom: "var(--spacing-md)",
+        paddingLeft: "var(--spacing-lg)",
+      }}
+    >
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol
+      style={{
+        ...TEXT_STYLES,
+        marginBottom: "var(--spacing-md)",
+        paddingLeft: "var(--spacing-lg)",
+      }}
+    >
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => (
+    <li style={{ marginBottom: "var(--spacing-xs)", lineHeight: "1.6" }}>{children}</li>
+  ),
+  h1: ({ children }) => (
+    <h1
+      style={{
+        fontSize: "20px",
+        fontWeight: 700,
+        marginBottom: "var(--spacing-md)",
+        marginTop: "var(--spacing-md)",
+        color: "var(--text-primary)",
+      }}
+    >
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2
+      style={{
+        fontSize: "18px",
+        fontWeight: 600,
+        marginBottom: "var(--spacing-sm)",
+        marginTop: "var(--spacing-md)",
+        color: "var(--text-primary)",
+      }}
+    >
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3
+      style={{
+        fontSize: "16px",
+        fontWeight: 600,
+        marginBottom: "var(--spacing-sm)",
+        marginTop: "var(--spacing-md)",
+        color: "var(--text-primary)",
+      }}
+    >
+      {children}
+    </h3>
+  ),
+};
 
 /**
  * TeacherFeedback - Provides AI-generated feedback from a helpful teacher
@@ -53,7 +228,7 @@ export function TeacherFeedback({
   relevanceCheck,
 }: TeacherFeedbackProps) {
   // Initialize from stored feedback if available
-  const [feedbackMode, setFeedbackMode] = useState<"initial" | "explanation">("initial");
+  const [feedbackMode, setFeedbackMode] = useState<FeedbackMode>("initial");
   const [explanation, setExplanation] = useState<string | null>(
     aiFeedback?.explanationMessage || null,
   );
@@ -62,7 +237,6 @@ export function TeacherFeedback({
   const [initialError, setInitialError] = useState<string | null>(null);
   const [hasRequestedClues, setHasRequestedClues] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showTryAgain, setShowTryAgain] = useState(true);
 
   // Use streaming hook for teacher feedback
   const {
@@ -72,8 +246,11 @@ export function TeacherFeedback({
     stopStream,
   } = useAIFeedbackStream();
 
-  const getFeedbackText = () => {
-    // If streaming, show streamed feedback
+  // Consolidate loading state
+  const isLoading = loading || initialLoading || isStreaming;
+
+  // Compute feedback text using useMemo
+  const feedbackText = useMemo(() => {
     if (feedbackMode === "explanation" && streamedFeedback) {
       return streamedFeedback;
     }
@@ -87,18 +264,34 @@ export function TeacherFeedback({
       return aiFeedback.message;
     }
     if (initialLoading) {
-      return "Preparing feedback...";
+      return LOADING_MESSAGES.PREPARING;
     }
     if (initialError) {
-      return "Loading feedback...";
+      return LOADING_MESSAGES.LOADING;
     }
-    return "Preparing feedback...";
-  };
+    return LOADING_MESSAGES.PREPARING;
+  }, [
+    feedbackMode,
+    streamedFeedback,
+    explanation,
+    initialMessage,
+    aiFeedback?.message,
+    initialLoading,
+    initialError,
+  ]);
 
-  const feedbackText = getFeedbackText();
+  // Prepare assessment data
+  const assessmentData = useMemo(
+    () => ({
+      essayScores: { overall, dimensions },
+      ltErrors: ltErrors || [],
+      llmErrors: llmErrors || [],
+    }),
+    [overall, dimensions, ltErrors, llmErrors],
+  );
 
   // Ensure the short Groq encouragement is available even if the async pipeline
-  // hasn’t stored it yet (common when submissions run in async mode).
+  // hasn't stored it yet (common when submissions run in async mode).
   useEffect(() => {
     if (
       hasRequestedClues ||
@@ -117,28 +310,23 @@ export function TeacherFeedback({
     setInitialError(null);
 
     getTeacherFeedback(submissionId, answerId, "clues", answerText, questionText, {
-      essayScores: {
-        overall,
-        dimensions,
-      },
+      essayScores: { overall, dimensions },
       ltErrors,
       llmErrors,
       relevanceCheck,
     })
       .then((data: { message: string; focusArea?: string }) => {
-        if (cancelled) {
-          return;
+        if (!cancelled) {
+          setInitialMessage(data.message || null);
+          setHasRequestedClues(true);
         }
-        setInitialMessage(data.message || null);
-        setHasRequestedClues(true);
       })
       .catch((error: unknown) => {
-        if (cancelled) {
-          return;
+        if (!cancelled) {
+          console.error("Error auto-fetching teacher clues:", error);
+          const message = error instanceof Error ? error.message : "Unknown error";
+          setInitialError(message);
         }
-        console.error("Error auto-fetching teacher clues:", error);
-        const message = error instanceof Error ? error.message : "Unknown error";
-        setInitialError(message);
       })
       .finally(() => {
         if (!cancelled) {
@@ -153,13 +341,19 @@ export function TeacherFeedback({
     submissionId,
     answerId,
     answerText,
+    questionText,
+    overall,
+    dimensions,
+    ltErrors,
+    llmErrors,
+    relevanceCheck,
     aiFeedback?.message,
     initialMessage,
     initialLoading,
     hasRequestedClues,
   ]);
 
-  const handleTryAgain = async () => {
+  const handleTryAgain = useCallback(async () => {
     if (!submissionId || !answerId || !answerText) {
       console.error("Missing required data:", { submissionId, answerId, answerText: !!answerText });
       alert(
@@ -169,9 +363,8 @@ export function TeacherFeedback({
     }
 
     setLoading(true);
-    setExplanation(""); // Clear previous explanation
+    setExplanation("");
     setFeedbackMode("explanation");
-    setShowTryAgain(false);
 
     try {
       console.log("Starting streaming teacher feedback", {
@@ -180,29 +373,20 @@ export function TeacherFeedback({
         answerTextLength: answerText.length,
       });
 
-      // Prepare assessment data for streaming
-      const assessmentData = {
-        essayScores: {
-          overall,
-          dimensions,
-        },
-        ltErrors: ltErrors || [],
-        llmErrors: llmErrors || [],
-      };
-
-      // Start streaming
       await startStream(submissionId, answerId, answerText, questionText, assessmentData);
     } catch (error) {
       console.error("Error starting teacher feedback stream:", error);
-      // Show error to user with more details
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       alert(
         `Failed to get feedback: ${errorMessage}\n\nPlease check the browser console for more details.`,
       );
       setLoading(false);
-      setShowTryAgain(true);
     }
-  };
+  }, [submissionId, answerId, answerText, questionText, assessmentData, startStream]);
+
+  const handleBackToSummary = useCallback(() => {
+    setFeedbackMode("initial");
+  }, []);
 
   // Update explanation when streamed feedback arrives
   useEffect(() => {
@@ -221,25 +405,14 @@ export function TeacherFeedback({
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      stopStream();
-    };
+    return stopStream;
   }, [stopStream]);
 
+  const hasRequiredData = Boolean(submissionId && answerId && answerText);
+  const showLoading = isLoading && !streamedFeedback;
+
   return (
-    <div
-      id="teacher-feedback-container"
-      lang="en"
-      translate="yes"
-      style={{
-        padding: "var(--spacing-lg)",
-        backgroundColor: "rgba(139, 69, 19, 0.05)",
-        border: "2px solid rgba(139, 69, 19, 0.2)",
-        borderRadius: "var(--border-radius-lg)",
-        marginBottom: "var(--spacing-lg)",
-        position: "relative",
-      }}
-    >
+    <div id="teacher-feedback-container" lang="en" translate="yes" style={CONTAINER_STYLES}>
       <div
         style={{
           display: "flex",
@@ -249,181 +422,38 @@ export function TeacherFeedback({
         }}
       >
         <span style={{ fontSize: "32px" }}>👩‍🏫</span>
-        <div lang="en">
-          <h3
-            style={{
-              fontSize: "20px",
-              fontWeight: 700,
-              margin: 0,
-              color: "var(--text-primary)",
-            }}
-          >
-            Teacher's Feedback
-          </h3>
-        </div>
+        <h3
+          style={{
+            fontSize: "20px",
+            fontWeight: 700,
+            margin: 0,
+            color: "var(--text-primary)",
+          }}
+        >
+          Teacher's Feedback
+        </h3>
       </div>
 
-      <div
-        id="teacher-feedback-text"
-        style={{
-          fontSize: "16px",
-          lineHeight: "1.6",
-          color: "var(--text-primary)",
-        }}
-      >
+      <div id="teacher-feedback-text" style={TEXT_STYLES}>
         <AnimatePresence mode="wait">
           <motion.div
             key={feedbackMode}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            transition={ANIMATION_TRANSITION}
             style={{ marginBottom: "var(--spacing-md)" }}
           >
-            {(loading || isStreaming) && !streamedFeedback ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "var(--spacing-md)",
-                  padding: "var(--spacing-lg)",
-                  justifyContent: "center",
-                }}
-              >
-                <span
-                  className="spinner"
-                  style={{
-                    display: "inline-block",
-                    width: "20px",
-                    height: "20px",
-                    border: "3px solid rgba(139, 69, 19, 0.2)",
-                    borderTopColor: "rgba(139, 69, 19, 0.8)",
-                    borderRadius: "50%",
-                    animation: "spin 0.6s linear infinite",
-                  }}
-                />
-                <span style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-                  Generating detailed analysis...
-                </span>
-              </div>
+            {showLoading ? (
+              <LoadingIndicator message={LOADING_MESSAGES.GENERATING} />
             ) : (
-              <ReactMarkdown
-                components={{
-                  p: ({ children }) => (
-                    <p
-                      style={{
-                        marginBottom: "var(--spacing-md)",
-                        fontSize: "16px",
-                        lineHeight: "1.6",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {children}
-                    </p>
-                  ),
-                  strong: ({ children }) => (
-                    <strong style={{ fontWeight: 600, color: "var(--text-primary)" }}>
-                      {children}
-                    </strong>
-                  ),
-                  ul: ({ children }) => (
-                    <ul
-                      style={{
-                        marginBottom: "var(--spacing-md)",
-                        paddingLeft: "var(--spacing-lg)",
-                        fontSize: "16px",
-                        lineHeight: "1.6",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {children}
-                    </ul>
-                  ),
-                  ol: ({ children }) => (
-                    <ol
-                      style={{
-                        marginBottom: "var(--spacing-md)",
-                        paddingLeft: "var(--spacing-lg)",
-                        fontSize: "16px",
-                        lineHeight: "1.6",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {children}
-                    </ol>
-                  ),
-                  li: ({ children }) => (
-                    <li
-                      style={{
-                        marginBottom: "var(--spacing-xs)",
-                        lineHeight: "1.6",
-                      }}
-                    >
-                      {children}
-                    </li>
-                  ),
-                  h1: ({ children }) => (
-                    <h1
-                      style={{
-                        fontSize: "20px",
-                        fontWeight: 700,
-                        marginBottom: "var(--spacing-md)",
-                        marginTop: "var(--spacing-md)",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {children}
-                    </h1>
-                  ),
-                  h2: ({ children }) => (
-                    <h2
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: 600,
-                        marginBottom: "var(--spacing-sm)",
-                        marginTop: "var(--spacing-md)",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {children}
-                    </h2>
-                  ),
-                  h3: ({ children }) => (
-                    <h3
-                      style={{
-                        fontSize: "16px",
-                        fontWeight: 600,
-                        marginBottom: "var(--spacing-sm)",
-                        marginTop: "var(--spacing-md)",
-                        color: "var(--text-primary)",
-                      }}
-                    >
-                      {children}
-                    </h3>
-                  ),
-                }}
-              >
-                {feedbackText}
-              </ReactMarkdown>
+              <ReactMarkdown components={markdownComponents}>{feedbackText}</ReactMarkdown>
             )}
           </motion.div>
         </AnimatePresence>
 
         {feedbackMode === "initial" && aiFeedback?.focusArea && (
-          <div
-            lang="en"
-            style={{
-              padding: "var(--spacing-md)",
-              backgroundColor: "rgba(102, 126, 234, 0.1)",
-              borderLeft: "4px solid var(--primary-color)",
-              borderRadius: "var(--spacing-xs)",
-              fontSize: "14px",
-              marginBottom: "var(--spacing-md)",
-              lineHeight: "1.5",
-            }}
-          >
-            💡 Focus on {aiFeedback.focusArea} next time.
-          </div>
+          <div style={FOCUS_AREA_STYLES}>💡 Focus on {aiFeedback.focusArea} next time.</div>
         )}
 
         <div
@@ -434,7 +464,7 @@ export function TeacherFeedback({
             flexWrap: "wrap",
           }}
         >
-          {!submissionId || !answerId || !answerText ? (
+          {!hasRequiredData ? (
             <p
               style={{
                 fontSize: "14px",
@@ -447,62 +477,38 @@ export function TeacherFeedback({
             </p>
           ) : feedbackMode === "explanation" ? (
             <motion.button
-              onClick={() => {
-                setFeedbackMode("initial");
-                setShowTryAgain(true);
-              }}
+              onClick={handleBackToSummary}
               className="btn btn-secondary"
-              lang="en"
-              style={{
-                fontSize: "14px",
-                padding: "var(--spacing-sm) var(--spacing-md)",
-                minHeight: "44px",
-              }}
+              style={BUTTON_STYLES}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              transition={{ duration: 0.2 }}
+              transition={BUTTON_TRANSITION}
             >
               ← Back to Summary
             </motion.button>
           ) : (
             <motion.button
               onClick={handleTryAgain}
-              disabled={loading || initialLoading || isStreaming}
+              disabled={isLoading}
               className="btn btn-secondary"
-              lang="en"
               style={{
-                fontSize: "14px",
-                padding: "var(--spacing-sm) var(--spacing-md)",
-                minHeight: "44px",
-                opacity: loading || initialLoading || isStreaming ? 0.6 : 1,
-                cursor: loading || initialLoading || isStreaming ? "not-allowed" : "pointer",
+                ...BUTTON_STYLES,
+                opacity: isLoading ? 0.6 : 1,
+                cursor: isLoading ? "not-allowed" : "pointer",
               }}
-              whileHover={!loading && !initialLoading && !isStreaming ? { scale: 1.02 } : {}}
-              whileTap={!loading && !initialLoading && !isStreaming ? { scale: 0.98 } : {}}
-              transition={{ duration: 0.2 }}
+              whileHover={!isLoading ? { scale: 1.02 } : {}}
+              whileTap={!isLoading ? { scale: 0.98 } : {}}
+              transition={BUTTON_TRANSITION}
             >
-              {loading || initialLoading || isStreaming ? (
+              {isLoading ? (
                 <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2 }}
+                  transition={BUTTON_TRANSITION}
                   style={{ display: "flex", alignItems: "center", gap: "8px" }}
                 >
-                  <span
-                    className="spinner"
-                    style={{
-                      display: "inline-block",
-                      width: "14px",
-                      height: "14px",
-                      border: "2px solid rgba(0, 0, 0, 0.2)",
-                      borderTopColor: "currentColor",
-                      borderRadius: "50%",
-                      animation: "spin 0.6s linear infinite",
-                    }}
-                  />
-                  {loading || isStreaming
-                    ? "Generating detailed analysis..."
-                    : "Loading feedback..."}
+                  <Spinner size={14} color="currentColor" />
+                  {loading || isStreaming ? LOADING_MESSAGES.GENERATING : LOADING_MESSAGES.LOADING}
                 </motion.span>
               ) : (
                 "View Detailed Analysis"

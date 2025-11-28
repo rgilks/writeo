@@ -9,28 +9,49 @@ interface ErrorBoundaryProps {
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
   error: Error | null;
-}
-
-// Wrapper component to provide router to class component
-function ErrorBoundaryWithRouter(props: ErrorBoundaryProps) {
-  const router = useRouter();
-  return <ErrorBoundaryInner {...props} router={router} />;
 }
 
 interface ErrorBoundaryInnerProps extends ErrorBoundaryProps {
   router: ReturnType<typeof useRouter>;
 }
 
+interface DefaultFallbackProps {
+  error: Error | null;
+  onReset: () => void;
+}
+
+function DefaultFallback({ error, onReset }: DefaultFallbackProps) {
+  return (
+    <div
+      className="card"
+      style={{
+        padding: "var(--spacing-lg)",
+        textAlign: "center",
+      }}
+      lang="en"
+    >
+      <h2 style={{ marginBottom: "var(--spacing-md)", color: "var(--error-color)" }}>
+        Something went wrong
+      </h2>
+      <p style={{ marginBottom: "var(--spacing-md)", color: "var(--text-secondary)" }}>
+        {error?.message || "An unexpected error occurred"}
+      </p>
+      <button onClick={onReset} className="btn btn-primary">
+        Try again
+      </button>
+    </div>
+  );
+}
+
 class ErrorBoundaryInner extends React.Component<ErrorBoundaryInnerProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryInnerProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { error: null };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+    return { error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -38,45 +59,30 @@ class ErrorBoundaryInner extends React.Component<ErrorBoundaryInnerProps, ErrorB
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
-    // Use Next.js router to refresh instead of window.location.reload()
+    this.setState({ error: null });
     this.props.router.refresh();
   };
 
   render() {
-    if (this.state.hasError) {
+    if (this.state.error) {
       return (
         this.props.fallback || (
-          <div
-            className="card"
-            style={{
-              padding: "var(--spacing-lg)",
-              textAlign: "center",
-            }}
-            lang="en"
-          >
-            <h2
-              style={{ marginBottom: "var(--spacing-md)", color: "var(--error-color)" }}
-              lang="en"
-            >
-              Something went wrong
-            </h2>
-            <p
-              style={{ marginBottom: "var(--spacing-md)", color: "var(--text-secondary)" }}
-              lang="en"
-            >
-              {this.state.error?.message || "An unexpected error occurred"}
-            </p>
-            <button onClick={this.handleReset} className="btn btn-primary" lang="en">
-              Try again
-            </button>
-          </div>
+          <DefaultFallback error={this.state.error} onReset={this.handleReset} />
         )
       );
     }
 
     return this.props.children;
   }
+}
+
+/**
+ * ErrorBoundary - Catches React errors and displays a fallback UI
+ * Wrapper component to inject Next.js router into the class component
+ */
+function ErrorBoundaryWithRouter(props: ErrorBoundaryProps) {
+  const router = useRouter();
+  return <ErrorBoundaryInner {...props} router={router} />;
 }
 
 export const ErrorBoundary = ErrorBoundaryWithRouter;

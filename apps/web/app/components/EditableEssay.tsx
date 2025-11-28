@@ -1,15 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
+import { pluralize } from "@/app/lib/utils/text-utils";
 
 interface EditableEssayProps {
   initialText: string;
   questionId?: string;
-  questionText?: string; // The question/prompt text
-  parentSubmissionId?: string; // For draft tracking
+  questionText?: string;
+  parentSubmissionId?: string;
   onSubmit: (editedText: string, parentSubmissionId?: string) => Promise<void>;
+}
+
+const SUCCESS_MESSAGE_DURATION = 3000;
+const TEXTAREA_MIN_HEIGHT = "300px";
+const REFLECTION_MIN_HEIGHT = "60px";
+
+const BROWN_BORDER = "rgba(139, 69, 19, 0.2)";
+const BROWN_BORDER_LIGHT = "rgba(139, 69, 19, 0.3)";
+const BROWN_BG = "rgba(139, 69, 19, 0.1)";
+
+type WordCountStatus = "too-short" | "valid" | "too-long";
+
+function getWordCountStatus(wordCount: number): WordCountStatus {
+  if (wordCount < MIN_ESSAY_WORDS) return "too-short";
+  if (wordCount > MAX_ESSAY_WORDS) return "too-long";
+  return "valid";
 }
 
 /**
@@ -25,80 +42,61 @@ export function EditableEssay({
   const [showQuestion, setShowQuestion] = useState(false);
   const [editedText, setEditedText] = useState(initialText);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
   const [reflection, setReflection] = useState("");
-  const [showReflection, setShowReflection] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Sync hasChanges state whenever editedText or initialText changes
-  useEffect(() => {
+  const hasChanges = useMemo(() => {
     const trimmedEdited = editedText.trim();
     const trimmedInitial = initialText.trim();
-    setHasChanges(trimmedEdited !== trimmedInitial && trimmedEdited.length > 0);
+    return trimmedEdited !== trimmedInitial && trimmedEdited.length > 0;
   }, [editedText, initialText]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newText = e.target.value;
-    setEditedText(newText);
-    // Also update immediately for better responsiveness
-    const trimmedNew = newText.trim();
-    const trimmedInitial = initialText.trim();
-    setHasChanges(trimmedNew !== trimmedInitial && trimmedNew.length > 0);
+    setEditedText(e.target.value);
   };
 
-  // Fallback handler for browser automation that may not trigger onChange
-  const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
-    const newText = (e.target as HTMLTextAreaElement).value;
-    setEditedText(newText);
-  };
+  const wordCount = useMemo(() => countWords(editedText), [editedText]);
+  const wordCountStatus = useMemo(() => getWordCountStatus(wordCount), [wordCount]);
 
-  // Calculate word count
-  const wordCount = countWords(editedText);
-  const MIN_WORDS = MIN_ESSAY_WORDS;
-  const MAX_WORDS = MAX_ESSAY_WORDS; // Soft cap - warn but allow
-
-  const handleSubmit = async () => {
+  const validateSubmission = useCallback((): string | null => {
     if (!hasChanges) {
-      alert(
-        "Please make some changes to your essay before resubmitting. Fix the highlighted errors to improve your score.",
-      );
-      return;
+      return "Please make some changes to your essay before resubmitting. Fix the highlighted errors to improve your score.";
     }
 
-    // Validate word count
-    if (wordCount < MIN_WORDS) {
-      alert(
-        `Your essay is too short. Please write at least ${MIN_WORDS} words (currently ${wordCount} words).`,
-      );
-      return;
+    if (wordCountStatus === "too-short") {
+      return `Your essay is too short. Please write at least ${MIN_ESSAY_WORDS} ${pluralize(MIN_ESSAY_WORDS, "word")} (currently ${wordCount} ${pluralize(wordCount, "word")}).`;
     }
 
-    if (wordCount > MAX_WORDS) {
-      alert(
-        `Your essay is too long. Please keep it under ${MAX_WORDS} words (currently ${wordCount} words).`,
-      );
+    if (wordCountStatus === "too-long") {
+      return `Your essay is too long. Please keep it under ${MAX_ESSAY_WORDS} ${pluralize(MAX_ESSAY_WORDS, "word")} (currently ${wordCount} ${pluralize(wordCount, "word")}).`;
+    }
+
+    return null;
+  }, [hasChanges, wordCountStatus, wordCount]);
+
+  const handleSubmit = useCallback(async () => {
+    const validationError = validateSubmission();
+    if (validationError) {
+      alert(validationError);
       return;
     }
 
     setIsSubmitting(true);
     try {
       await onSubmit(editedText, parentSubmissionId);
-      setHasChanges(false);
       setShowSuccess(true);
-      // Hide success message after 3 seconds
-      setTimeout(() => setShowSuccess(false), 3000);
+      setTimeout(() => setShowSuccess(false), SUCCESS_MESSAGE_DURATION);
     } catch (error) {
       console.error("Error submitting edited essay:", error);
       alert(`Failed to submit: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [validateSubmission, editedText, parentSubmissionId, onSubmit]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setEditedText(initialText);
-    setHasChanges(false);
-  };
+  }, [initialText]);
 
   return (
     <div
@@ -107,7 +105,7 @@ export function EditableEssay({
         marginTop: "var(--spacing-lg)",
         padding: "var(--spacing-lg)",
         backgroundColor: "var(--bg-secondary)",
-        border: "2px solid rgba(139, 69, 19, 0.2)",
+        border: `2px solid ${BROWN_BORDER}`,
         borderRadius: "var(--border-radius-lg)",
       }}
     >
@@ -127,14 +125,12 @@ export function EditableEssay({
             margin: 0,
             color: "var(--text-primary)",
           }}
-          lang="en"
         >
           Improve Your Writing
         </h3>
       </div>
 
       <p
-        lang="en"
         style={{
           fontSize: "16px",
           color: "var(--text-secondary)",
@@ -149,12 +145,11 @@ export function EditableEssay({
       {/* Show question text if available */}
       {questionText && (
         <div
-          lang="en"
           style={{
             marginBottom: "var(--spacing-md)",
             padding: "var(--spacing-sm) var(--spacing-md)",
-            backgroundColor: "rgba(139, 69, 19, 0.1)",
-            border: "1px solid rgba(139, 69, 19, 0.2)",
+            backgroundColor: BROWN_BG,
+            border: `1px solid ${BROWN_BORDER}`,
             borderRadius: "var(--border-radius)",
           }}
         >
@@ -172,13 +167,11 @@ export function EditableEssay({
               alignItems: "center",
               gap: "var(--spacing-xs)",
             }}
-            lang="en"
           >
             {showQuestion ? "▼" : "▶"} {showQuestion ? "Hide" : "Show"} Question
           </button>
           {showQuestion && (
             <p
-              lang="en"
               style={{
                 marginTop: "var(--spacing-sm)",
                 fontSize: "14px",
@@ -196,7 +189,6 @@ export function EditableEssay({
       <AnimatePresence>
         {showSuccess && (
           <motion.div
-            lang="en"
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -220,18 +212,17 @@ export function EditableEssay({
       <textarea
         value={editedText}
         onChange={handleChange}
-        onInput={handleInput}
         disabled={isSubmitting}
         translate="no"
         lang="en"
         style={{
           width: "100%",
-          minHeight: "300px",
+          minHeight: TEXTAREA_MIN_HEIGHT,
           padding: "var(--spacing-md)",
           fontSize: "16px",
           lineHeight: "1.5",
           fontFamily: "inherit",
-          border: "1px solid rgba(139, 69, 19, 0.3)",
+          border: `1px solid ${BROWN_BORDER_LIGHT}`,
           borderRadius: "var(--border-radius)",
           backgroundColor: "var(--bg-primary)",
           color: "var(--text-primary)",
@@ -243,7 +234,6 @@ export function EditableEssay({
       {/* Reflection Prompt */}
       {hasChanges && (
         <div
-          lang="en"
           style={{
             marginBottom: "var(--spacing-md)",
             padding: "var(--spacing-md)",
@@ -251,10 +241,7 @@ export function EditableEssay({
             borderRadius: "var(--border-radius)",
           }}
         >
-          <p
-            style={{ marginBottom: "var(--spacing-sm)", fontSize: "14px", fontWeight: 600 }}
-            lang="en"
-          >
+          <p style={{ marginBottom: "var(--spacing-sm)", fontSize: "14px", fontWeight: 600 }}>
             💭 Reflection (optional)
           </p>
           <p
@@ -264,7 +251,6 @@ export function EditableEssay({
               color: "var(--text-secondary)",
               lineHeight: "1.5",
             }}
-            lang="en"
           >
             What did you change this time? (Optional - helps you reflect on your improvements)
           </p>
@@ -274,11 +260,11 @@ export function EditableEssay({
             placeholder="E.g., I fixed the subject-verb agreement errors and added more examples..."
             style={{
               width: "100%",
-              minHeight: "60px",
+              minHeight: REFLECTION_MIN_HEIGHT,
               padding: "var(--spacing-sm)",
               fontSize: "14px",
               fontFamily: "inherit",
-              border: "1px solid rgba(139, 69, 19, 0.3)",
+              border: `1px solid ${BROWN_BORDER_LIGHT}`,
               borderRadius: "var(--border-radius)",
               backgroundColor: "var(--bg-primary)",
               color: "var(--text-primary)",
@@ -302,19 +288,17 @@ export function EditableEssay({
         }}
       >
         <span>
-          {wordCount} {wordCount === 1 ? "word" : "words"}
+          {wordCount} {pluralize(wordCount, "word")}
         </span>
-        {wordCount < MIN_WORDS && (
+        {wordCountStatus === "too-short" && (
           <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
-            (Need at least {MIN_WORDS} words)
+            (Need at least {MIN_ESSAY_WORDS} {pluralize(MIN_ESSAY_WORDS, "word")})
           </span>
         )}
-        {wordCount >= MIN_WORDS && wordCount <= MAX_WORDS && (
-          <span style={{ color: "var(--secondary-accent)" }}>✓</span>
-        )}
-        {wordCount > MAX_WORDS && (
+        {wordCountStatus === "valid" && <span style={{ color: "var(--secondary-accent)" }}>✓</span>}
+        {wordCountStatus === "too-long" && (
           <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
-            (Too long - maximum {MAX_WORDS} words)
+            (Too long - maximum {MAX_ESSAY_WORDS} {pluralize(MAX_ESSAY_WORDS, "word")})
           </span>
         )}
       </div>
@@ -331,7 +315,6 @@ export function EditableEssay({
           onClick={handleSubmit}
           disabled={isSubmitting || !hasChanges}
           className="btn btn-primary"
-          lang="en"
           style={{
             fontSize: "14px",
             padding: "var(--spacing-sm) var(--spacing-lg)",
@@ -368,31 +351,28 @@ export function EditableEssay({
         </motion.button>
 
         {hasChanges && (
-          <button
-            onClick={handleReset}
-            disabled={isSubmitting}
-            className="btn btn-secondary"
-            lang="en"
-            style={{
-              fontSize: "14px",
-              padding: "var(--spacing-sm) var(--spacing-lg)",
-            }}
-          >
-            Reset Changes
-          </button>
-        )}
-
-        {hasChanges && (
-          <span
-            lang="en"
-            style={{
-              fontSize: "14px",
-              color: "var(--text-secondary)",
-              fontStyle: "italic",
-            }}
-          >
-            You have unsaved changes
-          </span>
+          <>
+            <button
+              onClick={handleReset}
+              disabled={isSubmitting}
+              className="btn btn-secondary"
+              style={{
+                fontSize: "14px",
+                padding: "var(--spacing-sm) var(--spacing-lg)",
+              }}
+            >
+              Reset Changes
+            </button>
+            <span
+              style={{
+                fontSize: "14px",
+                color: "var(--text-secondary)",
+                fontStyle: "italic",
+              }}
+            >
+              You have unsaved changes
+            </span>
+          </>
         )}
       </div>
     </div>
