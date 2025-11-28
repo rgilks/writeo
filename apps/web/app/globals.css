@@ -49,14 +49,13 @@
   --spacing-3xl: 48px;
 }
 
-/* Spinner animation for loading states */
+/* Animations */
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* Fade in animation for smooth transitions */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -69,13 +68,19 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   color: var(--text-primary);
-  background: var(--bg-primary); /* Clean white background */
-  line-height: 1.5; /* 1.5× for comfortable reading */
+  background: var(--bg-primary);
+  line-height: 1.5;
   min-height: 100vh;
-  font-size: 16px; /* Minimum readable size for mobile */
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  font-size: 16px;
+  overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
 }
 
 html {
@@ -141,7 +146,7 @@ html {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: var(--spacing-xs);
 }
 
 .logo-subtitle {
@@ -185,7 +190,7 @@ html {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: calc(var(--spacing-xs) + 2px) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: 999px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
@@ -206,7 +211,7 @@ html {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: calc(var(--spacing-xs) + 2px) var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--border-radius);
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
@@ -276,7 +281,7 @@ html {
   position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 0 2px;
+  padding: 0 var(--spacing-xs);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform, border-color, background;
 }
@@ -308,7 +313,7 @@ html {
 
 .developer-toggle--active .developer-toggle__thumb {
   background: var(--primary-color);
-  transform: translateX(14px);
+  transform: translateX(16px);
 }
 
 .card {
@@ -455,19 +460,19 @@ button:not(.btn) {
 }
 
 .error {
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  padding: var(--spacing-md); /* 16px */
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--error-color);
+  padding: var(--spacing-md);
   border-radius: var(--border-radius);
   margin: var(--spacing-md) 0;
 }
 
 .success {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
-  padding: var(--spacing-md); /* 16px */
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--secondary-accent);
+  padding: var(--spacing-md);
   border-radius: var(--border-radius);
   margin: var(--spacing-md) 0;
 }
@@ -492,12 +497,6 @@ button:not(.btn) {
   text-decoration: none;
 }
 
-@media (max-width: 360px) {
-  .grid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-md);
-  }
-}
 
 .task-card-link {
   display: block;
@@ -609,7 +608,7 @@ button:not(.btn) {
 .cefr-level-large {
   font-size: 48px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
   color: var(--text-primary);
 }
 
@@ -638,19 +637,7 @@ button:not(.btn) {
 .dimensions-grid-responsive {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-@media (max-width: 768px) {
-  .dimensions-grid-responsive {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .dimensions-grid-responsive {
-    grid-template-columns: 1fr !important;
-  }
+  gap: var(--spacing-sm);
 }
 
 .dimension-card {
@@ -714,7 +701,7 @@ button:not(.btn) {
 
 .score-bar {
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--spacing-xs);
   transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: width;
 }
@@ -760,7 +747,7 @@ button:not(.btn) {
 }
 
 .tip-list li {
-  margin-bottom: 6px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .tip-list li:last-child {
@@ -890,12 +877,6 @@ button:not(.btn) {
   will-change: transform;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .dimensions-table tbody tr {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: background-color;
@@ -906,24 +887,22 @@ button:not(.btn) {
   transform: translateX(2px);
 }
 
-/* Draft Sidebar Responsive Styles */
+/* Responsive Styles */
 @media (max-width: 768px) {
   .write-page-layout {
     flex-direction: column !important;
   }
-  
+
   .draft-sidebar {
     width: 100% !important;
     height: auto !important;
     max-height: 40vh;
     border-right: none !important;
-    border-bottom: 1px solid #e4e4e7 !important;
+    border-bottom: 1px solid var(--border-color) !important;
   }
-}
 
-@media (max-width: 768px) {
   .container {
-    padding: var(--spacing-md); /* 16px - comfortable margin on mobile */
+    padding: var(--spacing-md);
   }
 
   .header-content {
@@ -955,29 +934,26 @@ button:not(.btn) {
   }
 
   .writing-container {
-    gap: var(--spacing-md); /* 16px */
+    gap: var(--spacing-md);
   }
-  
+
   .question-card {
-    position: relative; /* Don't stick on mobile */
+    position: relative;
     top: 0;
   }
-  
+
   .score-display {
     flex-direction: column;
-    gap: var(--spacing-md); /* 16px */
+    gap: var(--spacing-md);
   }
 
-  .hero-title {
-    font-size: 24px; /* Slightly smaller on mobile */
-  }
-
+  .hero-title,
   .page-title {
-    font-size: 24px; /* Page title size */
+    font-size: 24px;
   }
 
   .task-card {
-    padding: var(--spacing-lg); /* 24px */
+    padding: var(--spacing-lg);
   }
 
   .score-value {
@@ -986,13 +962,13 @@ button:not(.btn) {
 
   .overall-score-section {
     grid-template-columns: 1fr;
-    gap: var(--spacing-md); /* 16px */
+    gap: var(--spacing-md);
   }
 
   .overall-score-main {
     flex-direction: column;
     text-align: center;
-    gap: var(--spacing-sm); /* 8px */
+    gap: var(--spacing-sm);
   }
 
   .overall-score-value {
@@ -1005,14 +981,37 @@ button:not(.btn) {
 
   .dimensions-grid {
     grid-template-columns: 1fr;
-    gap: var(--spacing-md); /* 16px */
+    gap: var(--spacing-md);
+  }
+
+  .dimensions-grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .text-title {
+    font-size: 24px;
+  }
+
+  .text-subheading {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dimensions-grid-responsive {
+    grid-template-columns: 1fr !important;
   }
 }
 
 /* Very narrow screens (old mobile devices - 320px) */
 @media (max-width: 360px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
   .container {
-    padding: var(--spacing-sm); /* 8px - minimal padding on very narrow screens */
+    padding: var(--spacing-sm);
   }
 
   .header {
@@ -1025,7 +1024,7 @@ button:not(.btn) {
   }
 
   .logo {
-    font-size: 20px; /* Slightly smaller logo */
+    font-size: 20px;
   }
 
   .header-content nav,
@@ -1049,8 +1048,8 @@ button:not(.btn) {
     justify-content: space-between;
   }
 
-  /* Ensure buttons wrap text on very narrow screens */
-  button, .btn {
+  button,
+  .btn {
     word-wrap: break-word;
     overflow-wrap: break-word;
     hyphens: auto;
@@ -1059,43 +1058,37 @@ button:not(.btn) {
   .btn {
     width: 100%;
     padding: var(--spacing-sm) var(--spacing-md);
-    font-size: 14px; /* Slightly smaller text on very narrow screens */
+    font-size: 14px;
     white-space: normal;
     word-wrap: break-word;
   }
 
-  .card {
-    padding: var(--spacing-md); /* 16px instead of 32px */
-  }
-
+  .card,
   .task-card {
     padding: var(--spacing-md);
   }
 
   .hero-title,
-  .page-title {
-    font-size: 20px; /* Smaller on very narrow screens */
+  .page-title,
+  h1 {
+    font-size: 20px;
   }
 
   .hero-subtitle,
   .page-subtitle {
-    font-size: 14px; /* Minimum readable size */
-  }
-
-  body {
-    font-size: 14px; /* Minimum readable size for very narrow screens */
-  }
-
-  h1 {
-    font-size: 20px;
+    font-size: 14px;
   }
 
   h2 {
     font-size: 18px;
   }
+
+  body {
+    font-size: 14px;
+  }
 }
 
-/* Typography Utility Classes - Following Style Guide */
+/* Typography Utility Classes */
 .text-title {
   font-size: 28px;
   font-weight: 700;
@@ -1119,7 +1112,7 @@ button:not(.btn) {
 }
 
 .text-small {
-  font-size: 14px; /* Minimum readable size for labels/metadata */
+  font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
   color: var(--text-secondary);
@@ -1182,14 +1175,4 @@ footer > div > div > div:last-child {
   letter-spacing: 0.01em;
 }
 
-/* Achievement badge styles - now handled by framer-motion */
-
-@media (max-width: 768px) {
-  .text-title {
-    font-size: 24px;
-  }
-  .text-subheading {
-    font-size: 18px;
-  }
-}
 

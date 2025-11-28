@@ -1,6 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import {
+  SectionCard,
+  ContentList,
+  Text,
+  ExternalLink,
+  InternalLink,
+} from "@/app/components/ContentComponents";
+
+const LAST_UPDATED = new Date().toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
 
 export default function TermsPage() {
   return (
@@ -8,12 +21,12 @@ export default function TermsPage() {
       <header className="header" lang="en">
         <div className="header-content">
           <div className="logo-group">
-            <Link href="/" className="logo" lang="en">
+            <Link href="/" className="logo">
               Writeo
             </Link>
           </div>
-          <nav className="header-actions" aria-label="Terms actions" lang="en">
-            <Link href="/" className="nav-back-link" lang="en">
+          <nav className="header-actions" aria-label="Terms actions">
+            <Link href="/" className="nav-back-link">
               <span aria-hidden="true">←</span> Back to Home
             </Link>
           </nav>
@@ -21,309 +34,151 @@ export default function TermsPage() {
       </header>
 
       <div className="container" lang="en">
-        <div
-          style={{ marginBottom: "var(--spacing-xl)", maxWidth: "800px", margin: "0 auto" }}
-          lang="en"
-        >
+        <div style={{ maxWidth: "800px", margin: "0 auto" }}>
           <h1 className="page-title">Terms of Service</h1>
-          <p className="page-subtitle">
-            Last updated:{" "}
-            {new Date().toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
+          <p className="page-subtitle">Last updated: {LAST_UPDATED}</p>
 
-          <div className="card" style={{ marginTop: "var(--spacing-xl)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              📋 Agreement to Terms
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="📋 Agreement to Terms" isFirst>
+            <Text>
               By accessing or using Writeo, you agree to be bound by these Terms of Service. If you
               disagree with any part of these terms, you may not access the service.
-            </p>
-          </div>
+            </Text>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              👶 Age & Parental Guidance
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="👶 Age & Parental Guidance">
+            <Text>
               <strong>Writeo is designed to be safe for users of all ages.</strong> For detailed
               information about children's privacy, age guidelines, and parental guidance, please
-              see the{" "}
-              <Link href="/privacy" className="text-blue-600 hover:underline">
-                Privacy Policy
-              </Link>
-              .
-            </p>
-          </div>
+              see the <InternalLink href="/privacy">Privacy Policy</InternalLink>.
+            </Text>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              👤 Use of Service
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="👤 Use of Service">
+            <Text>
               Writeo is a study tool designed to help you improve your writing skills through
               automated feedback. You agree to:
-            </p>
-            <ul
-              style={{
-                marginLeft: "var(--spacing-lg)",
-                marginBottom: "var(--spacing-md)",
-                lineHeight: "1.5",
-                paddingLeft: "var(--spacing-lg)",
-              }}
-              lang="en"
-            >
-              <li lang="en">Use the service only for lawful purposes</li>
-              <li lang="en">Not attempt to abuse, disrupt, or harm the service</li>
-              <li lang="en">
-                Not use the service to generate content for academic dishonesty or plagiarism
-              </li>
-              <li lang="en">Respect the intellectual property rights of others</li>
-            </ul>
-          </div>
+            </Text>
+            <ContentList>
+              <li>Use the service only for lawful purposes</li>
+              <li>Not attempt to abuse, disrupt, or harm the service</li>
+              <li>Not use the service to generate content for academic dishonesty or plagiarism</li>
+              <li>Respect the intellectual property rights of others</li>
+            </ContentList>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              🤖 AI-Generated Feedback
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="🤖 AI-Generated Feedback">
+            <Text>
               Writeo uses AI models to provide automated feedback on your writing. You understand
               that:
-            </p>
-            <ul
-              style={{
-                marginLeft: "var(--spacing-lg)",
-                marginBottom: "var(--spacing-md)",
-                lineHeight: "1.5",
-                paddingLeft: "var(--spacing-lg)",
-              }}
-              lang="en"
-            >
-              <li lang="en">
+            </Text>
+            <ContentList>
+              <li>
                 Feedback is generated by AI and should be used as a learning aid, not as a
                 definitive assessment
               </li>
-              <li lang="en">Scores and feedback are advisory and may not always be accurate</li>
-              <li lang="en">
+              <li>Scores and feedback are advisory and may not always be accurate</li>
+              <li>
                 You are responsible for your own learning and should use feedback appropriately
               </li>
-              <li lang="en">The service is provided "as is" without warranties of any kind</li>
-            </ul>
-          </div>
+              <li>The service is provided "as is" without warranties of any kind</li>
+            </ContentList>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              ⚡ API Usage & Rate Limiting
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="⚡ API Usage & Rate Limiting">
+            <Text>
               Writeo implements rate limiting to ensure fair usage and service stability. The
               following limits apply:
-            </p>
-            <ul
-              style={{
-                marginLeft: "var(--spacing-lg)",
-                marginBottom: "var(--spacing-md)",
-                lineHeight: "1.5",
-                paddingLeft: "var(--spacing-lg)",
-              }}
-              lang="en"
-            >
-              <li lang="en">
+            </Text>
+            <ContentList>
+              <li>
                 <strong>Essay submissions:</strong> 10 submissions per minute per IP address
               </li>
-              <li lang="en">
+              <li>
                 <strong>General API requests:</strong> 30 requests per minute per IP address
               </li>
-              <li lang="en">
+              <li>
                 <strong>Results retrieval:</strong> 60 requests per minute per IP address
               </li>
-            </ul>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+            </ContentList>
+            <Text>
               If you exceed these limits, you will receive a 429 (Too Many Requests) error. Rate
               limits reset after 60 seconds. These limits are subject to change and may vary for
               different types of usage.
-            </p>
-            <p
-              style={{
-                marginBottom: "var(--spacing-md)",
-                lineHeight: "1.5",
-                fontSize: "16px",
-                color: "var(--text-secondary)",
-              }}
-              lang="en"
-            >
+            </Text>
+            <Text note>
               <strong>Note:</strong> Rate limits are applied per IP address. For API access with
               higher limits, please contact the project maintainer via{" "}
-              <a
-                href="https://discord.gg/9rtwCKp2"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                Discord server
-              </a>
-              .
-            </p>
-          </div>
+              <ExternalLink href="https://discord.gg/9rtwCKp2">Discord server</ExternalLink>.
+            </Text>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              💰 Donations
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
-              Writeo accepts voluntary donations through Ko-fi. Donations are:
-            </p>
-            <ul
-              style={{
-                marginLeft: "var(--spacing-lg)",
-                marginBottom: "var(--spacing-md)",
-                lineHeight: "1.5",
-                paddingLeft: "var(--spacing-lg)",
-              }}
-              lang="en"
-            >
-              <li lang="en">Completely voluntary and not required to use the service</li>
-              <li lang="en">Processed through third-party payment processors (Ko-fi)</li>
-              <li lang="en">Non-refundable unless required by law</li>
-              <li lang="en">Used to support the development and maintenance of Writeo</li>
-            </ul>
-            <p
-              style={{
-                marginBottom: "var(--spacing-md)",
-                lineHeight: "1.5",
-                fontSize: "16px",
-                color: "var(--text-secondary)",
-              }}
-              lang="en"
-            >
+          <SectionCard title="💰 Donations">
+            <Text>Writeo accepts voluntary donations through Ko-fi. Donations are:</Text>
+            <ContentList>
+              <li>Completely voluntary and not required to use the service</li>
+              <li>Processed through third-party payment processors (Ko-fi)</li>
+              <li>Non-refundable unless required by law</li>
+              <li>Used to support the development and maintenance of Writeo</li>
+            </ContentList>
+            <Text note>
               By making a donation, you agree to Ko-fi's terms of service and privacy policy.
-            </p>
-          </div>
+            </Text>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              📝 Intellectual Property
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="📝 Intellectual Property">
+            <Text>
               <strong>Your Content:</strong> You retain all rights to the essays and content you
               submit to Writeo. Writeo does not claim ownership of your writing.
-            </p>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+            </Text>
+            <Text>
               <strong>Writeo Service:</strong> Writeo is a personal project by Robert Gilks. The
               source code is available under the Apache License 2.0 and may be copied, modified, and
               distributed in accordance with that license. The Writeo name and branding are
               protected by copyright.
-            </p>
-          </div>
+            </Text>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              ⚠️ Disclaimer of Warranties
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="⚠️ Disclaimer of Warranties">
+            <Text>
               Writeo is provided "as is" and "as available" without any warranties, express or
               implied. We do not guarantee that:
-            </p>
-            <ul
-              style={{
-                marginLeft: "var(--spacing-lg)",
-                marginBottom: "var(--spacing-md)",
-                lineHeight: "1.5",
-                paddingLeft: "var(--spacing-lg)",
-              }}
-              lang="en"
-            >
-              <li lang="en">The service will be uninterrupted or error-free</li>
-              <li lang="en">Feedback will be accurate or suitable for your purposes</li>
-              <li lang="en">The service will meet your specific requirements</li>
-            </ul>
-          </div>
+            </Text>
+            <ContentList>
+              <li>The service will be uninterrupted or error-free</li>
+              <li>Feedback will be accurate or suitable for your purposes</li>
+              <li>The service will meet your specific requirements</li>
+            </ContentList>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              🔒 Limitation of Liability
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="🔒 Limitation of Liability">
+            <Text>
               To the maximum extent permitted by law, Writeo and its operators shall not be liable
               for any indirect, incidental, special, consequential, or punitive damages, or any loss
               of profits or revenues, whether incurred directly or indirectly, or any loss of data,
               use, goodwill, or other intangible losses resulting from your use of the service.
-            </p>
-          </div>
+            </Text>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              🔄 Changes to Terms
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="🔄 Changes to Terms">
+            <Text>
               We reserve the right to modify these terms at any time. We will update the "Last
               updated" date at the top of this page when changes are made. Your continued use of the
               service after changes constitutes acceptance of the new terms.
-            </p>
-          </div>
+            </Text>
+          </SectionCard>
 
-          <div className="card" style={{ marginTop: "var(--spacing-lg)" }} lang="en">
-            <h2
-              style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}
-              lang="en"
-            >
-              📧 Contact
-            </h2>
-            <p style={{ marginBottom: "var(--spacing-md)", lineHeight: "1.5" }} lang="en">
+          <SectionCard title="📧 Contact">
+            <Text>
               If you have questions about these Terms of Service, please contact the project
               maintainer via{" "}
-              <a
-                href="https://discord.gg/9rtwCKp2"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                Discord server
-              </a>
-              . For privacy-related inquiries, please see our{" "}
-              <Link href="/privacy" className="text-blue-600 hover:underline">
-                Privacy Policy
-              </Link>
-              .
-            </p>
-          </div>
+              <ExternalLink href="https://discord.gg/9rtwCKp2">Discord server</ExternalLink>. For
+              privacy-related inquiries, please see our{" "}
+              <InternalLink href="/privacy">Privacy Policy</InternalLink>.
+            </Text>
+          </SectionCard>
 
-          <div style={{ marginTop: "var(--spacing-xl)", textAlign: "center" }} lang="en">
-            <Link href="/" className="btn btn-primary" lang="en">
+          <div style={{ marginTop: "var(--spacing-xl)", textAlign: "center" }}>
+            <Link href="/" className="btn btn-primary">
               ← Back to Home
             </Link>
           </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getSubmissionResults, getSubmissionResultsWithDraftTracking } from "@/app/lib/actions";
+import { getSubmissionResults } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { LearnerResultsView } from "@/app/components/LearnerResultsView";
@@ -11,6 +11,24 @@ import { DeveloperResultsView } from "@/app/components/DeveloperResultsView";
 import { ModeSwitcher } from "@/app/components/ModeSwitcher";
 import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 import type { AssessmentResults } from "@writeo/shared";
+
+import { getErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/app/lib/utils/error-messages";
+
+function getFriendlyErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return getErrorMessage(error, "results");
+  }
+  return DEFAULT_ERROR_MESSAGES.results;
+}
+
+function extractAnswerText(data: AssessmentResults): string {
+  const answerTexts = data.meta?.answerTexts as Record<string, string> | undefined;
+  if (answerTexts) {
+    const firstAnswerId = Object.keys(answerTexts)[0];
+    return answerTexts[firstAnswerId] || "";
+  }
+  return "";
+}
 
 export default function ResultsPage() {
   const params = useParams();
@@ -32,8 +50,6 @@ export default function ResultsPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
-  const [processingTime, setProcessingTime] = useState<number | null>(null);
-  const [submissionStartTime] = useState<number>(Date.now());
 
   // Fetch results if we don't have them
   useEffect(() => {
@@ -87,14 +103,7 @@ export default function ResultsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          const errorMessage = err instanceof Error ? err.message : "Failed to fetch results";
-          const friendlyMessage =
-            errorMessage.includes("Server Component") ||
-            errorMessage.includes("omitted in production") ||
-            errorMessage.includes("not found")
-              ? "We couldn't load your results. This might happen if the submission ID is incorrect or the results are no longer available."
-              : errorMessage;
-          setError(friendlyMessage);
+          setError(getFriendlyErrorMessage(err));
           setStatus("error");
         }
       }
@@ -111,57 +120,47 @@ export default function ResultsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submissionId]);
 
-  // Extract answer text and calculate processing time when results arrive
+  // Extract answer text when results arrive
   useEffect(() => {
     if (data && status === "success") {
-      const answerTexts = data.meta?.answerTexts as Record<string, string> | undefined;
-      if (answerTexts) {
-        const firstAnswerId = Object.keys(answerTexts)[0];
-        setAnswerText(answerTexts[firstAnswerId] || "");
-      }
-
-      const endTime = Date.now();
-      const elapsed = (endTime - submissionStartTime) / 1000;
-      setProcessingTime(elapsed);
+      setAnswerText(extractAnswerText(data));
     }
-  }, [data, status, submissionStartTime]);
+  }, [data, status]);
 
   // Function to switch drafts without page reload
-  const switchDraft = (targetSubmissionId: string) => {
-    const storedResults = getResult(targetSubmissionId);
-    if (storedResults) {
-      setData(storedResults);
-      setStatus("success");
-      setError(null);
-      router.replace(`/results/${targetSubmissionId}`);
-
-      const answerTexts = storedResults.meta?.answerTexts as Record<string, string> | undefined;
-      if (answerTexts) {
-        const firstAnswerId = Object.keys(answerTexts)[0];
-        setAnswerText(answerTexts[firstAnswerId] || "");
+  const switchDraft = useCallback(
+    (targetSubmissionId: string) => {
+      const storedResults = getResult(targetSubmissionId);
+      if (storedResults) {
+        setData(storedResults);
+        setStatus("success");
+        setError(null);
+        setAnswerText(extractAnswerText(storedResults));
+        router.replace(`/results/${targetSubmissionId}`);
+        return true;
       }
-      return true;
-    }
-    return false;
-  };
+      return false;
+    },
+    [getResult, router],
+  );
 
   return (
     <>
       <header className="header">
         <div className="header-content">
-          <Link href="/" className="logo">
-            Writeo
-          </Link>
-          {status === "pending" ? (
+          <div className="logo-group">
+            <Link href="/" className="logo">
+              Writeo
+            </Link>
+          </div>
+          <nav className="header-actions" aria-label="Results actions">
             <ModeSwitcher />
-          ) : (
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <ModeSwitcher />
-              <Link href="/" className="btn btn-secondary">
-                ← Back to Tasks
+            {status !== "pending" && (
+              <Link href="/" className="nav-back-link">
+                <span aria-hidden="true">←</span> Back to Home
               </Link>
-            </div>
-          )}
+            )}
+          </nav>
         </div>
       </header>
       <div className="container" style={{ minHeight: "calc(100vh - 200px)" }}>
@@ -169,14 +168,14 @@ export default function ResultsPage() {
           <div
             style={{
               textAlign: "center",
-              padding: "48px 24px",
+              padding: "var(--spacing-3xl) var(--spacing-lg)",
               minHeight: "400px",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
             }}
           >
-            <h2 style={{ marginBottom: "16px" }}>Loading Results...</h2>
+            <h2 style={{ marginBottom: "var(--spacing-md)" }}>Loading Results...</h2>
             <p style={{ color: "var(--text-secondary)" }}>Fetching your essay results...</p>
           </div>
         )}
@@ -186,8 +185,7 @@ export default function ResultsPage() {
             className="card"
             style={{
               maxWidth: "600px",
-              margin: "48px auto",
-              padding: "var(--spacing-xl)",
+              margin: "var(--spacing-3xl) auto",
               textAlign: "center",
               minHeight: "400px",
               display: "flex",
@@ -195,17 +193,8 @@ export default function ResultsPage() {
               justifyContent: "center",
             }}
           >
-            <div
-              style={{
-                fontSize: "48px",
-                marginBottom: "var(--spacing-md)",
-              }}
-            >
-              📝
-            </div>
-            <h2 style={{ marginBottom: "var(--spacing-sm)", color: "var(--text-primary)" }}>
-              Results Not Available
-            </h2>
+            <div style={{ fontSize: "48px", marginBottom: "var(--spacing-md)" }}>📝</div>
+            <h2 style={{ marginBottom: "var(--spacing-sm)" }}>Results Not Available</h2>
             <p
               style={{
                 color: "var(--text-secondary)",
@@ -213,8 +202,7 @@ export default function ResultsPage() {
                 lineHeight: "1.6",
               }}
             >
-              {error ||
-                "We couldn't load your results. This might happen if the submission ID is incorrect or the results are no longer available."}
+              {error || DEFAULT_ERROR_MESSAGES.results}
             </p>
             <div style={{ marginTop: "var(--spacing-lg)" }}>
               <Link href="/" className="btn btn-primary">

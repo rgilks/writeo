@@ -8,50 +8,26 @@ import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
+import { TASK_DATA } from "@/app/lib/constants/tasks";
+import { getErrorMessage } from "@/app/lib/utils/error-messages";
 
-// Task data - matches tasks from home page
-const taskData: Record<string, { title: string; prompt: string }> = {
-  "1": {
-    title: "Education: Practical vs Theoretical",
-    prompt:
-      "Some people believe that universities should focus more on practical skills rather than theoretical knowledge. To what extent do you agree or disagree?",
-  },
-  "2": {
-    title: "Technology: Social Media Impact",
-    prompt:
-      "Some people think that social media has a negative impact on society. Others believe it brings people together and has positive effects. Discuss both views and give your own opinion.",
-  },
-  "3": {
-    title: "Environment: Individual vs Government",
-    prompt:
-      "Some people think that individuals should be responsible for protecting the environment. Others believe that governments should take the lead. What is your view?",
-  },
-  "4": {
-    title: "Work: Remote Working",
-    prompt:
-      "More and more people are working from home rather than in offices. What are the advantages and disadvantages of this trend?",
-  },
-  "5": {
-    title: "Health: Fast Food Problem",
-    prompt:
-      "Fast food consumption is increasing worldwide, leading to health problems. What problems does this cause, and what solutions can you suggest?",
-  },
-  "6": {
-    title: "Society: Ageing Population",
-    prompt:
-      "In many countries, the population is ageing. What are the causes of this trend, and what effects might it have on society?",
-  },
-  "7": {
-    title: "Culture: Global vs Local",
-    prompt:
-      "Some people think that globalization means losing local culture and traditions. Others believe it enriches culture by bringing people together. To what extent do you agree or disagree?",
-  },
-  "8": {
-    title: "Crime: Punishment vs Rehabilitation",
-    prompt:
-      "Some people think that criminals should be punished harshly to deter crime. Others believe that rehabilitation programs are more effective. Discuss both views and give your opinion.",
-  },
-};
+const SUBMISSION_TIMEOUT = 60000;
+const AUTO_SAVE_DELAY = 2000;
+
+function getFriendlyErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return getErrorMessage(error, "write");
+  }
+  if (
+    typeof error === "string" &&
+    error.length < 200 &&
+    !error.includes("Error:") &&
+    !error.includes("at ")
+  ) {
+    return error;
+  }
+  return getErrorMessage(new Error("Submission failed"), "write");
+}
 
 export default function WritePage() {
   const params = useParams();
@@ -60,7 +36,6 @@ export default function WritePage() {
   const taskId = params.id as string;
   const isCustom = taskId === "custom";
 
-  // Draft store (consolidated)
   const currentContent = useDraftStore((state) => state.currentContent);
   const updateContent = useDraftStore((state) => state.updateContent);
   const saveDraft = useDraftStore((state) => state.saveContentDraft);
@@ -68,7 +43,6 @@ export default function WritePage() {
   const contentDrafts = useDraftStore((state) => state.contentDrafts);
   const loadContentDraft = useDraftStore((state) => state.loadContentDraft);
 
-  // Track hydration state - content may not be available until store is hydrated
   const [isHydrated, setIsHydrated] = useState(() => useDraftStore.persist.hasHydrated());
 
   const [customQuestion, setCustomQuestion] = useState("");
@@ -77,15 +51,12 @@ export default function WritePage() {
         title: "Custom Question",
         prompt: customQuestion.trim() || "",
       }
-    : taskData[taskId] || {
+    : TASK_DATA[taskId] || {
         title: "Writing Practice",
         prompt: "Write your essay here.",
       };
 
-  // Use draft store content, but only after hydration
-  // Track textarea value directly for immediate word count updates
   const [localAnswer, setLocalAnswer] = useState<string | null>(null);
-  // Use localAnswer if it's been set (even if empty string), otherwise use currentContent after hydration
   const answer = localAnswer !== null ? localAnswer : isHydrated ? currentContent : "";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,11 +66,7 @@ export default function WritePage() {
     variedStructure: false,
   });
 
-  // Auto-save debouncing
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const AUTO_SAVE_DELAY = 2000; // 2 seconds after user stops typing
-
-  // Use preferences store for storeResults (persists across sessions)
   const storeResults = usePreferencesStore((state) => state.storeResults);
   const setStoreResults = usePreferencesStore((state) => state.setStoreResults);
 
@@ -107,21 +74,16 @@ export default function WritePage() {
     setStoreResults(checked);
   };
 
-  // Handle textarea change with explicit state update and auto-save debouncing
   const handleAnswerChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
-      // Update local state immediately for word count
       setLocalAnswer(newValue);
-      // Update store for persistence
       updateContent(newValue);
 
-      // Clear existing timeout
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
 
-      // Set new timeout for auto-save
       autoSaveTimeoutRef.current = setTimeout(() => {
         if (newValue.trim().length > 0) {
           saveDraft();
@@ -131,11 +93,9 @@ export default function WritePage() {
     [updateContent, saveDraft],
   );
 
-  // Listen for hydration completion
   useEffect(() => {
     if (useDraftStore.persist.hasHydrated()) {
       setIsHydrated(true);
-      // Initialize localAnswer from store if available
       if (currentContent && localAnswer === null) {
         setLocalAnswer(currentContent);
       }
@@ -144,7 +104,6 @@ export default function WritePage() {
 
     const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
       setIsHydrated(true);
-      // Initialize localAnswer from store after hydration
       if (currentContent && localAnswer === null) {
         setLocalAnswer(currentContent);
       }
@@ -155,11 +114,9 @@ export default function WritePage() {
     };
   }, [currentContent, localAnswer]);
 
-  // Load active draft after hydration if currentContent is empty but activeDraftId exists
   useEffect(() => {
     if (!isHydrated) return;
 
-    // If we have an active draft ID but no content, try to load it
     if (!currentContent && activeDraftId && contentDrafts.length > 0) {
       const draft = contentDrafts.find((d) => d.id === activeDraftId);
       if (draft) {
@@ -168,14 +125,12 @@ export default function WritePage() {
     }
   }, [isHydrated, currentContent, activeDraftId, contentDrafts, loadContentDraft]);
 
-  // Sync local state with store content after hydration (only once)
   useEffect(() => {
     if (isHydrated && currentContent && localAnswer === null) {
       setLocalAnswer(currentContent);
     }
   }, [isHydrated, currentContent, localAnswer]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (autoSaveTimeoutRef.current) {
@@ -184,17 +139,14 @@ export default function WritePage() {
     };
   }, []);
 
-  // Handle custom question change
   const handleCustomQuestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setCustomQuestion(e.target.value);
   };
 
-  // Return prompt as-is (no additional reminder text)
   const getPrompt = (basePrompt: string) => {
     return basePrompt;
   };
 
-  // Calculate word count
   const wordCount = countWords(answer);
   const MIN_WORDS = MIN_ESSAY_WORDS;
   const MAX_WORDS = MAX_ESSAY_WORDS; // Soft cap - warn but allow
@@ -226,13 +178,14 @@ export default function WritePage() {
     setError(null);
 
     try {
-      // Use custom question if provided, otherwise use empty string for free writing
       const questionText = task.prompt.trim() || "";
 
-      // Wrap Server Action call with timeout to prevent hanging
       const submitPromise = submitEssay(questionText, answer, undefined, storeResults);
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Request timed out. Please try again.")), 60000);
+        setTimeout(
+          () => reject(new Error("Request timed out. Please try again.")),
+          SUBMISSION_TIMEOUT,
+        );
       });
 
       const { submissionId, results } = await Promise.race([submitPromise, timeoutPromise]);
@@ -252,18 +205,13 @@ export default function WritePage() {
 
       const resultsObj = results as AssessmentResults;
 
-      // Ensure questionTexts are in metadata for draft tracking
-      // The API should include questionTexts, but ensure they're present
       let resultsToStore = resultsObj;
       if (resultsObj && typeof window !== "undefined") {
-        // Get answerId from answerTexts
         const answerTexts = resultsObj.meta?.answerTexts as Record<string, string> | undefined;
         const answerId = answerTexts ? Object.keys(answerTexts)[0] : undefined;
 
-        // Store question text (including empty string for free writing) if we have answerId
         if (answerId && questionText !== undefined) {
           if (!resultsObj.meta?.questionTexts) {
-            // Create a new results object to avoid mutation
             resultsToStore = {
               ...resultsObj,
               meta: {
@@ -276,7 +224,6 @@ export default function WritePage() {
           } else {
             const existingQuestionTexts = resultsObj.meta.questionTexts as Record<string, string>;
             if (!existingQuestionTexts[answerId]) {
-              // Create a new results object to avoid mutation
               resultsToStore = {
                 ...resultsObj,
                 meta: {
@@ -292,58 +239,11 @@ export default function WritePage() {
         }
       }
 
-      // Store results in draft store (Zustand persist handles localStorage automatically)
       setResult(submissionId, resultsToStore);
-
-      // Redirect to results page
       router.push(`/results/${submissionId}`);
     } catch (err) {
       console.error("Submission error:", err);
-      // Extract error message safely and make it user-friendly
-      let errorMessage = "We couldn't submit your essay. Please try again.";
-
-      if (err instanceof Error) {
-        const message = err.message;
-        // Handle Server Component errors (production builds omit details)
-        if (
-          message.includes("Server Components render") ||
-          message.includes("omitted in production builds") ||
-          message.includes("digest property")
-        ) {
-          errorMessage =
-            "We encountered an issue while processing your submission. Please try again.";
-        } else if (
-          message.includes("Server configuration error") ||
-          message.includes("API_KEY") ||
-          message.includes("API_BASE_URL")
-        ) {
-          errorMessage = "There's a server configuration issue. Please try again later.";
-        } else if (message.includes("timeout") || message.includes("timed out")) {
-          errorMessage = "The request took too long. Please try again.";
-        } else if (
-          message.includes("network") ||
-          message.includes("fetch") ||
-          message.includes("Failed to fetch")
-        ) {
-          errorMessage =
-            "Unable to connect to our servers. Please check your internet connection and try again.";
-        } else if (
-          message.length > 0 &&
-          message.length < 200 &&
-          !message.includes("Error:") &&
-          !message.includes("at ")
-        ) {
-          // Use the error message if it's user-friendly (short, no stack traces)
-          errorMessage = message;
-        }
-      } else if (typeof err === "string") {
-        // Check if it's a user-friendly string
-        if (err.length < 200 && !err.includes("Error:") && !err.includes("at ")) {
-          errorMessage = err;
-        }
-      }
-
-      setError(errorMessage);
+      setError(getFriendlyErrorMessage(err));
       setLoading(false);
     }
   };
@@ -353,20 +253,20 @@ export default function WritePage() {
       <header className="header" lang="en">
         <div className="header-content">
           <div className="logo-group">
-            <Link href="/" className="logo" lang="en">
+            <Link href="/" className="logo">
               Writeo
             </Link>
           </div>
-          <nav className="header-actions" aria-label="Writing actions" lang="en">
-            <Link href="/" className="nav-back-link" lang="en">
-              <span aria-hidden="true">←</span> Back to Tasks
+          <nav className="header-actions" aria-label="Writing actions">
+            <Link href="/" className="nav-back-link">
+              <span aria-hidden="true">←</span> Back to Home
             </Link>
           </nav>
         </div>
       </header>
 
       <div className="container" style={{ overflowY: "auto" }}>
-        <div style={{ marginBottom: "32px" }} lang="en">
+        <div style={{ marginBottom: "var(--spacing-xl)" }}>
           <h1 className="page-title">{task.title}</h1>
           <p className="page-subtitle">
             Write your essay and get detailed feedback to improve your writing.
@@ -376,13 +276,12 @@ export default function WritePage() {
         <div className="writing-container">
           <div className="card question-card">
             <h2
-              lang="en"
               style={{
                 fontSize: "20px",
-                marginBottom: "16px",
+                marginBottom: "var(--spacing-md)",
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
+                gap: "var(--spacing-sm)",
               }}
             >
               <span>📝</span> {isCustom ? "Your Question (Optional)" : "Question"}
@@ -396,7 +295,6 @@ export default function WritePage() {
                 rows={4}
                 disabled={loading}
                 translate="no"
-                lang="en"
                 style={{
                   width: "100%",
                   minHeight: "80px",
@@ -408,7 +306,6 @@ export default function WritePage() {
                 className="prompt-box notranslate"
                 style={{ whiteSpace: "pre-wrap" }}
                 translate="no"
-                lang="en"
               >
                 {getPrompt(task.prompt)}
               </div>
@@ -416,12 +313,11 @@ export default function WritePage() {
             {isCustom && !customQuestion.trim() && (
               <p
                 style={{
-                  marginTop: "12px",
+                  marginTop: "var(--spacing-sm)",
                   fontSize: "14px",
                   color: "var(--text-secondary)",
                   fontStyle: "italic",
                 }}
-                lang="en"
               >
                 💡 Leave blank to practice free writing without answering a specific question.
               </p>
@@ -430,7 +326,7 @@ export default function WritePage() {
 
           <div className="card answer-card">
             <form onSubmit={handleSubmit}>
-              <label htmlFor="answer" className="label" lang="en">
+              <label htmlFor="answer" className="label">
                 Your Answer
                 <div
                   style={{
@@ -474,13 +370,11 @@ export default function WritePage() {
                 disabled={loading}
                 autoFocus={false}
                 translate="no"
-                lang="en"
               />
 
               {/* Self-Evaluation Checklist */}
               {answer.trim().length > 50 && (
                 <div
-                  lang="en"
                   style={{
                     marginTop: "var(--spacing-md)",
                     padding: "var(--spacing-md)",
@@ -494,7 +388,6 @@ export default function WritePage() {
                       fontSize: "14px",
                       fontWeight: 600,
                     }}
-                    lang="en"
                   >
                     ✓ Self-Evaluation Checklist (optional)
                   </p>
@@ -504,7 +397,6 @@ export default function WritePage() {
                       flexDirection: "column",
                       gap: "var(--spacing-sm)",
                     }}
-                    lang="en"
                   >
                     {(!isCustom || customQuestion.trim()) && (
                       <label
@@ -516,7 +408,6 @@ export default function WritePage() {
                           cursor: "pointer",
                           lineHeight: "1.5",
                         }}
-                        lang="en"
                       >
                         <input
                           type="checkbox"
@@ -541,7 +432,6 @@ export default function WritePage() {
                         cursor: "pointer",
                         lineHeight: "1.5",
                       }}
-                      lang="en"
                     >
                       <input
                         type="checkbox"
@@ -565,7 +455,6 @@ export default function WritePage() {
                         cursor: "pointer",
                         lineHeight: "1.5",
                       }}
-                      lang="en"
                     >
                       <input
                         type="checkbox"
@@ -590,10 +479,9 @@ export default function WritePage() {
                   marginTop: "var(--spacing-md)",
                   padding: "var(--spacing-md)",
                   backgroundColor: "rgba(102, 126, 234, 0.05)",
-                  borderRadius: "8px",
+                  borderRadius: "var(--border-radius)",
                   border: "1px solid rgba(102, 126, 234, 0.2)",
                 }}
-                lang="en"
               >
                 <label
                   style={{
@@ -604,7 +492,6 @@ export default function WritePage() {
                     cursor: "pointer",
                     lineHeight: "1.5",
                   }}
-                  lang="en"
                 >
                   <input
                     type="checkbox"
@@ -646,7 +533,6 @@ export default function WritePage() {
                         fontSize: "0.875rem",
                         color: "var(--text-secondary)",
                       }}
-                      lang="en"
                     >
                       ✓ Auto-saved
                     </span>
@@ -669,16 +555,15 @@ export default function WritePage() {
                         alignItems: "center",
                         gap: "var(--spacing-sm)",
                       }}
-                      lang="en"
                     >
                       <span className="spinner"></span>
                       Analyzing your writing…
                     </span>
                   ) : (
-                    <span lang="en">Get Feedback →</span>
+                    "Get Feedback →"
                   )}
                 </button>
-                <Link href="/" className="btn btn-secondary" lang="en">
+                <Link href="/" className="btn btn-secondary">
                   Cancel
                 </Link>
               </div>
@@ -690,7 +575,6 @@ export default function WritePage() {
                   marginTop: "var(--spacing-sm)",
                   lineHeight: "1.5",
                 }}
-                lang="en"
               >
                 Your text is processed by an AI model; no one else reads it.{" "}
                 <Link

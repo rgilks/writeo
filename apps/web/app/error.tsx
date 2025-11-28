@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { getErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/app/lib/utils/error-messages";
+
+const isDevelopment = typeof process !== "undefined" && process.env?.NODE_ENV === "development";
 
 export default function GlobalError({
   error,
@@ -14,45 +17,62 @@ export default function GlobalError({
     console.error("Error:", error);
   }, [error]);
 
-  function getErrorMessage(error: Error): string {
-    const message = error?.message;
-    if (typeof message === "string" && message.length > 0) {
-      // Check for common error patterns and provide friendly messages
-      // Handle Next.js production Server Component errors
-      if (
-        message.includes("Server Components render") ||
-        message.includes("omitted in production builds") ||
-        message.includes("digest property") ||
-        message.includes("Server Component") ||
-        message.includes("Server Components")
-      ) {
-        return "We encountered an issue while loading the page. Please try refreshing or navigating back to the homepage.";
-      }
-      if (message.includes("API_KEY") || message.includes("API_BASE_URL")) {
-        return "There's a configuration issue. Please try again later.";
-      }
-      if (
-        message.includes("fetch") ||
-        message.includes("network") ||
-        message.includes("Failed to fetch")
-      ) {
-        return "We're having trouble connecting to our servers. Please check your internet connection and try again.";
-      }
-      if (message.includes("timeout") || message.includes("timed out")) {
-        return "The request took too long. Please try again.";
-      }
-      // Only return the message if it's user-friendly (not a stack trace or technical error)
-      if (message.length < 200 && !message.includes("Error:") && !message.includes("at ")) {
-        return message;
-      }
-    }
-    return "Something unexpected happened. Don't worry—this is usually temporary. Please try again.";
-  }
-
-  const errorMessage = getErrorMessage(error);
+  const errorMessage = getErrorMessage(error, "global");
 
   return (
     <html>
+      <head>
+        <style>{`
+          :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-tertiary: #f3f4f6;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --primary-color: #3b82f6;
+            --border-radius: 8px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            --spacing-3xl: 48px;
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+          }
+          body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+          }
+          .btn {
+            display: inline-block;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            min-height: 44px;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            line-height: 1.5;
+          }
+          .btn-primary {
+            background: var(--primary-color);
+            color: white;
+          }
+          .btn-primary:hover {
+            background: #2563eb;
+          }
+          .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid #e5e7eb;
+          }
+          .btn-secondary:hover {
+            background-color: var(--bg-secondary);
+          }
+        `}</style>
+      </head>
       <body>
         <div
           style={{
@@ -61,35 +81,28 @@ export default function GlobalError({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            padding: "20px",
-            backgroundColor: "#f9fafb",
+            padding: "var(--spacing-md)",
+            backgroundColor: "var(--bg-secondary)",
           }}
         >
           <div
             style={{
               maxWidth: "600px",
               width: "100%",
-              backgroundColor: "white",
-              borderRadius: "8px",
-              padding: "32px",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              backgroundColor: "var(--bg-primary)",
+              borderRadius: "var(--border-radius)",
+              padding: "var(--spacing-xl)",
+              boxShadow: "var(--shadow-md)",
               textAlign: "center",
             }}
           >
-            <div
-              style={{
-                fontSize: "48px",
-                marginBottom: "16px",
-              }}
-            >
-              ✨
-            </div>
+            <div style={{ fontSize: "48px", marginBottom: "var(--spacing-md)" }}>✨</div>
             <h1
               style={{
                 fontSize: "24px",
                 fontWeight: 600,
-                marginBottom: "16px",
-                color: "#111827",
+                marginBottom: "var(--spacing-md)",
+                color: "var(--text-primary)",
               }}
             >
               Oops! Something went wrong
@@ -97,80 +110,56 @@ export default function GlobalError({
 
             <p
               style={{
-                color: "#6b7280",
-                marginBottom: "24px",
+                color: "var(--text-secondary)",
+                marginBottom: "var(--spacing-lg)",
                 lineHeight: "1.6",
               }}
             >
               {errorMessage}
             </p>
 
-            {typeof process !== "undefined" &&
-              process.env?.NODE_ENV === "development" &&
-              error.digest && (
-                <details
+            {isDevelopment && error.digest && (
+              <details
+                style={{
+                  marginBottom: "var(--spacing-lg)",
+                  padding: "var(--spacing-md)",
+                  backgroundColor: "var(--bg-tertiary)",
+                  borderRadius: "var(--border-radius)",
+                  fontSize: "14px",
+                  textAlign: "left",
+                }}
+              >
+                <summary style={{ cursor: "pointer", fontWeight: 500 }}>
+                  Technical Details (Development Only)
+                </summary>
+                <pre
                   style={{
-                    marginBottom: "24px",
-                    padding: "12px",
-                    backgroundColor: "#f3f4f6",
-                    borderRadius: "4px",
-                    fontSize: "14px",
+                    marginTop: "var(--spacing-sm)",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    fontSize: "12px",
+                    color: "var(--text-secondary)",
                   }}
                 >
-                  <summary style={{ cursor: "pointer", fontWeight: 500 }}>
-                    Technical Details (Development Only)
-                  </summary>
-                  <pre
-                    style={{
-                      marginTop: "8px",
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      fontSize: "12px",
-                      color: "#374151",
-                    }}
-                  >
-                    {typeof error?.message === "string"
-                      ? error.message
-                      : "No error message available"}
-                    {typeof error?.digest === "string" && `\n\nDigest: ${error.digest}`}
-                    {typeof error?.stack === "string" &&
-                      `\n\nStack:\n${error.stack.substring(0, 500)}`}
-                  </pre>
-                </details>
-              )}
+                  {error.message || "No error message available"}
+                  {error.digest && `\n\nDigest: ${error.digest}`}
+                  {error.stack && `\n\nStack:\n${error.stack.substring(0, 500)}`}
+                </pre>
+              </details>
+            )}
 
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <button
-                onClick={reset}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#6366f1",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                  fontSize: "14px",
-                }}
-              >
-                Try again
+            <div
+              style={{
+                display: "flex",
+                gap: "var(--spacing-md)",
+                justifyContent: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <button onClick={reset} className="btn btn-primary">
+                Try Again
               </button>
-
-              <Link
-                href="/"
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#f3f4f6",
-                  color: "#374151",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                  fontSize: "14px",
-                  textDecoration: "none",
-                  display: "inline-block",
-                }}
-              >
+              <Link href="/" className="btn btn-secondary">
                 Back to Home
               </Link>
             </div>
