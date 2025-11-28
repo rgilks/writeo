@@ -1,7 +1,18 @@
 import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
-import { immer } from "zustand/middleware/immer";
 import { createSafeStorage } from "../utils/storage";
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const STORAGE_KEY = "writeo-preferences";
+const DEFAULT_VIEW_MODE = "learner" as const;
+const DEFAULT_STORE_RESULTS = false;
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 export type ViewMode = "learner" | "developer";
 
@@ -15,27 +26,21 @@ interface PreferencesStore {
   setStoreResults: (value: boolean) => void;
 }
 
-const STORAGE_KEY = "writeo-preferences";
+// ============================================================================
+// STORE CREATION
+// ============================================================================
 
 export const usePreferencesStore = create<PreferencesStore>()(
   devtools(
     persist(
-      immer((set) => ({
-        viewMode: "learner",
-        storeResults: false,
+      (set) => ({
+        viewMode: DEFAULT_VIEW_MODE,
+        storeResults: DEFAULT_STORE_RESULTS,
 
-        setViewMode: (mode) => {
-          set((state) => {
-            state.viewMode = mode;
-          });
-        },
+        setViewMode: (mode) => set({ viewMode: mode }),
 
-        setStoreResults: (value) => {
-          set((state) => {
-            state.storeResults = value;
-          });
-        },
-      })),
+        setStoreResults: (value) => set({ storeResults: value }),
+      }),
       {
         name: STORAGE_KEY,
         storage: createJSONStorage(() => createSafeStorage()),

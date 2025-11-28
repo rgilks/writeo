@@ -1,8 +1,8 @@
 /**
- * Draft Store - Simplified version
+ * Draft Store
  *
- * Uses standard Zustand persist with JSON storage
- * Sets are converted to arrays for storage
+ * Manages draft content, submission results, progress tracking, achievements, and streaks.
+ * Uses Zustand with persist middleware for localStorage persistence.
  */
 
 import { create } from "zustand";
@@ -10,6 +10,21 @@ import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AssessmentResults } from "@writeo/shared";
 import { createSafeStorage } from "../utils/storage";
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const STORAGE_KEY = "writeo-draft-store";
+const DEFAULT_RESULT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const SUMMARY_MAX_LENGTH = 40;
+const MIN_SCORE_IMPROVEMENT_FOR_ACHIEVEMENT = 1.0;
+const MIN_FIXED_ERRORS_FOR_ACHIEVEMENT = 10;
+const MIN_STREAK_FOR_ACHIEVEMENT = 7;
+const MIN_DRAFTS_FOR_REVISER_ACHIEVEMENT = 5;
+
+const CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"] as const;
+type CefrLevel = (typeof CEFR_LEVELS)[number];
 
 // ============================================================================
 // TYPES
@@ -72,7 +87,7 @@ interface DraftStore {
   results: Record<string, StoredResult>;
   drafts: Record<string, DraftHistory[]>; // keyed by rootSubmissionId
   progress: Record<string, ProgressMetrics>;
-  fixedErrors: Record<string, string[]>; // Changed from Set<string> to string[] for simpler storage
+  fixedErrors: Record<string, string[]>;
   achievements: Achievement[];
   streak: StreakData;
 
@@ -102,8 +117,6 @@ interface DraftStore {
   getFixedErrors: (submissionId: string) => string[];
 
   updateStreak: () => void;
-  getStreak: () => StreakData;
-  getAchievements: () => Achievement[];
 
   getTotalDrafts: () => number;
   getTotalWritings: () => number;
@@ -128,10 +141,17 @@ const countWords = (text: string): number => {
 const generateSummary = (text: string): string => {
   const trimmed = text.trim();
   if (trimmed.length === 0) return "Empty draft";
-  return trimmed.slice(0, 40) + (trimmed.length > 40 ? "..." : "");
+  return trimmed.slice(0, SUMMARY_MAX_LENGTH) + (trimmed.length > SUMMARY_MAX_LENGTH ? "..." : "");
 };
 
-const CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"] as const;
+const isCefrLevel = (level: string | undefined): level is CefrLevel => {
+  return level !== undefined && CEFR_LEVELS.includes(level as CefrLevel);
+};
+
+const getCefrLevelIndex = (level: string | undefined): number => {
+  if (!isCefrLevel(level)) return -1;
+  return CEFR_LEVELS.indexOf(level);
+};
 
 function findRootSubmissionId(
   submissionId: string,
@@ -186,83 +206,79 @@ function checkAchievements(
 ): Achievement[] {
   const existingIds = new Set(existingAchievements.map((a) => a.id));
   const achievements: Achievement[] = [];
+  const now = new Date().toISOString();
+
+  const createAchievement = (
+    id: string,
+    name: string,
+    description: string,
+    icon: string,
+  ): Achievement => ({
+    id,
+    name,
+    description,
+    icon,
+    unlockedAt: now,
+  });
 
   if (allDrafts.length === 1 && !existingIds.has("first-draft")) {
-    achievements.push({
-      id: "first-draft",
-      name: "First Draft",
-      description: "Submitted your first essay",
-      icon: "🎯",
-      unlockedAt: new Date().toISOString(),
-    });
+    achievements.push(
+      createAchievement("first-draft", "First Draft", "Submitted your first essay", "🎯"),
+    );
   }
 
-  if (allDrafts.length >= 5 && !existingIds.has("reviser")) {
-    achievements.push({
-      id: "reviser",
-      name: "Reviser",
-      description: "Submitted 5 drafts",
-      icon: "✏️",
-      unlockedAt: new Date().toISOString(),
-    });
+  if (allDrafts.length >= MIN_DRAFTS_FOR_REVISER_ACHIEVEMENT && !existingIds.has("reviser")) {
+    achievements.push(createAchievement("reviser", "Reviser", "Submitted 5 drafts", "✏️"));
   }
 
   if (
     progress?.scoreImprovement &&
-    progress.scoreImprovement >= 1.0 &&
+    progress.scoreImprovement >= MIN_SCORE_IMPROVEMENT_FOR_ACHIEVEMENT &&
     !existingIds.has("improver")
   ) {
-    achievements.push({
-      id: "improver",
-      name: "Improver",
-      description: "Improved your score by 1.0+ points",
-      icon: "📈",
-      unlockedAt: new Date().toISOString(),
-    });
+    achievements.push(
+      createAchievement("improver", "Improver", "Improved your score by 1.0+ points", "📈"),
+    );
   }
 
-  if (totalFixedErrors >= 10 && !existingIds.has("grammar-master")) {
-    achievements.push({
-      id: "grammar-master",
-      name: "Grammar Master",
-      description: "Fixed 10+ grammar errors",
-      icon: "🎓",
-      unlockedAt: new Date().toISOString(),
-    });
+  if (totalFixedErrors >= MIN_FIXED_ERRORS_FOR_ACHIEVEMENT && !existingIds.has("grammar-master")) {
+    achievements.push(
+      createAchievement("grammar-master", "Grammar Master", "Fixed 10+ grammar errors", "🎓"),
+    );
   }
 
-  if (draft.cefrLevel) {
-    const currentLevelIndex = CEFR_LEVELS.indexOf(draft.cefrLevel as (typeof CEFR_LEVELS)[number]);
-    const allLevels = allDrafts
-      .map((d) => d.cefrLevel)
-      .filter((l): l is string => !!l)
-      .map((l) => CEFR_LEVELS.indexOf(l as (typeof CEFR_LEVELS)[number]))
+  if (isCefrLevel(draft.cefrLevel)) {
+    const currentLevelIndex = getCefrLevelIndex(draft.cefrLevel);
+    const allLevelIndices = allDrafts
+      .map((d) => getCefrLevelIndex(d.cefrLevel))
       .filter((i) => i >= 0);
-    const maxLevel = Math.max(...allLevels, -1);
+    const maxLevel = Math.max(...allLevelIndices, -1);
 
     if (
       currentLevelIndex === maxLevel &&
       currentLevelIndex > 0 &&
       !existingIds.has("cefr-climber")
     ) {
-      achievements.push({
-        id: "cefr-climber",
-        name: "CEFR Climber",
-        description: `Reached CEFR level ${draft.cefrLevel}`,
-        icon: "🏆",
-        unlockedAt: new Date().toISOString(),
-      });
+      achievements.push(
+        createAchievement(
+          "cefr-climber",
+          "CEFR Climber",
+          `Reached CEFR level ${draft.cefrLevel}`,
+          "🏆",
+        ),
+      );
     }
   }
 
-  if (currentStreak >= 7 && !existingIds.has("streak-keeper")) {
-    achievements.push({
-      id: "streak-keeper",
-      name: "Streak Keeper",
-      description: "Maintained a 7+ day practice streak",
-      icon: "🔥",
-      unlockedAt: new Date().toISOString(),
-    });
+  if (currentStreak >= MIN_STREAK_FOR_ACHIEVEMENT && !existingIds.has("streak-keeper")) {
+    achievements.push(
+      createAchievement(
+        "streak-keeper",
+        "Streak Keeper",
+        "Maintained a 7+ day practice streak",
+        "🔥",
+      ),
+    );
   }
 
   return achievements;
@@ -303,8 +319,6 @@ function calculateNewStreak(
 // STORE CREATION
 // ============================================================================
 
-const STORAGE_KEY = "writeo-draft-store";
-
 export const useDraftStore = create<DraftStore>()(
   devtools(
     persist(
@@ -325,7 +339,6 @@ export const useDraftStore = create<DraftStore>()(
           lastActivityDate: "",
         },
 
-        // Local state actions
         updateContent: (text: string) => {
           set((state) => {
             state.currentContent = text;
@@ -346,11 +359,13 @@ export const useDraftStore = create<DraftStore>()(
             );
 
             if (existingIndex !== -1 && draft.activeDraftId) {
-              const updatedDraft = draft.contentDrafts[existingIndex];
-              updatedDraft.content = state.currentContent;
-              updatedDraft.lastModified = now;
-              updatedDraft.wordCount = wordCount;
-              updatedDraft.summary = summary;
+              const updatedDraft = {
+                ...draft.contentDrafts[existingIndex],
+                content: state.currentContent,
+                lastModified: now,
+                wordCount,
+                summary,
+              };
               draft.contentDrafts.splice(existingIndex, 1);
               draft.contentDrafts.unshift(updatedDraft);
             } else {
@@ -447,7 +462,7 @@ export const useDraftStore = create<DraftStore>()(
 
             const progress = calculateProgress(draftArray);
             if (progress) {
-              state.progress[draft.submissionId] = progress;
+              state.progress[rootSubmissionId] = progress;
             }
 
             const newStreak = calculateNewStreak(
@@ -489,7 +504,11 @@ export const useDraftStore = create<DraftStore>()(
         },
 
         getProgress: (submissionId) => {
-          return get().progress[submissionId];
+          const progress = get().progress[submissionId];
+          if (progress) return progress;
+
+          const rootId = findRootSubmissionId(submissionId, get().drafts);
+          return rootId ? get().progress[rootId] : undefined;
         },
 
         trackFixedErrors: (submissionId, previousErrorIds, currentErrorIds) => {
@@ -498,11 +517,11 @@ export const useDraftStore = create<DraftStore>()(
               state.fixedErrors[submissionId] = [];
             }
 
+            const fixedSet = new Set(state.fixedErrors[submissionId]);
+            const currentSet = new Set(currentErrorIds);
+
             previousErrorIds.forEach((errorId) => {
-              if (
-                !currentErrorIds.includes(errorId) &&
-                !state.fixedErrors[submissionId].includes(errorId)
-              ) {
+              if (!currentSet.has(errorId) && !fixedSet.has(errorId)) {
                 state.fixedErrors[submissionId].push(errorId);
               }
             });
@@ -521,14 +540,6 @@ export const useDraftStore = create<DraftStore>()(
               state.streak.longestStreak,
             );
           });
-        },
-
-        getStreak: () => {
-          return get().streak;
-        },
-
-        getAchievements: () => {
-          return get().achievements;
         },
 
         // Computed selectors
@@ -556,7 +567,7 @@ export const useDraftStore = create<DraftStore>()(
         },
 
         // Cleanup
-        cleanupOldResults: (maxAgeMs = 30 * 24 * 60 * 60 * 1000) => {
+        cleanupOldResults: (maxAgeMs = DEFAULT_RESULT_MAX_AGE_MS) => {
           const now = Date.now();
           set((state) => {
             Object.keys(state.results).forEach((submissionId) => {
