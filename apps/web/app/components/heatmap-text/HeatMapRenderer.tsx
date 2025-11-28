@@ -1,15 +1,49 @@
-/**
- * Heat map renderer component - renders text with intensity-based highlighting
- */
+import { useMemo } from "react";
+import type { HeatMapRendererProps } from "./types";
 
-interface HeatMapRendererProps {
-  text: string;
-  normalizedIntensity: number[];
-  revealed: boolean;
+const CONTAINER_STYLES = {
+  padding: "var(--spacing-lg)",
+  backgroundColor: "transparent",
+  borderRadius: "var(--border-radius)",
+  lineHeight: "1.5",
+  fontSize: "16px",
+  whiteSpace: "pre-wrap" as const,
+} as const;
+
+const BASE_SPAN_STYLES = {
+  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+  borderRadius: "2px",
+} as const;
+
+function getSpanStyle(intensity: number, revealed: boolean) {
+  if (revealed || intensity <= 0) {
+    return {
+      ...BASE_SPAN_STYLES,
+      backgroundColor: "transparent",
+      boxShadow: "none",
+      padding: "0",
+    };
+  }
+
+  const opacity = Math.max(0.1, intensity);
+  const redIntensity = Math.floor(intensity * 255);
+  const backgroundColor = `rgba(${redIntensity}, 0, 0, ${opacity * 0.3})`;
+  const boxShadow =
+    intensity > 0.3
+      ? `0 0 ${intensity * 8}px rgba(${redIntensity}, 0, 0, ${opacity * 0.5})`
+      : "none";
+  const padding = intensity > 0.5 ? "2px 1px" : "0";
+
+  return {
+    ...BASE_SPAN_STYLES,
+    backgroundColor,
+    boxShadow,
+    padding,
+  };
 }
 
-export function HeatMapRenderer({ text, normalizedIntensity, revealed }: HeatMapRendererProps) {
-  const elements: React.ReactNode[] = [];
+function buildSpans(text: string, normalizedIntensity: number[], revealed: boolean) {
+  const spans: React.ReactNode[] = [];
   let currentSpan = "";
   let currentIntensity = -1;
   let currentStart = 0;
@@ -19,55 +53,38 @@ export function HeatMapRenderer({ text, normalizedIntensity, revealed }: HeatMap
 
     if (intensity !== currentIntensity || i === text.length) {
       if (currentSpan) {
-        const opacity = Math.max(0.1, currentIntensity);
-        const redIntensity = Math.floor(currentIntensity * 255);
-
-        elements.push(
+        spans.push(
           <span
             key={`span-${currentStart}`}
             translate="no"
-            lang="en"
-            style={{
-              backgroundColor: revealed
-                ? "transparent"
-                : `rgba(${redIntensity}, 0, 0, ${opacity * 0.3})`,
-              boxShadow: revealed
-                ? "none"
-                : currentIntensity > 0.3
-                  ? `0 0 ${currentIntensity * 8}px rgba(${redIntensity}, 0, 0, ${opacity * 0.5})`
-                  : "none",
-              transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-              padding: currentIntensity > 0.5 ? "2px 1px" : "0",
-              borderRadius: "2px",
-            }}
+            style={getSpanStyle(currentIntensity, revealed)}
           >
             {currentSpan}
           </span>,
         );
       }
 
-      currentSpan = i < text.length ? text[i] : "";
-      currentIntensity = intensity;
-      currentStart = i;
+      if (i < text.length) {
+        currentSpan = text[i];
+        currentIntensity = intensity;
+        currentStart = i;
+      }
     } else {
       currentSpan += text[i];
     }
   }
 
+  return spans;
+}
+
+export function HeatMapRenderer({ text, normalizedIntensity, revealed }: HeatMapRendererProps) {
+  const elements = useMemo(
+    () => buildSpans(text, normalizedIntensity, revealed),
+    [text, normalizedIntensity, revealed],
+  );
+
   return (
-    <div
-      className="prose max-w-none notranslate"
-      translate="no"
-      lang="en"
-      style={{
-        padding: "var(--spacing-lg)",
-        backgroundColor: "transparent",
-        borderRadius: "var(--border-radius)",
-        lineHeight: "1.5",
-        fontSize: "16px",
-        whiteSpace: "pre-wrap",
-      }}
-    >
+    <div className="prose max-w-none notranslate" translate="no" style={CONTAINER_STYLES}>
       {elements}
     </div>
   );

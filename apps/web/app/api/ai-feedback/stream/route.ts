@@ -1,53 +1,76 @@
 /**
- * API Route: Stream AI Feedback
  * Proxies SSE stream from API worker to client
- * This is needed because Server Actions can't directly handle SSE from client components
+ * (Server Actions can't directly handle SSE from client components)
  */
 
 import { NextRequest } from "next/server";
 import { getApiBase, getApiKey } from "@/app/lib/api-config";
 
+interface StreamRequest {
+  submissionId: string;
+  answerId: string;
+  answerText: string;
+  questionText?: string;
+  assessmentData?: unknown;
+}
+
+interface ApiRequestBody {
+  answerId: string;
+  answerText: string;
+  questionText?: string;
+  assessmentData?: unknown;
+}
+
+const SSE_HEADERS = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
+  "X-Accel-Buffering": "no",
+} as const;
+
+function errorResponse(message: string, status: number): Response {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function validateRequest(body: unknown): body is StreamRequest {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "submissionId" in body &&
+    "answerId" in body &&
+    "answerText" in body &&
+    typeof (body as StreamRequest).submissionId === "string" &&
+    typeof (body as StreamRequest).answerId === "string" &&
+    typeof (body as StreamRequest).answerText === "string"
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { submissionId, answerId, answerText, questionText, assessmentData } = body;
 
-    if (!submissionId || !answerId || !answerText) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: submissionId, answerId, answerText" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+    if (!validateRequest(body)) {
+      return errorResponse("Missing required fields: submissionId, answerId, answerText", 400);
     }
+
+    const { submissionId, answerId, answerText, questionText, assessmentData } = body;
 
     const apiBase = getApiBase();
     const apiKey = getApiKey();
 
     if (apiKey === "MISSING_API_KEY" || apiBase === "MISSING_API_BASE_URL") {
-      return new Response(
-        JSON.stringify({ error: "Server configuration error: API credentials not set" }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Server configuration error: API credentials not set", 500);
     }
 
-    // Build request body with optional fields
-    const requestBody: any = {
+    const requestBody: ApiRequestBody = {
       answerId,
       answerText,
+      ...(questionText ? { questionText } : {}),
+      ...(assessmentData !== undefined ? { assessmentData } : {}),
     };
-    if (questionText) {
-      requestBody.questionText = questionText;
-    }
-    if (assessmentData) {
-      requestBody.assessmentData = assessmentData;
-    }
-
-    // Call the API worker's streaming endpoint
     const response = await fetch(`${apiBase}/text/submissions/${submissionId}/ai-feedback/stream`, {
       method: "POST",
       headers: {
@@ -59,31 +82,19 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return new Response(
-        JSON.stringify({ error: errorText || `Failed to stream feedback: ${response.status}` }),
-        {
-          status: response.status,
-          headers: { "Content-Type": "application/json" },
-        },
+      return errorResponse(
+        errorText || `Failed to stream feedback: ${response.status}`,
+        response.status,
       );
     }
 
-    // Return the SSE stream with proper headers
     return new Response(response.body, {
       status: 200,
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no", // Disable buffering for streaming
-      },
+      headers: SSE_HEADERS,
     });
   } catch (error) {
     console.error("[API Route] Error streaming AI feedback:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: `Internal server error: ${errorMessage}` }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse(`Internal server error: ${errorMessage}`, 500);
   }
 }

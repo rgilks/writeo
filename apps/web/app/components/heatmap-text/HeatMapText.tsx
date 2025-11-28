@@ -1,10 +1,6 @@
-/**
- * HeatMapText component - shows error intensity as a heat map without revealing details
- */
-
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { HeatMapTextProps } from "./types";
 import { AnnotatedTextRevealed } from "./AnnotatedTextRevealed";
 import { NoErrorsMessage } from "./NoErrorsMessage";
@@ -26,85 +22,123 @@ export function HeatMapText({
     useState(showMediumConfidence);
   const [showExperimentalSuggestions, setShowExperimentalSuggestions] = useState(showExperimental);
 
-  const { highConfidenceErrors, mediumConfidenceErrors, lowConfidenceErrors } =
-    filterErrorsByConfidence(errors);
-
-  const filteredErrors = buildFilteredErrors(
-    highConfidenceErrors,
-    mediumConfidenceErrors,
-    lowConfidenceErrors,
-    showMediumConfidenceErrors,
-    showExperimentalSuggestions,
+  const { highConfidenceErrors, mediumConfidenceErrors, lowConfidenceErrors } = useMemo(
+    () => filterErrorsByConfidence(errors),
+    [errors],
   );
 
-  if (!errors || errors.length === 0 || !text) {
+  const filteredErrors = useMemo(
+    () =>
+      buildFilteredErrors(
+        highConfidenceErrors,
+        mediumConfidenceErrors,
+        lowConfidenceErrors,
+        showMediumConfidenceErrors,
+        showExperimentalSuggestions,
+      ),
+    [
+      highConfidenceErrors,
+      mediumConfidenceErrors,
+      lowConfidenceErrors,
+      showMediumConfidenceErrors,
+      showExperimentalSuggestions,
+    ],
+  );
+
+  const { intensityMap, normalizedIntensity } = useMemo(() => {
+    const map = calculateIntensityMap(text, filteredErrors);
+    return {
+      intensityMap: map,
+      normalizedIntensity: normalizeIntensity(map),
+    };
+  }, [text, filteredErrors]);
+
+  const handleReveal = useCallback(() => {
+    setRevealed(true);
+    onReveal?.();
+  }, [onReveal]);
+
+  const handleShowMediumConfidence = useCallback(() => {
+    setShowMediumConfidenceErrors(true);
+  }, []);
+
+  const handleShowExperimental = useCallback(() => {
+    setShowExperimentalSuggestions(true);
+  }, []);
+
+  const handleToggleMediumConfidence = useCallback(() => {
+    setShowMediumConfidenceErrors((prev) => !prev);
+  }, []);
+
+  const handleToggleExperimental = useCallback(() => {
+    setShowExperimentalSuggestions((prev) => !prev);
+  }, []);
+
+  const handleHideFeedback = useCallback(() => {
+    setRevealed(false);
+    setShowMediumConfidenceErrors(false);
+    setShowExperimentalSuggestions(false);
+  }, []);
+
+  if (!text) {
+    return null;
+  }
+
+  if (!errors || errors.length === 0) {
     return (
-      <div className="prose max-w-none" translate="no" lang="en">
-        {text || ""}
+      <div className="prose max-w-none" translate="no">
+        {text}
       </div>
     );
   }
 
-  if (filteredErrors.length === 0 && !showExperimentalSuggestions) {
+  if (filteredErrors.length === 0) {
     return (
       <NoErrorsMessage
         mediumConfidenceErrors={mediumConfidenceErrors}
         lowConfidenceErrors={lowConfidenceErrors}
         showMediumConfidenceErrors={showMediumConfidenceErrors}
         showExperimentalSuggestions={showExperimentalSuggestions}
-        onShowMediumConfidence={() => setShowMediumConfidenceErrors(true)}
-        onShowExperimental={() => setShowExperimentalSuggestions(true)}
+        onShowMediumConfidence={handleShowMediumConfidence}
+        onShowExperimental={handleShowExperimental}
       />
     );
   }
-
-  const intensityMap = calculateIntensityMap(text, filteredErrors);
-  const normalizedIntensity = normalizeIntensity(intensityMap);
 
   return (
     <div>
       {!revealed && (
         <RevealPrompt
-          onReveal={() => {
-            setRevealed(true);
-            onReveal?.();
-          }}
+          onReveal={handleReveal}
           mediumConfidenceErrors={mediumConfidenceErrors}
           lowConfidenceErrors={lowConfidenceErrors}
           showMediumConfidenceErrors={showMediumConfidenceErrors}
           showExperimentalSuggestions={showExperimentalSuggestions}
-          onShowMediumConfidence={() => setShowMediumConfidenceErrors(true)}
-          onShowExperimental={() => setShowExperimentalSuggestions(true)}
+          onShowMediumConfidence={handleShowMediumConfidence}
+          onShowExperimental={handleShowExperimental}
         />
       )}
 
       {revealed && (
-        <FeedbackControls
-          mediumConfidenceErrors={mediumConfidenceErrors}
-          lowConfidenceErrors={lowConfidenceErrors}
-          showMediumConfidenceErrors={showMediumConfidenceErrors}
-          showExperimentalSuggestions={showExperimentalSuggestions}
-          onToggleMediumConfidence={() =>
-            setShowMediumConfidenceErrors(!showMediumConfidenceErrors)
-          }
-          onToggleExperimental={() => setShowExperimentalSuggestions(!showExperimentalSuggestions)}
-          onHideFeedback={() => {
-            setRevealed(false);
-            setShowMediumConfidenceErrors(false);
-            setShowExperimentalSuggestions(false);
-          }}
-        />
-      )}
-
-      {revealed && (
-        <AnnotatedTextRevealed
-          text={text}
-          errors={highConfidenceErrors}
-          showMediumConfidence={showMediumConfidenceErrors}
-          showExperimental={showExperimentalSuggestions}
-          mediumConfidenceErrors={mediumConfidenceErrors}
-          experimentalErrors={lowConfidenceErrors}
-        />
+        <>
+          <FeedbackControls
+            mediumConfidenceErrors={mediumConfidenceErrors}
+            lowConfidenceErrors={lowConfidenceErrors}
+            showMediumConfidenceErrors={showMediumConfidenceErrors}
+            showExperimentalSuggestions={showExperimentalSuggestions}
+            onToggleMediumConfidence={handleToggleMediumConfidence}
+            onToggleExperimental={handleToggleExperimental}
+            onHideFeedback={handleHideFeedback}
+          />
+          <AnnotatedTextRevealed
+            text={text}
+            errors={highConfidenceErrors}
+            showMediumConfidence={showMediumConfidenceErrors}
+            showExperimental={showExperimentalSuggestions}
+            mediumConfidenceErrors={mediumConfidenceErrors}
+            experimentalErrors={lowConfidenceErrors}
+          />
+        </>
       )}
 
       {!revealed && (

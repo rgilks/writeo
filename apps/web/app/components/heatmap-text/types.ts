@@ -19,13 +19,11 @@ export interface ErrorDetailProps {
 }
 
 export interface ErrorSpanProps {
-  errorKey: string;
   errorText: string;
   errorColor: string;
   isActive: boolean;
   onActivate: () => void;
   onDeactivate: () => void;
-  error: LanguageToolError;
 }
 
 export interface AnnotatedTextRevealedProps {
@@ -35,4 +33,35 @@ export interface AnnotatedTextRevealedProps {
   showExperimental?: boolean;
   mediumConfidenceErrors?: LanguageToolError[];
   experimentalErrors?: LanguageToolError[];
+}
+
+export interface FeedbackControlsProps {
+  mediumConfidenceErrors: LanguageToolError[];
+  lowConfidenceErrors: LanguageToolError[];
+  showMediumConfidenceErrors: boolean;
+  showExperimentalSuggestions: boolean;
+  onToggleMediumConfidence: () => void;
+  onToggleExperimental: () => void;
+  onHideFeedback: () => void;
+}
+
+export interface HeatMapRendererProps {
+  text: string;
+  normalizedIntensity: number[];
+  revealed: boolean;
+}
+
+interface BaseErrorControlProps {
+  mediumConfidenceErrors: LanguageToolError[];
+  lowConfidenceErrors: LanguageToolError[];
+  showMediumConfidenceErrors: boolean;
+  showExperimentalSuggestions: boolean;
+  onShowMediumConfidence: () => void;
+  onShowExperimental: () => void;
+}
+
+export interface NoErrorsMessageProps extends BaseErrorControlProps {}
+
+export interface RevealPromptProps extends BaseErrorControlProps {
+  onReveal: () => void;
 }
