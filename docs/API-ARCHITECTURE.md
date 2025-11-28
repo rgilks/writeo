@@ -27,31 +27,31 @@ The API Worker is a serverless application running on Cloudflare Workers that pr
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Cloudflare Workers                         │
-│                                                               │
+│                    Cloudflare Workers                       │
+│                                                             │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │              API Worker (Hono Framework)             │   │
-│  │                                                       │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │   │
-│  │  │  Middleware  │  │   Routes     │  │  Services  │ │   │
-│  │  │   Chain      │→ │   Handlers   │→ │  Layer     │ │   │
-│  │  └──────────────┘  └──────────────┘  └────────────┘ │   │
-│  │                                                       │   │
+│  │                                                      │   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐  │   │
+│  │  │  Middleware  │  │   Routes     │  │  Services  │  │   │
+│  │  │   Chain      │→ │   Handlers   │→ │  Layer     │  │   │
+│  │  └──────────────┘  └──────────────┘  └────────────┘  │   │
+│  │                                                      │   │
 │  └──────────────────────────────────────────────────────┘   │
-│                                                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │  R2 Bucket   │  │  KV Store    │  │  AI Binding  │     │
-│  │  (Storage)   │  │  (Results)   │  │  (Cloudflare)│     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │  R2 Bucket   │  │  KV Store    │  │  AI Binding  │       │
+│  │  (Storage)   │  │  (Results)   │  │  (Cloudflare)│       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
 └─────────────────────────────────────────────────────────────┘
          │                    │                    │
          │                    │                    │
          ▼                    ▼                    ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  Modal       │  │  OpenAI/     │  │  LanguageTool│
-│  Services    │  │  Groq API    │  │  (via Modal) │
-│  (Essay/LT)  │  │              │  │              │
-└──────────────┘  └──────────────┘  └──────────────┘
+   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+   │  Modal       │  │  OpenAI/     │  │  LanguageTool│
+   │  Services    │  │  Groq API    │  │  (via Modal) │
+   │  (Essay/LT)  │  │              │  │              │
+   └──────────────┘  └──────────────┘  └──────────────┘
 ```
 
 ---
@@ -87,8 +87,8 @@ Client Request
 ┌─────────────────────────────────────────────────────────────┐
 │ 4. Route Matching                                           │
 │    - /health → Public (no auth)                             │
-│    - /docs, /openapi.json → Public                         │
-│    - All others → Require authentication                     │
+│    - /docs, /openapi.json → Public                          │
+│    - All others → Require authentication                    │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
@@ -107,16 +107,16 @@ Client Request
 │ 6. Rate Limiting Middleware                                 │
 │    - Checks rate limits based on endpoint type:             │
 │      • Submissions: 10/min (prod), 500/min (test)           │
-│      • Results: 60/min (prod), 2000/min (test)             │
+│      • Results: 60/min (prod), 2000/min (test)              │
 │      • Questions: 30/min (prod), 1000/min (test)            │
-│    - Checks daily submission limit (100/day)               │
+│    - Checks daily submission limit (100/day)                │
 │    - Uses IP for shared keys, owner ID for user keys        │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 7. Route Handler                                            │
-│    - Questions: PUT /text/questions/:question_id             │
+│    - Questions: PUT /text/questions/:question_id            │
 │    - Submissions: PUT /text/submissions/:submission_id      │
 │    - Results: GET /text/submissions/:submission_id          │
 │    - Feedback: POST /text/submissions/:id/ai-feedback/stream│
@@ -126,8 +126,8 @@ Client Request
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 8. Error Handling (if error occurs)                         │
-│    - Catches exceptions                                      │
-│    - Logs with request ID                                    │
+│    - Catches exceptions                                     │
+│    - Logs with request ID                                   │
 │    - Returns sanitized error response (production)          │
 └─────────────────────────────────────────────────────────────┘
     │
@@ -196,10 +196,10 @@ PUT /text/submissions/:submission_id
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 1: Validate & Parse                                  │
-│  • Validate request body size (max 1MB)                    │
+│ Phase 1: Validate & Parse                                   │
+│  • Validate request body size (max 1MB)                     │
 │  • Parse JSON body                                          │
-│  • Validate submission structure (Zod schema)              │
+│  • Validate submission structure (Zod schema)               │
 │  • Extract questions/answers to create                      │
 └─────────────────────────────────────────────────────────────┘
     │
@@ -209,32 +209,32 @@ PUT /text/submissions/:submission_id
 │  • Auto-create questions/answers if needed                  │
 │  • Load existing data from R2 (if storeResults=true)        │
 │  • Build Modal request format                               │
-│  • Prepare service requests (essay, LT, LLM, relevance)    │
+│  • Prepare service requests (essay, LT, LLM, relevance)     │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
-┌─────────────────────────────────────────────────────────────┐
-│ Phase 3: Execute Services (PARALLEL)                       │
+┌──────────────────────────────────────────────────────────────┐
+│ Phase 3: Execute Services (PARALLEL)                         │
 │                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Essay        │  │ LanguageTool │  │ LLM         │      │
-│  │ Assessment   │  │ Grammar      │  │ Assessment   │      │
-│  │ (Modal)      │  │ Check       │  │ (OpenAI/    │      │
-│  │              │  │ (Modal)     │  │  Groq)      │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│         │                  │                  │             │
-│         └──────────────────┼──────────────────┘             │
-│                            │                                │
-│  ┌──────────────────────────────────────────────┐          │
-│  │ Relevance Check (Modal)                       │          │
-│  └──────────────────────────────────────────────┘          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │ Essay        │  │ LanguageTool │  │ LLM          │        │
+│  │ Assessment   │  │ Grammar      │  │ Assessment   │        │
+│  │ (Modal)      │  │ Check        │  │ (OpenAI/     │        │
+│  │              │  │ (Modal)      │  │  Groq)       │        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+│         │                  │                  │              │
+│         └──────────────────┼──────────────────┘              │
+│                            │                                 │
+│  ┌──────────────────────────────────────────────┐            │
+│  │ Relevance Check (Modal)                      │            │
+│  └──────────────────────────────────────────────┘            │
 │                                                              │
 │  All services execute in parallel using Promise.allSettled() │
-└─────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 4: Process Results                                   │
+│ Phase 4: Process Results                                    │
 │  • Process essay assessment results                         │
 │  • Process LanguageTool errors                              │
 │  • Process LLM assessment errors                            │
@@ -244,11 +244,11 @@ PUT /text/submissions/:submission_id
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 5: Generate AI Feedback                              │
+│ Phase 5: Generate AI Feedback                               │
 │  • For each answer:                                         │
 │    - Generate combined feedback (LLM + Teacher)             │
 │    - Retry on failure (up to 3 attempts)                    │
-│  • Collect all feedback by answer ID                       │
+│  • Collect all feedback by answer ID                        │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
@@ -385,39 +385,39 @@ processSubmission
 The API uses two Cloudflare storage services:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Storage Service                           │
-│                                                              │
+┌────────────────────────────────────────────────────────────┐
+│                    Storage Service                         │
+│                                                            │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │              R2 Bucket (WRITEO_DATA)                  │  │
-│  │                                                       │  │
+│  │              R2 Bucket (WRITEO_DATA)                 │  │
+│  │                                                      │  │
 │  │  • Questions: question:{id} → { text: string }       │  │
-│  │  • Answers: answer:{id} → { question-id, text }     │  │
-│  │  • Submissions: submission:{id} → full submission   │  │
-│  │                                                       │  │
-│  │  Operations:                                          │  │
-│  │  - getQuestion(id)                                    │  │
-│  │  - putQuestion(id, data)                              │  │
-│  │  - getAnswer(id)                                      │  │
-│  │  - putAnswer(id, data)                                │  │
-│  │  - getSubmission(id)                                  │  │
-│  │  - putSubmission(id, data)                            │  │
+│  │  • Answers: answer:{id} → { question-id, text }      │  │
+│  │  • Submissions: submission:{id} → full submission    │  │
+│  │                                                      │  │
+│  │  Operations:                                         │  │
+│  │  - getQuestion(id)                                   │  │
+│  │  - putQuestion(id, data)                             │  │
+│  │  - getAnswer(id)                                     │  │
+│  │  - putAnswer(id, data)                               │  │
+│  │  - getSubmission(id)                                 │  │
+│  │  - putSubmission(id, data)                           │  │
 │  └──────────────────────────────────────────────────────┘  │
-│                                                              │
+│                                                            │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │          KV Namespace (WRITEO_RESULTS)               │  │
-│  │                                                       │  │
+│  │                                                      │  │
 │  │  • Results: submission:{id} → AssessmentResults      │  │
-│  │  • Rate Limits: rate_limit:{type}:{id} → count data │  │
-│  │  • API Keys: apikey:{key} → { owner: string }       │  │
-│  │                                                       │  │
-│  │  Operations:                                          │  │
-│  │  - getResults(id)                                     │  │
-│  │  - putResults(id, data, ttl)                          │  │
+│  │  • Rate Limits: rate_limit:{type}:{id} → count data  │  │
+│  │  • API Keys: apikey:{key} → { owner: string }        │  │
+│  │                                                      │  │
+│  │  Operations:                                         │  │
+│  │  - getResults(id)                                    │  │
+│  │  - putResults(id, data, ttl)                         │  │
 │  │  - Rate limit state management                       │  │
-│  │  - API key lookups                                    │  │
+│  │  - API key lookups                                   │  │
 │  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Flow: Storage Operations
@@ -436,15 +436,15 @@ Submission Request (storeResults=true)
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 2. Load Existing Data (if needed)                           │
-│    R2.getQuestion(questionId) → question text                │
+│    R2.getQuestion(questionId) → question text               │
 │    R2.getAnswer(answerId) → answer data                     │
-│    KV.getResults(submissionId) → existing results            │
+│    KV.getResults(submissionId) → existing results           │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 3. Store Results (after processing)                          │
-│    KV.putResults(submissionId, results, ttl=90 days)         │
+│ 3. Store Results (after processing)                         │
+│    KV.putResults(submissionId, results, ttl=90 days)        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -460,19 +460,19 @@ API Worker
     ├─────────────────────────────────────────────────────┐
     │                                                     │
     ▼                                                     ▼
-┌──────────────┐                                  ┌──────────────┐
-│ Modal Service│                                  │ OpenAI/Groq  │
-│              │                                  │              │
-│ • Essay      │                                  │ • LLM        │
-│   Assessment │                                  │   Assessment │
-│              │                                  │              │
-│ • LanguageTool│                                 │ • Streaming  │
-│   Grammar    │                                  │   Feedback   │
-│   Check      │                                  │              │
-│              │                                  │ • Teacher    │
-│ • Relevance  │                                  │   Feedback   │
-│   Check      │                                  │              │
-└──────────────┘                                  └──────────────┘
+┌───────────────┐                                  ┌──────────────┐
+│ Modal Service │                                  │ OpenAI/Groq  │
+│               │                                  │              │
+│ • Essay       │                                  │ • LLM        │
+│   Assessment  │                                  │   Assessment │
+│               │                                  │              │
+│ • LanguageTool│                                  │ • Streaming  │
+│   Grammar     │                                  │   Feedback   │
+│   Check       │                                  │              │
+│               │                                  │ • Teacher    │
+│ • Relevance   │                                  │   Feedback   │
+│   Check       │                                  │              │
+└───────────────┘                                  └──────────────┘
 ```
 
 ### Service Details
@@ -570,15 +570,15 @@ All errors follow this format:
 ┌─────────────────────────────────────────────────────────────┐
 │ Layer 1: Network Security                                   │
 │  • Cloudflare DDoS protection                               │
-│  • HTTPS only                                                │
+│  • HTTPS only                                               │
 │  • Security headers (X-Content-Type-Options, etc.)          │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 2: Authentication                                    │
+│ Layer 2: Authentication                                     │
 │  • API key required (except /health, /docs)                 │
-│  • Key validation: Admin → Test → User (KV lookup)         │
+│  • Key validation: Admin → Test → User (KV lookup)          │
 │  • Keys stored securely (Cloudflare secrets)                │
 └─────────────────────────────────────────────────────────────┘
     │
@@ -592,7 +592,7 @@ All errors follow this format:
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 4: Input Validation                                  │
+│ Layer 4: Input Validation                                   │
 │  • Request body size limits (1MB max)                       │
 │  • Text validation (length, dangerous patterns)             │
 │  • Schema validation (Zod)                                  │
@@ -600,8 +600,8 @@ All errors follow this format:
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Layer 5: Data Sanitization                                 │
-│  • Error messages sanitized in production                    │
+│ Layer 5: Data Sanitization                                  │
+│  • Error messages sanitized in production                   │
 │  • Logs sanitized (API keys, tokens removed)                │
 │  • Sensitive data redacted                                  │
 └─────────────────────────────────────────────────────────────┘
