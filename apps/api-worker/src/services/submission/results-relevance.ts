@@ -2,7 +2,7 @@
  * Relevance result processing
  */
 
-import type { RelevanceCheck } from "../relevance";
+import type { RelevanceCheck } from "@writeo/shared";
 import { safeLogError } from "../../utils/logging";
 
 type RelevanceResultSettle = PromiseSettledResult<Array<RelevanceCheck | null>>;

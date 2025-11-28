@@ -112,6 +112,26 @@ export interface LanguageToolError {
   example?: string; // Example correction pattern (e.g., "you goes → you go")
 }
 
+export interface EssayScoreDimensions {
+  TA?: number;
+  CC?: number;
+  Vocab?: number;
+  Grammar?: number;
+  Overall?: number;
+}
+
+export interface EssayScores {
+  overall?: number;
+  dimensions?: EssayScoreDimensions;
+  label?: string;
+}
+
+export interface RelevanceCheck {
+  addressesQuestion: boolean;
+  score: number;
+  threshold?: number;
+}
+
 // Assessment results
 export interface AssessorResult {
   id: string;

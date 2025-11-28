@@ -19,8 +19,7 @@ import { extractEssayScores } from "./submission/results-scores";
 import { processRelevanceResults } from "./submission/results-relevance";
 import { buildMetadata, buildResponseHeaders } from "./submission/metadata";
 import type { LLMProvider } from "./llm";
-import type { ModalRequest, LanguageToolError } from "@writeo/shared";
-import type { RelevanceCheck } from "./relevance";
+import type { ModalRequest, LanguageToolError, RelevanceCheck } from "@writeo/shared";
 import { uuidStringSchema, formatZodMessage } from "../utils/zod";
 import {
   MAX_REQUEST_BODY_SIZE,

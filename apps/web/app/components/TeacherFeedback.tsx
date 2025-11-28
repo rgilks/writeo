@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import type { LanguageToolError } from "@writeo/shared";
+import type { LanguageToolError, RelevanceCheck } from "@writeo/shared";
 import { getTeacherFeedback } from "@/app/lib/actions";
 import { useAIFeedbackStream } from "@/app/hooks/useAIFeedbackStream";
 
@@ -22,12 +22,6 @@ interface AIFeedback {
   focusArea?: string;
   cluesMessage?: string;
   explanationMessage?: string;
-}
-
-interface RelevanceCheck {
-  addressesQuestion: boolean;
-  score: number;
-  threshold: number;
 }
 
 interface TeacherFeedbackProps {

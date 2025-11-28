@@ -1,8 +1,4 @@
-export interface RelevanceCheck {
-  addressesQuestion: boolean;
-  score: number;
-  threshold: number;
-}
+import type { RelevanceCheck } from "@writeo/shared";
 
 /** Default similarity threshold for determining if an answer addresses the question */
 const DEFAULT_THRESHOLD = 0.5;

@@ -2,9 +2,9 @@
  * Parallel service calls for submission processing
  */
 
-import type { ModalRequest, LanguageToolError } from "@writeo/shared";
+import type { ModalRequest, LanguageToolError, RelevanceCheck } from "@writeo/shared";
 import { getLLMAssessment } from "../ai-assessment";
-import { checkAnswerRelevance, type RelevanceCheck } from "../relevance";
+import { checkAnswerRelevance } from "../relevance";
 import type { AppConfig } from "../config";
 import type { LLMProvider } from "../llm";
 import { iterateAnswers } from "./utils";

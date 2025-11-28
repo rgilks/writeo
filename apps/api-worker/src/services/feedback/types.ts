@@ -1,6 +1,6 @@
-/**
- * Feedback types
- */
+import type { EssayScoreDimensions, EssayScores, RelevanceCheck } from "@writeo/shared";
+
+export type { EssayScoreDimensions, EssayScores, RelevanceCheck };
 
 export interface FeedbackError {
   message: string;
@@ -9,25 +9,6 @@ export interface FeedbackError {
   start?: number;
   end?: number;
   errorType?: string;
-}
-
-export interface EssayScoreDimensions {
-  TA?: number;
-  CC?: number;
-  Vocab?: number;
-  Grammar?: number;
-}
-
-export interface EssayScores {
-  overall?: number;
-  dimensions?: EssayScoreDimensions;
-  label?: string;
-}
-
-export interface RelevanceCheck {
-  addressesQuestion: boolean;
-  score: number;
-  threshold?: number;
 }
 
 export interface AIFeedback {

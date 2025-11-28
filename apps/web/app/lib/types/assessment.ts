@@ -1,28 +1,4 @@
-/**
- * Shared types for assessment data
- */
-
-import type { LanguageToolError } from "@writeo/shared";
-
-export interface EssayScoreDimensions {
-  TA?: number;
-  CC?: number;
-  Vocab?: number;
-  Grammar?: number;
-  Overall?: number;
-}
-
-export interface EssayScores {
-  overall?: number;
-  dimensions?: EssayScoreDimensions;
-  label?: string;
-}
-
-export interface RelevanceCheck {
-  addressesQuestion: boolean;
-  score: number;
-  threshold?: number;
-}
+import type { LanguageToolError, EssayScores, RelevanceCheck } from "@writeo/shared";
 
 export interface AssessmentData {
   essayScores?: EssayScores;

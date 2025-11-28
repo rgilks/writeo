@@ -5,9 +5,9 @@ import type {
   AssessmentPart,
   AnswerResult,
   ModalRequest,
+  RelevanceCheck,
 } from "@writeo/shared";
 import type { AIFeedback, TeacherFeedback } from "./feedback";
-import type { RelevanceCheck } from "./relevance";
 
 const MAX_LLM_ERRORS = 10;
 const ASSESSOR_IDS = {
