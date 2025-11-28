@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { z } from "zod";
+import type { AssessmentData } from "@/app/lib/types/assessment";
 
 const StreamEventSchema = z.discriminatedUnion("type", [
   z.object({
@@ -34,27 +35,31 @@ interface UseAIFeedbackStreamReturn {
     answerId: string,
     answerText: string,
     questionText?: string,
-    assessmentData?: {
-      essayScores?: {
-        overall?: number;
-        dimensions?: {
-          TA?: number;
-          CC?: number;
-          Vocab?: number;
-          Grammar?: number;
-          Overall?: number;
-        };
-      };
-      ltErrors?: any[];
-      llmErrors?: any[];
-    },
+    assessmentData?: AssessmentData,
   ) => Promise<void>;
   stopStream: () => void;
 }
 
-/**
- * Hook for consuming AI feedback SSE stream
- */
+const SSE_DATA_PREFIX = "data: ";
+const SSE_MESSAGE_DELIMITER = "\n\n";
+
+function parseSSEEvent(line: string): StreamEvent | null {
+  if (!line.startsWith(SSE_DATA_PREFIX)) {
+    return null;
+  }
+
+  const jsonStr = line.slice(SSE_DATA_PREFIX.length).trim();
+  if (!jsonStr) {
+    return null;
+  }
+
+  try {
+    return StreamEventSchema.parse(JSON.parse(jsonStr));
+  } catch {
+    return null;
+  }
+}
+
 export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
   const [feedback, setFeedback] = useState<string>("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -67,49 +72,27 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
       answerId: string,
       answerText: string,
       questionText?: string,
-      assessmentData?: {
-        essayScores?: {
-          overall?: number;
-          dimensions?: {
-            TA?: number;
-            CC?: number;
-            Vocab?: number;
-            Grammar?: number;
-            Overall?: number;
-          };
-        };
-        ltErrors?: any[];
-        llmErrors?: any[];
-      },
+      assessmentData?: AssessmentData,
     ) => {
-      // Stop any existing stream
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
 
-      // Reset state
       setFeedback("");
       setError(null);
       setIsStreaming(true);
 
-      // Create new abort controller
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
       try {
-        const requestBody: any = {
+        const requestBody = {
           submissionId,
           answerId,
           answerText,
+          ...(questionText && { questionText }),
+          ...(assessmentData && { assessmentData }),
         };
-
-        if (questionText) {
-          requestBody.questionText = questionText;
-        }
-
-        if (assessmentData) {
-          requestBody.assessmentData = assessmentData;
-        }
 
         const response = await fetch("/api/ai-feedback/stream", {
           method: "POST",
@@ -141,48 +124,34 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
               break;
             }
 
-            // Decode chunk and add to buffer
             buffer += decoder.decode(value, { stream: true });
 
-            // Process complete SSE messages (lines ending with \n\n)
-            const lines = buffer.split("\n\n");
-            buffer = lines.pop() || ""; // Keep incomplete line in buffer
+            const messages = buffer.split(SSE_MESSAGE_DELIMITER);
+            buffer = messages.pop() || "";
 
-            for (const line of lines) {
-              // Skip empty lines
-              if (!line.trim()) continue;
+            for (const message of messages) {
+              if (!message.trim()) continue;
 
-              // Handle SSE data lines
-              if (line.startsWith("data: ")) {
-                try {
-                  const jsonStr = line.slice(6).trim();
-                  if (!jsonStr) continue;
+              const event = parseSSEEvent(message);
+              if (!event) continue;
 
-                  const data = StreamEventSchema.parse(JSON.parse(jsonStr));
+              switch (event.type) {
+                case "start":
+                  setFeedback("");
+                  break;
 
-                  if (data.type === "start") {
-                    setFeedback("");
-                    console.log("[Stream] Start event received");
-                  } else if (data.type === "chunk" && data.text) {
-                    setFeedback((prev) => {
-                      const newFeedback = prev + data.text;
-                      console.log("[Stream] Chunk received, length:", newFeedback.length);
-                      return newFeedback;
-                    });
-                  } else if (data.type === "done") {
-                    console.log("[Stream] Done event received");
-                    setIsStreaming(false);
-                    break;
-                  } else if (data.type === "error") {
-                    throw new Error(data.message || "Stream error");
+                case "chunk":
+                  if (event.text) {
+                    setFeedback((prev) => prev + event.text);
                   }
-                } catch (parseError) {
-                  console.error("Failed to parse SSE event:", line, parseError);
-                  // Don't break on parse errors, continue processing
-                }
-              } else {
-                // Log non-data lines for debugging
-                console.log("[Stream] Non-data line:", line.substring(0, 50));
+                  break;
+
+                case "done":
+                  setIsStreaming(false);
+                  return;
+
+                case "error":
+                  throw new Error(event.message || "Stream error");
               }
             }
           }
@@ -191,7 +160,6 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
         }
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
-          // Stream was aborted, this is expected
           return;
         }
         const errorMessage = err instanceof Error ? err.message : String(err);

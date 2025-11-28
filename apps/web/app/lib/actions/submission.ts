@@ -1,13 +1,10 @@
-/**
- * Submission-related server actions
- */
-
 "use server";
 
+import type { AssessmentResults } from "@writeo/shared";
+import { retryWithBackoff } from "@writeo/shared";
 import { generateUUID } from "../utils/uuid-utils";
 import { apiRequest } from "../utils/api-client";
 import { getErrorMessage, makeSerializableError } from "../utils/error-handling";
-import { retryWithBackoff } from "@writeo/shared";
 import { getApiBase, getApiKey } from "../api-config";
 import { z } from "zod";
 
@@ -23,39 +20,56 @@ const SubmissionEnvelopeSchema = z.object({
   message: z.string().optional(),
 });
 
+interface AnswerPayload {
+  id: string;
+  "question-number": number;
+  "question-id": string;
+  text: string;
+  "question-text"?: string;
+}
+
+interface SubmissionBody {
+  submission: Array<{
+    part: string;
+    answers: AnswerPayload[];
+  }>;
+  template: { name: string; version: number };
+  storeResults: boolean;
+}
+
+interface CreateSubmissionResult {
+  submissionId: string;
+  results: unknown;
+}
+
 export async function createSubmission(
   questionText: string,
   answerText: string,
   storeResults: boolean = false,
-): Promise<{ submissionId: string; results: any }> {
+): Promise<CreateSubmissionResult> {
   const submissionId = generateUUID();
   const questionId = generateUUID();
   const answerId = generateUUID();
 
   const trimmedQuestionText = questionText?.trim();
 
-  const answerPayload: Record<string, unknown> = {
+  const answerPayload: AnswerPayload = {
     id: answerId,
     "question-number": 1,
     "question-id": questionId,
     text: answerText,
+    ...(trimmedQuestionText && { "question-text": trimmedQuestionText }),
   };
 
-  if (trimmedQuestionText) {
-    answerPayload["question-text"] = trimmedQuestionText;
-  }
-
-  const body: any = {
+  const body: SubmissionBody = {
     submission: [
       {
         part: "1",
-        answers: [
-          answerPayload,
-        ],
+        answers: [answerPayload],
       },
     ],
     template: { name: "generic", version: 1 },
-    storeResults: storeResults,
+    storeResults,
   };
 
   const response = await apiRequest(`/text/submissions/${submissionId}`, "PUT", body);
@@ -68,7 +82,29 @@ export async function createSubmission(
   return { submissionId, results };
 }
 
-export async function getSubmissionResults(submissionId: string) {
+async function extractErrorMessage(response: Response): Promise<string> {
+  const errorText = await response.text();
+  let errorMessage = `Failed to fetch results: HTTP ${response.status}`;
+
+  try {
+    const errorJson = JSON.parse(errorText);
+    errorMessage = errorJson.error || errorJson.message || errorMessage;
+  } catch {
+    errorMessage = errorText || errorMessage;
+  }
+
+  return errorMessage;
+}
+
+function createNotFoundError(): Error & { status: number } {
+  const error = new Error("Submission not found on server") as Error & { status: number };
+  error.status = 404;
+  return error;
+}
+
+export async function getSubmissionResults(
+  submissionId: string,
+): Promise<AssessmentResults | unknown> {
   const apiBase = getApiBase();
   const apiKey = getApiKey();
 
@@ -94,18 +130,9 @@ export async function getSubmissionResults(submissionId: string) {
 
   if (!response.ok) {
     if (response.status === 404) {
-      const error = new Error("Submission not found on server");
-      (error as any).status = 404;
-      throw error;
+      throw createNotFoundError();
     }
-    const errorText = await response.text();
-    let errorMessage = `Failed to fetch results: HTTP ${response.status}`;
-    try {
-      const errorJson = JSON.parse(errorText);
-      errorMessage = errorJson.error || errorJson.message || errorMessage;
-    } catch {
-      errorMessage = errorText || errorMessage;
-    }
+    const errorMessage = await extractErrorMessage(response);
     throw new Error(errorMessage);
   }
 
@@ -122,21 +149,29 @@ export async function getSubmissionResults(submissionId: string) {
   return data;
 }
 
+function calculatePollingInterval(attempt: number, initialIntervalMs: number): number {
+  return Math.min(initialIntervalMs * Math.pow(2, attempt), 10000);
+}
+
 export async function pollSubmissionResults(
   submissionId: string,
   maxAttempts: number = 20,
   initialIntervalMs: number = 1000,
   parentSubmissionId?: string,
-): Promise<any> {
+): Promise<AssessmentResults | unknown> {
   for (let attempts = 0; attempts < maxAttempts; attempts++) {
     try {
       const data = await getSubmissionResults(submissionId);
-      if (data.status !== "pending") {
-        if (parentSubmissionId) {
-          const { getSubmissionResultsWithDraftTracking } = await import("./draft");
-          return await getSubmissionResultsWithDraftTracking(submissionId, parentSubmissionId);
+
+      if (typeof data === "object" && data !== null && "status" in data) {
+        const assessmentData = data as AssessmentResults;
+        if (assessmentData.status !== "pending") {
+          if (parentSubmissionId) {
+            const { getSubmissionResultsWithDraftTracking } = await import("./draft");
+            return await getSubmissionResultsWithDraftTracking(submissionId, parentSubmissionId);
+          }
+          return data;
         }
-        return data;
       }
     } catch (error) {
       if (attempts >= maxAttempts - 1) {
@@ -144,7 +179,7 @@ export async function pollSubmissionResults(
       }
     }
 
-    const intervalMs = Math.min(initialIntervalMs * Math.pow(2, attempts), 10000);
+    const intervalMs = calculatePollingInterval(attempts, initialIntervalMs);
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
 

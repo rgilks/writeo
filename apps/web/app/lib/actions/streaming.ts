@@ -1,19 +1,35 @@
-/**
- * Streaming server actions
- */
-
 "use server";
 
+import type { AssessmentData } from "../types/assessment";
 import { getApiBase, getApiKey } from "../api-config";
-import { getErrorMessage, makeSerializableError } from "../utils/error-handling";
-import { retryWithBackoff } from "@writeo/shared";
+import { getErrorMessage } from "../utils/error-handling";
+
+interface RequestBody {
+  answerId: string;
+  answerText: string;
+  questionText?: string;
+  assessmentData?: AssessmentData;
+}
+
+const SSE_ERROR_HEADERS = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
+} as const;
+
+function createErrorResponse(message: string): Response {
+  return new Response(`data: ${JSON.stringify({ type: "error", message })}\n\n`, {
+    status: 500,
+    headers: SSE_ERROR_HEADERS,
+  });
+}
 
 export async function streamAIFeedback(
   submissionId: string,
   answerId: string,
   answerText: string,
   questionText?: string,
-  assessmentData?: any,
+  assessmentData?: AssessmentData,
 ): Promise<Response> {
   try {
     if (!submissionId || !answerId || !answerText) {
@@ -27,17 +43,12 @@ export async function streamAIFeedback(
       throw new Error("Server configuration error: API credentials not set");
     }
 
-    const requestBody: any = {
+    const requestBody: RequestBody = {
       answerId,
       answerText,
+      ...(questionText && { questionText }),
+      ...(assessmentData && { assessmentData }),
     };
-
-    if (questionText) {
-      requestBody.questionText = questionText;
-    }
-    if (assessmentData) {
-      requestBody.assessmentData = assessmentData;
-    }
 
     const response = await fetch(`${apiBase}/text/submissions/${submissionId}/ai-feedback/stream`, {
       method: "POST",
@@ -56,13 +67,6 @@ export async function streamAIFeedback(
   } catch (error) {
     console.error("[streamAIFeedback] Error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return new Response(`data: ${JSON.stringify({ type: "error", message: errorMessage })}\n\n`, {
-      status: 500,
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
+    return createErrorResponse(errorMessage);
   }
 }

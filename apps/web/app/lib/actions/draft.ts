@@ -1,99 +1,128 @@
-/**
- * Draft tracking server actions
- */
-
 "use server";
 
+import type { AssessmentResults } from "@writeo/shared";
+import {
+  getEssayAssessorResult,
+  getLanguageToolAssessorResult,
+  getLLMAssessorResult,
+} from "@writeo/shared";
 import { getSubmissionResults } from "./submission";
+
+interface DraftHistoryEntry {
+  draftNumber: number;
+  timestamp: string;
+  wordCount: number;
+  errorCount: number;
+  overallScore?: number;
+}
+
+interface DraftInfo {
+  draftNumber: number;
+  parentSubmissionId: string;
+  draftHistory: DraftHistoryEntry[];
+}
+
+function getFirstAssessorResults(results: AssessmentResults) {
+  const parts = results.results?.parts;
+  if (!parts || parts.length === 0) {
+    return [];
+  }
+
+  const firstPart = parts[0];
+  const firstAnswer = firstPart?.answers?.[0];
+  return firstAnswer?.["assessor-results"] || [];
+}
+
+function extractOverallScore(results: AssessmentResults): number | undefined {
+  const metaScore = results.meta?.overallScore;
+  if (typeof metaScore === "number") {
+    return metaScore;
+  }
+
+  const assessorResults = getFirstAssessorResults(results);
+  const essayAssessor = getEssayAssessorResult(assessorResults);
+  return essayAssessor?.overall;
+}
+
+function extractErrorCount(results: AssessmentResults): number {
+  const metaErrorCount = results.meta?.errorCount;
+  if (typeof metaErrorCount === "number" && metaErrorCount > 0) {
+    return metaErrorCount;
+  }
+
+  const assessorResults = getFirstAssessorResults(results);
+  const ltAssessor = getLanguageToolAssessorResult(assessorResults);
+  const llmAssessor = getLLMAssessorResult(assessorResults);
+
+  const ltErrorCount = ltAssessor?.errors?.length || 0;
+  const llmErrorCount = llmAssessor?.errors?.length || 0;
+  return ltErrorCount + llmErrorCount;
+}
 
 export async function getDraftInfo(
   parentSubmissionId: string,
   storeResults: boolean = false,
-  parentResults?: any,
-): Promise<{
-  draftNumber: number;
-  parentSubmissionId: string;
-  draftHistory: Array<{
-    draftNumber: number;
-    timestamp: string;
-    wordCount: number;
-    errorCount: number;
-    overallScore?: number;
-  }>;
-}> {
+  parentResults?: AssessmentResults,
+): Promise<DraftInfo> {
   try {
-    let parentResultsData = parentResults;
+    let parentResultsData: AssessmentResults | undefined = parentResults;
 
     if (!parentResultsData) {
       if (storeResults) {
-        parentResultsData = await getSubmissionResults(parentSubmissionId);
-      } else {
-        // In local mode, we should have parentResults passed from the client
-        // If not available, use defaults but still maintain the draft chain
+        const fetched = await getSubmissionResults(parentSubmissionId);
+        if (
+          typeof fetched === "object" &&
+          fetched !== null &&
+          "status" in fetched &&
+          "template" in fetched
+        ) {
+          parentResultsData = fetched as AssessmentResults;
+        }
+      }
+      if (!parentResultsData) {
         return {
           draftNumber: 2,
-          parentSubmissionId: parentSubmissionId, // Use parent as root for draft chain
+          parentSubmissionId,
           draftHistory: [],
         };
       }
     }
 
-    const parentDraftNumber = (parentResultsData.meta?.draftNumber as number) || 1;
-    // Use the root submission ID from parent, or the parent's ID if this is draft 2
+    const parentDraftNumber =
+      (typeof parentResultsData.meta?.draftNumber === "number"
+        ? parentResultsData.meta.draftNumber
+        : 1) || 1;
+
     const rootSubmissionId =
-      (parentResultsData.meta?.parentSubmissionId as string) || parentSubmissionId;
-    const parentHistory = (parentResultsData.meta?.draftHistory as any[]) || [];
+      (typeof parentResultsData.meta?.parentSubmissionId === "string"
+        ? parentResultsData.meta.parentSubmissionId
+        : parentSubmissionId) || parentSubmissionId;
 
-    // Extract overall score from the assessment results if not in meta
-    let overallScore = parentResultsData.meta?.overallScore as number | undefined;
-    if (overallScore === undefined) {
-      // Try to get score from assessor results
-      try {
-        const parts = parentResultsData.results?.parts || [];
-        const firstPart = parts[0];
-        const firstAnswer = firstPart?.answers?.[0];
-        const assessorResults = firstAnswer?.["assessor-results"] || [];
-        const essayAssessor = assessorResults.find(
-          (r: any) => r.assessor === "essay-assessor" || r.assessor === "modal-essay-assessor",
-        );
-        overallScore = essayAssessor?.result?.overall;
-      } catch {
-        // Ignore errors
-      }
-    }
+    const parentHistory = (
+      Array.isArray(parentResultsData.meta?.draftHistory) ? parentResultsData.meta.draftHistory : []
+    ) as DraftHistoryEntry[];
 
-    // Extract error count from assessor results if not in meta
-    let errorCount = (parentResultsData.meta?.errorCount as number) || 0;
-    if (errorCount === 0) {
-      try {
-        const parts = parentResultsData.results?.parts || [];
-        const firstPart = parts[0];
-        const firstAnswer = firstPart?.answers?.[0];
-        const assessorResults = firstAnswer?.["assessor-results"] || [];
-        const ltAssessor = assessorResults.find(
-          (r: any) => r.assessor === "languagetool-assessor" || r.assessor === "modal-lt-assessor",
-        );
-        const llmAssessor = assessorResults.find((r: any) => r.assessor === "llm-error-assessor");
-        errorCount =
-          (ltAssessor?.result?.errors?.length || 0) + (llmAssessor?.result?.errors?.length || 0);
-      } catch {
-        // Ignore errors
-      }
-    }
+    const overallScore = extractOverallScore(parentResultsData);
+    const errorCount = extractErrorCount(parentResultsData);
 
-    // Check if the parent's entry already exists in the history
     const parentAlreadyInHistory = parentHistory.some(
-      (h: any) => h.draftNumber === parentDraftNumber,
+      (entry) => entry.draftNumber === parentDraftNumber,
     );
 
-    const draftHistory = parentAlreadyInHistory
+    const draftHistory: DraftHistoryEntry[] = parentAlreadyInHistory
       ? [...parentHistory]
       : [
           ...parentHistory,
           {
             draftNumber: parentDraftNumber,
-            timestamp: (parentResultsData.meta?.timestamp as string) || new Date().toISOString(),
-            wordCount: (parentResultsData.meta?.wordCount as number) || 0,
+            timestamp:
+              (typeof parentResultsData.meta?.timestamp === "string"
+                ? parentResultsData.meta.timestamp
+                : new Date().toISOString()) || new Date().toISOString(),
+            wordCount:
+              (typeof parentResultsData.meta?.wordCount === "number"
+                ? parentResultsData.meta.wordCount
+                : 0) || 0,
             errorCount,
             overallScore,
           },
@@ -117,43 +146,70 @@ export async function getSubmissionResultsWithDraftTracking(
   submissionId: string,
   parentSubmissionId?: string,
   storeResults: boolean = false,
-  parentResults?: any,
-): Promise<any> {
-  const results = await getSubmissionResults(submissionId);
+  parentResults?: AssessmentResults,
+): Promise<AssessmentResults> {
+  const fetched = await getSubmissionResults(submissionId);
 
-  if (parentSubmissionId && results.status === "success") {
+  if (
+    typeof fetched !== "object" ||
+    fetched === null ||
+    !("status" in fetched) ||
+    !("template" in fetched)
+  ) {
+    throw new Error("Invalid submission results format");
+  }
+
+  const results = fetched as AssessmentResults;
+
+  if (results.status !== "success") {
+    return results;
+  }
+
+  if (!results.meta) {
+    results.meta = {};
+  }
+
+  if (parentSubmissionId) {
     try {
       const draftInfo = await getDraftInfo(parentSubmissionId, storeResults, parentResults);
 
-      if (!results.meta) {
-        results.meta = {};
-      }
       results.meta.draftNumber = draftInfo.draftNumber;
       results.meta.parentSubmissionId = draftInfo.parentSubmissionId;
       results.meta.draftHistory = draftInfo.draftHistory;
 
-      if (results.meta.wordCount !== undefined && results.meta.errorCount !== undefined) {
-        const currentDraft = {
+      const wordCount = results.meta.wordCount;
+      const errorCount = results.meta.errorCount;
+      if (typeof wordCount === "number" && typeof errorCount === "number") {
+        const currentDraft: DraftHistoryEntry = {
           draftNumber: draftInfo.draftNumber,
-          timestamp: results.meta.timestamp || new Date().toISOString(),
-          wordCount: results.meta.wordCount as number,
-          errorCount: results.meta.errorCount as number,
-          overallScore: results.meta.overallScore as number | undefined,
+          timestamp:
+            (typeof results.meta.timestamp === "string"
+              ? results.meta.timestamp
+              : new Date().toISOString()) || new Date().toISOString(),
+          wordCount,
+          errorCount,
+          overallScore:
+            typeof results.meta.overallScore === "number" ? results.meta.overallScore : undefined,
         };
         results.meta.draftHistory = [...draftInfo.draftHistory, currentDraft];
       }
     } catch (error) {
       console.warn("Failed to get draft info:", error);
     }
-  } else if (results.status === "success" && results.meta) {
+  } else {
     results.meta.draftNumber = 1;
     results.meta.draftHistory = [
       {
         draftNumber: 1,
-        timestamp: results.meta.timestamp || new Date().toISOString(),
-        wordCount: results.meta.wordCount || 0,
-        errorCount: results.meta.errorCount || 0,
-        overallScore: results.meta.overallScore,
+        timestamp:
+          (typeof results.meta.timestamp === "string"
+            ? results.meta.timestamp
+            : new Date().toISOString()) || new Date().toISOString(),
+        wordCount: (typeof results.meta.wordCount === "number" ? results.meta.wordCount : 0) || 0,
+        errorCount:
+          (typeof results.meta.errorCount === "number" ? results.meta.errorCount : 0) || 0,
+        overallScore:
+          typeof results.meta.overallScore === "number" ? results.meta.overallScore : undefined,
       },
     ];
   }

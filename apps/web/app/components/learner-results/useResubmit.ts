@@ -4,6 +4,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { AssessmentResults } from "@writeo/shared";
 import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
@@ -29,7 +30,8 @@ export function useResubmit() {
       setIsResubmitting(true);
       try {
         const parentId = submissionId;
-        const parentResults = !storeResults && parentId ? getResult(parentId) : undefined;
+        const fetchedParentResults = !storeResults && parentId ? getResult(parentId) : null;
+        const parentResults = fetchedParentResults ?? undefined;
         const finalQuestionText = questionText?.trim() || "";
 
         const { submissionId: newSubmissionId, results } = await submitEssay(
@@ -44,7 +46,16 @@ export function useResubmit() {
           throw new Error("No submission ID or results returned");
         }
 
-        setResult(newSubmissionId, results);
+        if (
+          typeof results === "object" &&
+          results !== null &&
+          "status" in results &&
+          "template" in results
+        ) {
+          setResult(newSubmissionId, results as AssessmentResults);
+        } else {
+          throw new Error("Invalid results format");
+        }
         router.push(`/results/${newSubmissionId}`);
       } finally {
         setIsResubmitting(false);

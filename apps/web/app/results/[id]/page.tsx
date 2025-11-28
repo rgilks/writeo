@@ -69,11 +69,21 @@ export default function ResultsPage() {
         }
 
         // Server storage mode - fetch from server
-        const results = await getSubmissionResults(submissionId);
+        const fetched = await getSubmissionResults(submissionId);
         if (!cancelled) {
-          setData(results);
-          setStatus("success");
-          setResult(submissionId, results);
+          if (
+            typeof fetched === "object" &&
+            fetched !== null &&
+            "status" in fetched &&
+            "template" in fetched
+          ) {
+            const results = fetched as AssessmentResults;
+            setData(results);
+            setStatus("success");
+            setResult(submissionId, results);
+          } else {
+            throw new Error("Invalid results format");
+          }
         }
       } catch (err) {
         if (!cancelled) {

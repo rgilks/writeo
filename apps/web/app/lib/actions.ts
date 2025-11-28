@@ -1,11 +1,8 @@
-/**
- * Server Actions for Writeo API - Main exports
- */
-
 "use server";
 
-import { makeSerializableError } from "./utils/error-handling";
+import type { AssessmentResults } from "@writeo/shared";
 import { countWords, validateWordCount } from "@writeo/shared";
+import { makeSerializableError } from "./utils/error-handling";
 import {
   createSubmission,
   getSubmissionResults,
@@ -15,23 +12,75 @@ import { getDraftInfo, getSubmissionResultsWithDraftTracking } from "./actions/d
 import { getTeacherFeedback } from "./actions/teacher-feedback";
 import { streamAIFeedback } from "./actions/streaming";
 
+interface SubmitEssayResult {
+  submissionId: string;
+  results: unknown;
+}
+
+function validateAnswer(answerText: string): number {
+  if (!answerText?.trim()) {
+    throw new Error("Answer text is required");
+  }
+
+  const wordCount = countWords(answerText);
+  const validation = validateWordCount(wordCount);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+
+  return wordCount;
+}
+
+async function setFollowUpDraftMetadata(
+  results: { meta?: Record<string, unknown> },
+  parentSubmissionId: string,
+  storeResults: boolean,
+  parentResults: AssessmentResults | undefined,
+  wordCount: number,
+): Promise<void> {
+  try {
+    const draftInfo = await getDraftInfo(parentSubmissionId, storeResults, parentResults);
+    results.meta = {
+      ...results.meta,
+      draftNumber: draftInfo.draftNumber,
+      parentSubmissionId: draftInfo.parentSubmissionId,
+      draftHistory: draftInfo.draftHistory,
+      wordCount,
+    };
+  } catch (error) {
+    console.warn("[submitEssay] Failed to get draft info:", error);
+    results.meta = {
+      ...results.meta,
+      draftNumber: 2,
+      parentSubmissionId,
+      draftHistory: [],
+      wordCount,
+    };
+  }
+}
+
+function setFirstDraftMetadata(
+  results: { meta?: Record<string, unknown> },
+  wordCount: number,
+): void {
+  results.meta = {
+    ...results.meta,
+    draftNumber: 1,
+    draftHistory: [],
+    wordCount,
+  };
+}
+
 export async function submitEssay(
   questionText: string,
   answerText: string,
   parentSubmissionId?: string,
   storeResults: boolean = false,
-  parentResults?: any,
-): Promise<{ submissionId: string; results: any }> {
+  parentResults?: AssessmentResults,
+): Promise<SubmitEssayResult> {
   try {
-    // Allow empty question text for free writing - send empty string to API
     const finalQuestionText = questionText?.trim() || "";
-    if (!answerText?.trim()) throw new Error("Answer text is required");
-
-    const wordCount = countWords(answerText);
-    const validation = validateWordCount(wordCount);
-    if (!validation.valid) {
-      throw new Error(validation.error);
-    }
+    const wordCount = validateAnswer(answerText);
 
     const { submissionId, results } = await createSubmission(
       finalQuestionText,
@@ -39,34 +88,23 @@ export async function submitEssay(
       storeResults,
     );
 
-    // Always set draft metadata - even for first draft
-    if (results) {
-      if (!results.meta) {
-        results.meta = {};
+    if (results && typeof results === "object") {
+      const resultsObj = results as { meta?: Record<string, unknown> };
+      if (!resultsObj.meta) {
+        resultsObj.meta = {};
       }
 
       if (parentSubmissionId) {
-        // This is a follow-up draft
-        try {
-          const draftInfo = await getDraftInfo(parentSubmissionId, storeResults, parentResults);
-          results.meta.draftNumber = draftInfo.draftNumber;
-          results.meta.parentSubmissionId = draftInfo.parentSubmissionId;
-          results.meta.draftHistory = draftInfo.draftHistory;
-        } catch (error) {
-          console.warn("[submitEssay] Failed to get draft info:", error);
-          // Set fallback values so draft tracking still works
-          results.meta.draftNumber = 2;
-          results.meta.parentSubmissionId = parentSubmissionId;
-          results.meta.draftHistory = [];
-        }
+        await setFollowUpDraftMetadata(
+          resultsObj,
+          parentSubmissionId,
+          storeResults,
+          parentResults,
+          wordCount,
+        );
       } else {
-        // This is the first draft - set draftNumber: 1 explicitly
-        results.meta.draftNumber = 1;
-        results.meta.draftHistory = [];
+        setFirstDraftMetadata(resultsObj, wordCount);
       }
-
-      // Store word count in meta for draft history tracking
-      results.meta.wordCount = wordCount;
     }
 
     return { submissionId, results };

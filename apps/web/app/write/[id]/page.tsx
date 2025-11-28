@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import type { AssessmentResults } from "@writeo/shared";
 import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
@@ -240,35 +241,46 @@ export default function WritePage() {
         throw new Error("No submission ID or results returned");
       }
 
+      if (
+        typeof results !== "object" ||
+        results === null ||
+        !("status" in results) ||
+        !("template" in results)
+      ) {
+        throw new Error("Invalid results format");
+      }
+
+      const resultsObj = results as AssessmentResults;
+
       // Ensure questionTexts are in metadata for draft tracking
       // The API should include questionTexts, but ensure they're present
-      let resultsToStore = results;
-      if (results && typeof window !== "undefined") {
+      let resultsToStore = resultsObj;
+      if (resultsObj && typeof window !== "undefined") {
         // Get answerId from answerTexts
-        const answerTexts = results.meta?.answerTexts as Record<string, string> | undefined;
+        const answerTexts = resultsObj.meta?.answerTexts as Record<string, string> | undefined;
         const answerId = answerTexts ? Object.keys(answerTexts)[0] : undefined;
 
         // Store question text (including empty string for free writing) if we have answerId
         if (answerId && questionText !== undefined) {
-          if (!results.meta?.questionTexts) {
+          if (!resultsObj.meta?.questionTexts) {
             // Create a new results object to avoid mutation
             resultsToStore = {
-              ...results,
+              ...resultsObj,
               meta: {
-                ...results.meta,
+                ...resultsObj.meta,
                 questionTexts: {
                   [answerId]: questionText,
                 },
               },
             };
           } else {
-            const existingQuestionTexts = results.meta.questionTexts as Record<string, string>;
+            const existingQuestionTexts = resultsObj.meta.questionTexts as Record<string, string>;
             if (!existingQuestionTexts[answerId]) {
               // Create a new results object to avoid mutation
               resultsToStore = {
-                ...results,
+                ...resultsObj,
                 meta: {
-                  ...results.meta,
+                  ...resultsObj.meta,
                   questionTexts: {
                     ...existingQuestionTexts,
                     [answerId]: questionText,

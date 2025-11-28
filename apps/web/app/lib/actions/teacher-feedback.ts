@@ -1,29 +1,50 @@
-/**
- * Teacher feedback server actions
- */
-
 "use server";
 
-import { getApiBase, getApiKey } from "../api-config";
+import type { AssessmentData } from "../types/assessment";
 import { retryWithBackoff } from "@writeo/shared";
+import { getApiBase, getApiKey } from "../api-config";
 import { getErrorMessage, makeSerializableError } from "../utils/error-handling";
+
+type FeedbackMode = "clues" | "explanation";
+
+interface RequestBody {
+  answerId: string;
+  mode: FeedbackMode;
+  answerText: string;
+  questionText?: string;
+  assessmentData?: AssessmentData;
+}
+
+interface TeacherFeedbackResponse {
+  message: string;
+  focusArea?: string;
+}
+
+function validateRequest(
+  submissionId: string,
+  answerId: string,
+  mode: string,
+  answerText: string,
+): void {
+  if (!submissionId || !answerId || !mode || !answerText) {
+    throw new Error("Missing required fields: submissionId, answerId, mode, answerText");
+  }
+
+  if (mode !== "clues" && mode !== "explanation") {
+    throw new Error("Mode must be 'clues' or 'explanation'");
+  }
+}
 
 export async function getTeacherFeedback(
   submissionId: string,
   answerId: string,
-  mode: "clues" | "explanation",
+  mode: FeedbackMode,
   answerText: string,
   questionText?: string,
-  assessmentData?: any,
-): Promise<{ message: string; focusArea?: string }> {
+  assessmentData?: AssessmentData,
+): Promise<TeacherFeedbackResponse> {
   try {
-    if (!submissionId || !answerId || !mode || !answerText) {
-      throw new Error("Missing required fields: submissionId, answerId, mode, answerText");
-    }
-
-    if (mode !== "clues" && mode !== "explanation") {
-      throw new Error("Mode must be 'clues' or 'explanation'");
-    }
+    validateRequest(submissionId, answerId, mode, answerText);
 
     const apiBase = getApiBase();
     const apiKey = getApiKey();
@@ -32,18 +53,13 @@ export async function getTeacherFeedback(
       throw new Error("Server configuration error: API credentials not set");
     }
 
-    const requestBody: any = {
+    const requestBody: RequestBody = {
       answerId,
       mode,
       answerText,
+      ...(questionText && { questionText }),
+      ...(assessmentData && { assessmentData }),
     };
-
-    if (questionText) {
-      requestBody.questionText = questionText;
-    }
-    if (assessmentData) {
-      requestBody.assessmentData = assessmentData;
-    }
 
     const response = await retryWithBackoff(async () => {
       const res = await fetch(`${apiBase}/text/submissions/${submissionId}/teacher-feedback`, {
@@ -67,16 +83,10 @@ export async function getTeacherFeedback(
     }
 
     const data = await response.json();
-    const feedbackResult = {
+    return {
       message: data.message || "",
       focusArea: data.focusArea,
     };
-
-    // Note: Storage updates should be handled by the client component calling this action
-    // Server actions can't access localStorage, so we return the feedback data
-    // The client component (TeacherFeedback.tsx) should update the results store
-
-    return feedbackResult;
   } catch (error) {
     console.error("[getTeacherFeedback] Error:", error);
     throw makeSerializableError(error);
