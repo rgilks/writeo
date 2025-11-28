@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
+import { useStoreHydration } from "@/app/hooks/useStoreHydration";
 import { AchievementList } from "./AchievementBadge";
 import Link from "next/link";
 
@@ -153,28 +154,12 @@ function StatCard({ value, label, icon, color, delay = 0, gradient }: StatCardPr
   );
 }
 
-/**
- * Custom hook to handle client-side mounting and store hydration
- */
 function useClientHydration() {
   const [mounted, setMounted] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(() => useDraftStore.persist.hasHydrated());
+  const isHydrated = useStoreHydration(useDraftStore);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (useDraftStore.persist.hasHydrated()) {
-      setIsHydrated(true);
-      return;
-    }
-
-    const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
-      setIsHydrated(true);
-    });
-
-    return unsubscribe;
   }, []);
 
   return { mounted, isHydrated, isReady: mounted && isHydrated };
@@ -190,18 +175,11 @@ interface StatCardData {
   condition?: boolean;
 }
 
-/**
- * ProgressDashboard - Shows overall learner progress with celebratory animations
- */
 export function ProgressDashboard() {
   const { isReady } = useClientHydration();
 
-  // Use selectors to subscribe only to needed state slices
-  // This prevents re-renders when unrelated state changes
   const streak = useDraftStore((state) => state.streak);
   const achievements = useDraftStore((state) => state.achievements);
-
-  // Use computed selectors from store for better performance
   const totalDrafts = useDraftStore((state) => state.getTotalDrafts());
   const totalWritings = useDraftStore((state) => state.getTotalWritings());
   const averageImprovement = useDraftStore((state) => state.getAverageImprovement());

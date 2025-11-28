@@ -240,10 +240,8 @@ export function TeacherFeedback({
     stopStream,
   } = useAIFeedbackStream();
 
-  // Consolidate loading state
   const isLoading = loading || initialLoading || isStreaming;
 
-  // Compute feedback text using useMemo
   const feedbackText = useMemo(() => {
     if (feedbackMode === "explanation" && streamedFeedback) {
       return streamedFeedback;
@@ -274,7 +272,6 @@ export function TeacherFeedback({
     initialError,
   ]);
 
-  // Prepare assessment data
   const assessmentData = useMemo(
     () => ({
       essayScores: { overall, dimensions },
@@ -284,18 +281,26 @@ export function TeacherFeedback({
     [overall, dimensions, ltErrors, llmErrors],
   );
 
-  // Ensure the short Groq encouragement is available even if the async pipeline
-  // hasn't stored it yet (common when submissions run in async mode).
+  const shouldFetchInitial = useMemo(() => {
+    return (
+      !hasRequestedClues &&
+      !initialMessage &&
+      !aiFeedback?.message &&
+      !initialLoading &&
+      Boolean(submissionId && answerId && answerText)
+    );
+  }, [
+    hasRequestedClues,
+    initialMessage,
+    aiFeedback?.message,
+    initialLoading,
+    submissionId,
+    answerId,
+    answerText,
+  ]);
+
   useEffect(() => {
-    if (
-      hasRequestedClues ||
-      initialMessage ||
-      aiFeedback?.message ||
-      initialLoading ||
-      !submissionId ||
-      !answerId ||
-      !answerText
-    ) {
+    if (!shouldFetchInitial || !submissionId || !answerId || !answerText) {
       return;
     }
 
@@ -332,6 +337,7 @@ export function TeacherFeedback({
       cancelled = true;
     };
   }, [
+    shouldFetchInitial,
     submissionId,
     answerId,
     answerText,
@@ -341,10 +347,6 @@ export function TeacherFeedback({
     ltErrors,
     llmErrors,
     relevanceCheck,
-    aiFeedback?.message,
-    initialMessage,
-    initialLoading,
-    hasRequestedClues,
   ]);
 
   const handleTryAgain = useCallback(async () => {
@@ -382,22 +384,15 @@ export function TeacherFeedback({
     setFeedbackMode("initial");
   }, []);
 
-  // Update explanation when streamed feedback arrives
   useEffect(() => {
     if (streamedFeedback) {
       setExplanation(streamedFeedback);
-      setLoading(false);
+      if (!isStreaming) {
+        setLoading(false);
+      }
     }
-  }, [streamedFeedback]);
+  }, [streamedFeedback, isStreaming]);
 
-  // Handle streaming completion
-  useEffect(() => {
-    if (!isStreaming && streamedFeedback) {
-      setLoading(false);
-    }
-  }, [isStreaming, streamedFeedback]);
-
-  // Cleanup on unmount
   useEffect(() => {
     return stopStream;
   }, [stopStream]);

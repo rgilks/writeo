@@ -74,8 +74,6 @@ export function useDraftStorage(
     } catch (error) {
       console.error("Error storing draft:", error);
     }
-    // Store functions are stable and intentionally omitted from deps.
-    // Note: submissionId intentionally excluded from deps to avoid re-running on every change
   }, [
     submissionId,
     overall,
@@ -83,6 +81,10 @@ export function useDraftStorage(
     grammarErrors.length,
     finalAnswerText,
     parentSubmissionId,
+    addDraft,
+    getDraftHistory,
+    getRootSubmissionId,
+    trackFixedErrors,
   ]);
 }
 

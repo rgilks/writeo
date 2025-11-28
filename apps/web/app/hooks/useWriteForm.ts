@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
+import { useStoreHydration } from "@/app/hooks/useStoreHydration";
 
 const AUTO_SAVE_DELAY = 2000;
 
@@ -13,7 +14,7 @@ export function useWriteForm() {
   const contentDrafts = useDraftStore((state) => state.contentDrafts);
   const loadContentDraft = useDraftStore((state) => state.loadContentDraft);
 
-  const [isHydrated, setIsHydrated] = useState(() => useDraftStore.persist.hasHydrated());
+  const isHydrated = useStoreHydration(useDraftStore);
   const [localAnswer, setLocalAnswer] = useState<string | null>(null);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -38,29 +39,12 @@ export function useWriteForm() {
     [updateContent, saveDraft],
   );
 
-  // Hydration effect
   useEffect(() => {
-    if (useDraftStore.persist.hasHydrated()) {
-      setIsHydrated(true);
-      if (currentContent && localAnswer === null) {
-        setLocalAnswer(currentContent);
-      }
-      return;
+    if (isHydrated && currentContent && localAnswer === null) {
+      setLocalAnswer(currentContent);
     }
+  }, [isHydrated, currentContent, localAnswer]);
 
-    const unsubscribe = useDraftStore.persist.onFinishHydration(() => {
-      setIsHydrated(true);
-      if (currentContent && localAnswer === null) {
-        setLocalAnswer(currentContent);
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [currentContent, localAnswer]);
-
-  // Load draft if needed
   useEffect(() => {
     if (!isHydrated) return;
 
@@ -72,14 +56,6 @@ export function useWriteForm() {
     }
   }, [isHydrated, currentContent, activeDraftId, contentDrafts, loadContentDraft]);
 
-  // Sync local answer with store
-  useEffect(() => {
-    if (isHydrated && currentContent && localAnswer === null) {
-      setLocalAnswer(currentContent);
-    }
-  }, [isHydrated, currentContent, localAnswer]);
-
-  // Cleanup timeout
   useEffect(() => {
     return () => {
       if (autoSaveTimeoutRef.current) {

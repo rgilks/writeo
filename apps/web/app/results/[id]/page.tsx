@@ -124,8 +124,7 @@ export default function ResultsPage() {
     return () => {
       cancelled = true;
     };
-    // Only run when submissionId changes, not when data changes
-  }, [submissionId]);
+  }, [submissionId, getResult, setResult]);
 
   // Extract answer text when results arrive
   useEffect(() => {

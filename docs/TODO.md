@@ -52,3 +52,22 @@
 - ❌ Don't add tests for simple getters/setters
 - ❌ Don't add tests for thin wrappers around well-tested functions
 - ❌ Don't duplicate coverage already provided by integration tests
+
+---
+
+## Hooks & State Management (Future Considerations)
+
+**Status**: ✅ All critical and medium-priority hook issues have been resolved.
+
+### Low Priority / Future
+
+1. **Consider Zustand stores for shared state** (only if needed)
+   - TeacherFeedback state - Only if feedback mode/explanation needs to persist across page reloads
+   - Results page loading state - Only if loading state needs to be shown in header/navigation
+   - AI Feedback streaming state - Only if streaming state needs to be shared or persisted
+   - **Note**: Current local state is appropriate for component-specific state
+
+2. **Monitor hook performance** (if issues arise)
+   - Watch for unnecessary re-renders from Zustand selectors
+   - Consider using shallow equality for complex selectors if needed
+   - Current implementation is efficient with proper selector usage
