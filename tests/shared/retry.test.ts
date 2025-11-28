@@ -43,15 +43,15 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 3, baseDelayMs: 100 });
 
-    // Run all timers instead of advancing specific time
-    await vi.runAllTimersAsync();
+    // Run all timers and catch the rejection
+    const timerPromise = vi.runAllTimersAsync();
+    const catchPromise = promise.catch((e) => e);
 
-    try {
-      await promise;
-      expect.fail("Should have thrown");
-    } catch (error: any) {
-      expect(error.message).toBe("Always fails");
-    }
+    await timerPromise;
+    const error = await catchPromise;
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Always fails");
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
@@ -60,15 +60,15 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 });
 
-    // Run all timers instead of advancing specific time
-    await vi.runAllTimersAsync();
+    // Run all timers and catch the rejection
+    const timerPromise = vi.runAllTimersAsync();
+    const catchPromise = promise.catch((e) => e);
 
-    try {
-      await promise;
-    } catch {
-      // Expected to fail
-    }
+    await timerPromise;
+    const error = await catchPromise;
 
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Fail");
     // Should have called function 3 times (initial + 2 retries)
     expect(fn).toHaveBeenCalledTimes(3);
   });
@@ -82,15 +82,15 @@ describe("retryWithBackoff", () => {
       maxDelayMs: 2000,
     });
 
-    // Run all timers instead of advancing specific time
-    await vi.runAllTimersAsync();
+    // Run all timers and catch the rejection
+    const timerPromise = vi.runAllTimersAsync();
+    const catchPromise = promise.catch((e) => e);
 
-    try {
-      await promise;
-    } catch {
-      // Expected to fail
-    }
+    await timerPromise;
+    const error = await catchPromise;
 
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Fail");
     // Delays should be capped at maxDelayMs
     expect(fn).toHaveBeenCalledTimes(5);
   });
@@ -154,14 +154,15 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 2, baseDelayMs: 100 });
 
-    await vi.runAllTimersAsync();
+    // Run all timers and catch the rejection
+    const timerPromise = vi.runAllTimersAsync();
+    const catchPromise = promise.catch((e) => e);
 
-    try {
-      await promise;
-      expect.fail("Should have thrown");
-    } catch {
-      // Expected to throw
-    }
+    await timerPromise;
+    const error = await catchPromise;
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("string error");
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
@@ -170,14 +171,15 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { baseDelayMs: 100 });
 
-    await vi.runAllTimersAsync();
+    // Run all timers and catch the rejection
+    const timerPromise = vi.runAllTimersAsync();
+    const catchPromise = promise.catch((e) => e);
 
-    try {
-      await promise;
-      expect.fail("Should have thrown");
-    } catch {
-      // Expected to throw
-    }
+    await timerPromise;
+    const error = await catchPromise;
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Fail");
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
@@ -202,14 +204,15 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 3, baseDelayMs: 100 });
 
-    await vi.runAllTimersAsync();
+    // Run all timers and catch the rejection
+    const timerPromise = vi.runAllTimersAsync();
+    const catchPromise = promise.catch((e) => e);
 
-    try {
-      await promise;
-      expect.fail("Should have thrown");
-    } catch (error: any) {
-      expect(error.message).toBe("Final error");
-    }
+    await timerPromise;
+    const error = await catchPromise;
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Final error");
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
@@ -218,14 +221,16 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 2, baseDelayMs: 100 });
 
-    await vi.runAllTimersAsync();
+    // Run all timers and catch the rejection
+    const timerPromise = vi.runAllTimersAsync();
+    const catchPromise = promise.catch((e) => e);
 
-    try {
-      await promise;
-      expect.fail("Should have thrown");
-    } catch (error: any) {
-      expect(error.message).toBe("Rejected");
-    }
+    await timerPromise;
+    const error = await catchPromise;
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Rejected");
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 
   it("should work with async functions", async () => {

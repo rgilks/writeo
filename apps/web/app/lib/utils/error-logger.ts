@@ -25,16 +25,18 @@ class ErrorLogger {
    * Log an error with context
    */
   logError(error: Error | unknown, context?: ErrorContext): void {
-    if (!this.enabled) return;
+    if (typeof window === "undefined") return;
 
     const errorObj = error instanceof Error ? error : new Error(String(error));
+    const env =
+      typeof process !== "undefined" ? process.env.NODE_ENV || "development" : "development";
     const errorInfo = {
       message: errorObj.message,
       stack: errorObj.stack,
       name: errorObj.name,
       context: {
         ...context,
-        environment: this.environment,
+        environment: env,
         timestamp: new Date().toISOString(),
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
         url: typeof window !== "undefined" ? window.location.href : undefined,
@@ -42,7 +44,7 @@ class ErrorLogger {
     };
 
     // Log to console in development
-    if (this.environment === "development") {
+    if (env === "development") {
       console.error("Error logged:", errorInfo);
     }
 
@@ -67,18 +69,20 @@ class ErrorLogger {
    * Log a warning
    */
   logWarning(message: string, context?: ErrorContext): void {
-    if (!this.enabled) return;
+    if (typeof window === "undefined") return;
 
+    const env =
+      typeof process !== "undefined" ? process.env.NODE_ENV || "development" : "development";
     const warningInfo = {
       message,
       context: {
         ...context,
-        environment: this.environment,
+        environment: env,
         timestamp: new Date().toISOString(),
       },
     };
 
-    if (this.environment === "development") {
+    if (env === "development") {
       console.warn("Warning logged:", warningInfo);
     }
 
