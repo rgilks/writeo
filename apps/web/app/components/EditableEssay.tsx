@@ -34,7 +34,7 @@ function getWordCountStatus(wordCount: number): WordCountStatus {
  */
 export function EditableEssay({
   initialText,
-  questionId,
+  questionId: _questionId,
   questionText,
   parentSubmissionId,
   onSubmit,

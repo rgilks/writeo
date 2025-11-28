@@ -93,7 +93,7 @@ function getConfidenceInfo(error: ErrorDetailProps["error"]) {
   };
 }
 
-export function ErrorDetail({ error, errorText, onClose }: ErrorDetailProps) {
+export function ErrorDetail({ error, errorText: _errorText, onClose }: ErrorDetailProps) {
   const hasStructuredFeedback = !!(error.errorType || error.explanation || error.example);
 
   if (!hasStructuredFeedback) {

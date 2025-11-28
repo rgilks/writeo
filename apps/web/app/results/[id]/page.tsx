@@ -125,7 +125,6 @@ export default function ResultsPage() {
       cancelled = true;
     };
     // Only run when submissionId changes, not when data changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [submissionId]);
 
   // Extract answer text when results arrive

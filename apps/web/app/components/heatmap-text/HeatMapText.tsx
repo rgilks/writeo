@@ -45,10 +45,9 @@ export function HeatMapText({
     ],
   );
 
-  const { intensityMap, normalizedIntensity } = useMemo(() => {
+  const { normalizedIntensity } = useMemo(() => {
     const map = calculateIntensityMap(text, filteredErrors);
     return {
-      intensityMap: map,
       normalizedIntensity: normalizeIntensity(map),
     };
   }, [text, filteredErrors]);

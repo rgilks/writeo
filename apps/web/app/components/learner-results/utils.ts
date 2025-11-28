@@ -2,7 +2,7 @@
  * Utility functions for learner results
  */
 
-import type { LanguageToolError } from "@writeo/shared";
+// LanguageToolError type available from @writeo/shared if needed
 
 const SCORE_BANDS = [
   { min: 7.5, color: "#10b981", label: "Excellent" },

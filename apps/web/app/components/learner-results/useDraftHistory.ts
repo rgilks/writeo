@@ -5,14 +5,14 @@
 import { useMemo } from "react";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { countWords } from "@writeo/shared";
+import type { AssessmentResults, LanguageToolError } from "@writeo/shared";
 import { mapScoreToCEFR } from "./utils";
-import type { AssessmentResults } from "@writeo/shared";
 
 export function useDraftHistory(
   data: AssessmentResults,
   submissionId: string | undefined,
   overall: number,
-  grammarErrors: any[],
+  grammarErrors: LanguageToolError[],
   finalAnswerText: string,
   parentSubmissionId?: string,
 ) {

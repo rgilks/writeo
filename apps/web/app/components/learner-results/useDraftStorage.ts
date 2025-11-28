@@ -4,6 +4,7 @@
 
 import { useEffect } from "react";
 import { countWords } from "@writeo/shared";
+import type { LanguageToolError } from "@writeo/shared";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { extractErrorIds } from "@/app/lib/utils/progress";
 import { mapScoreToCEFR } from "./utils";
@@ -23,7 +24,7 @@ export function useDraftStorage(
   submissionId: string | undefined,
   overall: number,
   draftNumber: number,
-  grammarErrors: any[],
+  grammarErrors: LanguageToolError[],
   finalAnswerText: string,
   parentSubmissionId: string | undefined,
 ) {
@@ -74,7 +75,7 @@ export function useDraftStorage(
       console.error("Error storing draft:", error);
     }
     // Store functions are stable and intentionally omitted from deps.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Note: submissionId intentionally excluded from deps to avoid re-running on every change
   }, [
     submissionId,
     overall,

@@ -211,7 +211,7 @@ const markdownComponents: React.ComponentProps<typeof ReactMarkdown>["components
 export function TeacherFeedback({
   overall,
   dimensions,
-  errorCount,
+  errorCount: _errorCount,
   aiFeedback,
   submissionId,
   answerId,

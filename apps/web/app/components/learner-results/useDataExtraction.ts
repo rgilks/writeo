@@ -10,7 +10,6 @@ import {
   getTeacherFeedbackAssessorResult,
   getRelevanceCheckAssessorResult,
 } from "@writeo/shared";
-import { mapScoreToCEFR } from "./utils";
 
 export function useDataExtraction(data: AssessmentResults, submissionId?: string) {
   const parts = data.results?.parts ?? [];

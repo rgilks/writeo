@@ -1,4 +1,3 @@
-import type { LanguageToolError } from "@writeo/shared";
 import type { FeedbackControlsProps } from "./types";
 import { pluralize } from "@/app/lib/utils/text-utils";
 

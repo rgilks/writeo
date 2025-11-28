@@ -206,7 +206,7 @@ interface AssessorDisplayProps {
   assessorIndex: number;
 }
 
-function AssessorDisplay({ assessor, assessorIndex }: AssessorDisplayProps) {
+function AssessorDisplay({ assessor, assessorIndex: _assessorIndex }: AssessorDisplayProps) {
   const assessorId = assessor.id as string;
   const assessorName = (assessor.name as string) || assessorId;
   const assessorType = assessor.type as string;
