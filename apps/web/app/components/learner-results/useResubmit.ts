@@ -2,7 +2,7 @@
  * Hook for handling essay resubmission
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitEssay } from "@/app/lib/actions";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
@@ -17,52 +17,41 @@ export function useResubmit() {
   // This ensures component re-renders if preference changes
   const storeResults = usePreferencesStore((state) => state.storeResults);
 
-  const handleResubmit = async (
-    editedText: string,
-    questionText: string,
-    submissionId: string,
-    parentSubmissionId?: string,
-  ) => {
-    if (!submissionId) {
-      throw new Error("Cannot resubmit: Submission ID not available");
-    }
-
-    setIsResubmitting(true);
-    try {
-      // Always use the current submissionId as parent for draft number calculation
-      // This ensures correct draft numbering (draft 2 -> draft 3, not draft 2 -> draft 2)
-      // The getDraftInfo function will find the root submission ID from the parent's metadata
-      const parentId = submissionId;
-
-      let parentResults: any = undefined;
-      if (!storeResults && parentId) {
-        parentResults = getResult(parentId);
+  const handleResubmit = useCallback(
+    async (editedText: string, questionText: string, submissionId: string) => {
+      if (isResubmitting) {
+        return;
+      }
+      if (!submissionId) {
+        throw new Error("Cannot resubmit: Submission ID not available");
       }
 
-      // Use question text if provided, otherwise use empty string for free writing
-      const finalQuestionText = questionText?.trim() || "";
+      setIsResubmitting(true);
+      try {
+        const parentId = submissionId;
+        const parentResults = !storeResults && parentId ? getResult(parentId) : undefined;
+        const finalQuestionText = questionText?.trim() || "";
 
-      const { submissionId: newSubmissionId, results } = await submitEssay(
-        finalQuestionText,
-        editedText,
-        parentId,
-        storeResults,
-        parentResults,
-      );
-      if (!newSubmissionId || !results) {
-        throw new Error("No submission ID or results returned");
+        const { submissionId: newSubmissionId, results } = await submitEssay(
+          finalQuestionText,
+          editedText,
+          parentId,
+          storeResults,
+          parentResults,
+        );
+
+        if (!newSubmissionId || !results) {
+          throw new Error("No submission ID or results returned");
+        }
+
+        setResult(newSubmissionId, results);
+        router.push(`/results/${newSubmissionId}`);
+      } finally {
+        setIsResubmitting(false);
       }
-
-      // Store results in draft store (Zustand persist handles localStorage automatically)
-      setResult(newSubmissionId, results);
-
-      // Redirect to results page
-      router.push(`/results/${newSubmissionId}`);
-    } catch (error) {
-      setIsResubmitting(false);
-      throw error;
-    }
-  };
+    },
+    [getResult, isResubmitting, router, setResult, storeResults],
+  );
 
   return { handleResubmit, isResubmitting };
 }

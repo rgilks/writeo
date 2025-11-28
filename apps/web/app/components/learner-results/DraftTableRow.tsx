@@ -6,29 +6,36 @@ import { getScoreColor } from "./utils";
 import { ChangeCell } from "./ChangeCell";
 import type { DraftHistory } from "@/app/lib/stores/draft-store";
 
-export function DraftTableRow({
-  draft,
-  index,
-  prevDraft,
-  currentDraftNumber,
-}: {
+const cellBaseStyle = {
+  padding: "var(--spacing-sm)",
+  color: "var(--text-primary)",
+} as const;
+
+const numericCellStyle = {
+  ...cellBaseStyle,
+  textAlign: "right",
+} as const;
+
+type DraftTableRowProps = {
   draft: DraftHistory;
   index: number;
   prevDraft: DraftHistory | null;
   currentDraftNumber: number;
-}) {
+};
+
+export function DraftTableRow({ draft, index, prevDraft, currentDraftNumber }: DraftTableRowProps) {
+  const hasPrevScore = prevDraft?.overallScore !== undefined && prevDraft?.overallScore !== null;
+  const hasScore = draft.overallScore !== undefined && draft.overallScore !== null;
+  const hasPrevWords = typeof prevDraft?.wordCount === "number";
+  const hasWords = typeof draft.wordCount === "number";
+  const hasPrevErrors = typeof prevDraft?.errorCount === "number";
+  const hasErrors = typeof draft.errorCount === "number";
+
   const scoreChange =
-    prevDraft && draft.overallScore && prevDraft.overallScore
-      ? draft.overallScore - prevDraft.overallScore
-      : null;
-  const wordChange =
-    prevDraft && draft.wordCount && prevDraft.wordCount
-      ? draft.wordCount - prevDraft.wordCount
-      : null;
+    hasPrevScore && hasScore ? draft.overallScore! - prevDraft!.overallScore! : null;
+  const wordChange = hasPrevWords && hasWords ? draft.wordCount! - prevDraft!.wordCount! : null;
   const errorChange =
-    prevDraft && draft.errorCount !== undefined && prevDraft.errorCount !== undefined
-      ? draft.errorCount - prevDraft.errorCount
-      : null;
+    hasPrevErrors && hasErrors ? draft.errorCount! - prevDraft!.errorCount! : null;
   const isCurrent = draft.draftNumber === currentDraftNumber;
 
   return (
@@ -63,43 +70,21 @@ export function DraftTableRow({
       </td>
       <td
         style={{
-          textAlign: "right",
-          padding: "var(--spacing-sm)",
+          ...numericCellStyle,
           fontWeight: 600,
-          color: draft.overallScore ? getScoreColor(draft.overallScore) : "var(--text-secondary)",
+          color: hasScore ? getScoreColor(draft.overallScore!) : "var(--text-secondary)",
         }}
         lang="en"
       >
-        {draft.overallScore ? draft.overallScore.toFixed(1) : "-"}
+        {hasScore ? draft.overallScore!.toFixed(1) : "-"}
       </td>
-      <td
-        style={{
-          textAlign: "right",
-          padding: "var(--spacing-sm)",
-          color: "var(--text-primary)",
-        }}
-        lang="en"
-      >
-        {draft.wordCount || "-"}
+      <td style={numericCellStyle} lang="en">
+        {hasWords ? draft.wordCount : "-"}
       </td>
-      <td
-        style={{
-          textAlign: "right",
-          padding: "var(--spacing-sm)",
-          color: "var(--text-primary)",
-        }}
-        lang="en"
-      >
-        {draft.errorCount !== undefined ? draft.errorCount : "-"}
+      <td style={numericCellStyle} lang="en">
+        {hasErrors ? draft.errorCount : "-"}
       </td>
-      <td
-        style={{
-          padding: "var(--spacing-sm)",
-          color: "var(--text-secondary)",
-          fontSize: "12px",
-        }}
-        lang="en"
-      >
+      <td style={{ ...cellBaseStyle, color: "var(--text-secondary)", fontSize: "12px" }} lang="en">
         {index === 0 ? (
           <span style={{ fontStyle: "italic" }}>Baseline</span>
         ) : (

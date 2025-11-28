@@ -15,51 +15,45 @@ export function DraftComparisonTable({
 }) {
   if (draftHistory.length <= 1) return null;
 
+  const containerStyle = {
+    marginTop: "var(--spacing-md)",
+    padding: "var(--spacing-md)",
+    backgroundColor: "var(--bg-primary)",
+    borderRadius: "var(--border-radius)",
+    border: "1px solid var(--border-color)",
+  } as const;
+
+  const headingStyle = {
+    fontSize: "16px",
+    fontWeight: 600,
+    marginBottom: "var(--spacing-md)",
+    color: "var(--text-primary)",
+  } as const;
+
+  const tableStyle = {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontSize: "14px",
+  } as const;
+
   return (
-    <div
-      style={{
-        marginTop: "var(--spacing-md)",
-        padding: "var(--spacing-md)",
-        backgroundColor: "var(--bg-primary)",
-        borderRadius: "var(--border-radius)",
-        border: "1px solid var(--border-color)",
-      }}
-      lang="en"
-    >
-      <h3
-        style={{
-          fontSize: "16px",
-          fontWeight: 600,
-          marginBottom: "var(--spacing-md)",
-          color: "var(--text-primary)",
-        }}
-        lang="en"
-      >
+    <div style={containerStyle} lang="en">
+      <h3 style={headingStyle} lang="en">
         Draft Comparison
       </h3>
       <div style={{ overflowX: "auto" }}>
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            fontSize: "14px",
-          }}
-          lang="en"
-        >
+        <table style={tableStyle} lang="en">
           <DraftTableHeader />
           <tbody>
-            {draftHistory.map((draft, index) => {
-              const prevDraft = index > 0 ? draftHistory[index - 1] : null;
-              return (
-                <DraftTableRow
-                  key={draft.draftNumber}
-                  draft={draft}
-                  index={index}
-                  prevDraft={prevDraft}
-                  currentDraftNumber={currentDraftNumber}
-                />
-              );
-            })}
+            {draftHistory.map((draft, index, drafts) => (
+              <DraftTableRow
+                key={draft.draftNumber}
+                draft={draft}
+                index={index}
+                prevDraft={index > 0 ? drafts[index - 1] : null}
+                currentDraftNumber={currentDraftNumber}
+              />
+            ))}
           </tbody>
         </table>
       </div>

@@ -6,13 +6,13 @@ import { EditableEssay } from "../EditableEssay";
 
 export function EditableEssaySection({
   finalAnswerText,
-  questionText,
+  questionText = "",
   answerId,
   submissionId,
   onSubmit,
 }: {
   finalAnswerText: string;
-  questionText: string;
+  questionText?: string;
   answerId?: string;
   submissionId?: string;
   onSubmit: (editedText: string) => Promise<void>;
@@ -26,7 +26,7 @@ export function EditableEssaySection({
     <EditableEssay
       initialText={finalAnswerText}
       questionId={answerId}
-      questionText={questionText || ""} // Pass empty string if questionText is not provided
+      questionText={questionText} // questionText is already defaulted to an empty string
       parentSubmissionId={submissionId}
       onSubmit={onSubmit}
     />

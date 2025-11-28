@@ -4,29 +4,31 @@
 
 import type { LanguageToolError } from "@writeo/shared";
 
+const SCORE_BANDS = [
+  { min: 7.5, color: "#10b981", label: "Excellent" },
+  { min: 6.5, color: "#3b82f6", label: "Good" },
+  { min: 5.5, color: "#f59e0b", label: "Fair" },
+  { min: Number.NEGATIVE_INFINITY, color: "#ef4444", label: "Needs Improvement" },
+] as const;
+
 export function getScoreColor(score: number): string {
-  if (score >= 7.5) return "#10b981";
-  if (score >= 6.5) return "#3b82f6";
-  if (score >= 5.5) return "#f59e0b";
-  return "#ef4444";
+  return SCORE_BANDS.find((band) => score >= band.min)!.color;
 }
 
 export function getScoreLabel(score: number): string {
-  if (score >= 7.5) return "Excellent";
-  if (score >= 6.5) return "Good";
-  if (score >= 5.5) return "Fair";
-  return "Needs Improvement";
+  return SCORE_BANDS.find((band) => score >= band.min)!.label;
 }
 
+const CEFR_DESCRIPTORS: Record<string, string> = {
+  A2: "Can write simple connected text on familiar topics.",
+  B1: "Can write simple connected text on topics which are familiar or of personal interest.",
+  B2: "Can write clear, detailed text on a wide range of subjects.",
+  C1: "Can write clear, well-structured text on complex subjects.",
+  C2: "Can write clear, smoothly flowing text in an appropriate style.",
+};
+
 export function getCEFRDescriptor(level: string): string {
-  const descriptors: Record<string, string> = {
-    A2: "Can write simple connected text on familiar topics.",
-    B1: "Can write simple connected text on topics which are familiar or of personal interest.",
-    B2: "Can write clear, detailed text on a wide range of subjects.",
-    C1: "Can write clear, well-structured text on complex subjects.",
-    C2: "Can write clear, smoothly flowing text in an appropriate style.",
-  };
-  return descriptors[level] || "Writing proficiency level.";
+  return CEFR_DESCRIPTORS[level] || "Writing proficiency level.";
 }
 
 export function mapScoreToCEFR(score: number): string {
@@ -47,21 +49,16 @@ export function getCEFRThresholds(): Record<string, { min: number; max: number }
   };
 }
 
-export function calculateCEFRProgress(score: number): {
-  current: string;
-  next: string;
-  progress: number;
-  scoreToNext: number;
-} {
+export function calculateCEFRProgress(score: number) {
   const thresholds = getCEFRThresholds();
+  const levels = Object.keys(thresholds);
   const current = mapScoreToCEFR(score);
-  const cefrLevels = ["A2", "B1", "B2", "C1", "C2"];
-  const currentIndex = cefrLevels.indexOf(current);
-  const nextIndex = currentIndex < cefrLevels.length - 1 ? currentIndex + 1 : currentIndex;
-  const next = cefrLevels[nextIndex];
+  const currentIndex = levels.indexOf(current);
+  const nextIndex = Math.min(currentIndex + 1, levels.length - 1);
+  const next = levels[nextIndex];
 
   if (current === "C2") {
-    return { current, next: current, progress: 100, scoreToNext: 0 };
+    return { current, next, progress: 100, scoreToNext: 0 };
   }
 
   const currentThreshold = thresholds[current];
@@ -74,35 +71,37 @@ export function calculateCEFRProgress(score: number): {
   return { current, next, progress, scoreToNext };
 }
 
+const CEFR_LABELS: Record<string, string> = {
+  A2: "Elementary",
+  B1: "Intermediate",
+  B2: "Upper Intermediate",
+  C1: "Advanced",
+  C2: "Proficient",
+};
+
 export function getCEFRLabel(level: string): string {
-  const labels: Record<string, string> = {
-    A2: "Elementary",
-    B1: "Intermediate",
-    B2: "Upper Intermediate",
-    C1: "Advanced",
-    C2: "Proficient",
-  };
-  return labels[level] || level;
+  return CEFR_LABELS[level] || level;
 }
 
+const ERROR_EXPLANATIONS: Record<string, string> = {
+  "Subject-verb agreement":
+    "The subject and verb must agree in number (singular/plural). Example: 'He go' should be 'He goes'.",
+  "Verb tense":
+    "Use consistent verb tenses. Check if actions happened in the past, present, or future.",
+  "Article use":
+    "Use 'a' before consonant sounds, 'an' before vowel sounds, and 'the' for specific things.",
+  Preposition:
+    "Prepositions show relationships (in, on, at, with, etc.). Choose the correct one for the context.",
+  Spelling:
+    "Check spelling carefully. Common mistakes include homophones (words that sound the same but are spelled differently).",
+  Punctuation: "Use punctuation marks correctly: periods, commas, question marks, etc.",
+  "Word order": "English follows a specific word order: Subject-Verb-Object.",
+  "Grammar error": "A grammatical mistake that affects clarity or correctness.",
+};
+
 export function getErrorExplanation(errorType: string, count: number): string {
-  const explanations: Record<string, string> = {
-    "Subject-verb agreement":
-      "The subject and verb must agree in number (singular/plural). Example: 'He go' should be 'He goes'.",
-    "Verb tense":
-      "Use consistent verb tenses. Check if actions happened in the past, present, or future.",
-    "Article use":
-      "Use 'a' before consonant sounds, 'an' before vowel sounds, and 'the' for specific things.",
-    Preposition:
-      "Prepositions show relationships (in, on, at, with, etc.). Choose the correct one for the context.",
-    Spelling:
-      "Check spelling carefully. Common mistakes include homophones (words that sound the same but are spelled differently).",
-    Punctuation: "Use punctuation marks correctly: periods, commas, question marks, etc.",
-    "Word order": "English follows a specific word order: Subject-Verb-Object.",
-    "Grammar error": "A grammatical mistake that affects clarity or correctness.",
-  };
   return (
-    explanations[errorType] ||
+    ERROR_EXPLANATIONS[errorType] ||
     `This type of error appears ${count} ${count === 1 ? "time" : "times"} in your essay.`
   );
 }

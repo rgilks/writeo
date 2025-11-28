@@ -28,35 +28,27 @@ export function DraftHistorySection({
   // Determine root submission ID: use parentSubmissionId if it exists, otherwise use draft 1's submissionId
   const rootSubmissionId = parentSubmissionId || rootDraft?.submissionId || submissionId;
 
+  const cardStyle = { padding: "var(--spacing-md)" } as const;
+  const headingStyle = {
+    fontSize: "16px",
+    marginBottom: "var(--spacing-sm)",
+    fontWeight: 600,
+  } as const;
+  const buttonsContainerStyle = {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "var(--spacing-sm)",
+    marginBottom: "var(--spacing-md)",
+    width: "100%",
+  } as const;
+
   return (
-    <div
-      className="card"
-      lang="en"
-      style={{ padding: "var(--spacing-md)" }}
-      data-testid="draft-history"
-    >
-      <h2
-        style={{
-          fontSize: "16px",
-          marginBottom: "var(--spacing-sm)",
-          fontWeight: 600,
-        }}
-        lang="en"
-      >
+    <div className="card" lang="en" style={cardStyle} data-testid="draft-history">
+      <h2 style={headingStyle} lang="en">
         Draft History
       </h2>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "var(--spacing-sm)",
-          marginBottom: "var(--spacing-md)",
-          width: "100%",
-        }}
-        lang="en"
-        data-testid="draft-buttons-container"
-      >
-        {displayDraftHistory.map((draft, index) => {
+      <div style={buttonsContainerStyle} lang="en" data-testid="draft-buttons-container">
+        {displayDraftHistory.map((draft) => {
           const { navigateUrl, hasValidSubmissionId } = useDraftNavigation(
             draft,
             draftNumber,

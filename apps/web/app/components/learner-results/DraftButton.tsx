@@ -2,6 +2,7 @@
  * Draft button component
  */
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DraftHistory } from "@/app/lib/stores/draft-store";
 
@@ -21,9 +22,13 @@ export function DraftButton({
   onDraftSwitch?: (submissionId: string, parentId?: string) => boolean;
 }) {
   const router = useRouter();
+  const [isHovered, setIsHovered] = useState(false);
+  const isInteractive = hasValidSubmissionId && !isCurrent;
+  const overallScore = draft.overallScore;
+  const showScore = typeof overallScore === "number";
 
   const handleClick = () => {
-    if (!hasValidSubmissionId || isCurrent) return;
+    if (!isInteractive) return;
 
     // Try client-side switch first (if callback provided)
     if (onDraftSwitch && draft.submissionId) {
@@ -37,44 +42,47 @@ export function DraftButton({
     router.push(navigateUrl);
   };
 
+  const backgroundColor = isCurrent
+    ? "var(--primary-color)"
+    : isHovered && isInteractive
+      ? "var(--bg-primary)"
+      : "var(--bg-secondary)";
+  const border = isCurrent ? "2px solid var(--primary-color)" : "1px solid var(--border-color)";
+  const transform = isHovered && isInteractive ? "scale(1.05)" : "scale(1)";
+  const boxShadow = isHovered && isInteractive ? "var(--shadow-sm)" : "none";
+
   return (
-    <div
-      key={`draft-${draft.draftNumber}-${draft.submissionId || draft.timestamp}`}
-      style={{
-        padding: "var(--spacing-sm) var(--spacing-md)",
-        backgroundColor: isCurrent ? "var(--primary-color)" : "var(--bg-secondary)",
-        color: isCurrent ? "white" : "var(--text-primary)",
-        borderRadius: "var(--border-radius)",
-        fontSize: "14px",
-        fontWeight: isCurrent ? 600 : 500,
-        cursor: hasValidSubmissionId && !isCurrent ? "pointer" : "default",
-        transition: "all 0.2s ease",
-        opacity: hasValidSubmissionId ? 1 : 0.6,
-        textAlign: "center",
-        minWidth: "100px",
-        border: isCurrent ? "2px solid var(--primary-color)" : "1px solid var(--border-color)",
-      }}
-      onClick={handleClick}
-      onMouseEnter={(e) => {
-        if (!isCurrent && hasValidSubmissionId) {
-          e.currentTarget.style.backgroundColor = "var(--bg-primary)";
-          e.currentTarget.style.transform = "scale(1.05)";
-          e.currentTarget.style.boxShadow = "var(--shadow-sm)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isCurrent) {
-          e.currentTarget.style.backgroundColor = "var(--bg-secondary)";
-          e.currentTarget.style.transform = "scale(1)";
-          e.currentTarget.style.boxShadow = "none";
-        }
-      }}
-      lang="en"
-    >
-      <div style={{ fontWeight: 600, marginBottom: "2px" }}>Draft {draft.draftNumber}</div>
-      {draft.overallScore && (
-        <div style={{ fontSize: "12px", opacity: 0.9 }}>{draft.overallScore.toFixed(1)}</div>
-      )}
+    <div lang="en">
+      <button
+        type="button"
+        onClick={handleClick}
+        onMouseEnter={() => isInteractive && setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        disabled={!isInteractive}
+        aria-pressed={isCurrent}
+        style={{
+          width: "100%",
+          padding: "var(--spacing-sm) var(--spacing-md)",
+          backgroundColor,
+          color: isCurrent ? "white" : "var(--text-primary)",
+          borderRadius: "var(--border-radius)",
+          fontSize: "14px",
+          fontWeight: isCurrent ? 600 : 500,
+          cursor: isInteractive ? "pointer" : "default",
+          transition: "all 0.2s ease",
+          opacity: hasValidSubmissionId ? 1 : 0.6,
+          textAlign: "center",
+          minWidth: "100px",
+          border,
+          transform,
+          boxShadow,
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: "2px" }}>Draft {draft.draftNumber}</div>
+        {showScore && (
+          <div style={{ fontSize: "12px", opacity: 0.9 }}>{overallScore!.toFixed(1)}</div>
+        )}
+      </button>
     </div>
   );
 }

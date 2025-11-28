@@ -16,31 +16,29 @@ export function HeatMapSection({
   isFeedbackRevealed: boolean;
   onReveal: () => void;
 }) {
-  if (!grammarErrors || grammarErrors.length === 0 || !finalAnswerText) {
+  if (!grammarErrors?.length || !finalAnswerText) {
     return null;
   }
 
+  const headingStyle = {
+    fontSize: "20px",
+    marginBottom: "var(--spacing-md)",
+    fontWeight: 600,
+  } as const;
+
+  const instructionsStyle = {
+    marginBottom: "var(--spacing-md)",
+    fontSize: "14px",
+    color: "var(--text-secondary)",
+  } as const;
+
   return (
     <div className="card notranslate" translate="no" lang="en">
-      <h2
-        style={{
-          fontSize: "20px",
-          marginBottom: "var(--spacing-md)",
-          fontWeight: 600,
-        }}
-        lang="en"
-      >
+      <h2 style={headingStyle} lang="en">
         Your Writing with Feedback
       </h2>
       {isFeedbackRevealed && (
-        <p
-          style={{
-            marginBottom: "var(--spacing-md)",
-            fontSize: "14px",
-            color: "var(--text-secondary)",
-          }}
-          lang="en"
-        >
+        <p style={instructionsStyle} lang="en">
           Click on highlighted text to see suggestions for improvement.
         </p>
       )}

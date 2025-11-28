@@ -84,7 +84,7 @@ export function LearnerResultsView({
     }
     // Use question text if available, otherwise use empty string for free writing
     const finalQuestionText = questionText || "";
-    await handleResubmit(editedText, finalQuestionText, submissionId, parentSubmissionId);
+    await handleResubmit(editedText, finalQuestionText, submissionId);
   };
 
   return (

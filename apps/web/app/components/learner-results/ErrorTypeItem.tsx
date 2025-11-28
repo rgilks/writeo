@@ -2,7 +2,7 @@
  * Component for displaying error types with explanations
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { LanguageToolError } from "@writeo/shared";
 import { getErrorExplanation } from "./utils";
 
@@ -16,40 +16,52 @@ export function ErrorTypeItem({
   examples: LanguageToolError[];
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const contentId = useId();
+  const toggleExpansion = () => setIsExpanded((prev) => !prev);
+
+  const listItemStyle = { marginBottom: "var(--spacing-sm)", fontSize: "16px" } as const;
+  const toggleButtonStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: "var(--spacing-sm)",
+    cursor: "pointer",
+    width: "100%",
+    background: "transparent",
+    border: "none",
+    padding: 0,
+    color: "var(--text-primary)",
+    textAlign: "left" as const,
+  };
+  const expandedIconStyle = { fontSize: "12px", color: "var(--text-secondary)" } as const;
+  const countStyle = { color: "var(--text-secondary)" } as const;
+  const detailsStyle = {
+    marginTop: "var(--spacing-xs)",
+    marginLeft: "var(--spacing-md)",
+    padding: "var(--spacing-sm)",
+    backgroundColor: "rgba(102, 126, 234, 0.1)",
+    borderRadius: "var(--border-radius)",
+    fontSize: "14px",
+    lineHeight: "1.5",
+  } as const;
 
   return (
-    <li style={{ marginBottom: "var(--spacing-sm)", fontSize: "16px" }} lang="en">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "var(--spacing-sm)",
-          cursor: "pointer",
-        }}
-        onClick={() => setIsExpanded(!isExpanded)}
+    <li style={listItemStyle} lang="en">
+      <button
+        type="button"
+        onClick={toggleExpansion}
+        aria-expanded={isExpanded}
+        aria-controls={contentId}
+        style={toggleButtonStyle}
         lang="en"
       >
-        <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-          {isExpanded ? "▼" : "▶"}
-        </span>
+        <span style={expandedIconStyle}>{isExpanded ? "▼" : "▶"}</span>
         <strong>{type}</strong>
-        <span style={{ color: "var(--text-secondary)" }}>
+        <span style={countStyle}>
           ({count} {count === 1 ? "time" : "times"})
         </span>
-      </div>
+      </button>
       {isExpanded && (
-        <div
-          style={{
-            marginTop: "var(--spacing-xs)",
-            marginLeft: "var(--spacing-md)",
-            padding: "var(--spacing-sm)",
-            backgroundColor: "rgba(102, 126, 234, 0.1)",
-            borderRadius: "var(--border-radius)",
-            fontSize: "14px",
-            lineHeight: "1.5",
-          }}
-          lang="en"
-        >
+        <div style={detailsStyle} id={contentId} lang="en">
           <p style={{ marginBottom: "var(--spacing-xs)", fontWeight: 600 }} lang="en">
             {getErrorExplanation(type, count)}
           </p>

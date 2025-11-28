@@ -12,22 +12,26 @@ export function useDraftNavigation(
   rootDraft: DraftHistory | undefined,
   getDraftHistory: (id: string) => DraftHistory[],
 ) {
-  // Use the draft's submissionId directly if available
-  let draftSubmissionId = draft.submissionId;
+  const fallbackRootId = parentSubmissionId ?? rootDraft?.submissionId ?? submissionId;
+  const draftSubmissionId =
+    draft.submissionId ||
+    findSubmissionId(draft.draftNumber ?? draftNumber, fallbackRootId, getDraftHistory);
 
-  // If draft doesn't have a submissionId, try to find it from stored history
-  if (!draftSubmissionId || draftSubmissionId.length === 0) {
-    // Try to find the root submission ID first
-    const rootId = parentSubmissionId || rootDraft?.submissionId || submissionId;
-    if (rootId) {
-      const storedHistory = getDraftHistory(rootId);
-      const storedDraft = storedHistory.find((d) => d.draftNumber === draft.draftNumber);
-      draftSubmissionId = storedDraft?.submissionId || "";
-    }
-  }
-
-  const hasValidSubmissionId = Boolean(draftSubmissionId && draftSubmissionId.length > 0);
+  const hasValidSubmissionId = Boolean(draftSubmissionId);
   const navigateUrl = hasValidSubmissionId ? `/results/${draftSubmissionId}` : "#";
 
   return { navigateUrl, hasValidSubmissionId };
+}
+
+function findSubmissionId(
+  draftNumber: number | undefined,
+  rootId: string | undefined,
+  getDraftHistory: (id: string) => DraftHistory[],
+) {
+  if (!draftNumber || !rootId) {
+    return undefined;
+  }
+
+  const storedHistory = getDraftHistory(rootId);
+  return storedHistory.find((storedDraft) => storedDraft.draftNumber === draftNumber)?.submissionId;
 }

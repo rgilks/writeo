@@ -2,65 +2,29 @@
  * Draft table header component
  */
 
+const headerBaseStyle = {
+  padding: "var(--spacing-sm)",
+  fontWeight: 600,
+  color: "var(--text-primary)",
+} as const;
+
+const columns = [
+  { label: "Draft", align: "left" },
+  { label: "Score", align: "right" },
+  { label: "Words", align: "right" },
+  { label: "Errors", align: "right" },
+  { label: "Change", align: "left" },
+] as const;
+
 export function DraftTableHeader() {
   return (
     <thead>
       <tr style={{ borderBottom: "2px solid var(--border-color)" }}>
-        <th
-          style={{
-            textAlign: "left",
-            padding: "var(--spacing-sm)",
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-          lang="en"
-        >
-          Draft
-        </th>
-        <th
-          style={{
-            textAlign: "right",
-            padding: "var(--spacing-sm)",
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-          lang="en"
-        >
-          Score
-        </th>
-        <th
-          style={{
-            textAlign: "right",
-            padding: "var(--spacing-sm)",
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-          lang="en"
-        >
-          Words
-        </th>
-        <th
-          style={{
-            textAlign: "right",
-            padding: "var(--spacing-sm)",
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-          lang="en"
-        >
-          Errors
-        </th>
-        <th
-          style={{
-            textAlign: "left",
-            padding: "var(--spacing-sm)",
-            fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-          lang="en"
-        >
-          Change
-        </th>
+        {columns.map(({ label, align }) => (
+          <th key={label} style={{ ...headerBaseStyle, textAlign: align }} lang="en">
+            {label}
+          </th>
+        ))}
       </tr>
     </thead>
   );

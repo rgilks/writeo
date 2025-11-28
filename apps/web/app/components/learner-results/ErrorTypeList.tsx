@@ -9,33 +9,37 @@ import { ErrorTypeItem } from "./ErrorTypeItem";
 export function ErrorTypeList({ grammarErrors }: { grammarErrors: LanguageToolError[] }) {
   const topErrorTypes = getTopErrorTypes(grammarErrors, 3);
 
-  if (!topErrorTypes || topErrorTypes.length === 0) {
+  if (!topErrorTypes?.length) {
     return null;
   }
 
+  const cardStyle = {
+    padding: "var(--spacing-md)",
+  } as const;
+
+  const headingStyle = {
+    fontSize: "20px",
+    marginBottom: "var(--spacing-md)",
+    fontWeight: 600,
+  } as const;
+
+  const descriptionStyle = {
+    marginBottom: "var(--spacing-md)",
+    fontSize: "16px",
+    color: "var(--text-secondary)",
+  } as const;
+
+  const listStyle = { margin: 0, paddingLeft: "var(--spacing-md)" } as const;
+
   return (
-    <div className="card" lang="en">
-      <h2
-        style={{
-          fontSize: "20px",
-          marginBottom: "var(--spacing-md)",
-          fontWeight: 600,
-        }}
-        lang="en"
-      >
+    <div className="card" lang="en" style={cardStyle}>
+      <h2 style={headingStyle} lang="en">
         Common Areas to Improve
       </h2>
-      <p
-        style={{
-          marginBottom: "var(--spacing-md)",
-          fontSize: "16px",
-          color: "var(--text-secondary)",
-        }}
-        lang="en"
-      >
+      <p style={descriptionStyle} lang="en">
         You made these types of errors most often:
       </p>
-      <ul style={{ margin: 0, paddingLeft: "var(--spacing-md)" }} lang="en">
+      <ul style={listStyle} lang="en">
         {topErrorTypes.map(({ type, count }) => {
           const exampleErrors = grammarErrors
             .filter((err) => (err.errorType || err.category) === type)

@@ -36,6 +36,54 @@ export function DimensionScores({
     return null; // Don't show dimension scores when scoring service failed
   }
 
+  const cardBaseStyle = {
+    padding: "10px 8px",
+    backgroundColor: "var(--bg-primary)",
+    border: "1px solid rgba(0, 0, 0, 0.08)",
+    borderRadius: "var(--border-radius)",
+    transition: "all 0.2s ease",
+    position: "relative",
+  } as const;
+
+  const getCardStyle = (isWeakest: boolean) =>
+    isWeakest
+      ? {
+          ...cardBaseStyle,
+          backgroundColor: "rgba(239, 68, 68, 0.08)",
+          border: "2px solid rgba(239, 68, 68, 0.4)",
+        }
+      : cardBaseStyle;
+
+  const scoreNumberStyle = {
+    fontSize: "28px",
+    fontWeight: 700,
+    marginBottom: "4px",
+    lineHeight: "1",
+  } as const;
+
+  const scoreLabelStyle = {
+    fontSize: "10px",
+    fontWeight: 600,
+    marginBottom: "4px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  } as const;
+
+  const dimensionLabelStyle = {
+    fontSize: "12px",
+    color: "var(--text-primary)",
+    lineHeight: "1.3",
+    fontWeight: 500,
+    marginBottom: "6px",
+  } as const;
+
+  const progressTrackStyle = {
+    height: "3px",
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+    borderRadius: "2px",
+    overflow: "hidden",
+  } as const;
+
   return (
     <div
       style={{
@@ -60,12 +108,7 @@ export function DimensionScores({
       <div
         className="dimensions-grid-responsive"
         style={{
-          gridTemplateColumns:
-            columnCount === 3
-              ? "repeat(3, 1fr)"
-              : columnCount === 4
-                ? "repeat(4, 1fr)"
-                : `repeat(${columnCount}, 1fr)`,
+          gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
         }}
         lang="en"
       >
@@ -75,66 +118,17 @@ export function DimensionScores({
           const scoreColor = getScoreColor(score);
 
           return (
-            <div
-              key={key}
-              style={{
-                padding: "10px 8px",
-                backgroundColor: isWeakest ? "rgba(239, 68, 68, 0.08)" : "var(--bg-primary)",
-                border: isWeakest
-                  ? "2px solid rgba(239, 68, 68, 0.4)"
-                  : "1px solid rgba(0, 0, 0, 0.08)",
-                borderRadius: "var(--border-radius)",
-                transition: "all 0.2s ease",
-                position: "relative",
-              }}
-              lang="en"
-            >
-              <div
-                style={{
-                  fontSize: "28px",
-                  fontWeight: 700,
-                  color: scoreColor,
-                  marginBottom: "4px",
-                  lineHeight: "1",
-                }}
-                lang="en"
-              >
+            <div key={key} style={getCardStyle(Boolean(isWeakest))} lang="en">
+              <div style={{ ...scoreNumberStyle, color: scoreColor }} lang="en">
                 {score.toFixed(1)}
               </div>
-              <div
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 600,
-                  color: scoreColor,
-                  marginBottom: "4px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                }}
-                lang="en"
-              >
+              <div style={{ ...scoreLabelStyle, color: scoreColor }} lang="en">
                 {scoreLabel}
               </div>
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "var(--text-primary)",
-                  lineHeight: "1.3",
-                  fontWeight: 500,
-                  marginBottom: "6px",
-                }}
-                lang="en"
-              >
+              <div style={dimensionLabelStyle} lang="en">
                 {label}
               </div>
-              <div
-                style={{
-                  height: "3px",
-                  backgroundColor: "rgba(0, 0, 0, 0.1)",
-                  borderRadius: "2px",
-                  overflow: "hidden",
-                }}
-                lang="en"
-              >
+              <div style={progressTrackStyle} lang="en">
                 <div
                   style={{
                     height: "100%",
