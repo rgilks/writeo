@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Test Coverage:** ~58 tests (38 API + 20 E2E) covering critical functionality
+**Test Coverage:** 453 unit tests + 28 API integration tests + 20 E2E tests covering critical functionality
 
 ---
 
@@ -42,22 +42,39 @@ npm run test:e2e:ui   # Playwright UI mode
 - Relevance checking
 - Cost controls (essay truncation)
 
-**Total:** 38 test cases covering critical API functionality
+**Total:** 28 test cases covering critical API functionality
+
+### Unit Tests (`tests/**/*.test.ts` - Vitest)
+
+**Coverage:** Utilities, middleware, validation, error handling, storage, shared packages
+
+**Test Files (31 files):**
+
+- **API Worker** (11 files): Auth, rate limiting, security, validation, errors, context, HTTP utilities, Zod utilities, fetch-with-timeout, request-id
+- **Web App** (13 files): Error handling, validation, progress, storage, submission, text utils, UUID utils, grammar rules, error logger, API client, learner results, error utils
+- **Shared Package** (4 files): Validation, text utils, retry logic, type guards
+- **Integration** (1 file): Position validation
+- **API Integration** (1 file): Full E2E API workflows
+
+**Total:** 453 unit tests covering critical utilities and middleware
 
 ### E2E Tests (`tests/e2e/*.spec.ts` - Playwright)
 
 **Coverage:** User-facing flows, UI interactions, visual design, responsive layout
 
-**Test Suites:**
+**Test Files (3 files):**
 
-- `homepage.spec.ts` - Homepage and navigation (including custom question card)
-- `writing.spec.ts` - Form submission and validation (including custom questions and free writing)
-- `results.spec.ts` - Results display and feedback
-- `interactive-learning.spec.ts` - Interactive learning flow
-- `draft-tracking.spec.ts` - Draft tracking and navigation
-- `error-handling.spec.ts` - Error handling
-- `visual.spec.ts` - Visual design verification
+- `core.spec.ts` - Comprehensive core functionality:
+  - Homepage and navigation (including custom question card)
+  - Essay submission and validation (including custom questions and free writing)
+  - Results display and feedback
+  - Interactive learning flow
+  - Draft tracking and navigation
+  - Error handling
+  - Results persistence
+  - Progress dashboard
 - `responsive.spec.ts` - Responsive layouts (mobile/tablet/desktop)
+- `visual.spec.ts` - Visual design verification (contrast, touch targets)
 
 **Total:** 20 test cases covering critical user flows
 
