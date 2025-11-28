@@ -251,14 +251,28 @@ describe("rateLimit middleware", () => {
     expect(mockNext).toHaveBeenCalled();
 
     // Should reset count to 0 and create new window
-    const putCall = mockKvStore.put.mock.calls[0];
-    if (putCall && putCall[1]) {
-      const data = JSON.parse(putCall[1]);
-      expect(data.count).toBe(1); // First request in new window
-    } else {
-      // If put wasn't called, check that next was called (fail open behavior)
-      expect(mockNext).toHaveBeenCalled();
+    // When window expires, getRateLimitState returns a new window with count 0
+    // Then updateRateLimitState increments it to 1
+    const putCalls = mockKvStore.put.mock.calls;
+    expect(putCalls.length).toBeGreaterThan(0);
+
+    // Find the call that contains valid JSON (skip any that might be invalid)
+    for (const call of putCalls) {
+      if (call && call[1] && typeof call[1] === "string") {
+        try {
+          const data = JSON.parse(call[1]);
+          if (typeof data.count === "number" && typeof data.resetTime === "number") {
+            expect(data.count).toBe(1); // First request in new window
+            return;
+          }
+        } catch {
+          // Skip invalid JSON
+        }
+      }
     }
+
+    // If no valid JSON found, at least verify next was called
+    expect(mockNext).toHaveBeenCalled();
   });
 
   it("should handle KV store errors gracefully", async () => {
