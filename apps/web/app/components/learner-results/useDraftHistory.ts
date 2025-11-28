@@ -163,7 +163,7 @@ export function useDraftHistory(
       }
     });
 
-    let result = Array.from(draftMap.values()).sort((a, b) => a.draftNumber - b.draftNumber);
+    const result = Array.from(draftMap.values()).sort((a, b) => a.draftNumber - b.draftNumber);
 
     // Add current draft to history if not already present
     // Do this even if overall is 0 (essay scoring may have failed)

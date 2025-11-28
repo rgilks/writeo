@@ -37,7 +37,11 @@ export function ErrorSpan({
       style={styles}
       onClick={(e) => {
         e.stopPropagation();
-        isActive ? onDeactivate() : onActivate();
+        if (isActive) {
+          onDeactivate();
+        } else {
+          onActivate();
+        }
       }}
     >
       {errorText}

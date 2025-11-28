@@ -58,7 +58,7 @@ class ErrorLogger {
         storedErrors.pop();
       }
       localStorage.setItem("writeo_errors", JSON.stringify(storedErrors));
-    } catch (e) {
+    } catch {
       // Ignore localStorage errors
     }
   }

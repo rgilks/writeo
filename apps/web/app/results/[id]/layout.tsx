@@ -5,7 +5,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  await params; // id not used but required for function signature
 
   const title = "Writing Feedback - Writeo";
   const description =

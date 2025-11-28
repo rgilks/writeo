@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { getErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/app/lib/utils/error-messages";
+import { getErrorMessage } from "@/app/lib/utils/error-messages";
 import { errorLogger } from "@/app/lib/utils/error-logger";
 
 const isDevelopment = typeof process !== "undefined" && process.env?.NODE_ENV === "development";

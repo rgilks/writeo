@@ -60,7 +60,7 @@ interface BaseErrorControlProps {
   onShowExperimental: () => void;
 }
 
-export interface NoErrorsMessageProps extends BaseErrorControlProps {}
+export type NoErrorsMessageProps = BaseErrorControlProps;
 
 export interface RevealPromptProps extends BaseErrorControlProps {
   onReveal: () => void;

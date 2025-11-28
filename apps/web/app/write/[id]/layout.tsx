@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { TASK_DATA } from "@/app/lib/constants/tasks";
+import { TASK_DATA, TASKS } from "@/app/lib/constants/tasks";
 
 export async function generateMetadata({
   params,
@@ -9,6 +9,7 @@ export async function generateMetadata({
   const { id } = await params;
   const isCustom = id === "custom";
   const task = isCustom ? null : TASK_DATA[id];
+  const fullTask = isCustom ? null : TASKS.find((t) => t.id === id);
 
   const title = isCustom
     ? "Custom Question - Writeo"
@@ -18,8 +19,8 @@ export async function generateMetadata({
 
   const description = isCustom
     ? "Write your own question or practice free writing without a specific prompt. Get detailed feedback on your essays."
-    : task
-      ? `${task.description} Practice your writing and get detailed feedback.`
+    : fullTask
+      ? `${fullTask.description} Practice your writing and get detailed feedback.`
       : "Practice your writing skills and get detailed feedback on your essays.";
 
   return {
