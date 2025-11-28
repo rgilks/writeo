@@ -5,11 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cf": "next build && npx @opennextjs/cloudflare@latest build --skipNextBuild",
+    "build:cf": "next build && npx @opennextjs/cloudflare build --skipNextBuild",
     "deploy": "npm run build:cf && wrangler deploy",
-    "preview": "npm run build && wrangler dev",
-    "lint": "echo 'Linting skipped - Next.js lint is deprecated. Configure ESLint manually if needed.' || true",
-    "type-check": "tsc --noEmit"
+    "preview": "npm run build:cf && wrangler dev",
+    "start": "next start",
+    "lint": "echo 'Linting skipped - Next.js lint is deprecated. Configure ESLint manually if needed.'",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next .open-next .opennext node_modules/.cache"
   },
   "dependencies": {
     "@writeo/shared": "file:../../packages/shared",
@@ -24,7 +26,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240222.0",
-    "@opennextjs/cloudflare": "^1.12.0",
+    "@opennextjs/cloudflare": "^1.13.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",

@@ -4,11 +4,17 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 workers_dev = false
 
+# Production route configuration
 routes = [{ pattern = "writeo.tre.systems/*", zone_name = "tre.systems" }]
 
+# Static assets from OpenNext build
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+# Environment variables injected into process.env at runtime
+# These are available to both server-side code and Next.js Server Actions
 [vars]
+# API base URL for backend requests
+# Used by app/lib/api-config.ts to determine which API endpoint to call
 API_BASE_URL = "https://writeo-api-worker.rob-gilks.workers.dev"
