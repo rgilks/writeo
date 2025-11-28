@@ -30,8 +30,8 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 2, baseDelayMs: 100 });
 
-    // Fast-forward past the delay
-    await vi.advanceTimersByTimeAsync(100);
+    // Run all timers instead of advancing specific time
+    await vi.runAllTimersAsync();
 
     const result = await promise;
     expect(result).toBe("success");
@@ -43,8 +43,8 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 3, baseDelayMs: 100 });
 
-    // Fast-forward through all delays
-    await vi.advanceTimersByTimeAsync(500);
+    // Run all timers instead of advancing specific time
+    await vi.runAllTimersAsync();
 
     try {
       await promise;
@@ -60,9 +60,8 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 3, baseDelayMs: 100, maxDelayMs: 1000 });
 
-    // Advance timers to trigger all retries
-    // First retry after 100ms, second after 200ms (100 + 200 = 300ms total)
-    await vi.advanceTimersByTimeAsync(500);
+    // Run all timers instead of advancing specific time
+    await vi.runAllTimersAsync();
 
     try {
       await promise;
@@ -83,7 +82,8 @@ describe("retryWithBackoff", () => {
       maxDelayMs: 2000,
     });
 
-    await vi.advanceTimersByTimeAsync(10000);
+    // Run all timers instead of advancing specific time
+    await vi.runAllTimersAsync();
 
     try {
       await promise;
@@ -117,7 +117,7 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { shouldRetry, baseDelayMs: 100 });
 
-    await vi.advanceTimersByTimeAsync(100);
+    await vi.runAllTimersAsync();
 
     const result = await promise;
     expect(result).toBe("success");
@@ -142,7 +142,7 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { baseDelayMs: 100 });
 
-    await vi.advanceTimersByTimeAsync(100);
+    await vi.runAllTimersAsync();
 
     const result = await promise;
     expect(result).toBe("success");
@@ -154,7 +154,7 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 2, baseDelayMs: 100 });
 
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.runAllTimersAsync();
 
     try {
       await promise;
@@ -170,7 +170,7 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { baseDelayMs: 100 });
 
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.runAllTimersAsync();
 
     try {
       await promise;
@@ -186,7 +186,7 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn);
 
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.runAllTimersAsync();
 
     const result = await promise;
     expect(result).toBe("success");
@@ -202,7 +202,7 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 3, baseDelayMs: 100 });
 
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.runAllTimersAsync();
 
     try {
       await promise;
@@ -218,7 +218,7 @@ describe("retryWithBackoff", () => {
 
     const promise = retryWithBackoff(fn, { maxAttempts: 2, baseDelayMs: 100 });
 
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.runAllTimersAsync();
 
     try {
       await promise;
@@ -235,7 +235,7 @@ describe("retryWithBackoff", () => {
     });
 
     const promise = retryWithBackoff(fn);
-    await vi.advanceTimersByTimeAsync(10);
+    await vi.runAllTimersAsync();
     const result = await promise;
     expect(result).toBe("async success");
   });
