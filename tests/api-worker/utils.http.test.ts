@@ -90,27 +90,23 @@ describe("postJsonWithAuth", () => {
     );
   });
 
-  it("should handle different body types", async () => {
+  it.each([
+    [{ data: "string" }],
+    [{ count: 123 }],
+    [{ active: true }],
+    [{ items: [1, 2, 3] }],
+    [{ nested: { deep: { value: "test" } } }],
+  ])("should handle different body types: %j", async (body) => {
     const mockResponse = new Response("OK", { status: 200 });
     vi.spyOn(fetchWithTimeoutModule, "fetchWithTimeout").mockResolvedValue(mockResponse);
 
-    const testCases = [
-      { data: "string" },
-      { count: 123 },
-      { active: true },
-      { items: [1, 2, 3] },
-      { nested: { deep: { value: "test" } } },
-    ];
-
-    for (const body of testCases) {
-      await postJsonWithAuth("https://api.example.com", "key", body, 30000);
-      expect(fetchWithTimeoutModule.fetchWithTimeout).toHaveBeenCalledWith(
-        "https://api.example.com",
-        expect.objectContaining({
-          body: JSON.stringify(body),
-        }),
-      );
-    }
+    await postJsonWithAuth("https://api.example.com", "key", body, 30000);
+    expect(fetchWithTimeoutModule.fetchWithTimeout).toHaveBeenCalledWith(
+      "https://api.example.com",
+      expect.objectContaining({
+        body: JSON.stringify(body),
+      }),
+    );
   });
 
   it("should propagate errors from fetchWithTimeout", async () => {

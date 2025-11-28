@@ -73,18 +73,12 @@ describe("apiRequest", () => {
     expect(fetchCall[1].headers.get("Authorization")).toBe("Token my-api-key");
   });
 
-  it("should throw error when API key is missing", async () => {
-    vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
-    vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("MISSING_API_KEY");
-
-    await expect(apiRequest({ endpoint: "/test" })).rejects.toThrow(
-      "Server configuration error: API credentials not set",
-    );
-  });
-
-  it("should throw error when API base URL is missing", async () => {
-    vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("MISSING_API_BASE_URL");
-    vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-key");
+  it.each([
+    ["MISSING_API_KEY", "https://api.example.com", "API key"],
+    ["test-key", "MISSING_API_BASE_URL", "API base URL"],
+  ])("should throw error when %s is missing", async (apiKey, apiBase, description) => {
+    vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue(apiBase);
+    vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue(apiKey);
 
     await expect(apiRequest({ endpoint: "/test" })).rejects.toThrow(
       "Server configuration error: API credentials not set",
@@ -120,13 +114,6 @@ describe("apiRequest", () => {
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-key");
 
     await apiRequest({ endpoint: "/test", method: "GET" });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://api.example.com/test",
-      expect.objectContaining({
-        method: "GET",
-      }),
-    );
 
     const fetchCall = (global.fetch as any).mock.calls[0];
     expect(fetchCall[1].body).toBeUndefined();

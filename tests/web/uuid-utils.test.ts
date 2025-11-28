@@ -26,22 +26,20 @@ describe("generateUUID", () => {
     expect(result).toMatch(uuidRegex);
   });
 
-  it("should use fallback implementation when crypto.randomUUID is not available", () => {
-    // @ts-ignore
-    delete global.crypto;
+  it.each([
+    [undefined, "crypto.randomUUID not available"],
+    [{ randomUUID: undefined }, "crypto exists but randomUUID is undefined"],
+  ])("should use fallback when %j: %s", (cryptoConfig, description) => {
+    if (cryptoConfig === undefined) {
+      // @ts-ignore
+      delete global.crypto;
+    } else {
+      global.crypto = cryptoConfig as any;
+    }
 
     const result = generateUUID();
     expect(result).toMatch(uuidRegex);
     expect(result.length).toBe(36); // UUID format: 8-4-4-4-12
-  });
-
-  it("should use fallback when crypto exists but randomUUID is not a function", () => {
-    global.crypto = {
-      randomUUID: undefined,
-    } as any;
-
-    const result = generateUUID();
-    expect(result).toMatch(uuidRegex);
   });
 
   it("should generate different UUIDs on each call (fallback)", () => {
@@ -66,16 +64,6 @@ describe("generateUUID", () => {
       // Check variant bits (17th character should be 8, 9, a, or b)
       expect(["8", "9", "a", "b"]).toContain(uuid[19].toLowerCase());
     }
-  });
-
-  it("should use fallback when crypto.randomUUID is not a function", () => {
-    // Test that if randomUUID doesn't exist, it falls back
-    if (!global.crypto) {
-      global.crypto = {} as any;
-    }
-    delete (global.crypto as any).randomUUID;
-    const result = generateUUID();
-    expect(result).toMatch(uuidRegex);
   });
 
   it("should generate valid UUID structure (8-4-4-4-12 format)", () => {

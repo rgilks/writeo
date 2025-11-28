@@ -6,52 +6,28 @@ import {
 
 describe("error messages utilities", () => {
   describe("getErrorMessage", () => {
-    it("should return default message for empty error message", () => {
-      const error = new Error("");
-      const result = getErrorMessage(error, "global");
-      expect(result).toBe(DEFAULT_ERROR_MESSAGES.global);
-    });
+    it.each([
+      [new Error(""), "global", DEFAULT_ERROR_MESSAGES.global],
+      [new Error(), "write", DEFAULT_ERROR_MESSAGES.write],
+    ])(
+      "should return default message for empty/undefined error message",
+      (error, context, expected) => {
+        const result = getErrorMessage(error, context as any);
+        expect(result).toBe(expected);
+      },
+    );
 
-    it("should return default message for error without message", () => {
-      const error = new Error();
-      const result = getErrorMessage(error, "write");
-      expect(result).toBe(DEFAULT_ERROR_MESSAGES.write);
-    });
-
-    it("should handle Server Component errors", () => {
-      const error = new Error("Server Components render error");
-      const result = getErrorMessage(error, "write");
-      expect(result).toContain("processing your submission");
-    });
-
-    it("should handle configuration errors", () => {
-      const error = new Error("API_KEY is missing");
-      const result = getErrorMessage(error, "write");
-      expect(result).toContain("configuration issue");
-    });
-
-    it("should handle network errors", () => {
-      const error = new Error("Failed to fetch");
-      const result = getErrorMessage(error, "write");
-      expect(result).toContain("internet connection");
-    });
-
-    it("should handle timeout errors", () => {
-      const error = new Error("Request timed out");
-      const result = getErrorMessage(error, "global");
-      expect(result).toContain("too long");
-    });
-
-    it("should handle server configuration errors", () => {
-      const error = new Error("Server configuration error");
-      const result = getErrorMessage(error, "global");
-      expect(result).toContain("server configuration");
-    });
-
-    it("should handle not found errors in results context", () => {
-      const error = new Error("Not found");
-      const result = getErrorMessage(error, "results");
-      expect(result).toContain("couldn't find the results");
+    it.each([
+      ["Server Components render error", "write", "processing your submission"],
+      ["API_KEY is missing", "write", "configuration issue"],
+      ["Failed to fetch", "write", "internet connection"],
+      ["Request timed out", "global", "too long"],
+      ["Server configuration error", "global", "server configuration"],
+      ["Not found", "results", "couldn't find the results"],
+    ])("should handle specific error types: %s", (errorMessage, context, expectedContain) => {
+      const error = new Error(errorMessage);
+      const result = getErrorMessage(error, context as any);
+      expect(result).toContain(expectedContain);
     });
 
     it("should return user-friendly message if message is short and clean", () => {
@@ -60,24 +36,25 @@ describe("error messages utilities", () => {
       expect(result).toBe("Please try again later");
     });
 
-    it("should return default message for stack trace", () => {
-      const error = new Error("Error at line 1\n  at function()");
-      const result = getErrorMessage(error, "write");
-      expect(result).toBe(DEFAULT_ERROR_MESSAGES.write);
-    });
+    it.each([
+      ["Error at line 1\n  at function()", "write", DEFAULT_ERROR_MESSAGES.write],
+      ["a".repeat(201), "global", DEFAULT_ERROR_MESSAGES.global],
+    ])(
+      "should return default message for problematic error messages: %s",
+      (errorMessage, context, expected) => {
+        const error = new Error(errorMessage);
+        const result = getErrorMessage(error, context as any);
+        expect(result).toBe(expected);
+      },
+    );
 
-    it("should return default message for long error messages", () => {
-      const longMessage = "a".repeat(201);
-      const error = new Error(longMessage);
-      const result = getErrorMessage(error, "global");
-      expect(result).toBe(DEFAULT_ERROR_MESSAGES.global);
-    });
-
-    it("should use correct context for default messages", () => {
+    it.each([
+      ["global", DEFAULT_ERROR_MESSAGES.global],
+      ["write", DEFAULT_ERROR_MESSAGES.write],
+      ["results", DEFAULT_ERROR_MESSAGES.results],
+    ])("should use correct default message for context: %s", (context, expectedMessage) => {
       const error = new Error("");
-      expect(getErrorMessage(error, "global")).toBe(DEFAULT_ERROR_MESSAGES.global);
-      expect(getErrorMessage(error, "write")).toBe(DEFAULT_ERROR_MESSAGES.write);
-      expect(getErrorMessage(error, "results")).toBe(DEFAULT_ERROR_MESSAGES.results);
+      expect(getErrorMessage(error, context as any)).toBe(expectedMessage);
     });
   });
 });

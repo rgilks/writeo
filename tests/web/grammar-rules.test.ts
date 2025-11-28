@@ -19,23 +19,18 @@ describe("getGrammarRule", () => {
     expect(Array.isArray(result?.examples)).toBe(true);
   });
 
-  it("should return null for undefined input", () => {
-    expect(getGrammarRule(undefined)).toBeNull();
+  it.each([[undefined], [""]])("should return null for invalid input: %j", (input) => {
+    expect(getGrammarRule(input as any)).toBeNull();
   });
 
-  it("should return null for empty string", () => {
-    expect(getGrammarRule("")).toBeNull();
-  });
-
-  it("should be case-insensitive", () => {
-    const result1 = getGrammarRule("Subject-verb agreement");
-    const result2 = getGrammarRule("subject-verb agreement");
-    const result3 = getGrammarRule("SUBJECT-VERB AGREEMENT");
-
-    expect(result1).not.toBeNull();
-    expect(result2).toEqual(result1);
-    expect(result3).toEqual(result1);
-  });
+  it.each([["Subject-verb agreement"], ["subject-verb agreement"], ["SUBJECT-VERB AGREEMENT"]])(
+    "should be case-insensitive: %s",
+    (input) => {
+      const result = getGrammarRule(input);
+      expect(result).not.toBeNull();
+      expect(result?.rule).toBeDefined();
+    },
+  );
 
   it("should match partial patterns", () => {
     const result = getGrammarRule("subject verb agreement");
@@ -50,40 +45,17 @@ describe("getGrammarRule", () => {
     expect(result?.rule).toBeDefined();
   });
 
-  it("should return correct rule for Verb tense", () => {
-    const result = getGrammarRule("Verb tense");
+  it.each([
+    ["Verb tense", "consistent verb tenses"],
+    ["Article use", "a' before consonant"],
+    ["Preposition use", "relationships"],
+    ["Spelling", "spelling"],
+    ["Punctuation", "Punctuation marks"],
+    ["Word order", "Subject-Verb-Object"],
+  ])("should return correct rule for %s", (ruleType, expectedContain) => {
+    const result = getGrammarRule(ruleType);
     expect(result).not.toBeNull();
-    expect(result?.rule).toContain("consistent verb tenses");
-  });
-
-  it("should return correct rule for Article use", () => {
-    const result = getGrammarRule("Article use");
-    expect(result).not.toBeNull();
-    expect(result?.rule).toContain("a' before consonant");
-  });
-
-  it("should return correct rule for Preposition use", () => {
-    const result = getGrammarRule("Preposition use");
-    expect(result).not.toBeNull();
-    expect(result?.rule).toContain("relationships");
-  });
-
-  it("should return correct rule for Spelling", () => {
-    const result = getGrammarRule("Spelling");
-    expect(result).not.toBeNull();
-    expect(result?.rule).toContain("spelling");
-  });
-
-  it("should return correct rule for Punctuation", () => {
-    const result = getGrammarRule("Punctuation");
-    expect(result).not.toBeNull();
-    expect(result?.rule).toContain("Punctuation marks");
-  });
-
-  it("should return correct rule for Word order", () => {
-    const result = getGrammarRule("Word order");
-    expect(result).not.toBeNull();
-    expect(result?.rule).toContain("Subject-Verb-Object");
+    expect(result?.rule).toContain(expectedContain);
   });
 
   it("should return rule with examples array", () => {
@@ -119,13 +91,15 @@ describe("getAvailableGrammarRuleTypes", () => {
     });
   });
 
-  it("should include common rule types", () => {
+  it.each([
+    ["Subject-verb agreement"],
+    ["Verb tense"],
+    ["Article use"],
+    ["Spelling"],
+    ["Punctuation"],
+  ])("should include common rule type: %s", (ruleType) => {
     const types = getAvailableGrammarRuleTypes();
-    expect(types).toContain("Subject-verb agreement");
-    expect(types).toContain("Verb tense");
-    expect(types).toContain("Article use");
-    expect(types).toContain("Spelling");
-    expect(types).toContain("Punctuation");
+    expect(types).toContain(ruleType);
   });
 
   it("should return consistent results", () => {

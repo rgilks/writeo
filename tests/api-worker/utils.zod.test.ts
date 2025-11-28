@@ -25,15 +25,13 @@ describe("uuidStringSchema", () => {
     }
   });
 
-  it("should reject empty string", () => {
+  it.each([
+    ["", "empty string"],
+    [123, "non-string input"],
+    ["not-a-uuid", "invalid UUID format"],
+  ])("should reject %j: %s", (input, description) => {
     const schema = uuidStringSchema("test_id");
-    const result = schema.safeParse("");
-    expect(result.success).toBe(false);
-  });
-
-  it("should reject non-string input", () => {
-    const schema = uuidStringSchema("test_id");
-    const result = schema.safeParse(123);
+    const result = schema.safeParse(input);
     expect(result.success).toBe(false);
   });
 
@@ -46,17 +44,16 @@ describe("uuidStringSchema", () => {
     }
   });
 
-  it("should validate multiple different UUIDs", () => {
+  it.each([
+    ["123e4567-e89b-12d3-a456-426614174000"],
+    ["00000000-0000-4000-8000-000000000000"],
+    ["ffffffff-ffff-4fff-bfff-ffffffffffff"],
+  ])("should validate UUID: %s", (uuid) => {
     const schema = uuidStringSchema("test_id");
-    const uuids = [
-      "123e4567-e89b-12d3-a456-426614174000",
-      "00000000-0000-4000-8000-000000000000",
-      "ffffffff-ffff-4fff-bfff-ffffffffffff",
-    ];
-
-    for (const uuid of uuids) {
-      const result = schema.safeParse(uuid);
-      expect(result.success).toBe(true);
+    const result = schema.safeParse(uuid);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBe(uuid);
     }
   });
 
@@ -80,20 +77,19 @@ describe("formatZodMessage", () => {
     }
   });
 
-  it("should use fallback message when no issues found", () => {
-    const error = new z.ZodError([]);
-    const message = formatZodMessage(error, "Default error message");
-    expect(message).toBe("Default error message");
-  });
-
-  it("should use fallback message when issue has no message", () => {
-    const error = new z.ZodError([
-      {
-        code: "custom",
-        path: [],
-        message: undefined as any,
-      },
-    ]);
+  it.each([
+    [new z.ZodError([]), "no issues found"],
+    [
+      new z.ZodError([
+        {
+          code: "custom",
+          path: [],
+          message: undefined as any,
+        },
+      ]),
+      "issue has no message",
+    ],
+  ])("should use fallback message when %s", (error, description) => {
     const message = formatZodMessage(error, "Default error message");
     expect(message).toBe("Default error message");
   });

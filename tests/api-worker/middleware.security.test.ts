@@ -63,30 +63,19 @@ describe("securityHeaders middleware", () => {
 });
 
 describe("getCorsOrigin", () => {
-  it("should return origin when no allowedOrigins configured", () => {
-    const result = getCorsOrigin("https://example.com", undefined);
-    expect(result).toBe("https://example.com");
-  });
-
-  it("should return null when origin is null and no allowedOrigins", () => {
-    const result = getCorsOrigin(null, undefined);
-    expect(result).toBeNull();
-  });
-
-  it("should return origin when origin is in allowed list", () => {
-    const result = getCorsOrigin("https://example.com", "https://example.com,https://other.com");
-    expect(result).toBe("https://example.com");
-  });
-
-  it("should return null when origin is not in allowed list", () => {
-    const result = getCorsOrigin("https://evil.com", "https://example.com,https://other.com");
-    expect(result).toBeNull();
-  });
-
-  it("should handle comma-separated allowed origins with spaces", () => {
-    const result = getCorsOrigin("https://example.com", "https://example.com, https://other.com");
-    expect(result).toBe("https://example.com");
-  });
+  it.each([
+    ["https://example.com", undefined, "https://example.com"],
+    [null, undefined, null],
+    ["https://example.com", "https://example.com,https://other.com", "https://example.com"],
+    ["https://evil.com", "https://example.com,https://other.com", null],
+    ["https://example.com", "https://example.com, https://other.com", "https://example.com"],
+  ])(
+    "should handle CORS origin: origin=%s, allowedOrigins=%s",
+    (origin, allowedOrigins, expected) => {
+      const result = getCorsOrigin(origin as any, allowedOrigins);
+      expect(result).toBe(expected);
+    },
+  );
 
   it("should trim whitespace from allowed origins", () => {
     const result = getCorsOrigin(
@@ -101,21 +90,15 @@ describe("getCorsOrigin", () => {
     expect(result).toBeNull();
   });
 
-  it("should return empty string for empty origin when allowedOrigins is set", () => {
-    // Empty string is falsy, so !origin check returns early with origin value (empty string)
-    const result = getCorsOrigin("", "https://example.com");
-    expect(result).toBe("");
-  });
-
-  it("should handle single allowed origin", () => {
-    const result = getCorsOrigin("https://example.com", "https://example.com");
-    expect(result).toBe("https://example.com");
-  });
-
-  it("should return origin when allowedOrigins is empty string", () => {
-    // When allowedOrigins is empty string, !allowedOrigins is true (empty string is falsy)
-    // So it returns origin early without checking the list
-    const result = getCorsOrigin("https://example.com", "");
-    expect(result).toBe("https://example.com");
-  });
+  it.each([
+    ["", "https://example.com", ""],
+    ["https://example.com", "https://example.com", "https://example.com"],
+    ["https://example.com", "", "https://example.com"],
+  ])(
+    "should handle edge cases: origin=%s, allowedOrigins=%s, expected=%s",
+    (origin, allowedOrigins, expected) => {
+      const result = getCorsOrigin(origin, allowedOrigins);
+      expect(result).toBe(expected);
+    },
+  );
 });
