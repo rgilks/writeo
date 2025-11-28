@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { errorLogger } from "@/app/lib/utils/error-logger";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -55,7 +56,11 @@ class ErrorBoundaryInner extends React.Component<ErrorBoundaryInnerProps, ErrorB
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    errorLogger.logError(error, {
+      page: typeof window !== "undefined" ? window.location.pathname : "unknown",
+      action: "react_error_boundary",
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   handleReset = () => {

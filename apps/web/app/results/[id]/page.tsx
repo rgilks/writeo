@@ -10,7 +10,10 @@ import { LearnerResultsView } from "@/app/components/LearnerResultsView";
 import { DeveloperResultsView } from "@/app/components/DeveloperResultsView";
 import { ModeSwitcher } from "@/app/components/ModeSwitcher";
 import { ErrorBoundary } from "@/app/components/ErrorBoundary";
+import { LiveRegion } from "@/app/components/LiveRegion";
+import { ResultsLoadingSkeleton } from "@/app/components/LoadingSkeleton";
 import type { AssessmentResults } from "@writeo/shared";
+import { errorLogger } from "@/app/lib/utils/error-logger";
 
 import { getErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/app/lib/utils/error-messages";
 
@@ -103,6 +106,11 @@ export default function ResultsPage() {
         }
       } catch (err) {
         if (!cancelled) {
+          errorLogger.logError(err, {
+            page: "results",
+            action: "fetch_results",
+            submissionId,
+          });
           setError(getFriendlyErrorMessage(err));
           setStatus("error");
         }
@@ -163,26 +171,30 @@ export default function ResultsPage() {
           </nav>
         </div>
       </header>
+      <LiveRegion
+        message={
+          status === "pending"
+            ? "Loading your essay results, please wait"
+            : status === "error"
+              ? `Error: ${error || "Unable to load results"}`
+              : status === "success" && data
+                ? "Essay results loaded successfully"
+                : null
+        }
+        priority={status === "error" ? "assertive" : "polite"}
+      />
       <div className="container" style={{ minHeight: "calc(100vh - 200px)" }}>
         {status === "pending" && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "var(--spacing-3xl) var(--spacing-lg)",
-              minHeight: "400px",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-            }}
-          >
-            <h2 style={{ marginBottom: "var(--spacing-md)" }}>Loading Results...</h2>
-            <p style={{ color: "var(--text-secondary)" }}>Fetching your essay results...</p>
+          <div role="status" aria-live="polite" aria-busy="true">
+            <ResultsLoadingSkeleton />
           </div>
         )}
 
         {status === "error" && (
           <div
             className="card"
+            role="alert"
+            aria-live="assertive"
             style={{
               maxWidth: "600px",
               margin: "var(--spacing-3xl) auto",
@@ -193,7 +205,9 @@ export default function ResultsPage() {
               justifyContent: "center",
             }}
           >
-            <div style={{ fontSize: "48px", marginBottom: "var(--spacing-md)" }}>📝</div>
+            <div style={{ fontSize: "48px", marginBottom: "var(--spacing-md)" }} aria-hidden="true">
+              📝
+            </div>
             <h2 style={{ marginBottom: "var(--spacing-sm)" }}>Results Not Available</h2>
             <p
               style={{

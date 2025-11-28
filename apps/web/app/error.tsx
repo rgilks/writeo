@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { getErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/app/lib/utils/error-messages";
+import { errorLogger } from "@/app/lib/utils/error-logger";
 
 const isDevelopment = typeof process !== "undefined" && process.env?.NODE_ENV === "development";
 
@@ -14,7 +15,11 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Error:", error);
+    errorLogger.logError(error, {
+      page: typeof window !== "undefined" ? window.location.pathname : "unknown",
+      action: "global_error",
+      digest: error.digest,
+    });
   }, [error]);
 
   const errorMessage = getErrorMessage(error, "global");

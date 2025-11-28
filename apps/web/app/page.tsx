@@ -17,7 +17,7 @@ export default function HomePage() {
               Writeo
             </Link>
           </div>
-          <nav className="header-actions" aria-label="Primary"></nav>
+          <nav className="header-actions" aria-label="Primary navigation"></nav>
         </div>
       </header>
 

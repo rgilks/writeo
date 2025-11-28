@@ -10,6 +10,8 @@ import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
 import { TASK_DATA } from "@/app/lib/constants/tasks";
 import { getErrorMessage } from "@/app/lib/utils/error-messages";
+import { errorLogger } from "@/app/lib/utils/error-logger";
+import { LiveRegion } from "@/app/components/LiveRegion";
 
 const SUBMISSION_TIMEOUT = 60000;
 const AUTO_SAVE_DELAY = 2000;
@@ -242,7 +244,12 @@ export default function WritePage() {
       setResult(submissionId, resultsToStore);
       router.push(`/results/${submissionId}`);
     } catch (err) {
-      console.error("Submission error:", err);
+      errorLogger.logError(err, {
+        page: "write",
+        action: "submit_essay",
+        taskId,
+        wordCount,
+      });
       setError(getFriendlyErrorMessage(err));
       setLoading(false);
     }
@@ -250,6 +257,16 @@ export default function WritePage() {
 
   return (
     <>
+      <LiveRegion
+        message={
+          loading
+            ? "Submitting your essay for analysis, please wait"
+            : error
+              ? `Error: ${error}`
+              : null
+        }
+        priority={error ? "assertive" : "polite"}
+      />
       <header className="header" lang="en">
         <div className="header-content">
           <div className="logo-group">
@@ -337,19 +354,32 @@ export default function WritePage() {
                     color: "var(--text-secondary)",
                   }}
                 >
-                  <span>
+                  <span aria-live="polite" aria-atomic="true">
                     {wordCount} {wordCount === 1 ? "word" : "words"}
                   </span>
                   {wordCount < MIN_WORDS && (
-                    <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
+                    <span
+                      style={{ color: "var(--error-color)", fontWeight: 600 }}
+                      role="status"
+                      aria-live="polite"
+                    >
                       (Need at least {MIN_WORDS} words)
                     </span>
                   )}
                   {wordCount >= MIN_WORDS && wordCount <= MAX_WORDS && (
-                    <span style={{ color: "var(--secondary-accent)" }}>✓</span>
+                    <span
+                      style={{ color: "var(--secondary-accent)" }}
+                      aria-label="Word count valid"
+                    >
+                      ✓
+                    </span>
                   )}
                   {wordCount > MAX_WORDS && (
-                    <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
+                    <span
+                      style={{ color: "var(--error-color)", fontWeight: 600 }}
+                      role="status"
+                      aria-live="polite"
+                    >
                       (Too long - maximum {MAX_WORDS} words)
                     </span>
                   )}
@@ -360,7 +390,8 @@ export default function WritePage() {
                 className="textarea notranslate"
                 value={answer}
                 onChange={handleAnswerChange}
-                onInput={handleAnswerChange}
+                aria-describedby={error ? "answer-error" : "answer-help"}
+                aria-invalid={!!error || wordCount < MIN_WORDS || wordCount > MAX_WORDS}
                 placeholder={
                   isCustom && !customQuestion.trim()
                     ? "Write your essay here. Minimum 250 words required. This is free writing practice - write about any topic you choose."
@@ -371,6 +402,9 @@ export default function WritePage() {
                 autoFocus={false}
                 translate="no"
               />
+              <div id="answer-help" className="sr-only">
+                Minimum {MIN_WORDS} words required. Maximum {MAX_WORDS} words recommended.
+              </div>
 
               {/* Self-Evaluation Checklist */}
               {answer.trim().length > 50 && (
@@ -593,8 +627,16 @@ export default function WritePage() {
         </div>
 
         {error && (
-          <div className="error" role="alert" style={{ marginTop: "var(--spacing-md)" }}>
-            <strong>⚠️ {error}</strong>
+          <div
+            id="answer-error"
+            className="error"
+            role="alert"
+            aria-live="assertive"
+            style={{ marginTop: "var(--spacing-md)" }}
+          >
+            <strong>
+              <span aria-hidden="true">⚠️</span> {error}
+            </strong>
           </div>
         )}
       </div>

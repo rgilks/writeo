@@ -51,10 +51,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Disable ESLint during build - ESLint config is incomplete (missing @typescript-eslint packages)
-  // Linting should be done separately via npm run lint if needed
   eslint: {
-    ignoreDuringBuilds: true,
+    // Enable ESLint during builds
+    ignoreDuringBuilds: false,
+    // Only run ESLint on these directories
+    dirs: ["app", "components"],
   },
   async headers() {
     return [
