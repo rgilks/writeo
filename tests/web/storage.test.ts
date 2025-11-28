@@ -33,30 +33,38 @@ describe("getAvailableStorageSpace", () => {
 describe("createSafeStorage", () => {
   let mockLocalStorage: Record<string, string>;
   let originalLocalStorage: Storage | undefined;
+  let mockGetItem: ReturnType<typeof vi.fn>;
+  let mockSetItem: ReturnType<typeof vi.fn>;
+  let mockRemoveItem: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockLocalStorage = {};
     originalLocalStorage = global.localStorage;
 
-    // Mock localStorage - getItem must actually read from mockLocalStorage
+    // Create spies that actually interact with mockLocalStorage
+    // Note: isStorageAvailable() will try to set/remove "__storage_test__"
+    mockGetItem = vi.fn((key: string) => {
+      try {
+        return mockLocalStorage[key] || null;
+      } catch {
+        return null;
+      }
+    });
+    mockSetItem = vi.fn((key: string, value: string) => {
+      mockLocalStorage[key] = value;
+    });
+    mockRemoveItem = vi.fn((key: string) => {
+      delete mockLocalStorage[key];
+    });
+
     const localStorageMock = {
-      getItem: (key: string) => {
-        try {
-          return mockLocalStorage[key] || null;
-        } catch {
-          return null;
-        }
-      },
-      setItem: (key: string, value: string) => {
-        mockLocalStorage[key] = value;
-      },
-      removeItem: (key: string) => {
-        delete mockLocalStorage[key];
-      },
-      clear: () => {
+      getItem: mockGetItem,
+      setItem: mockSetItem,
+      removeItem: mockRemoveItem,
+      clear: vi.fn(() => {
         mockLocalStorage = {};
-      },
-      key: (index: number) => Object.keys(mockLocalStorage)[index] || null,
+      }),
+      key: vi.fn((index: number) => Object.keys(mockLocalStorage)[index] || null),
       get length() {
         return Object.keys(mockLocalStorage).length;
       },
@@ -89,8 +97,9 @@ describe("createSafeStorage", () => {
     });
 
     it("should return stored value", () => {
-      mockLocalStorage["test"] = '{"key": "value"}';
       const storage = createSafeStorage();
+      // Set the value after storage is created (isStorageAvailable may have cleared mockLocalStorage)
+      mockLocalStorage["test"] = '{"key": "value"}';
       const result = storage.getItem("test");
       expect(result).toBe('{"key": "value"}');
     });
@@ -106,7 +115,7 @@ describe("createSafeStorage", () => {
       const storage = createSafeStorage();
       const result = storage.getItem("test");
       expect(result).toBeNull();
-      expect(global.localStorage.removeItem).toHaveBeenCalledWith("test");
+      expect(mockRemoveItem).toHaveBeenCalledWith("test");
     });
 
     it("should handle localStorage errors gracefully", () => {
@@ -124,7 +133,8 @@ describe("createSafeStorage", () => {
     it("should store value successfully", () => {
       const storage = createSafeStorage();
       storage.setItem("test", '{"key": "value"}');
-      expect(global.localStorage.setItem).toHaveBeenCalledWith("test", '{"key": "value"}');
+      expect(mockSetItem).toHaveBeenCalledWith("test", '{"key": "value"}');
+      expect(mockLocalStorage["test"]).toBe('{"key": "value"}');
     });
 
     it("should warn when window is undefined", () => {
@@ -143,10 +153,12 @@ describe("createSafeStorage", () => {
     });
 
     it("should throw StorageError on quota exceeded", () => {
-      const quotaError = new DOMException("Quota exceeded", "QuotaExceededError");
-      quotaError.code = 22;
+      const quotaError = Object.create(DOMException.prototype);
+      quotaError.name = "QuotaExceededError";
+      quotaError.message = "Quota exceeded";
+      Object.defineProperty(quotaError, "code", { value: 22, writable: false });
 
-      global.localStorage.setItem = vi.fn(() => {
+      mockSetItem.mockImplementationOnce(() => {
         throw quotaError;
       });
 
@@ -156,10 +168,12 @@ describe("createSafeStorage", () => {
     });
 
     it("should throw StorageError on security error", () => {
-      const securityError = new DOMException("Security error", "SecurityError");
-      securityError.code = 18;
+      const securityError = Object.create(DOMException.prototype);
+      securityError.name = "SecurityError";
+      securityError.message = "Security error";
+      Object.defineProperty(securityError, "code", { value: 18, writable: false });
 
-      global.localStorage.setItem = vi.fn(() => {
+      mockSetItem.mockImplementationOnce(() => {
         throw securityError;
       });
 
@@ -170,23 +184,26 @@ describe("createSafeStorage", () => {
 
     it("should retry after cleanup on quota error", () => {
       let callCount = 0;
-      const quotaError = new DOMException("Quota exceeded", "QuotaExceededError");
-      quotaError.code = 22;
+      const quotaError = Object.create(DOMException.prototype);
+      quotaError.name = "QuotaExceededError";
+      quotaError.message = "Quota exceeded";
+      Object.defineProperty(quotaError, "code", { value: 22, writable: false });
 
-      global.localStorage.setItem = vi.fn(() => {
+      mockSetItem.mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           throw quotaError;
         }
         // Second call succeeds
+        mockLocalStorage["test"] = "value";
       });
 
       // Mock getAllKeys to return some keys for cleanup
-      const originalKey = global.localStorage.key;
-      global.localStorage.key = vi.fn((index: number) => {
+      const mockKey = vi.fn((index: number) => {
         const keys = ["results_1", "results_2"];
         return keys[index] || null;
       });
+      global.localStorage.key = mockKey;
       Object.defineProperty(global.localStorage, "length", {
         get: () => 2,
       });
@@ -195,14 +212,13 @@ describe("createSafeStorage", () => {
       storage.setItem("test", "value");
 
       // Should have tried cleanup and retried
-      expect(global.localStorage.setItem).toHaveBeenCalledTimes(2);
-
-      global.localStorage.key = originalKey;
+      expect(mockSetItem).toHaveBeenCalledTimes(2);
     });
 
     it("should warn about large values", () => {
       const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const largeValue = "x".repeat(5 * 1024 * 1024); // 5MB
+      // Use a value that's 90% of the estimated 5MB limit
+      const largeValue = "x".repeat(Math.floor(5 * 1024 * 1024 * 0.91));
 
       const storage = createSafeStorage();
       storage.setItem("test", largeValue);
@@ -221,7 +237,8 @@ describe("createSafeStorage", () => {
       mockLocalStorage["test"] = "value";
       const storage = createSafeStorage();
       storage.removeItem("test");
-      expect(global.localStorage.removeItem).toHaveBeenCalledWith("test");
+      expect(mockRemoveItem).toHaveBeenCalledWith("test");
+      expect(mockLocalStorage["test"]).toBeUndefined();
     });
 
     it("should handle errors gracefully", () => {
@@ -242,7 +259,7 @@ describe("createSafeStorage", () => {
       const storage = createSafeStorage();
       storage.removeItem("test");
       // Should not call localStorage.removeItem
-      expect(global.localStorage.removeItem).not.toHaveBeenCalled();
+      expect(mockRemoveItem).not.toHaveBeenCalled();
 
       global.window = originalWindow;
     });
@@ -253,18 +270,28 @@ describe("cleanupExpiredStorage", () => {
   let mockLocalStorage: Record<string, string>;
   let originalLocalStorage: Storage | undefined;
 
+  let mockGetItem: ReturnType<typeof vi.fn>;
+  let mockSetItem: ReturnType<typeof vi.fn>;
+  let mockRemoveItem: ReturnType<typeof vi.fn>;
+  let mockKey: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     mockLocalStorage = {};
     originalLocalStorage = global.localStorage;
 
+    mockGetItem = vi.fn((key: string) => mockLocalStorage[key] || null);
+    mockSetItem = vi.fn();
+    mockRemoveItem = vi.fn((key: string) => {
+      delete mockLocalStorage[key];
+    });
+    mockKey = vi.fn((index: number) => Object.keys(mockLocalStorage)[index] || null);
+
     global.localStorage = {
-      getItem: vi.fn((key: string) => mockLocalStorage[key] || null),
-      setItem: vi.fn(),
-      removeItem: vi.fn((key: string) => {
-        delete mockLocalStorage[key];
-      }),
+      getItem: mockGetItem,
+      setItem: mockSetItem,
+      removeItem: mockRemoveItem,
       clear: vi.fn(),
-      key: vi.fn((index: number) => Object.keys(mockLocalStorage)[index] || null),
+      key: mockKey,
       length: 0,
     } as any;
 
@@ -291,9 +318,9 @@ describe("cleanupExpiredStorage", () => {
 
     cleanupExpiredStorage(30 * 24 * 60 * 60 * 1000); // 30 days
 
-    expect(global.localStorage.removeItem).toHaveBeenCalledWith("results_old");
-    expect(global.localStorage.removeItem).not.toHaveBeenCalledWith("results_recent");
-    expect(global.localStorage.removeItem).not.toHaveBeenCalledWith("other_key");
+    expect(mockRemoveItem).toHaveBeenCalledWith("results_old");
+    expect(mockRemoveItem).not.toHaveBeenCalledWith("results_recent");
+    expect(mockRemoveItem).not.toHaveBeenCalledWith("other_key");
   });
 
   it("should only cleanup results_ keys", () => {
@@ -305,8 +332,8 @@ describe("cleanupExpiredStorage", () => {
 
     cleanupExpiredStorage(30 * 24 * 60 * 60 * 1000);
 
-    expect(global.localStorage.removeItem).toHaveBeenCalledWith("results_old");
-    expect(global.localStorage.removeItem).not.toHaveBeenCalledWith("other_old");
+    expect(mockRemoveItem).toHaveBeenCalledWith("results_old");
+    expect(mockRemoveItem).not.toHaveBeenCalledWith("other_old");
   });
 
   it("should handle invalid JSON gracefully", () => {
@@ -340,7 +367,7 @@ describe("cleanupExpiredStorage", () => {
 
     cleanupExpiredStorage(); // Use default
 
-    expect(global.localStorage.removeItem).toHaveBeenCalledWith("results_old");
+    expect(mockRemoveItem).toHaveBeenCalledWith("results_old");
   });
 
   it("should handle errors during cleanup", () => {

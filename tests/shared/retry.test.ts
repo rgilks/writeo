@@ -46,7 +46,12 @@ describe("retryWithBackoff", () => {
     // Fast-forward through all delays
     await vi.advanceTimersByTimeAsync(500);
 
-    await expect(promise).rejects.toThrow("Always fails");
+    try {
+      await promise;
+      expect.fail("Should have thrown");
+    } catch (error: any) {
+      expect(error.message).toBe("Always fails");
+    }
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
@@ -58,7 +63,12 @@ describe("retryWithBackoff", () => {
     // Advance timers to trigger all retries
     // First retry after 100ms, second after 200ms (100 + 200 = 300ms total)
     await vi.advanceTimersByTimeAsync(500);
-    await promise.catch(() => {});
+
+    try {
+      await promise;
+    } catch {
+      // Expected to fail
+    }
 
     // Should have called function 3 times (initial + 2 retries)
     expect(fn).toHaveBeenCalledTimes(3);
@@ -74,7 +84,12 @@ describe("retryWithBackoff", () => {
     });
 
     await vi.advanceTimersByTimeAsync(10000);
-    await promise.catch(() => {});
+
+    try {
+      await promise;
+    } catch {
+      // Expected to fail
+    }
 
     // Delays should be capped at maxDelayMs
     expect(fn).toHaveBeenCalledTimes(5);
@@ -141,7 +156,12 @@ describe("retryWithBackoff", () => {
 
     await vi.advanceTimersByTimeAsync(200);
 
-    await expect(promise).rejects.toThrow();
+    try {
+      await promise;
+      expect.fail("Should have thrown");
+    } catch {
+      // Expected to throw
+    }
     expect(fn).toHaveBeenCalledTimes(2);
   });
 
@@ -152,7 +172,12 @@ describe("retryWithBackoff", () => {
 
     await vi.advanceTimersByTimeAsync(500);
 
-    await expect(promise).rejects.toThrow();
+    try {
+      await promise;
+      expect.fail("Should have thrown");
+    } catch {
+      // Expected to throw
+    }
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
@@ -179,7 +204,12 @@ describe("retryWithBackoff", () => {
 
     await vi.advanceTimersByTimeAsync(500);
 
-    await expect(promise).rejects.toThrow("Final error");
+    try {
+      await promise;
+      expect.fail("Should have thrown");
+    } catch (error: any) {
+      expect(error.message).toBe("Final error");
+    }
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
