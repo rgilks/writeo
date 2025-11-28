@@ -1,61 +1,68 @@
 import type { DraftHistory, ProgressMetrics } from "../stores/draft-store";
 import type { LanguageToolError } from "@writeo/shared";
+import { getErrorType } from "./error-utils";
+
+function calculateDraftDifference<T extends number | undefined>(
+  previousDraft: DraftHistory | null,
+  currentDraft: DraftHistory,
+  getValue: (draft: DraftHistory) => T,
+  calculateDiff: (prev: number, curr: number) => number,
+): number | null {
+  if (!previousDraft) return null;
+
+  const prevValue = getValue(previousDraft);
+  const currValue = getValue(currentDraft);
+
+  if (prevValue === undefined || currValue === undefined) {
+    return null;
+  }
+
+  return calculateDiff(prevValue, currValue);
+}
 
 export function calculateErrorReduction(
   previousDraft: DraftHistory | null,
   currentDraft: DraftHistory,
 ): number | null {
-  if (
-    !previousDraft ||
-    previousDraft.errorCount === undefined ||
-    currentDraft.errorCount === undefined
-  ) {
-    return null;
-  }
-  return previousDraft.errorCount - currentDraft.errorCount;
+  return calculateDraftDifference(
+    previousDraft,
+    currentDraft,
+    (draft) => draft.errorCount,
+    (prev, curr) => prev - curr,
+  );
 }
 
 export function calculateScoreImprovement(
   previousDraft: DraftHistory | null,
   currentDraft: DraftHistory,
 ): number | null {
-  if (
-    !previousDraft ||
-    previousDraft.overallScore === undefined ||
-    currentDraft.overallScore === undefined
-  ) {
-    return null;
-  }
-  return currentDraft.overallScore - previousDraft.overallScore;
+  return calculateDraftDifference(
+    previousDraft,
+    currentDraft,
+    (draft) => draft.overallScore,
+    (prev, curr) => curr - prev,
+  );
 }
 
-/**
- * Calculate word count change between two drafts
- */
 export function calculateWordCountChange(
   previousDraft: DraftHistory | null,
   currentDraft: DraftHistory,
 ): number | null {
-  if (
-    !previousDraft ||
-    previousDraft.wordCount === undefined ||
-    currentDraft.wordCount === undefined
-  ) {
-    return null;
-  }
-  return currentDraft.wordCount - previousDraft.wordCount;
+  return calculateDraftDifference(
+    previousDraft,
+    currentDraft,
+    (draft) => draft.wordCount,
+    (prev, curr) => curr - prev,
+  );
 }
 
-/**
- * Analyze error type frequency from an array of errors
- */
 export function analyzeErrorTypeFrequency(
   errors: LanguageToolError[],
 ): Array<{ type: string; count: number }> {
   const frequency = new Map<string, number>();
 
   errors.forEach((error) => {
-    const errorType = error.errorType || error.category || "Other";
+    const errorType = getErrorType(error);
     frequency.set(errorType, (frequency.get(errorType) || 0) + 1);
   });
 
@@ -64,9 +71,6 @@ export function analyzeErrorTypeFrequency(
     .sort((a, b) => b.count - a.count);
 }
 
-/**
- * Get top error types (most frequent)
- */
 export function getTopErrorTypes(
   errors: LanguageToolError[],
   limit: number = 3,
@@ -74,9 +78,17 @@ export function getTopErrorTypes(
   return analyzeErrorTypeFrequency(errors).slice(0, limit);
 }
 
-/**
- * Calculate progress metrics from draft history
- */
+function safeDifference(
+  first: number | undefined,
+  latest: number | undefined,
+  calculate: (first: number, latest: number) => number,
+): number | undefined {
+  if (first === undefined || latest === undefined) {
+    return undefined;
+  }
+  return calculate(first, latest);
+}
+
 export function calculateProgressMetrics(draftHistory: DraftHistory[]): ProgressMetrics | null {
   if (draftHistory.length === 0) {
     return null;
@@ -89,32 +101,28 @@ export function calculateProgressMetrics(draftHistory: DraftHistory[]): Progress
     totalDrafts: draftHistory.length,
     firstDraftScore: firstDraft.overallScore,
     latestDraftScore: latestDraft.overallScore,
-    scoreImprovement:
-      latestDraft.overallScore !== undefined && firstDraft.overallScore !== undefined
-        ? latestDraft.overallScore - firstDraft.overallScore
-        : undefined,
-    errorReduction:
-      latestDraft.errorCount !== undefined && firstDraft.errorCount !== undefined
-        ? firstDraft.errorCount - latestDraft.errorCount
-        : undefined,
-    wordCountChange:
-      latestDraft.wordCount !== undefined && firstDraft.wordCount !== undefined
-        ? latestDraft.wordCount - firstDraft.wordCount
-        : undefined,
+    scoreImprovement: safeDifference(
+      firstDraft.overallScore,
+      latestDraft.overallScore,
+      (first, latest) => latest - first,
+    ),
+    errorReduction: safeDifference(
+      firstDraft.errorCount,
+      latestDraft.errorCount,
+      (first, latest) => first - latest,
+    ),
+    wordCountChange: safeDifference(
+      firstDraft.wordCount,
+      latestDraft.wordCount,
+      (first, latest) => latest - first,
+    ),
   };
 }
 
-/**
- * Generate a unique error ID from error properties
- */
-export function generateErrorId(error: LanguageToolError, text: string): string {
-  // Use start/end positions and message to create a unique ID
+export function generateErrorId(error: LanguageToolError): string {
   return `${error.start}-${error.end}-${error.message?.slice(0, 20) || ""}`;
 }
 
-/**
- * Extract error IDs from an array of errors
- */
-export function extractErrorIds(errors: LanguageToolError[], text: string): string[] {
-  return errors.map((error) => generateErrorId(error, text));
+export function extractErrorIds(errors: LanguageToolError[]): string[] {
+  return errors.map((error) => generateErrorId(error));
 }

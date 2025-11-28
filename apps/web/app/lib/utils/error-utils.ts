@@ -1,54 +1,51 @@
 import type { LanguageToolError } from "@writeo/shared";
 
+export function getErrorType(error: LanguageToolError): string {
+  return error.errorType || error.category || "Other";
+}
+
 export function groupErrorsByType(
   errors: LanguageToolError[],
 ): Record<string, LanguageToolError[]> {
-  const grouped: Record<string, LanguageToolError[]> = {};
-
-  errors.forEach((error) => {
-    const errorType = error.errorType || error.category || "Other";
-    if (!grouped[errorType]) {
-      grouped[errorType] = [];
-    }
-    grouped[errorType].push(error);
-  });
-
-  return grouped;
+  return errors.reduce(
+    (grouped, error) => {
+      const errorType = getErrorType(error);
+      if (!grouped[errorType]) {
+        grouped[errorType] = [];
+      }
+      grouped[errorType].push(error);
+      return grouped;
+    },
+    {} as Record<string, LanguageToolError[]>,
+  );
 }
 
 export function getErrorCountByType(errors: LanguageToolError[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-
-  errors.forEach((error) => {
-    const errorType = error.errorType || error.category || "Other";
-    counts[errorType] = (counts[errorType] || 0) + 1;
-  });
-
-  return counts;
+  return errors.reduce(
+    (counts, error) => {
+      const errorType = getErrorType(error);
+      counts[errorType] = (counts[errorType] || 0) + 1;
+      return counts;
+    },
+    {} as Record<string, number>,
+  );
 }
 
-/**
- * Get error severity color
- */
 export function getErrorSeverityColor(error: LanguageToolError): string {
   if (error.highConfidence === false) {
-    return "#f59e0b"; // Amber for experimental/low confidence
+    return "#f59e0b";
   }
 
-  if (error.severity === "error") {
-    return "#ef4444"; // Red for errors
+  switch (error.severity) {
+    case "error":
+      return "#ef4444";
+    case "warning":
+      return "#f59e0b";
+    default:
+      return "#6b7280";
   }
-
-  if (error.severity === "warning") {
-    return "#f59e0b"; // Amber for warnings
-  }
-
-  return "#6b7280"; // Grey for info/other
 }
 
-/**
- * Get error category icon (simple text representation)
- */
 export function getErrorCategoryIcon(category: string): string {
   const icons: Record<string, string> = {
     GRAMMAR: "📝",
@@ -62,28 +59,19 @@ export function getErrorCategoryIcon(category: string): string {
   return icons[category.toUpperCase()] || icons.OTHER;
 }
 
-/**
- * Format error message for display
- */
 export function formatErrorMessage(error: LanguageToolError): string {
   if (error.message) {
     return error.message;
   }
 
-  if (error.errorType) {
-    return `${error.errorType} error`;
-  }
-
-  if (error.category) {
-    return `${error.category} issue`;
+  const type = error.errorType || error.category;
+  if (type) {
+    return `${type} ${error.errorType ? "error" : "issue"}`;
   }
 
   return "Error detected";
 }
 
-/**
- * Get learning tip for error type
- */
 export function getLearningTipForErrorType(errorType: string): string | null {
   const tips: Record<string, string> = {
     GRAMMAR: "Review grammar rules and practice with similar sentences.",

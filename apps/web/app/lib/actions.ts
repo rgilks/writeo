@@ -17,6 +17,14 @@ interface SubmitEssayResult {
   results: unknown;
 }
 
+interface ResultsWithMeta {
+  meta?: Record<string, unknown>;
+}
+
+function hasMeta(results: unknown): results is ResultsWithMeta {
+  return typeof results === "object" && results !== null;
+}
+
 function validateAnswer(answerText: string): number {
   if (!answerText?.trim()) {
     throw new Error("Answer text is required");
@@ -31,8 +39,14 @@ function validateAnswer(answerText: string): number {
   return wordCount;
 }
 
+function ensureMeta(results: ResultsWithMeta): void {
+  if (!results.meta) {
+    results.meta = {};
+  }
+}
+
 async function setFollowUpDraftMetadata(
-  results: { meta?: Record<string, unknown> },
+  results: ResultsWithMeta,
   parentSubmissionId: string,
   storeResults: boolean,
   parentResults: AssessmentResults | undefined,
@@ -49,6 +63,7 @@ async function setFollowUpDraftMetadata(
     };
   } catch (error) {
     console.warn("[submitEssay] Failed to get draft info:", error);
+    // Fallback to default follow-up draft metadata
     results.meta = {
       ...results.meta,
       draftNumber: 2,
@@ -59,10 +74,7 @@ async function setFollowUpDraftMetadata(
   }
 }
 
-function setFirstDraftMetadata(
-  results: { meta?: Record<string, unknown> },
-  wordCount: number,
-): void {
+function setFirstDraftMetadata(results: ResultsWithMeta, wordCount: number): void {
   results.meta = {
     ...results.meta,
     draftNumber: 1,
@@ -88,22 +100,19 @@ export async function submitEssay(
       storeResults,
     );
 
-    if (results && typeof results === "object") {
-      const resultsObj = results as { meta?: Record<string, unknown> };
-      if (!resultsObj.meta) {
-        resultsObj.meta = {};
-      }
+    if (hasMeta(results)) {
+      ensureMeta(results);
 
       if (parentSubmissionId) {
         await setFollowUpDraftMetadata(
-          resultsObj,
+          results,
           parentSubmissionId,
           storeResults,
           parentResults,
           wordCount,
         );
       } else {
-        setFirstDraftMetadata(resultsObj, wordCount);
+        setFirstDraftMetadata(results, wordCount);
       }
     }
 

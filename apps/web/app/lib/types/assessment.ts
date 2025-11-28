@@ -15,6 +15,7 @@ export interface EssayScoreDimensions {
 export interface EssayScores {
   overall?: number;
   dimensions?: EssayScoreDimensions;
+  label?: string;
 }
 
 export interface RelevanceCheck {

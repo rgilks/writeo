@@ -5,7 +5,6 @@ import { retryWithBackoff } from "@writeo/shared";
 import { generateUUID } from "../utils/uuid-utils";
 import { apiRequest } from "../utils/api-client";
 import { getErrorMessage, makeSerializableError } from "../utils/error-handling";
-import { getApiBase, getApiKey } from "../api-config";
 import { z } from "zod";
 
 const SubmissionEnvelopeSchema = z.object({
@@ -72,7 +71,11 @@ export async function createSubmission(
     storeResults,
   };
 
-  const response = await apiRequest(`/text/submissions/${submissionId}`, "PUT", body);
+  const response = await apiRequest({
+    endpoint: `/text/submissions/${submissionId}`,
+    method: "PUT",
+    body,
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to create submission: ${await getErrorMessage(response)}`);
@@ -80,20 +83,6 @@ export async function createSubmission(
 
   const results = await response.json();
   return { submissionId, results };
-}
-
-async function extractErrorMessage(response: Response): Promise<string> {
-  const errorText = await response.text();
-  let errorMessage = `Failed to fetch results: HTTP ${response.status}`;
-
-  try {
-    const errorJson = JSON.parse(errorText);
-    errorMessage = errorJson.error || errorJson.message || errorMessage;
-  } catch {
-    errorMessage = errorText || errorMessage;
-  }
-
-  return errorMessage;
 }
 
 function createNotFoundError(): Error & { status: number } {
@@ -105,16 +94,10 @@ function createNotFoundError(): Error & { status: number } {
 export async function getSubmissionResults(
   submissionId: string,
 ): Promise<AssessmentResults | unknown> {
-  const apiBase = getApiBase();
-  const apiKey = getApiKey();
-
-  if (apiKey === "MISSING_API_KEY" || apiBase === "MISSING_API_BASE_URL") {
-    throw new Error("Server configuration error: API credentials not set");
-  }
-
   const response = await retryWithBackoff(async () => {
-    const res = await fetch(`${apiBase}/text/submissions/${submissionId}`, {
-      headers: { Authorization: `Token ${apiKey}` },
+    const res = await apiRequest({
+      endpoint: `/text/submissions/${submissionId}`,
+      method: "GET",
     });
 
     if (res.status === 404) {
@@ -132,8 +115,7 @@ export async function getSubmissionResults(
     if (response.status === 404) {
       throw createNotFoundError();
     }
-    const errorMessage = await extractErrorMessage(response);
-    throw new Error(errorMessage);
+    throw new Error(await getErrorMessage(response));
   }
 
   const data = await response.json();

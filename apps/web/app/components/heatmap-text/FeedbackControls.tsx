@@ -1,5 +1,6 @@
 import type { LanguageToolError } from "@writeo/shared";
 import type { FeedbackControlsProps } from "./types";
+import { pluralize } from "@/app/lib/utils/text-utils";
 
 const CONTAINER_STYLES = {
   marginBottom: "var(--spacing-md)",
@@ -26,10 +27,6 @@ const BUTTON_STYLES = {
   fontSize: "13px",
   padding: "var(--spacing-xs) var(--spacing-sm)",
 } as const;
-
-function pluralize(count: number, singular: string, plural?: string): string {
-  return count === 1 ? singular : plural || `${singular}s`;
-}
 
 interface ToggleButtonProps {
   count: number;

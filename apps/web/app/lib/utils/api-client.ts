@@ -4,7 +4,18 @@
 
 import { getApiBase, getApiKey } from "../api-config";
 
-export async function apiRequest(endpoint: string, method: string, body: any): Promise<Response> {
+export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
+  endpoint: string;
+  body?: unknown;
+}
+
+/**
+ * Makes an authenticated API request
+ * @param options - Request options including endpoint, method, body, and other fetch options
+ * @returns Promise resolving to the Response
+ */
+export async function apiRequest(options: ApiRequestOptions): Promise<Response> {
+  const { endpoint, body, method = "GET", ...fetchOptions } = options;
   const apiBase = getApiBase();
   const apiKey = getApiKey();
 
@@ -12,14 +23,15 @@ export async function apiRequest(endpoint: string, method: string, body: any): P
     throw new Error("Server configuration error: API credentials not set");
   }
 
-  // No retries - just make the request directly
+  const headers = new Headers(fetchOptions.headers);
+  headers.set("Content-Type", "application/json");
+  headers.set("Authorization", `Token ${apiKey}`);
+
   const response = await fetch(`${apiBase}${endpoint}`, {
+    ...fetchOptions,
     method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Token ${apiKey}`,
-    },
-    body: JSON.stringify(body),
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   return response;

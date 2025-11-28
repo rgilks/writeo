@@ -3,10 +3,32 @@
  */
 
 export async function getErrorMessage(response: Response): Promise<string> {
+  if (response.status === 429) {
+    return "Too many requests. Please wait a moment and try again.";
+  }
+  if (response.status >= 500) {
+    return "Server error. Please try again in a moment.";
+  }
+  if (response.status === 404) {
+    return "Resource not found. Please check and try again.";
+  }
+  if (response.status === 401 || response.status === 403) {
+    return "Authentication error. Please refresh the page and try again.";
+  }
+
   try {
-    const errorData = await response.json().catch(() => null);
-    const errorText =
-      errorData?.error || errorData?.message || (await response.text().catch(() => null));
+    const text = await response.text();
+    if (!text) {
+      return `HTTP ${response.status}`;
+    }
+
+    let errorText: string | null = null;
+    try {
+      const errorData = JSON.parse(text);
+      errorText = errorData?.error || errorData?.message || null;
+    } catch {
+      errorText = text;
+    }
 
     if (errorText) {
       if (errorText.includes("network") || errorText.includes("fetch")) {
@@ -15,35 +37,13 @@ export async function getErrorMessage(response: Response): Promise<string> {
       if (errorText.includes("timeout")) {
         return "The request took too long. Please try again.";
       }
-      if (response.status === 429) {
-        return "Too many requests. Please wait a moment and try again.";
-      }
-      if (response.status >= 500) {
-        return "Server error. Please try again in a moment.";
-      }
-      if (response.status === 404) {
-        return "Resource not found. Please check and try again.";
-      }
-      if (response.status === 401 || response.status === 403) {
-        return "Authentication error. Please refresh the page and try again.";
-      }
       return errorText;
     }
-
-    if (response.status >= 500) {
-      return "Server error. Please try again in a moment.";
-    }
-    if (response.status === 429) {
-      return "Too many requests. Please wait a moment and try again.";
-    }
-    if (response.status === 404) {
-      return "Resource not found. Please check and try again.";
-    }
-
-    return `HTTP ${response.status}`;
   } catch {
-    return `HTTP ${response.status}`;
+    // Fall through to default
   }
+
+  return `HTTP ${response.status}`;
 }
 
 export function makeSerializableError(error: unknown): Error {
@@ -53,14 +53,15 @@ export function makeSerializableError(error: unknown): Error {
   if (typeof error === "string") {
     return new Error(error);
   }
+
   try {
     const errorStr = JSON.stringify(error);
-    return new Error(
-      errorStr && errorStr !== "{}"
-        ? `Error: ${errorStr.substring(0, 200)}`
-        : "An unexpected error occurred",
-    );
+    if (errorStr && errorStr !== "{}") {
+      return new Error(`Error: ${errorStr.substring(0, 200)}`);
+    }
   } catch {
-    return new Error("An unexpected error occurred");
+    // Fall through to default
   }
+
+  return new Error("An unexpected error occurred");
 }

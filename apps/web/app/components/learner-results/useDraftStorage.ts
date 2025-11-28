@@ -40,7 +40,7 @@ export function useDraftStorage(
     try {
       // Store draft even if overall score is 0 so draft history always reflects user edits
       const wordCount = countWords(finalAnswerText);
-      const errorIds = extractErrorIds(grammarErrors, finalAnswerText);
+      const errorIds = extractErrorIds(grammarErrors);
       const cefrLevel = overall > 0 ? mapScoreToCEFR(overall) : undefined;
 
       const draftData = {

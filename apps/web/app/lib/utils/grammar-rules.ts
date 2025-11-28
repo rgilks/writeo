@@ -4,16 +4,14 @@
  */
 
 export interface GrammarRule {
-  errorType: string;
-  why: string; // Why this error happens
-  rule: string; // Formal grammar rule
-  examples: string[]; // 2-3 correct usage examples
+  why: string;
+  rule: string;
+  examples: string[];
 }
 
 // Grammar rule mappings by error type
 const grammarRules: Record<string, GrammarRule> = {
   "Subject-verb agreement": {
-    errorType: "Subject-verb agreement",
     why: "In English, the verb must match the subject in number. Singular subjects need singular verbs, and plural subjects need plural verbs.",
     rule: "The verb must agree with its subject in number (singular/plural). Singular subjects take singular verbs (e.g., 'he goes'), and plural subjects take plural verbs (e.g., 'they go').",
     examples: [
@@ -23,7 +21,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   "Verb tense": {
-    errorType: "Verb tense",
     why: "Verb tenses show when an action happens. When writing about the past, all verbs in that narrative should be in past tense for consistency.",
     rule: "Use consistent verb tenses within a narrative. If you're writing about past events, use past tense verbs throughout. Present tense is for current actions, and future tense is for actions that will happen.",
     examples: [
@@ -33,7 +30,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   "Article use": {
-    errorType: "Article use",
     why: "Articles (a, an, the) help specify whether we're talking about something specific or general. 'A/an' is for general or first mention, 'the' is for specific or already mentioned things.",
     rule: "Use 'a' before consonant sounds, 'an' before vowel sounds, and 'the' for specific or previously mentioned nouns. Use 'a/an' for general or first-time mentions, 'the' for specific or known items.",
     examples: [
@@ -43,7 +39,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   "Preposition use": {
-    errorType: "Preposition use",
     why: "Prepositions show relationships between words (time, place, direction). Different prepositions have different meanings, and some are used in fixed expressions.",
     rule: "Prepositions indicate relationships: time (at, on, in), place (at, on, in), direction (to, from, into). Many preposition uses are fixed expressions that must be memorized (e.g., 'good at', 'depend on').",
     examples: [
@@ -53,7 +48,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   Spelling: {
-    errorType: "Spelling",
     why: "English spelling can be tricky because many words don't follow simple rules. Some words have silent letters or unusual spellings that must be memorized.",
     rule: "English spelling follows patterns but has many exceptions. Common patterns include: 'i before e except after c' (receive), doubling consonants before -ing (running), and silent letters (knight, write).",
     examples: [
@@ -63,7 +57,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   Grammar: {
-    errorType: "Grammar",
     why: "Grammar rules help make your writing clear and understandable. Following grammar rules helps readers understand your meaning.",
     rule: "Grammar rules provide structure and clarity to language. Following standard grammar conventions helps ensure your writing is clear and professional.",
     examples: [
@@ -73,7 +66,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   Typo: {
-    errorType: "Typo",
     why: "Typos are accidental mistakes in typing or writing. They often happen when typing quickly or not proofreading carefully.",
     rule: "Typos are unintentional errors in spelling, punctuation, or word choice. Proofreading helps catch and correct typos before submitting your work.",
     examples: [
@@ -83,7 +75,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   Style: {
-    errorType: "Style",
     why: "Writing style affects how clear and professional your writing sounds. Some phrases are wordy or unclear and can be improved.",
     rule: "Good writing style is clear, concise, and appropriate for the context. Avoid wordiness, redundancy, and overly informal language in academic writing.",
     examples: [
@@ -93,7 +84,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   Punctuation: {
-    errorType: "Punctuation",
     why: "Punctuation marks help readers understand your meaning by showing pauses, connections, and emphasis. Missing or incorrect punctuation can confuse readers.",
     rule: "Punctuation marks clarify meaning: periods (.) end sentences, commas (,) separate ideas, apostrophes (') show possession or contractions, and question marks (?) indicate questions.",
     examples: [
@@ -103,7 +93,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   "Word order": {
-    errorType: "Word order",
     why: "English has a specific word order (Subject-Verb-Object). Changing this order can make sentences confusing or grammatically incorrect.",
     rule: "English follows Subject-Verb-Object (SVO) order. Adjectives come before nouns, and adverbs usually come after verbs. Questions invert the subject and verb.",
     examples: [
@@ -113,7 +102,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   "Word choice": {
-    errorType: "Word choice",
     why: "Some words sound similar but have different meanings. Using the wrong word can change your meaning or make your writing unclear.",
     rule: "Choose words that accurately express your meaning. Pay attention to commonly confused words (their/there, your/you're, its/it's) and use a dictionary when unsure.",
     examples: [
@@ -123,7 +111,6 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
   "Sentence structure": {
-    errorType: "Sentence structure",
     why: "Sentences need a subject and a verb to be complete. Incomplete sentences or run-on sentences can confuse readers.",
     rule: "A complete sentence needs a subject (who/what) and a verb (action). Avoid sentence fragments (incomplete thoughts) and run-on sentences (too many ideas without proper punctuation).",
     examples: [
@@ -133,6 +120,19 @@ const grammarRules: Record<string, GrammarRule> = {
     ],
   },
 };
+
+// Create case-insensitive lookup map for faster matching
+const caseInsensitiveLookup = new Map<string, string>(
+  Object.keys(grammarRules).map((key) => [key.toLowerCase(), key]),
+);
+
+// Partial match patterns for common error type variations
+const partialMatchPatterns: Array<{ keywords: string[]; ruleKey: string }> = [
+  { keywords: ["subject", "verb"], ruleKey: "Subject-verb agreement" },
+  { keywords: ["tense", "verb"], ruleKey: "Verb tense" },
+  { keywords: ["article"], ruleKey: "Article use" },
+  { keywords: ["preposition"], ruleKey: "Preposition use" },
+];
 
 /**
  * Get grammar rule information for an error type
@@ -147,24 +147,16 @@ export function getGrammarRule(errorType?: string): GrammarRule | null {
 
   // Try case-insensitive match
   const lowerErrorType = errorType.toLowerCase();
-  for (const [key, rule] of Object.entries(grammarRules)) {
-    if (key.toLowerCase() === lowerErrorType) {
-      return rule;
-    }
+  const matchedKey = caseInsensitiveLookup.get(lowerErrorType);
+  if (matchedKey) {
+    return grammarRules[matchedKey];
   }
 
   // Try partial match for common patterns
-  if (lowerErrorType.includes("subject") && lowerErrorType.includes("verb")) {
-    return grammarRules["Subject-verb agreement"];
-  }
-  if (lowerErrorType.includes("tense") || lowerErrorType.includes("verb")) {
-    return grammarRules["Verb tense"];
-  }
-  if (lowerErrorType.includes("article")) {
-    return grammarRules["Article use"];
-  }
-  if (lowerErrorType.includes("preposition")) {
-    return grammarRules["Preposition use"];
+  for (const { keywords, ruleKey } of partialMatchPatterns) {
+    if (keywords.every((keyword) => lowerErrorType.includes(keyword))) {
+      return grammarRules[ruleKey];
+    }
   }
 
   // Default fallback
