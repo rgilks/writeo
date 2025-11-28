@@ -57,6 +57,15 @@ const nextConfig: NextConfig = {
     // Only run ESLint on these directories
     dirs: ["app", "components"],
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "storage.ko-fi.com",
+        pathname: "/**",
+      },
+    ],
+  },
   async headers() {
     return [
       {

@@ -96,7 +96,8 @@ function KoFiButton({ url, imageUrl }: KoFiButtonProps) {
         src={imageUrl}
         alt="Buy Me a Coffee at ko-fi.com"
         style={{ display: "block" }}
-        unoptimized
+        loading="lazy"
+        priority={false}
       />
     </a>
   );
