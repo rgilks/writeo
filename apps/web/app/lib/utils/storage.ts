@@ -1,8 +1,3 @@
-/**
- * Shared storage utilities for Zustand stores
- * Provides error handling, quota management, and cleanup
- */
-
 import { StateStorage } from "zustand/middleware";
 
 export class StorageError extends Error {
@@ -15,16 +10,10 @@ export class StorageError extends Error {
   }
 }
 
-/**
- * Get available storage space (approximate)
- * Returns bytes available, or null if unable to determine
- * Note: Most browsers have ~5-10MB limit for localStorage
- */
 export function getAvailableStorageSpace(): number | null {
   if (typeof window === "undefined") {
     return null;
   }
-  // Conservative 5MB estimate (actual limit varies by browser)
   return 5 * 1024 * 1024;
 }
 
@@ -74,9 +63,6 @@ function isStorageAvailable(): boolean {
   }
 }
 
-/**
- * Enhanced base storage with error handling and quota management
- */
 export function createSafeStorage(): StateStorage {
   return {
     getItem: (name: string): string | null => {

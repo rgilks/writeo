@@ -221,7 +221,6 @@ export function TeacherFeedback({
   llmErrors,
   relevanceCheck,
 }: TeacherFeedbackProps) {
-  // Initialize from stored feedback if available
   const [feedbackMode, setFeedbackMode] = useState<FeedbackMode>("initial");
   const [explanation, setExplanation] = useState<string | null>(
     aiFeedback?.explanationMessage || null,
@@ -232,7 +231,6 @@ export function TeacherFeedback({
   const [hasRequestedClues, setHasRequestedClues] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Use streaming hook for teacher feedback
   const {
     feedback: streamedFeedback,
     isStreaming,

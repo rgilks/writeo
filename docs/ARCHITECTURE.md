@@ -161,9 +161,8 @@ graph TB
 
 **Stores:**
 
-- **Draft Store** - Draft history, progress tracking, achievements, streaks
+- **Draft Store** - Draft content, assessment results, draft history, progress tracking, achievements, streaks
 - **Preferences Store** - User preferences (view mode, storage settings)
-- **Draft Store** - Consolidated store for draft content, assessment results, and progress tracking
 
 **Key Features:**
 
@@ -534,7 +533,7 @@ See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis, including per-s
 
 - **Framework**: Next.js 15+ (App Router)
 - **Language**: TypeScript 5+
-- **Styling**: CSS Modules
+- **Styling**: Global CSS with CSS Variables
 - **API Client**: Server Actions (server-side only)
 
 ### API Worker Stack

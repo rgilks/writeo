@@ -29,9 +29,6 @@ function getWordCountStatus(wordCount: number): WordCountStatus {
   return "valid";
 }
 
-/**
- * EditableEssay - Allows users to edit their essay and resubmit
- */
 export function EditableEssay({
   initialText,
   questionId: _questionId,

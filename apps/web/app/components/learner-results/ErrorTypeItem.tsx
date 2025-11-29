@@ -1,7 +1,3 @@
-/**
- * Component for displaying error types with explanations
- */
-
 import { useId, useState } from "react";
 import type { LanguageToolError } from "@writeo/shared";
 import { getErrorExplanation } from "./utils";

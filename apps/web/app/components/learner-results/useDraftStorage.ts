@@ -1,7 +1,3 @@
-/**
- * Hook for storing draft data
- */
-
 import { useEffect } from "react";
 import { countWords } from "@writeo/shared";
 import type { LanguageToolError } from "@writeo/shared";
@@ -39,7 +35,6 @@ export function useDraftStorage(
     }
 
     try {
-      // Store draft even if overall score is 0 so draft history always reflects user edits
       const wordCount = countWords(finalAnswerText);
       const errorIds = extractErrorIds(grammarErrors);
       const cefrLevel = overall > 0 ? mapScoreToCEFR(overall) : undefined;

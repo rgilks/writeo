@@ -7,21 +7,17 @@ import type { Achievement } from "@/app/lib/stores/draft-store";
 const SPARKLE_VARIANTS = ["✨", "⭐"] as const;
 const SPARKLE_COUNT = 5;
 
-/**
- * Sparkle effect that randomly appears across the card
- */
 function Sparkle() {
-  // Randomly select a sparkle variant, position, size, and timing (stable per instance)
   const sparkleData = useMemo(() => {
-    const top = Math.random() * 90 + 5; // 5% to 95%
-    const left = Math.random() * 90 + 5; // 5% to 95%
-    const size = Math.random() * 6 + 10; // 10px to 16px
-    const initialDelay = Math.random() * 2; // 0 to 2 seconds
-    const duration = Math.random() * 1.5 + 2; // 2 to 3.5 seconds
-    const repeatDelay = Math.random() * 3 + 1; // 1 to 4 seconds
+    const top = Math.random() * 90 + 5;
+    const left = Math.random() * 90 + 5;
+    const size = Math.random() * 6 + 10;
+    const initialDelay = Math.random() * 2;
+    const duration = Math.random() * 1.5 + 2;
+    const repeatDelay = Math.random() * 3 + 1;
     const sparkle = SPARKLE_VARIANTS[Math.floor(Math.random() * SPARKLE_VARIANTS.length)];
-    const xOffset = (Math.random() - 0.5) * 12; // -6px to 6px horizontal drift
-    const yOffset = (Math.random() - 0.5) * 12; // -6px to 6px vertical drift
+    const xOffset = (Math.random() - 0.5) * 12;
+    const yOffset = (Math.random() - 0.5) * 12;
 
     return {
       sparkle,
@@ -109,9 +105,6 @@ const ABSOLUTE_FILL = {
   pointerEvents: "none" as const,
 };
 
-/**
- * AchievementBadge - Displays an achievement badge with icon and name
- */
 export function AchievementBadge({
   achievement,
   size = "medium",
@@ -165,7 +158,6 @@ export function AchievementBadge({
         transition={{ duration: 0.3 }}
       />
 
-      {/* Shine effect overlay */}
       <motion.div
         style={{
           ...ABSOLUTE_FILL,
@@ -192,7 +184,6 @@ export function AchievementBadge({
         }}
       />
 
-      {/* Glow effect on hover */}
       <motion.div
         style={{
           position: "absolute",
@@ -216,12 +207,10 @@ export function AchievementBadge({
         }}
       />
 
-      {/* Sparkles randomly appearing across the entire card */}
       {Array.from({ length: SPARKLE_COUNT }).map((_, i) => (
         <Sparkle key={i} />
       ))}
 
-      {/* Content wrapper with relative positioning */}
       <div
         style={{
           position: "relative",
@@ -307,9 +296,6 @@ interface AchievementListProps {
   maxDisplay?: number;
 }
 
-/**
- * AchievementList - Displays a list of achievement badges with staggered animations
- */
 export function AchievementList({ achievements, maxDisplay }: AchievementListProps) {
   const displayAchievements = maxDisplay ? achievements.slice(0, maxDisplay) : achievements;
 

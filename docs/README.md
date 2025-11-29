@@ -19,6 +19,7 @@ This directory contains all documentation for the Writeo project.
 ### Architecture & API
 
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, components, data flow, and performance
+- **[API-ARCHITECTURE.md](API-ARCHITECTURE.md)** - Detailed API Worker architecture (middleware, request flow, services)
 - **[STATE_MANAGEMENT.md](STATE_MANAGEMENT.md)** - Frontend state management (Zustand, Immer, patterns)
 - **[SPEC.md](SPEC.md)** - Complete API specification with request/response examples
 

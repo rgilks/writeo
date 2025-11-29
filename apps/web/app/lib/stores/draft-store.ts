@@ -1,22 +1,11 @@
-/**
- * Draft Store
- *
- * Manages draft content, submission results, progress tracking, achievements, and streaks.
- * Uses Zustand with persist middleware for localStorage persistence.
- */
-
 import { create } from "zustand";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import type { AssessmentResults } from "@writeo/shared";
 import { createSafeStorage } from "../utils/storage";
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 const STORAGE_KEY = "writeo-draft-store";
-const DEFAULT_RESULT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const DEFAULT_RESULT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const SUMMARY_MAX_LENGTH = 40;
 const MIN_SCORE_IMPROVEMENT_FOR_ACHIEVEMENT = 1.0;
 const MIN_FIXED_ERRORS_FOR_ACHIEVEMENT = 10;
@@ -25,10 +14,6 @@ const MIN_DRAFTS_FOR_REVISER_ACHIEVEMENT = 5;
 
 const CEFR_LEVELS = ["A2", "B1", "B2", "C1", "C2"] as const;
 type CefrLevel = (typeof CEFR_LEVELS)[number];
-
-// ============================================================================
-// TYPES
-// ============================================================================
 
 export interface DraftContent {
   id: string;
@@ -78,20 +63,16 @@ interface StoredResult {
 }
 
 interface DraftStore {
-  // Local-only state
   contentDrafts: DraftContent[];
   currentContent: string;
   activeDraftId: string | null;
 
-  // Syncable state
   results: Record<string, StoredResult>;
-  drafts: Record<string, DraftHistory[]>; // keyed by rootSubmissionId
+  drafts: Record<string, DraftHistory[]>;
   progress: Record<string, ProgressMetrics>;
   fixedErrors: Record<string, string[]>;
   achievements: Achievement[];
   streak: StreakData;
-
-  // Actions
   updateContent: (text: string) => void;
   saveContentDraft: () => void;
   loadContentDraft: (id: string) => void;
@@ -126,10 +107,6 @@ interface DraftStore {
   cleanupOldResults: (maxAgeMs?: number) => void;
   clearDrafts: () => void;
 }
-
-// ============================================================================
-// UTILITIES
-// ============================================================================
 
 const generateId = (): string => Math.random().toString(36).substring(2, 9);
 
@@ -315,15 +292,10 @@ function calculateNewStreak(
   return { currentStreak: 1, longestStreak, lastActivityDate: today };
 }
 
-// ============================================================================
-// STORE CREATION
-// ============================================================================
-
 export const useDraftStore = create<DraftStore>()(
   devtools(
     persist(
       immer((set, get) => ({
-        // Initial state
         contentDrafts: [],
         currentContent: "",
         activeDraftId: null,
@@ -409,7 +381,6 @@ export const useDraftStore = create<DraftStore>()(
           });
         },
 
-        // Syncable state actions
         setResult: (submissionId, results) => {
           set((state) => {
             state.results[submissionId] = {
@@ -542,7 +513,6 @@ export const useDraftStore = create<DraftStore>()(
           });
         },
 
-        // Computed selectors
         getTotalDrafts: () => {
           const state = get();
           return Object.values(state.drafts).reduce((sum, drafts) => sum + drafts.length, 0);

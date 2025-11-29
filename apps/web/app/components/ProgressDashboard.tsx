@@ -30,13 +30,9 @@ interface AnimatedCounterProps {
   value: number;
 }
 
-/**
- * AnimatedCounter - Animates a number from 0 to target value
- */
 function AnimatedCounter({ value }: AnimatedCounterProps) {
   const spring = useSpring(0, SPRING_CONFIG);
   const display = useTransform(spring, (current) => {
-    // Handle decimal values (for average improvement)
     if (value % 1 !== 0) {
       return current.toFixed(1);
     }
@@ -68,9 +64,6 @@ const ABSOLUTE_FILL = {
   pointerEvents: "none" as const,
 };
 
-/**
- * StatCard - Animated stat card with hover effects
- */
 function StatCard({ value, label, icon, color, delay = 0, gradient }: StatCardProps) {
   return (
     <motion.div

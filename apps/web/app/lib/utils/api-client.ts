@@ -1,7 +1,3 @@
-/**
- * API client utilities
- */
-
 import { getApiBase, getApiKey } from "../api-config";
 
 export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
@@ -9,11 +5,6 @@ export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
 }
 
-/**
- * Makes an authenticated API request
- * @param options - Request options including endpoint, method, body, and other fetch options
- * @returns Promise resolving to the Response
- */
 export async function apiRequest(options: ApiRequestOptions): Promise<Response> {
   const { endpoint, body, method = "GET", ...fetchOptions } = options;
   const apiBase = getApiBase();

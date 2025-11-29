@@ -1,7 +1,3 @@
-/**
- * Hook for managing draft history
- */
-
 import { useMemo } from "react";
 import { useDraftStore } from "@/app/lib/stores/draft-store";
 import { countWords } from "@writeo/shared";
@@ -16,9 +12,7 @@ export function useDraftHistory(
   finalAnswerText: string,
   parentSubmissionId?: string,
 ) {
-  // Subscribe to drafts state so component re-renders when drafts change
   const drafts = useDraftStore((state) => state.drafts);
-  // Store functions are stable
   const getDraftHistory = useDraftStore((state) => state.getDraftHistory);
   const getRootSubmissionId = useDraftStore((state) => state.getRootSubmissionId);
 
