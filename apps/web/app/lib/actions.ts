@@ -123,7 +123,7 @@ export async function submitEssay(
   }
 }
 
-export { getSubmissionResults, pollSubmissionResults } from "./actions/submission";
-export { getSubmissionResultsWithDraftTracking } from "./actions/draft";
-export { getTeacherFeedback } from "./actions/teacher-feedback";
-export { streamAIFeedback } from "./actions/streaming";
+export { getSubmissionResults, pollSubmissionResults };
+export { getSubmissionResultsWithDraftTracking };
+export { getTeacherFeedback };
+export { streamAIFeedback };
