@@ -89,6 +89,10 @@ export default function WritePage() {
             </Link>
           </div>
           <nav className="header-actions" aria-label="Writing actions">
+            <Link href="/history" className="nav-history-link">
+              <span aria-hidden="true">📜</span>
+              <span>History</span>
+            </Link>
             <Link href="/" className="nav-back-link">
               <span aria-hidden="true">←</span> Back to Home
             </Link>

@@ -77,9 +77,7 @@ export async function createTestSubmission(
                 id: answerId,
                 "question-number": 1,
                 "question-id": questionId,
-                ...(questionText?.trim()
-                  ? { "question-text": questionText.trim() }
-                  : {}),
+                ...(questionText?.trim() ? { "question-text": questionText.trim() } : {}),
                 text: answerText,
               },
             ],
@@ -182,6 +180,56 @@ export class HomePage {
 
   async getTitle() {
     return this.page.locator("h1.hero-title");
+  }
+
+  async clickHistoryLink() {
+    await this.page.click('a[href="/history"]');
+  }
+}
+
+export class HistoryPage {
+  constructor(private page: Page) {}
+
+  async goto() {
+    await this.page.goto("/history");
+  }
+
+  async getTitle() {
+    return this.page.locator("h1:has-text('History')");
+  }
+
+  async getEmptyState() {
+    return this.page.locator('[data-testid="history-empty-state"]');
+  }
+
+  async getHistoryItemsContainer() {
+    return this.page.locator('[data-testid="history-items-container"]');
+  }
+
+  async getContentDraftCards() {
+    return this.page.locator('[data-testid="content-draft-card"]');
+  }
+
+  async getSubmissionCards() {
+    return this.page.locator('[data-testid="submission-card"]');
+  }
+
+  async getContinueEditingButtons() {
+    return this.page.locator('[data-testid="continue-editing-button"]');
+  }
+
+  async getViewResultsButtons() {
+    return this.page.locator('[data-testid="view-results-button"]');
+  }
+
+  async clickContinueEditing(index = 0) {
+    const buttons = await this.getContinueEditingButtons();
+    await buttons.nth(index).click();
+  }
+
+  async clickViewResults(index = 0) {
+    const buttons = await this.getViewResultsButtons();
+    await buttons.nth(index).click();
   }
 }
 

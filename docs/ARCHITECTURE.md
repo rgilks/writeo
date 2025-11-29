@@ -145,7 +145,7 @@ graph TB
 
 | Component           | Technology                  | Responsibility                                                       | Scale-to-Zero        |
 | ------------------- | --------------------------- | -------------------------------------------------------------------- | -------------------- |
-| **Web Frontend**    | Next.js 15+ (App Router)    | User interface, form handling, result display                        | ✅ Yes               |
+| **Web Frontend**    | Next.js 15+ (App Router)    | User interface, form handling, result display, history page          | ✅ Yes               |
 | **API Worker**      | Cloudflare Workers          | REST API, request validation, data orchestration                     | ✅ Yes               |
 | **R2 Storage**      | Cloudflare R2               | Persistent storage for questions, answers, submissions (opt-in only) | ❌ No (storage only) |
 | **KV Store**        | Cloudflare KV               | Assessment results cache (90-day TTL, opt-in only)                   | ❌ No (storage only) |

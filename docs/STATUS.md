@@ -10,6 +10,7 @@
 
 - ✅ **Core Assessment** - Essay scoring, grammar checking, AI feedback
 - ✅ **Draft Tracking** - Multiple drafts, revision history, navigation
+- ✅ **History Page** - View and access drafts and submissions with date grouping
 - ✅ **Precision-Focused Feedback** - High-confidence error filtering with toggles
 - ✅ **Interactive Learning Flow** - Heat map, reveal mistakes, teacher analysis
 - ✅ **Progress Visualization** - CEFR mapping, progress tracking
@@ -26,6 +27,7 @@ All critical features have been verified through comprehensive browser testing:
 - ✅ Essay submission and results display
 - ✅ Grammar error detection and highlighting
 - ✅ Draft tracking and navigation
+- ✅ History page for accessing past work
 - ✅ Teacher feedback (short notes and full analysis)
 - ✅ Error reveal functionality
 - ✅ Heat map visualization

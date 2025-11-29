@@ -1,11 +1,12 @@
 import { test as base, expect } from "@playwright/test";
-import { HomePage, WritePage, ResultsPage } from "./helpers";
+import { HomePage, WritePage, ResultsPage, HistoryPage } from "./helpers";
 import { createTestSubmission, generateValidEssay, getTestEssay } from "./helpers";
 
 type TestFixtures = {
   homePage: HomePage;
   writePage: WritePage;
   resultsPage: ResultsPage;
+  historyPage: HistoryPage;
   // Shared submission fixtures - created once per test file and reused
   sharedSubmission: { submissionId: string; questionText: string; essay: string };
   sharedSubmissionWithErrors: { submissionId: string; questionText: string; essay: string };
@@ -16,6 +17,7 @@ export const test = base.extend<TestFixtures>({
   homePage: async ({ page }, use) => await use(new HomePage(page)),
   writePage: async ({ page }, use) => await use(new WritePage(page)),
   resultsPage: async ({ page }, use) => await use(new ResultsPage(page)),
+  historyPage: async ({ page }, use) => await use(new HistoryPage(page)),
 
   // Shared submission - created once per worker and reused across tests
   // Results are stored on server for later retrieval

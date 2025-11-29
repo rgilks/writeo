@@ -17,7 +17,12 @@ export default function HomePage() {
               Writeo
             </Link>
           </div>
-          <nav className="header-actions" aria-label="Primary navigation"></nav>
+          <nav className="header-actions" aria-label="Primary navigation">
+            <Link href="/history" className="nav-history-link">
+              <span aria-hidden="true">📜</span>
+              <span>History</span>
+            </Link>
+          </nav>
         </div>
       </header>
 

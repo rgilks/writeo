@@ -413,3 +413,127 @@ test.describe("Results Persistence", () => {
     await expect(score.first()).toBeVisible({ timeout: 10000 });
   });
 });
+
+test.describe("History Page", () => {
+  test("history page loads and displays empty state when no history", async ({
+    page,
+    homePage,
+    historyPage,
+  }) => {
+    // Clear localStorage to ensure empty state
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+
+    // Navigate to history page
+    await homePage.goto();
+    await homePage.clickHistoryLink();
+    await expect(page).toHaveURL("/history");
+
+    // Check page loads with title
+    const title = await historyPage.getTitle();
+    await expect(title).toBeVisible();
+
+    // Check empty state is displayed
+    const emptyState = await historyPage.getEmptyState();
+    await expect(emptyState).toBeVisible();
+    await expect(emptyState.locator("text=No History Yet")).toBeVisible();
+  });
+
+  test("history page displays submissions after creating one", async ({
+    page,
+    writePage,
+    resultsPage,
+    homePage,
+    historyPage,
+  }) => {
+    // Submit an essay
+    await writePage.goto("1");
+    const essay = generateValidEssay();
+    await writePage.typeEssay(essay);
+    await expect(async () => {
+      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
+    }).toPass({ timeout: 3000 });
+    await writePage.clickSubmit();
+
+    // Wait for results
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    await resultsPage.waitForResults();
+
+    // Wait for draft storage
+    const submissionId = page.url().split("/results/")[1];
+    await resultsPage.waitForDraftStorage(submissionId);
+
+    // Navigate to history page
+    await homePage.goto();
+    await homePage.clickHistoryLink();
+    await expect(page).toHaveURL("/history");
+
+    // Check page loads
+    const title = await historyPage.getTitle();
+    await expect(title).toBeVisible();
+
+    // Check that history items container is visible (not empty state)
+    const itemsContainer = await historyPage.getHistoryItemsContainer();
+    await expect(itemsContainer).toBeVisible({ timeout: 5000 });
+
+    // Check that at least one submission card is visible
+    const submissionCards = await historyPage.getSubmissionCards();
+    await expect(submissionCards.first()).toBeVisible({ timeout: 5000 });
+
+    // Check that "View Results" button is present
+    const viewResultsButtons = await historyPage.getViewResultsButtons();
+    await expect(viewResultsButtons.first()).toBeVisible();
+  });
+
+  test("history page navigation works from header", async ({ page, homePage, historyPage }) => {
+    // Navigate to home
+    await homePage.goto();
+
+    // Click history link in header
+    await homePage.clickHistoryLink();
+    await expect(page).toHaveURL("/history");
+
+    // Verify history page loaded
+    const title = await historyPage.getTitle();
+    await expect(title).toBeVisible();
+  });
+
+  test("view results button navigates to results page", async ({
+    page,
+    writePage,
+    resultsPage,
+    homePage,
+    historyPage,
+  }) => {
+    // Submit an essay
+    await writePage.goto("1");
+    const essay = generateValidEssay();
+    await writePage.typeEssay(essay);
+    await expect(async () => {
+      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
+    }).toPass({ timeout: 3000 });
+    await writePage.clickSubmit();
+
+    // Wait for results and get submission ID
+    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    await resultsPage.waitForResults();
+    const submissionId = page.url().split("/results/")[1];
+    await resultsPage.waitForDraftStorage(submissionId);
+
+    // Navigate to history
+    await homePage.goto();
+    await homePage.clickHistoryLink();
+    await expect(page).toHaveURL("/history");
+
+    // Wait for submission card to appear
+    const submissionCards = await historyPage.getSubmissionCards();
+    await expect(submissionCards.first()).toBeVisible({ timeout: 5000 });
+
+    // Click "View Results" button
+    await historyPage.clickViewResults(0);
+
+    // Should navigate back to results page
+    await expect(page).toHaveURL(new RegExp(`/results/${submissionId}`), { timeout: 10000 });
+    await resultsPage.waitForResults();
+  });
+});
