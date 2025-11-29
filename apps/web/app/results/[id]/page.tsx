@@ -160,6 +160,10 @@ export default function ResultsPage() {
             </Link>
           </div>
           <nav className="header-actions" aria-label="Results actions">
+            <Link href="/history" className="nav-history-link">
+              <span aria-hidden="true">📜</span>
+              <span>History</span>
+            </Link>
             <ModeSwitcher />
             {status !== "pending" && (
               <Link href="/" className="nav-back-link">
