@@ -71,3 +71,24 @@
    - Watch for unnecessary re-renders from Zustand selectors
    - Consider using shallow equality for complex selectors if needed
    - Current implementation is efficient with proper selector usage
+
+---
+
+## Styling & CSS (Future Considerations)
+
+**Status**: ✅ All styling improvements completed. CSS is well-organized and maintainable.
+
+### Low Priority / Future
+
+1. **CSS Modules** (only if class name conflicts become an issue)
+   - Current global CSS approach is working well
+   - Consider only if component-specific styles need better encapsulation
+
+2. **Design System Documentation** (if team grows)
+   - Document all CSS variables in a style guide
+   - Create usage examples for common patterns
+   - Only needed if multiple developers are working on styling
+
+3. **Performance Optimization** (if CSS file size becomes an issue)
+   - Current 1,430 lines is reasonable
+   - Consider CSS splitting only if bundle size becomes a concern

@@ -15,12 +15,7 @@ const CONTAINER_STYLES = {
   gap: "var(--spacing-sm)",
 } as const;
 
-const BUTTON_GROUP_STYLES = {
-  display: "flex",
-  gap: "var(--spacing-sm)",
-  flexWrap: "wrap",
-  alignItems: "center",
-} as const;
+// BUTTON_GROUP_STYLES removed - use .button-group class instead
 
 const BUTTON_STYLES = {
   fontSize: "13px",
@@ -55,7 +50,7 @@ export function FeedbackControls({
 }: FeedbackControlsProps) {
   return (
     <div style={CONTAINER_STYLES}>
-      <div style={BUTTON_GROUP_STYLES}>
+      <div className="button-group">
         <ToggleButton
           count={mediumConfidenceErrors.length}
           isVisible={showMediumConfidenceErrors}

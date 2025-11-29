@@ -20,7 +20,7 @@ export function SelfEvaluationChecklist({
       style={{
         marginTop: "var(--spacing-md)",
         padding: "var(--spacing-md)",
-        backgroundColor: "rgba(102, 126, 234, 0.1)",
+        backgroundColor: "var(--primary-bg-light)",
         borderRadius: "var(--border-radius)",
       }}
     >

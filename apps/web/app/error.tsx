@@ -27,54 +27,11 @@ export default function GlobalError({
   return (
     <html>
       <head>
+        <link rel="stylesheet" href="/globals.css" />
         <style>{`
-          :root {
-            --bg-primary: #ffffff;
-            --bg-secondary: #f9fafb;
-            --bg-tertiary: #f3f4f6;
-            --text-primary: #111827;
-            --text-secondary: #6b7280;
-            --primary-color: #3b82f6;
-            --border-radius: 8px;
-            --spacing-sm: 8px;
-            --spacing-md: 16px;
-            --spacing-lg: 24px;
-            --spacing-xl: 32px;
-            --spacing-3xl: 48px;
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
-          }
           body {
             margin: 0;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-          }
-          .btn {
-            display: inline-block;
-            padding: var(--spacing-sm) var(--spacing-lg);
-            min-height: 44px;
-            border-radius: var(--border-radius);
-            font-size: 16px;
-            font-weight: 600;
-            text-align: center;
-            text-decoration: none;
-            cursor: pointer;
-            border: none;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            line-height: 1.5;
-          }
-          .btn-primary {
-            background: var(--primary-color);
-            color: white;
-          }
-          .btn-primary:hover {
-            background: #2563eb;
-          }
-          .btn-secondary {
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid #e5e7eb;
-          }
-          .btn-secondary:hover {
-            background-color: var(--bg-secondary);
           }
         `}</style>
       </head>

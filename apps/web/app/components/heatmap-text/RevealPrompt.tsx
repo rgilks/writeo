@@ -2,12 +2,6 @@ import type { RevealPromptProps } from "./types";
 
 const PROMPT_BOX_STYLES = {
   marginBottom: "var(--spacing-md)",
-  padding: "var(--spacing-md)",
-  backgroundColor: "rgba(59, 130, 246, 0.1)",
-  border: "1px solid rgba(59, 130, 246, 0.2)",
-  borderRadius: "var(--border-radius)",
-  fontSize: "14px",
-  lineHeight: "1.5",
 } as const;
 
 const TITLE_STYLES = {
@@ -22,12 +16,7 @@ const DESCRIPTION_STYLES = {
   fontSize: "14px",
 } as const;
 
-const BUTTON_GROUP_STYLES = {
-  display: "flex",
-  gap: "var(--spacing-sm)",
-  flexWrap: "wrap",
-  alignItems: "center",
-} as const;
+// BUTTON_GROUP_STYLES removed - use .button-group class instead
 
 const PRIMARY_BUTTON_STYLES = {
   fontSize: "14px",
@@ -68,13 +57,13 @@ export function RevealPrompt({
   const hasAdditionalErrors = mediumConfidenceErrors.length > 0 || lowConfidenceErrors.length > 0;
 
   return (
-    <div style={PROMPT_BOX_STYLES}>
+    <div className="info-box info-box-primary" style={PROMPT_BOX_STYLES}>
       <p style={TITLE_STYLES}>💡 Find the Mistakes</p>
       <p style={DESCRIPTION_STYLES}>
         Look for the red highlights in your text. Can you spot what needs fixing? Click "Show
         Feedback" when you're ready to see suggestions.
       </p>
-      <div style={BUTTON_GROUP_STYLES}>
+      <div className="button-group">
         <button onClick={onReveal} className="btn btn-primary" style={PRIMARY_BUTTON_STYLES}>
           Show Feedback
         </button>

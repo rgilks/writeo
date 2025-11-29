@@ -17,24 +17,24 @@ interface CopyButtonProps {
 const COPY_RESET_DELAY = 2000;
 
 const STATUS_COLORS = {
-  success: { bg: "#d1fae5", text: "#065f46" },
-  error: { bg: "#fef2f2", text: "#991b1b" },
+  success: { bg: "var(--success-bg)", text: "var(--success-text)" },
+  error: { bg: "var(--error-bg)", text: "var(--error-text)" },
   default: { bg: "var(--bg-secondary)", text: "var(--text-primary)" },
 } as const;
 
 const ERROR_COLORS = {
-  bg: "#fef2f2",
-  border: "#fecaca",
-  text: "#991b1b",
+  bg: "var(--error-bg)",
+  border: "var(--error-border)",
+  text: "var(--error-text)",
 } as const;
 
-const SUCCESS_COLOR = "#10b981";
-const ERROR_COLOR = "#dc2626";
+const SUCCESS_COLOR = "var(--success-color)";
+const ERROR_COLOR = "var(--error-color)";
 
 const CODE_BLOCK_STYLES = {
-  padding: "12px",
+  padding: "var(--spacing-md)",
   backgroundColor: "var(--bg-secondary)",
-  borderRadius: "6px",
+  borderRadius: "var(--border-radius)",
   fontSize: "13px",
   overflow: "auto",
   margin: 0,
@@ -44,7 +44,7 @@ const SECTION_HEADER_STYLES = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "16px",
+  marginBottom: "var(--spacing-md)",
 } as const;
 
 function CopyButton({ text, label }: CopyButtonProps) {
@@ -64,12 +64,12 @@ function CopyButton({ text, label }: CopyButtonProps) {
     <button
       onClick={handleCopy}
       style={{
-        padding: "6px 12px",
+        padding: "var(--spacing-xs) var(--spacing-sm)",
         fontSize: "12px",
         backgroundColor: copied ? SUCCESS_COLOR : "var(--bg-secondary)",
         color: copied ? "white" : "var(--text-primary)",
         border: "1px solid var(--border-color)",
-        borderRadius: "4px",
+        borderRadius: "var(--border-radius)",
         cursor: "pointer",
         fontWeight: 500,
         transition: "all 0.2s",
@@ -92,10 +92,10 @@ function StatusBadge({ status, label }: StatusBadgeProps) {
   return (
     <code
       style={{
-        padding: "8px 12px",
+        padding: "var(--spacing-sm) var(--spacing-md)",
         backgroundColor: colors.bg,
         color: colors.text,
-        borderRadius: "6px",
+        borderRadius: "var(--border-radius)",
         fontSize: "14px",
         display: "inline-block",
         fontWeight: 600,

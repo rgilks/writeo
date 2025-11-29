@@ -18,7 +18,7 @@ export function SectionCard({
       className="card"
       style={{
         marginTop: isFirst ? "var(--spacing-xl)" : "var(--spacing-lg)",
-        ...(highlight && { backgroundColor: "rgba(102, 126, 234, 0.1)" }),
+        ...(highlight && { backgroundColor: "var(--primary-bg-light)" }),
       }}
     >
       <h2 style={{ fontSize: "24px", marginBottom: "var(--spacing-md)", fontWeight: 600 }}>

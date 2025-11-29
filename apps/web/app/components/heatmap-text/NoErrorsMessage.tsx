@@ -3,12 +3,6 @@ import { pluralize } from "@/app/lib/utils/text-utils";
 
 const SUCCESS_BOX_STYLES = {
   marginBottom: "var(--spacing-md)",
-  padding: "var(--spacing-md)",
-  backgroundColor: "rgba(16, 185, 129, 0.1)",
-  border: "1px solid rgba(16, 185, 129, 0.3)",
-  borderRadius: "var(--border-radius)",
-  fontSize: "14px",
-  lineHeight: "1.5",
 } as const;
 
 const MESSAGE_STYLES = {
@@ -16,13 +10,7 @@ const MESSAGE_STYLES = {
   fontWeight: 600,
 } as const;
 
-const BUTTON_GROUP_STYLES = {
-  display: "flex",
-  gap: "var(--spacing-sm)",
-  flexWrap: "wrap",
-  alignItems: "center",
-  marginTop: "var(--spacing-sm)",
-} as const;
+// BUTTON_GROUP_STYLES removed - use .button-group class instead
 
 const BUTTON_STYLES = {
   fontSize: "13px",
@@ -57,10 +45,10 @@ export function NoErrorsMessage({
   const hasAdditionalErrors = mediumConfidenceErrors.length > 0 || lowConfidenceErrors.length > 0;
 
   return (
-    <div style={SUCCESS_BOX_STYLES}>
+    <div className="info-box info-box-success" style={SUCCESS_BOX_STYLES}>
       <p style={MESSAGE_STYLES}>✅ Great work! No issues found</p>
       {hasAdditionalErrors && (
-        <div style={BUTTON_GROUP_STYLES}>
+        <div className="button-group" style={{ marginTop: "var(--spacing-sm)" }}>
           <ShowButton
             count={mediumConfidenceErrors.length}
             isVisible={showMediumConfidenceErrors}

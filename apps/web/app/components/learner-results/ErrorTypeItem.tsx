@@ -38,7 +38,7 @@ export function ErrorTypeItem({
     marginTop: "var(--spacing-xs)",
     marginLeft: "var(--spacing-md)",
     padding: "var(--spacing-sm)",
-    backgroundColor: "rgba(102, 126, 234, 0.1)",
+    backgroundColor: "var(--primary-bg-light)",
     borderRadius: "var(--border-radius)",
     fontSize: "14px",
     lineHeight: "1.5",

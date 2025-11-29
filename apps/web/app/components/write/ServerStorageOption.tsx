@@ -14,9 +14,9 @@ export function ServerStorageOption({
       style={{
         marginTop: "var(--spacing-md)",
         padding: "var(--spacing-md)",
-        backgroundColor: "rgba(102, 126, 234, 0.05)",
+        backgroundColor: "var(--primary-bg-light)",
         borderRadius: "var(--border-radius)",
-        border: "1px solid rgba(102, 126, 234, 0.2)",
+        border: "1px solid var(--primary-border-light)",
       }}
     >
       <label
