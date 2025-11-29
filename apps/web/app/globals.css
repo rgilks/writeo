@@ -1234,7 +1234,7 @@ footer > div > div {
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  gap: var(--spacing-md) !important;
+  gap: var(--spacing-xl) !important;
 }
 
 footer nav {
@@ -1243,14 +1243,21 @@ footer nav {
   align-items: center !important;
   justify-content: center !important;
   width: 100%;
-  gap: var(--spacing-md);
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) 0;
 }
 
 footer nav a {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: 16px;
-  line-height: 1.6;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 14px;
+  line-height: 1.5;
   letter-spacing: 0.01em;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+footer nav a:hover {
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 footer > div > div > div:first-child {

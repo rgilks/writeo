@@ -15,13 +15,17 @@ const LINK_STYLES = {
   fontWeight: 500,
   color: "var(--text-secondary)",
   textDecoration: "none",
-  padding: "var(--spacing-xs) var(--spacing-sm)",
-  transition: "color 0.2s",
+  padding: "var(--spacing-xs) var(--spacing-md)",
+  transition: "all 0.2s ease",
+  borderRadius: "4px",
+  position: "relative" as const,
 } as const;
 
 const SEPARATOR_STYLES = {
   color: "var(--border-color)",
   userSelect: "none" as const,
+  fontSize: "12px",
+  padding: "0 var(--spacing-xs)",
 } as const;
 
 interface FooterLinkProps {
@@ -36,6 +40,7 @@ function FooterLink({ href, children, external = false, icon }: FooterLinkProps)
   const linkStyle = {
     ...LINK_STYLES,
     color: isHovered ? "var(--text-primary)" : "var(--text-secondary)",
+    backgroundColor: isHovered ? "rgba(0, 0, 0, 0.02)" : "transparent",
     ...(icon && { display: "inline-flex", alignItems: "center", gap: "6px" }),
   };
 
@@ -127,7 +132,7 @@ export function Footer() {
         borderTop: "1px solid var(--border-color)",
         backgroundColor: "var(--bg-primary)",
         width: "100%",
-        padding: "var(--spacing-xl) var(--spacing-md)",
+        padding: "var(--spacing-2xl) var(--spacing-md) var(--spacing-xl)",
       }}
     >
       <div
@@ -138,7 +143,7 @@ export function Footer() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: "var(--spacing-lg)",
+          gap: "var(--spacing-xl)",
           textAlign: "center",
         }}
       >
@@ -150,7 +155,8 @@ export function Footer() {
             flexWrap: "wrap",
             alignItems: "center",
             justifyContent: "center",
-            gap: "var(--spacing-md)",
+            gap: "var(--spacing-xs)",
+            padding: "var(--spacing-sm) 0",
           }}
           aria-label="Footer navigation"
         >
