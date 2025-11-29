@@ -948,7 +948,7 @@ button:not(.btn) {
   }
 
   .container {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
   }
 
   .header-content {
@@ -980,12 +980,46 @@ button:not(.btn) {
   }
 
   .writing-container {
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
   }
 
   .question-card {
     position: relative;
     top: 0;
+  }
+
+  /* Reduce padding on cards for writing and results pages on mobile */
+  .card,
+  .question-card,
+  .answer-card {
+    padding: var(--spacing-sm);
+  }
+
+  /* Reduce textarea padding on mobile */
+  .textarea,
+  textarea {
+    padding: var(--spacing-sm) !important;
+  }
+
+  /* Target textareas in cards specifically */
+  .card textarea,
+  .answer-card textarea,
+  .question-card textarea {
+    padding: var(--spacing-sm) !important;
+  }
+
+  /* Reduce margins on mobile for better space utilization */
+  .page-title {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .page-subtitle {
+    margin-bottom: var(--spacing-sm);
+  }
+
+  /* Reduce top margin on container divs that have inline marginBottom styles */
+  .container > div[style*="marginBottom"] {
+    margin-bottom: var(--spacing-md) !important;
   }
 
   .score-display {
@@ -1111,7 +1145,12 @@ button:not(.btn) {
 
   .card,
   .task-card {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
+  }
+
+  /* Further reduce textarea padding on very narrow screens */
+  .textarea {
+    padding: var(--spacing-xs) var(--spacing-sm);
   }
 
   .hero-title,

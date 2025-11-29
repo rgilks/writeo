@@ -64,10 +64,63 @@ const ABSOLUTE_FILL = {
   pointerEvents: "none" as const,
 };
 
+function StatCardSkeleton() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
+      style={{
+        padding: "var(--spacing-lg)",
+        background: "var(--bg-secondary)",
+        borderRadius: "var(--border-radius-lg)",
+        textAlign: "center",
+        position: "relative",
+        overflow: "hidden",
+        boxShadow: "var(--shadow-md)",
+        border: "2px solid var(--border-color)",
+      }}
+    >
+      <div
+        style={{
+          height: "40px",
+          marginBottom: "var(--spacing-xs)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "60px",
+            height: "40px",
+            backgroundColor: "var(--bg-tertiary)",
+            borderRadius: "var(--border-radius)",
+            animation: "pulse 1.5s ease-in-out infinite",
+          }}
+          aria-hidden="true"
+        />
+      </div>
+      <div
+        style={{
+          height: "14px",
+          width: "80px",
+          margin: "0 auto",
+          backgroundColor: "var(--bg-tertiary)",
+          borderRadius: "var(--border-radius)",
+          animation: "pulse 1.5s ease-in-out infinite",
+        }}
+        aria-hidden="true"
+      />
+    </motion.div>
+  );
+}
+
 function StatCard({ value, label, icon, color, delay = 0, gradient }: StatCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.9 }}
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{
         ...STAT_CARD_ANIMATION,
@@ -262,20 +315,44 @@ export function ProgressDashboard() {
           marginBottom: "var(--spacing-xl)",
         }}
       >
-        {isReady &&
-          statCards
-            .filter((card) => card.condition !== false)
-            .map((card) => (
-              <StatCard
-                key={card.label}
-                value={card.value}
-                label={card.label}
-                icon={card.icon}
-                color={card.color}
-                delay={card.delay}
-                gradient={card.gradient}
-              />
-            ))}
+        <AnimatePresence mode="wait">
+          {!isReady ? (
+            <motion.div
+              key="skeletons"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              style={{ display: "contents" }}
+            >
+              {[1, 2, 3, 4].map((i) => (
+                <StatCardSkeleton key={`skeleton-${i}`} />
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="cards"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+              style={{ display: "contents" }}
+            >
+              {statCards
+                .filter((card) => card.condition !== false)
+                .map((card) => (
+                  <StatCard
+                    key={card.label}
+                    value={card.value}
+                    label={card.label}
+                    icon={card.icon}
+                    color={card.color}
+                    delay={Math.max(0, card.delay - 0.1)}
+                    gradient={card.gradient}
+                  />
+                ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Achievements Section - Always render container to prevent layout shift */}

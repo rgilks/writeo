@@ -19,6 +19,7 @@ const SUBMISSION_TIMEOUT = 60000;
 export function useEssaySubmission() {
   const router = useRouter();
   const setResult = useDraftStore((state) => state.setResult);
+  const createNewContentDraft = useDraftStore((state) => state.createNewContentDraft);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +74,12 @@ export function useEssaySubmission() {
         const resultsToStore = mergeQuestionTextIntoResults(resultsObj, questionText);
 
         setResult(submissionId, resultsToStore);
+
+        // Clear the current content after successful submission
+        // This prevents the answer from being prepopulated when returning to the same question
+        // Saved drafts remain intact for work-in-progress recovery
+        createNewContentDraft();
+
         router.push(`/results/${submissionId}`);
       } catch (err) {
         errorLogger.logError(err, {
@@ -85,7 +92,7 @@ export function useEssaySubmission() {
         setLoading(false);
       }
     },
-    [router, setResult],
+    [router, setResult, createNewContentDraft],
   );
 
   return {
