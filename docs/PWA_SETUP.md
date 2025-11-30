@@ -4,19 +4,19 @@ This document describes the Progressive Web App (PWA) implementation for Writeo.
 
 ## What's Included
 
-✅ **Web App Manifest** (`/public/manifest.json`)
+✅ **Web App Manifest** (`apps/web/public/manifest.json`)
 
 - App metadata and configuration
 - Icon definitions
 - App shortcuts for quick access
 
-✅ **Service Worker** (`/public/service-worker.js`)
+✅ **Service Worker** (`apps/web/public/service-worker.js`)
 
 - Offline support and caching
 - Static asset precaching
 - Runtime caching for better performance
 
-✅ **PWA Registration Component** (`/app/components/PWARegistration.tsx`)
+✅ **PWA Registration Component** (`apps/web/app/components/PWARegistration.tsx`)
 
 - Automatic service worker registration
 - Install prompt handling
@@ -40,8 +40,8 @@ npm run generate-icons
 
 This will create:
 
-- `public/icon-192.png` (192x192 pixels)
-- `public/icon-512.png` (512x512 pixels)
+- `apps/web/public/icon-192.png` (192x192 pixels)
+- `apps/web/public/icon-512.png` (512x512 pixels)
 
 ## Testing the PWA
 
@@ -114,17 +114,18 @@ The install prompt requires:
 
 ### Icons Not Displaying
 
-- Verify icon files exist in `/public` directory
+- Verify icon files exist in `apps/web/public` directory
 - Check manifest.json icon paths are correct
 - Clear browser cache and service worker cache
-- Regenerate icons if needed: `npm run generate-icons`
+- Regenerate icons if needed: `cd apps/web && npm run generate-icons`
 
 ## Deployment Notes
 
-The PWA works automatically with your existing Cloudflare Workers deployment. No additional configuration needed - the service worker and manifest are served from the `public` directory.
+The PWA works automatically with your existing Cloudflare Workers deployment. No additional configuration needed - the service worker and manifest are served from the `apps/web/public` directory.
 
 ## Additional Resources
 
 - [MDN: Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
 - [Web.dev: PWA Checklist](https://web.dev/pwa-checklist/)
 - [Service Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)
+

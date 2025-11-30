@@ -37,10 +37,12 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 | **[COST_REVIEW.md](docs/COST_REVIEW.md)**           | Detailed cost analysis, guardrails, and pricing for OpenAI vs Groq.    |
 | **[MODES.md](docs/MODES.md)**                       | Quick guide for switching between Cheap Mode and Turbo Mode.           |
 | **[SERVICES.md](docs/SERVICES.md)**                 | Documentation for Modal services (Essay Scoring, LanguageTool).        |
+| **[MODELS.md](docs/MODELS.md)**                     | Essay scoring models documentation and comparison.                      |
 | **[SPEC.md](docs/SPEC.md)**                         | Complete API specification with request/response examples.             |
 | **[TESTING.md](docs/TESTING.md)**                   | Testing guide and strategies.                                          |
 | **[OPERATIONS.md](docs/OPERATIONS.md)**             | Operational guide for logging, monitoring, and maintenance.            |
 | **[STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md)** | Frontend state management (Zustand, Immer, patterns).                  |
+| **[PWA_SETUP.md](docs/PWA_SETUP.md)**               | Progressive Web App setup and configuration guide.                      |
 | **[SCRIPTS.md](docs/SCRIPTS.md)**                   | Scripts reference and usage guide.                                     |
 | **[STATUS.md](docs/STATUS.md)**                     | Current status, roadmap, and production readiness.                     |
 

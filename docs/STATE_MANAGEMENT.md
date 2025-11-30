@@ -420,3 +420,12 @@ await page.evaluate(() => {
 - All data is stored via Zustand persist middleware
 - `parentSubmissionId` is stored in `results.meta.parentSubmissionId` (not as a separate key)
 - Tests should use Zustand stores directly, not localStorage
+
+---
+
+## References
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and frontend stack
+- [TESTING.md](TESTING.md) - Testing guide and strategies
+- [Zustand Documentation](https://zustand-demo.pmnd.rs/) - Official Zustand documentation
+- [Immer Documentation](https://immerjs.github.io/immer/) - Official Immer documentation

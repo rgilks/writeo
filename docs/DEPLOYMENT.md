@@ -67,10 +67,12 @@ Run the setup script (creates R2 bucket and KV namespace):
 Or manually:
 
 ```bash
-wrangler r2 bucket create writeo-data
+wrangler r2 bucket create writeo-data-1  # Or use your preferred bucket name
 wrangler kv:namespace create "WRITEO_RESULTS"  # Copy ID to wrangler.toml
 wrangler kv:namespace create "WRITEO_RESULTS" --preview  # Copy preview_id
 ```
+
+**Note:** The bucket name in `wrangler.toml` is `writeo-data-1`. You can use any bucket name, but make sure it matches what's configured in `wrangler.toml`.
 
 ### Step 2: Deploy Modal Services
 

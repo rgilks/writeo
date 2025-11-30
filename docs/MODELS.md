@@ -77,7 +77,7 @@ The default model can be changed via:
 
 1. Environment variable: `MODEL_NAME=engessay` (in Modal)
 2. Query parameter: `?model_key=engessay`
-3. Code: Update `DEFAULT_MODEL` in `app.py`
+3. Code: Update `DEFAULT_MODEL` in `services/modal-essay/app.py`
 
 ## Test Results
 
@@ -98,3 +98,4 @@ Models were tested across essays of varying quality:
 - If a model fails to load, the system falls back to heuristic scoring
 - All scores are normalized to 0-9 band scale
 - Engessay model successfully differentiates between essay quality levels
+

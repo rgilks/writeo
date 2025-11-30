@@ -61,7 +61,7 @@ modal deploy app.py
 
 ### Model Details
 
-See `services/modal-essay/MODELS.md` for model documentation and comparison.
+See [MODELS.md](MODELS.md) for model documentation and comparison.
 
 ## Modal LanguageTool Service
 

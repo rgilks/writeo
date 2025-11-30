@@ -841,3 +841,13 @@ The API Worker is designed for:
 - **Observability**: Request tracing and performance metrics
 
 The architecture prioritizes maintainability and developer experience while ensuring high performance and security.
+
+---
+
+## References
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System-wide architecture and design
+- [SPEC.md](SPEC.md) - Complete API specification
+- [OPERATIONS.md](OPERATIONS.md) - Operations guide and environment configuration
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
+- [SERVICES.md](SERVICES.md) - Service documentation

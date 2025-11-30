@@ -6,7 +6,7 @@
 **Live Services:**
 
 - [Web Frontend](https://writeo.tre.systems) - Interactive essay submission interface
-- [API Documentation](https://writeo-api.workers.dev/docs) - Interactive Swagger UI (available at `/docs` endpoint)
+- [API Documentation](https://writeo-api-worker.rob-gilks.workers.dev/docs) - Interactive Swagger UI (available at `/docs` endpoint)
 
 ---
 
@@ -550,7 +550,7 @@ See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis, including per-s
 - **Framework**: FastAPI 0.104+
 - **Language**: Python 3.11+
 - **ML Framework**: PyTorch 2.1.0+
-- **Models**: HuggingFace Transformers 4.40+
+- **Models**: HuggingFace Transformers 4.35+
 - **Grammar**: LanguageTool 6.4+
 
 ---

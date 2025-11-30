@@ -150,6 +150,13 @@ export const submissionsPath = {
                     },
                   },
                 },
+                storeResults: {
+                  type: "boolean" as const,
+                  description:
+                    "Opt-in server storage flag. Default: false (no server storage). When false, results are returned immediately but not stored on the server. Results are stored only in the user's browser (localStorage). When true, results are stored on the server for 90 days, allowing access from any device.",
+                  default: false,
+                  example: false,
+                },
               },
             },
           },

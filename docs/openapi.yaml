@@ -226,10 +226,9 @@ paths:
                     required: [part, answers]
                     properties:
                       part:
-                        type: integer
-                        description: Part number (typically 1 or 2)
-                        example: 1
-                        minimum: 1
+                        type: string
+                        description: Part identifier (typically "1" or "2")
+                        example: "1"
                       answers:
                         type: array
                         description: |
@@ -247,9 +246,16 @@ paths:
                               type: string
                               format: uuid
                               description: Answer ID (will be created)
+                              example: "660e8400-e29b-41d4-a716-446655440000"
+                            question-number:
+                              type: integer
+                              description: Question number within the part
+                              example: 1
+                            question-id:
                               type: string
                               format: uuid
                               description: Question ID (required - will auto-create question if question-text is provided and non-empty, otherwise question must exist; empty question-text "" allowed for free writing)
+                              example: "550e8400-e29b-41d4-a716-446655440000"
                             question-text:
                               type: string
                               description: Question text (optional - if provided, will create/update question; if omitted, question must exist; empty string "" allowed for free writing without a question)

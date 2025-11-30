@@ -31,12 +31,10 @@ This directory contains all documentation for the Writeo project.
 - **[COST_REVIEW.md](COST_REVIEW.md)** - Comprehensive cost analysis and current cost controls
 - **[SCRIPTS.md](SCRIPTS.md)** - Scripts reference and usage guide
 - **[SERVICES.md](SERVICES.md)** - Individual services documentation (Modal, Shared package)
+- **[MODELS.md](MODELS.md)** - Essay scoring models documentation and comparison
+- **[PWA_SETUP.md](PWA_SETUP.md)** - Progressive Web App setup and configuration guide
 - **[TESTING.md](TESTING.md)** - Complete testing guide with test structure, examples, and best practices
 - **[openapi.yaml](openapi.yaml)** - OpenAPI 3.0 specification
-
-### CI/CD
-
-- **[../.github/README.md](../.github/README.md)** - GitHub Actions workflows and setup
 
 ### Legal & Compliance
 
@@ -51,8 +49,7 @@ This directory contains all documentation for the Writeo project.
 **Cost Analysis:** [COST_REVIEW.md](COST_REVIEW.md)  
 **Testing:** [TESTING.md](TESTING.md)  
 **Deployment:** [DEPLOYMENT.md](DEPLOYMENT.md)  
-**Architecture:** [ARCHITECTURE.md](ARCHITECTURE.md)  
-**CI/CD:** [.github/README.md](../.github/README.md)
+**Architecture:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
 ---
 

@@ -89,7 +89,7 @@ npm run test:e2e:ui   # Playwright UI mode
 - Install prompt handling
 - Offline functionality (manual testing recommended)
 
-See `apps/web/PWA_SETUP.md` for PWA setup and testing details.
+See [PWA_SETUP.md](PWA_SETUP.md) for PWA setup and testing details.
 
 ---
 
@@ -238,7 +238,7 @@ GitHub Actions automatically:
 - Runs tests on pull requests
 - Deploys and tests on push to `main`
 
-See [.github/README.md](../.github/README.md) for workflow details.
+See `.github/workflows/` for GitHub Actions workflow details.
 
 ---
 

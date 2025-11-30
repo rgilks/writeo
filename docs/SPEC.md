@@ -316,7 +316,7 @@ For higher limits, please contact the project maintainer via [GitHub](https://gi
 
 ## References
 
-- [Interactive API Documentation](https://your-api-worker.workers.dev/docs) - Swagger UI (available at `/docs` endpoint)
+- [Interactive API Documentation](https://writeo-api-worker.rob-gilks.workers.dev/docs) - Swagger UI (available at `/docs` endpoint)
 - [OpenAPI Specification](openapi.yaml) - Machine-readable API spec
 - [Architecture Documentation](ARCHITECTURE.md) - System design and architecture
 - [Deployment Guide](DEPLOYMENT.md) - Deployment instructions
