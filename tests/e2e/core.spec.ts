@@ -568,12 +568,11 @@ test.describe("History Page", () => {
     homePage,
     historyPage,
   }) => {
-    // Clear localStorage to ensure empty state (already done in beforeEach, but ensure it's clear)
-    await page.goto("/", { waitUntil: "domcontentloaded", timeout: 15000 });
+    // Navigate to home page and clear localStorage to ensure empty state
+    await homePage.goto();
     await page.evaluate(() => localStorage.clear());
 
     // Navigate to history page
-    await homePage.goto();
     await homePage.clickHistoryLink();
     await expect(page).toHaveURL("/history");
 

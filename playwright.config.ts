@@ -41,7 +41,7 @@ export default defineConfig({
   workers: process.env.CI ? 4 : 4, // Reduced to 4 for better stability in parallel execution
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || "https://writeo.tre.systems/",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000",
     actionTimeout: 10000,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
