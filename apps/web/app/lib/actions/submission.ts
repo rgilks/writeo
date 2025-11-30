@@ -83,10 +83,9 @@ export async function createSubmission(
   }
 
   const data = await response.json();
-  // API returns { status: "success", results: AssessmentResults, requestId: string }
-  // Extract the results field
-  const results = data.results || data;
-  return { submissionId, results };
+  // API returns AssessmentResults directly (with optional requestId field)
+  // The response is the assessment results object itself, not wrapped in an envelope
+  return { submissionId, results: data };
 }
 
 function createNotFoundError(): Error & { status: number } {
