@@ -229,7 +229,10 @@ export default function ResultsPage() {
         )}
 
         {status === "success" && data && (
-          <div style={mode === "developer" ? {} : { animation: "fadeIn 0.3s ease-in" }}>
+          <div
+            style={mode === "developer" ? {} : { animation: "fadeIn 0.3s ease-in" }}
+            data-testid="results-loaded"
+          >
             {mode === "developer" ? (
               <DeveloperResultsView data={data} answerText={answerText} />
             ) : (

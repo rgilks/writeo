@@ -148,7 +148,6 @@ export async function waitForResults(page: Page, timeout = 30000): Promise<void>
   // Wait for either success state or error state
   // Prioritize data-testid selectors for reliability
   const selectors = [
-    '[data-testid="results-loaded"]',
     '[data-testid="overall-score-value"]',
     '[data-testid="teacher-feedback"]',
     '[data-testid="cefr-badge"]',
