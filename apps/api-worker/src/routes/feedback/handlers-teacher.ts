@@ -59,11 +59,11 @@ function setupLLMConfig(env: Env): { provider: LLMProvider; apiKey: string; mode
  * Gets teacher assessor result from assessment results
  */
 function getTeacherAssessor(results: AssessmentResults | null): AssessorResult | undefined {
-  if (!results?.results?.parts?.[0]?.answers?.[0]?.["assessor-results"]) {
+  if (!results?.results?.parts?.[0]?.answers?.[0]?.assessorResults) {
     return undefined;
   }
   return findAssessorResultById(
-    results.results.parts[0].answers[0]["assessor-results"],
+    results.results.parts[0].answers[0].assessorResults,
     "T-TEACHER-FEEDBACK",
   );
 }
@@ -243,14 +243,11 @@ async function saveTeacherFeedbackToStorage(
   }
 
   const firstAnswer = firstPart.answers[0];
-  if (!firstAnswer["assessor-results"]) {
-    firstAnswer["assessor-results"] = [];
+  if (!firstAnswer.assessorResults) {
+    firstAnswer.assessorResults = [];
   }
 
-  let teacherAssessor = findAssessorResultById(
-    firstAnswer["assessor-results"],
-    "T-TEACHER-FEEDBACK",
-  );
+  let teacherAssessor = findAssessorResultById(firstAnswer.assessorResults, "T-TEACHER-FEEDBACK");
 
   if (!teacherAssessor) {
     teacherAssessor = {
@@ -259,7 +256,7 @@ async function saveTeacherFeedbackToStorage(
       type: "feedback",
       meta: {},
     };
-    firstAnswer["assessor-results"].push(teacherAssessor);
+    firstAnswer.assessorResults.push(teacherAssessor);
   }
 
   const existingMeta = (teacherAssessor.meta || {}) as TeacherFeedbackMeta;

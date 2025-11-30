@@ -12,61 +12,266 @@ import {
 } from "../utils";
 
 // Descriptions
-const PUT_DESCRIPTION = `Creates a submission and processes it synchronously for assessment. Results are returned immediately in the response body.
+const POST_DESCRIPTION = `Creates a new submission and processes it synchronously for assessment. Results are returned immediately in the response body.
 
 **Processing Mode:**
-- **Synchronous**: API processes the submission immediately and returns results in the PUT response
-- **Typical processing time**: 3-10 seconds
-- **Maximum processing time**: <20 seconds
+- **Synchronous**: API processes the submission immediately and returns results in the POST response
+- **Typical processing time**: 3-10 seconds (estimate, actual time may vary)
+- **Maximum processing time**: <20 seconds (estimate, not a guarantee)
 
 **Submission Format:**
 
 - **Answers**: Must always be sent inline with the submission (using the \`text\` field). Answers cannot be referenced by ID.
-- **Questions**: Can be sent inline (with \`question-text\`) OR referenced by ID (using \`question-id\` only, question must already exist via PUT /text/questions/{question_id}).
+- **Questions**: Can be sent inline (with \`questionText\` as a string), referenced by ID (omit \`questionText\`, question must exist), or free writing (set \`questionText\` to \`null\`).
 
-**Example with inline question:**
-\`\`\`json
-{
-    "submission": [{
-    "part": "1",
-    "answers": [{
-      "id": "answer-uuid",
-      "question-number": 1,
-      "question-id": "question-uuid",
-      "question-text": "Describe your weekend.",
-      "text": "I went to the park..."
-    }]
-  }],
-  "template": {"name": "essay-task-2", "version": 1}
-}
-\`\`\`
+**Request Body:**
+The request body must include \`submissionId\` (UUID) along with the submission data. The \`submissionId\` must be unique - if a submission with this ID already exists, the request will fail with 409 Conflict.
 
-**Example with referenced question:**
-\`\`\`json
-{
-    "submission": [{
-    "part": "1",
-    "answers": [{
-      "id": "answer-uuid",
-      "question-number": 1,
-      "question-id": "question-uuid",
-      "text": "I went to the park..."
-    }]
-  }],
-  "template": {"name": "essay-task-2", "version": 1}
-}
-\`\`\`
+**Response:**
+Returns \`200 OK\` with assessment results in the response body. Results include band scores, CEFR levels, grammar errors, and AI feedback.`;
+
+const PUT_DESCRIPTION_UPDATED = `Updates an existing submission and processes it synchronously for assessment. Results are returned immediately in the response body.
+
+**Processing Mode:**
+- **Synchronous**: API processes the submission immediately and returns results in the PUT response
+- **Typical processing time**: 3-10 seconds (estimate, actual time may vary)
+- **Maximum processing time**: <20 seconds (estimate, not a guarantee)
+
+**Note:** The submission must already exist. If it doesn't exist, use POST /v1/text/submissions to create a new submission.
+
+**Submission Format:**
+
+- **Answers**: Must always be sent inline with the submission (using the \`text\` field). Answers cannot be referenced by ID.
+- **Questions**: Can be sent inline (with \`questionText\` as a string), referenced by ID (omit \`questionText\`, question must exist), or free writing (set \`questionText\` to \`null\`).
 
 **Response:**
 Returns \`200 OK\` with assessment results in the response body. Results include band scores, CEFR levels, grammar errors, and AI feedback.`;
 
 export const submissionsPath = {
-  "/text/submissions/{submission_id}": {
+  "/v1/text/submissions": {
+    post: {
+      tags: ["Submissions"],
+      summary: "Create a new submission for assessment",
+      description: POST_DESCRIPTION,
+      operationId: "createSubmission",
+      security: [{ ApiKeyAuth: [] }],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object" as const,
+              required: ["submissionId", "submission", "template"],
+              properties: {
+                submissionId: {
+                  type: "string" as const,
+                  format: "uuid" as const,
+                  description:
+                    "Unique identifier for the submission (UUID format). Must be unique - if a submission with this ID already exists, the request will fail.",
+                  example: "660e8400-e29b-41d4-a716-446655440000",
+                },
+                submission: {
+                  type: "array",
+                  description:
+                    "Array of submission parts. Answers must always be sent inline with the submission (using the text field). Questions can be sent inline (with questionText), referenced by ID (omit questionText), or free writing (set questionText to null).",
+                  items: {
+                    type: "object" as const,
+                    required: ["part", "answers"],
+                    properties: {
+                      part: {
+                        type: "integer" as const,
+                        description:
+                          "Part identifier (typically 1 or 2). Must be a positive integer.",
+                        example: 1,
+                        minimum: 1,
+                      },
+                      answers: {
+                        type: "array",
+                        description:
+                          "Array of answers. Each answer must include: id, questionId, and text. Optionally include questionText to create/update the question inline, or set to null for free writing.",
+                        items: {
+                          type: "object" as const,
+                          required: ["id", "questionId", "text"],
+                          properties: {
+                            id: {
+                              type: "string" as const,
+                              format: "uuid" as const,
+                              description: "Answer ID (UUID format)",
+                              example: "660e8400-e29b-41d4-a716-446655440000",
+                            },
+                            questionId: {
+                              type: "string" as const,
+                              format: "uuid" as const,
+                              description:
+                                "Question ID (required - will auto-create question if questionText is provided as a string, otherwise question must exist)",
+                              example: "550e8400-e29b-41d4-a716-446655440000",
+                            },
+                            questionText: {
+                              oneOf: [
+                                { type: "string" as const, maxLength: 10000 },
+                                { type: "null" as const },
+                              ],
+                              description:
+                                "Question text: if provided as a string, will create/update question; if null, free writing (no question); if omitted, question must exist. Maximum length: 10,000 characters.",
+                              example: "Describe your weekend. What did you do?",
+                            },
+                            text: {
+                              type: "string" as const,
+                              maxLength: 50000,
+                              description:
+                                "Answer text (required - answers must always be sent inline). Maximum length: 50,000 characters.",
+                              example:
+                                "I went to the park yesterday and played football with my friends.",
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                template: {
+                  type: "object" as const,
+                  required: ["name", "version"],
+                  properties: {
+                    name: { type: "string" as const, example: "essay-task-2" },
+                    version: { type: "integer" as const, example: 1 },
+                  },
+                },
+                storeResults: {
+                  type: "boolean" as const,
+                  description: "Whether to store results on the server (default: false)",
+                  example: false,
+                },
+              },
+            },
+            examples: {
+              inlineQuestion: {
+                summary: "Submission with inline question",
+                value: {
+                  submissionId: "660e8400-e29b-41d4-a716-446655440000",
+                  submission: [
+                    {
+                      part: 1,
+                      answers: [
+                        {
+                          id: "660e8400-e29b-41d4-a716-446655440000",
+                          questionId: "550e8400-e29b-41d4-a716-446655440000",
+                          questionText: "Describe your weekend. What did you do?",
+                          text: "I went to the park yesterday and played football with my friends.",
+                        },
+                      ],
+                    },
+                  ],
+                  template: { name: "essay-task-2", version: 1 },
+                  storeResults: false,
+                },
+              },
+              referencedQuestion: {
+                summary: "Submission with referenced question",
+                value: {
+                  submissionId: "660e8400-e29b-41d4-a716-446655440000",
+                  submission: [
+                    {
+                      part: 1,
+                      answers: [
+                        {
+                          id: "660e8400-e29b-41d4-a716-446655440000",
+                          questionId: "550e8400-e29b-41d4-a716-446655440000",
+                          text: "I went to the park yesterday and played football with my friends.",
+                        },
+                      ],
+                    },
+                  ],
+                  template: { name: "essay-task-2", version: 1 },
+                },
+              },
+              freeWriting: {
+                summary: "Free writing (no question)",
+                value: {
+                  submissionId: "660e8400-e29b-41d4-a716-446655440000",
+                  submission: [
+                    {
+                      part: 1,
+                      answers: [
+                        {
+                          id: "660e8400-e29b-41d4-a716-446655440000",
+                          questionId: "550e8400-e29b-41d4-a716-446655440000",
+                          questionText: null,
+                          text: "I went to the park yesterday and played football with my friends.",
+                        },
+                      ],
+                    },
+                  ],
+                  template: { name: "generic", version: 1 },
+                  storeResults: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        "201": {
+          description:
+            "Submission created and processed successfully - results returned immediately in response body",
+          headers: {
+            Location: {
+              description: "URL of the created submission resource",
+              schema: {
+                type: "string",
+                example: "/v1/text/submissions/660e8400-e29b-41d4-a716-446655440000",
+              },
+            },
+            "X-Request-Id": {
+              description: "Unique request identifier for debugging",
+              schema: { type: "string", example: "req-1234567890" },
+            },
+            "X-RateLimit-Limit": {
+              description: "Maximum number of requests allowed per time window",
+              schema: { type: "integer", example: 10 },
+            },
+            "X-RateLimit-Remaining": {
+              description: "Number of requests remaining in the current time window",
+              schema: { type: "integer", example: 7 },
+            },
+            "X-RateLimit-Reset": {
+              description: "Unix timestamp (seconds) when the rate limit window resets",
+              schema: { type: "integer", example: 1705689600 },
+            },
+            "X-Timing-Total": {
+              description: "Total request processing time in milliseconds",
+              schema: { type: "string", example: "3.45" },
+            },
+          },
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/AssessmentResults",
+              },
+            },
+          },
+        },
+        "400": badRequestResponse(
+          "invalid format or missing required fields",
+          "Answer text is required. Answers must be sent inline with the submission.",
+          "INVALID_SUBMISSION_FORMAT",
+        ),
+        "409": conflictResponse(
+          "submission already exists",
+          "Submission already exists. Use PUT /v1/text/submissions/{submission_id} to update.",
+          "SUBMISSION_EXISTS_DIFFERENT_CONTENT",
+        ),
+        "413": payloadTooLargeResponse,
+        "500": internalServerErrorResponse,
+      },
+    },
+  },
+  "/v1/text/submissions/{submission_id}": {
     put: {
       tags: ["Submissions"],
-      summary: "Create a submission for assessment",
-      description: PUT_DESCRIPTION,
-      operationId: "createSubmission",
+      summary: "Update an existing submission for assessment",
+      description: PUT_DESCRIPTION_UPDATED,
+      operationId: "updateSubmission",
       parameters: [submissionIdParam],
       requestBody: {
         required: true,
@@ -79,23 +284,25 @@ export const submissionsPath = {
                 submission: {
                   type: "array",
                   description:
-                    "Array of submission parts. Answers must always be sent inline with the submission (using the text field). Questions can be sent inline (with question-text) or referenced by ID (question must already exist).",
+                    "Array of submission parts. Answers must always be sent inline with the submission (using the text field). Questions can be sent inline (with questionText), referenced by ID (omit questionText), or free writing (set questionText to null).",
                   items: {
                     type: "object" as const,
                     required: ["part", "answers"],
                     properties: {
                       part: {
-                        type: "string" as const,
-                        description: 'Part identifier (typically "1" or "2")',
-                        example: "1",
+                        type: "integer" as const,
+                        description:
+                          "Part identifier (typically 1 or 2). Must be a positive integer.",
+                        example: 1,
+                        minimum: 1,
                       },
                       answers: {
                         type: "array",
                         description:
-                          "Array of answers. Each answer must include: id, question-number, question-id, and text. Optionally include question-text to create/update the question inline.",
+                          "Array of answers. Each answer must include: id, questionId, and text. Optionally include questionText to create/update the question inline, or set to null for free writing.",
                         items: {
                           type: "object" as const,
-                          required: ["id", "question-number", "question-id", "text"],
+                          required: ["id", "questionId", "text"],
                           properties: {
                             id: {
                               type: "string" as const,
@@ -103,28 +310,27 @@ export const submissionsPath = {
                               description: "Answer ID (UUID format)",
                               example: "660e8400-e29b-41d4-a716-446655440000",
                             },
-                            "question-number": {
-                              type: "integer" as const,
-                              description: "Question number within the part",
-                              example: 1,
-                            },
-                            "question-id": {
+                            questionId: {
                               type: "string" as const,
                               format: "uuid" as const,
                               description:
-                                "Question ID (required - will auto-create question if question-text is provided, otherwise question must exist)",
+                                "Question ID (required - will auto-create question if questionText is provided as a string, otherwise question must exist)",
                               example: "550e8400-e29b-41d4-a716-446655440000",
                             },
-                            "question-text": {
-                              type: "string" as const,
+                            questionText: {
+                              oneOf: [
+                                { type: "string" as const, maxLength: 10000 },
+                                { type: "null" as const },
+                              ],
                               description:
-                                "Question text (optional - if provided, will create/update question; if omitted, question must exist)",
+                                "Question text: if provided as a string, will create/update question; if null, free writing (no question); if omitted, question must exist. Maximum length: 10,000 characters.",
                               example: "Describe your weekend. What did you do?",
                             },
                             text: {
                               type: "string" as const,
+                              maxLength: 50000,
                               description:
-                                "Answer text (required - answers must always be sent inline)",
+                                "Answer text (required - answers must always be sent inline). Maximum length: 50,000 characters.",
                               example:
                                 "I went to the park yesterday and played football with my friends.",
                             },
@@ -159,13 +365,73 @@ export const submissionsPath = {
                 },
               },
             },
+            examples: {
+              inlineQuestion: {
+                summary: "Submission with inline question",
+                value: {
+                  submission: [
+                    {
+                      part: 1,
+                      answers: [
+                        {
+                          id: "660e8400-e29b-41d4-a716-446655440000",
+                          questionId: "550e8400-e29b-41d4-a716-446655440000",
+                          questionText: "Describe your weekend. What did you do?",
+                          text: "I went to the park yesterday and played football with my friends.",
+                        },
+                      ],
+                    },
+                  ],
+                  template: { name: "essay-task-2", version: 1 },
+                  storeResults: false,
+                },
+              },
+              referencedQuestion: {
+                summary: "Submission with referenced question",
+                value: {
+                  submission: [
+                    {
+                      part: 1,
+                      answers: [
+                        {
+                          id: "660e8400-e29b-41d4-a716-446655440000",
+                          questionId: "550e8400-e29b-41d4-a716-446655440000",
+                          text: "I went to the park yesterday and played football with my friends.",
+                        },
+                      ],
+                    },
+                  ],
+                  template: { name: "essay-task-2", version: 1 },
+                },
+              },
+              freeWriting: {
+                summary: "Free writing (no question)",
+                value: {
+                  submission: [
+                    {
+                      part: 1,
+                      answers: [
+                        {
+                          id: "660e8400-e29b-41d4-a716-446655440000",
+                          questionId: "550e8400-e29b-41d4-a716-446655440000",
+                          questionText: null,
+                          text: "I went to the park yesterday and played football with my friends.",
+                        },
+                      ],
+                    },
+                  ],
+                  template: { name: "generic", version: 1 },
+                  storeResults: true,
+                },
+              },
+            },
           },
         },
       },
       responses: {
         "200": {
           description:
-            "Submission processed successfully - results returned immediately in response body",
+            "Submission updated successfully - results returned immediately in response body",
           content: {
             "application/json": {
               schema: {
@@ -196,14 +462,14 @@ export const submissionsPath = {
                               type: "array",
                               items: {
                                 type: "object",
-                                required: ["id", "assessor-results"],
+                                required: ["id", "assessorResults"],
                                 properties: {
                                   id: {
                                     type: "string",
                                     format: "uuid",
                                     example: "550e8400-e29b-41d4-a716-446655440000",
                                   },
-                                  "assessor-results": {
+                                  assessorResults: {
                                     type: "array",
                                     items: {
                                       type: "object",
@@ -305,7 +571,7 @@ export const submissionsPath = {
                     meta: {
                       type: "object" as const,
                       description:
-                        "Additional metadata (wordCount, errorCount, overallScore, timestamp, etc.)",
+                        "Additional metadata including wordCount, errorCount, overallScore, timestamp, answerTexts, and optional draft tracking fields (draftNumber, parentSubmissionId, draftHistory). Draft tracking fields are populated by Server Actions when retrieving results, not by the API itself.",
                       properties: {
                         wordCount: { type: "integer" as const, example: 150 },
                         errorCount: { type: "integer" as const, example: 3 },
@@ -315,51 +581,87 @@ export const submissionsPath = {
                           format: "date-time" as const,
                           example: "2025-01-18T16:00:00Z",
                         },
+                        answerTexts: {
+                          type: "object" as const,
+                          description: "Map of answer IDs to answer texts",
+                          additionalProperties: { type: "string" as const },
+                        },
+                        draftNumber: {
+                          type: "integer" as const,
+                          description: "Draft number (populated by Server Actions)",
+                          example: 1,
+                        },
+                        parentSubmissionId: {
+                          type: "string" as const,
+                          format: "uuid" as const,
+                          description:
+                            "Root submission ID for draft chain (populated by Server Actions)",
+                          example: "770e8400-e29b-41d4-a716-446655440000",
+                        },
+                        draftHistory: {
+                          type: "array" as const,
+                          description: "Draft history array (populated by Server Actions)",
+                          items: {
+                            type: "object" as const,
+                            properties: {
+                              draftNumber: { type: "integer" as const },
+                              timestamp: { type: "string" as const, format: "date-time" as const },
+                              wordCount: { type: "integer" as const },
+                              errorCount: { type: "integer" as const },
+                              overallScore: { type: "number" as const },
+                            },
+                          },
+                        },
                       },
                       additionalProperties: true,
                     },
                   },
                 },
-                example: {
-                  status: "success",
-                  results: {
-                    parts: [
-                    {
-                      part: "1",
-                        status: "success",
-                        answers: [
+                examples: {
+                  success: {
+                    summary: "Successful submission with assessment results",
+                    value: {
+                      status: "success",
+                      results: {
+                        parts: [
                           {
-                            id: "550e8400-e29b-41d4-a716-446655440000",
-                            "assessor-results": [
+                            part: 1,
+                            status: "success",
+                            answers: [
                               {
-                                id: "T-AES-ESSAY",
-                                name: "Essay scorer",
-                                type: "grader",
-                                overall: 6.5,
-                                label: "B2",
-                                dimensions: {
-                                  TA: 6.0,
-                                  CC: 6.5,
-                                  Vocab: 6.5,
-                                  Grammar: 6.0,
-                                  Overall: 6.5,
-                                },
+                                id: "550e8400-e29b-41d4-a716-446655440000",
+                                assessorResults: [
+                                  {
+                                    id: "T-AES-ESSAY",
+                                    name: "Essay scorer",
+                                    type: "grader",
+                                    overall: 6.5,
+                                    label: "B2",
+                                    dimensions: {
+                                      TA: 6.0,
+                                      CC: 6.5,
+                                      Vocab: 6.5,
+                                      Grammar: 6.0,
+                                      Overall: 6.5,
+                                    },
+                                  },
+                                ],
                               },
                             ],
                           },
                         ],
                       },
-                    ],
-                  },
-                  template: {
-                    name: "essay-task-2",
-                    version: 1,
-                  },
-                  meta: {
-                    wordCount: 150,
-                    errorCount: 3,
-                    overallScore: 6.5,
-                    timestamp: "2025-01-18T16:00:00Z",
+                      template: {
+                        name: "essay-task-2",
+                        version: 1,
+                      },
+                      meta: {
+                        wordCount: 150,
+                        errorCount: 3,
+                        overallScore: 6.5,
+                        timestamp: "2025-01-18T16:00:00Z",
+                      },
+                    },
                   },
                 },
               },
@@ -372,10 +674,12 @@ export const submissionsPath = {
         "400": badRequestResponse(
           "invalid format or missing required fields",
           "Answer text is required. Answers must be sent inline with the submission.",
+          "INVALID_SUBMISSION_FORMAT",
         ),
         "409": conflictResponse(
           "submission exists with different content",
           "Submission already exists with different content",
+          "SUBMISSION_EXISTS_DIFFERENT_CONTENT",
         ),
         "413": payloadTooLargeResponse,
         "500": internalServerErrorResponse,
@@ -385,7 +689,7 @@ export const submissionsPath = {
       tags: ["Submissions"],
       summary: "Get submission results",
       description:
-        "Retrieves stored assessment results for a submission. Note: PUT endpoint returns results immediately, so GET is primarily useful for retrieving previously stored results or checking status.",
+        "Retrieves stored assessment results for a submission. **Note:** This endpoint only works for submissions where `storeResults: true` was set during submission. By default, results are stored only in the user's browser (localStorage) and are not available via this endpoint. If results are not found (404), it may mean the submission was created with `storeResults: false` (default), the results have expired (90-day retention for opt-in storage), or the submission ID is incorrect.",
       operationId: "getSubmissionResults",
       parameters: [submissionIdParam],
       responses: {
@@ -437,7 +741,7 @@ export const submissionsPath = {
                                         format: "uuid",
                                         example: "550e8400-e29b-41d4-a716-446655440000",
                                       },
-                                      "assessor-results": {
+                                      assessorResults: {
                                         type: "array",
                                         items: {
                                           type: "object",
@@ -525,7 +829,7 @@ export const submissionsPath = {
                         meta: {
                           type: "object" as const,
                           description:
-                            "Additional metadata (wordCount, errorCount, overallScore, timestamp, etc.)",
+                            "Additional metadata including wordCount, errorCount, overallScore, timestamp, answerTexts, and optional draft tracking fields (draftNumber, parentSubmissionId, draftHistory). Draft tracking fields are populated by Server Actions when retrieving results, not by the API itself.",
                           properties: {
                             wordCount: { type: "integer" as const, example: 150 },
                             errorCount: { type: "integer" as const, example: 3 },
@@ -534,6 +838,40 @@ export const submissionsPath = {
                               type: "string" as const,
                               format: "date-time" as const,
                               example: "2025-01-18T16:00:00Z",
+                            },
+                            answerTexts: {
+                              type: "object" as const,
+                              description: "Map of answer IDs to answer texts",
+                              additionalProperties: { type: "string" as const },
+                            },
+                            draftNumber: {
+                              type: "integer" as const,
+                              description: "Draft number (populated by Server Actions)",
+                              example: 1,
+                            },
+                            parentSubmissionId: {
+                              type: "string" as const,
+                              format: "uuid" as const,
+                              description:
+                                "Root submission ID for draft chain (populated by Server Actions)",
+                              example: "770e8400-e29b-41d4-a716-446655440000",
+                            },
+                            draftHistory: {
+                              type: "array" as const,
+                              description: "Draft history array (populated by Server Actions)",
+                              items: {
+                                type: "object" as const,
+                                properties: {
+                                  draftNumber: { type: "integer" as const },
+                                  timestamp: {
+                                    type: "string" as const,
+                                    format: "date-time" as const,
+                                  },
+                                  wordCount: { type: "integer" as const },
+                                  errorCount: { type: "integer" as const },
+                                  overallScore: { type: "number" as const },
+                                },
+                              },
                             },
                           },
                           additionalProperties: true,
@@ -555,12 +893,12 @@ export const submissionsPath = {
                     results: {
                       parts: [
                         {
-                          part: "1",
+                          part: 1,
                           status: "success",
                           answers: [
                             {
                               id: "550e8400-e29b-41d4-a716-446655440000",
-                              "assessor-results": [
+                              assessorResults: [
                                 {
                                   id: "T-AES-ESSAY",
                                   name: "Essay scorer",
@@ -597,8 +935,9 @@ export const submissionsPath = {
         "400": badRequestResponse(
           "invalid format or missing required fields",
           "Invalid submission_id format",
+          "INVALID_UUID_FORMAT",
         ),
-        "404": notFoundResponse("Submission"),
+        "404": notFoundResponse("Submission", "SUBMISSION_NOT_FOUND"),
         "500": internalServerErrorResponse,
       },
     },

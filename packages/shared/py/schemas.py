@@ -2,7 +2,7 @@
 
 from typing import Any, Literal, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class TemplateDict(TypedDict):
@@ -173,17 +173,13 @@ class AssessorResult(BaseModel):
 class AnswerResult(BaseModel):
     """Answer result with assessor results."""
 
-    model_config = ConfigDict(
-        populate_by_name=True
-    )  # Allow using field name (assessor_results) or alias (assessor-results)
-
     id: str = Field(
         ..., description="Answer ID (UUID)", examples=["550e8400-e29b-41d4-a716-446655440000"]
     )
     assessor_results: list[AssessorResult] = Field(
         ...,
-        alias="assessor-results",
-        serialization_alias="assessor-results",
+        alias="assessorResults",
+        serialization_alias="assessorResults",
         description="List of assessor results for this answer",
         min_length=1,
     )

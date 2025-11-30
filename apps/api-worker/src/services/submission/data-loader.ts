@@ -4,7 +4,7 @@
 
 import type { CreateSubmissionRequest, ModalRequest } from "@writeo/shared";
 import { StorageService } from "../storage";
-import { errorResponse } from "../../utils/errors";
+import { errorResponse, ERROR_CODES } from "../../utils/errors";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
 
@@ -17,16 +17,22 @@ async function resolveQuestionText(
   storage: StorageService,
   cache: Map<string, string>,
 ): Promise<string> {
-  const providedText = answer["question-text"];
-  if (providedText !== undefined && providedText !== null) {
+  const providedText = answer.questionText;
+  // If questionText is explicitly null, it's free writing (no question)
+  if (providedText === null) {
+    return "";
+  }
+  // If questionText is provided as a string, use it
+  if (typeof providedText === "string") {
     return providedText;
   }
 
+  // If questionText is omitted, try to load from storage (only if storeResults is true)
   if (!storeResults) {
     return "";
   }
 
-  const questionId = answer["question-id"] ?? "";
+  const questionId = answer.questionId;
   if (!questionId) {
     return "";
   }
@@ -54,7 +60,17 @@ export async function buildModalRequest(
     const modalAnswers: ModalAnswer[] = [];
 
     for (const answerRef of part.answers) {
-      const questionId = answerRef["question-id"] ?? "";
+      const questionId = answerRef.questionId;
+      if (!questionId) {
+        return errorResponse(
+          400,
+          `questionId is required for answer ${answerRef.id}`,
+          c,
+          ERROR_CODES.MISSING_REQUIRED_FIELD,
+          `submission[${part.part}].answers[${answerRef.id}].questionId`,
+        );
+      }
+
       const questionText = await resolveQuestionText(
         answerRef,
         storeResults,
@@ -64,7 +80,13 @@ export async function buildModalRequest(
 
       const answerText = answerRef.text;
       if (!answerText) {
-        return errorResponse(400, `Answer text is required for answer ${answerRef.id}`, c);
+        return errorResponse(
+          400,
+          `Answer text is required for answer ${answerRef.id}`,
+          c,
+          ERROR_CODES.MISSING_REQUIRED_FIELD,
+          `submission[${part.part}].answers[${answerRef.id}].text`,
+        );
       }
 
       modalAnswers.push({

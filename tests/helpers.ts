@@ -47,10 +47,10 @@ export async function apiRequest(method: string, path: string, body?: object) {
   return { status: response.status, json };
 }
 
-// Poll for results (GET requests only - PUT returns results immediately)
+// Poll for results (GET requests only - POST/PUT return results immediately)
 export async function pollResults(submissionId: string, maxAttempts = 30) {
   for (let i = 0; i < maxAttempts; i++) {
-    const { status, json } = await apiRequest("GET", `/text/submissions/${submissionId}`);
+    const { status, json } = await apiRequest("GET", `/v1/text/submissions/${submissionId}`);
     if (status === 200 && json.status === "success") {
       return json;
     }

@@ -69,8 +69,8 @@ describe("rateLimit middleware", () => {
     mockKvStore.get.mockResolvedValue(JSON.stringify({ count: 10, resetTime: now + 60000 }));
 
     const c = createContext({
-      path: "/text/submissions/123",
-      method: "PUT",
+      path: "/v1/text/submissions",
+      method: "POST",
       headers: { "CF-Connecting-IP": "192.168.1.1" },
       env: { WRITEO_RESULTS: mockKvStore as any },
     });
@@ -128,8 +128,8 @@ describe("rateLimit middleware", () => {
     mockKvStore.get.mockResolvedValue(JSON.stringify({ count: 9, resetTime: now + 60000 }));
 
     const c = createContext({
-      path: "/text/submissions/123",
-      method: "PUT",
+      path: "/v1/text/submissions",
+      method: "POST",
       headers: { "CF-Connecting-IP": "192.168.1.1" },
       env: { WRITEO_RESULTS: mockKvStore as any },
     });
@@ -175,8 +175,8 @@ describe("rateLimit middleware", () => {
       .mockResolvedValueOnce("99"); // Daily count
 
     const c = createContext({
-      path: "/text/submissions/123",
-      method: "PUT",
+      path: "/v1/text/submissions",
+      method: "POST",
       headers: { "CF-Connecting-IP": "192.168.1.1" },
       env: { WRITEO_RESULTS: mockKvStore as any },
     });
@@ -198,8 +198,8 @@ describe("rateLimit middleware", () => {
       .mockResolvedValueOnce("100"); // Daily limit reached
 
     const c = createContext({
-      path: "/text/submissions/123",
-      method: "PUT",
+      path: "/v1/text/submissions",
+      method: "POST",
       headers: { "CF-Connecting-IP": "192.168.1.1" },
       env: { WRITEO_RESULTS: mockKvStore as any },
     });
@@ -210,7 +210,7 @@ describe("rateLimit middleware", () => {
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).status).toBe(429);
     const body = await (result as Response).json();
-    expect(body.error).toContain("Daily submission limit");
+    expect(body.error.message || body.error).toContain("Daily submission limit");
   });
 
   it("should set rate limit headers", async () => {

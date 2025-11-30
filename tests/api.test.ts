@@ -2,7 +2,7 @@ import { test, expect, describe } from "vitest";
 import { apiRequest, pollResults, generateIds, API_BASE, API_KEY } from "./helpers";
 
 function getAssessorResults(part: any): any[] {
-  return part.answers?.[0]?.["assessor-results"] || [];
+  return part.answers?.[0]?.assessorResults || [];
 }
 
 describe("API Tests", () => {
@@ -18,16 +18,16 @@ describe("API Tests", () => {
 
   test.concurrent("smoke - full E2E workflow", async () => {
     const { questionId, answerId, submissionId } = generateIds();
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend. What did you do?",
+              questionId: questionId,
+              questionText: "Describe your weekend. What did you do?",
               text: "I goes to the park yesterday and played football with my friends. It was a sunny day and we was having a great time.",
             },
           ],
@@ -36,7 +36,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // Default: no server storage
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorIds = getAssessorResults(json.results.parts[0]).map((a: any) => a.id);
@@ -46,16 +46,16 @@ describe("API Tests", () => {
 
   test.concurrent("ai-feedback - AI feedback included in results", async () => {
     const { questionId, answerId, submissionId } = generateIds();
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend. What did you do?",
+              questionId: questionId,
+              questionText: "Describe your weekend. What did you do?",
               text: "Last weekend I go to the park with my friend. We was playing football and having a really fun time.",
             },
           ],
@@ -64,7 +64,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorIds = getAssessorResults(json.results.parts[0]).map((a: any) => a.id);
@@ -74,16 +74,16 @@ describe("API Tests", () => {
   test.concurrent("lt - grammar error detection", async () => {
     const { questionId, answerId, submissionId } = generateIds();
 
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend. What did you do?",
+              questionId: questionId,
+              questionText: "Describe your weekend. What did you do?",
               text: "I goes to park yesterday. The dog was happy and we plays together. It was fun time.",
             },
           ],
@@ -92,7 +92,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json.results.parts[0]).find(
@@ -106,16 +106,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     // Text with tense errors that should get context-aware confidence boost
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend. What did you do?",
+              questionId: questionId,
+              questionText: "Describe your weekend. What did you do?",
               text: "Last weekend I go to the park. We was playing football. I have a lot of fun.",
             },
           ],
@@ -124,7 +124,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json.results.parts[0]).find(
@@ -160,29 +160,25 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     // Text with past tense indicators that should boost confidence for tense errors
-    const { status: status2, json: json2 } = await apiRequest(
-      "PUT",
-      `/text/submissions/${submissionId}`,
-      {
-        submission: [
-          {
-            part: "1",
-            answers: [
-              {
-                id: answerId,
-                "question-number": 1,
-                "question-id": questionId,
-                "question-text": "What did you do last weekend?",
-                text: "Yesterday I go to the store. Last week we was visiting friends. I have a good time.",
-              },
-            ],
-          },
-        ],
-        template: { name: "generic", version: 1 },
-        storeResults: false, // No server storage for tests
-      },
-    );
-    expect(status2).toBe(200);
+    const { status: status2, json: json2 } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
+      submission: [
+        {
+          part: 1,
+          answers: [
+            {
+              id: answerId,
+              questionId: questionId,
+              questionText: "What did you do last weekend?",
+              text: "Yesterday I go to the store. Last week we was visiting friends. I have a good time.",
+            },
+          ],
+        },
+      ],
+      template: { name: "generic", version: 1 },
+      storeResults: false, // No server storage for tests
+    });
+    expect(status2).toBe(201);
     expect(json2.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json2.results.parts[0]).find(
@@ -240,16 +236,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     // Text with errors that LLM should catch (tense errors with past indicators)
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend. What did you do?",
+              questionId: questionId,
+              questionText: "Describe your weekend. What did you do?",
               text: "Last weekend I go to the park. We was playing football. I have a lot of fun.",
             },
           ],
@@ -258,7 +254,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     // LLM assessment is included in synchronous response
@@ -316,16 +312,16 @@ describe("API Tests", () => {
     const answerText =
       "I believe universities should increase their focus on engineering and understanding that graduates can contribute to the economy.";
 
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "What should universities focus on?",
+              questionId: questionId,
+              questionText: "What should universities focus on?",
               text: answerText,
             },
           ],
@@ -334,7 +330,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorResults = getAssessorResults(json.results.parts[0]);
@@ -394,16 +390,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
     const answerText = "Last weekend I go to the park. We was playing football.";
 
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend.",
+              questionId: questionId,
+              questionText: "Describe your weekend.",
               text: answerText,
             },
           ],
@@ -412,7 +408,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorResults = getAssessorResults(json.results.parts[0]);
@@ -451,16 +447,16 @@ describe("API Tests", () => {
     const answerText =
       "I believe this is correct. Today many employers also said they need graduates.";
 
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "What do employers need?",
+              questionId: questionId,
+              questionText: "What do employers need?",
               text: answerText,
             },
           ],
@@ -469,7 +465,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorResults = getAssessorResults(json.results.parts[0]);
@@ -536,16 +532,16 @@ describe("API Tests", () => {
 
     // Create submission - results returned immediately
     // Note: storeResults: true is required for GET endpoint to work
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend. What did you do?",
+              questionId: questionId,
+              questionText: "Describe your weekend. What did you do?",
               text: "Last weekend I go to the park with my friend. We was playing football.",
             },
           ],
@@ -554,13 +550,13 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: true, // Required for GET endpoint to retrieve results
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     // Request clues feedback
     const cluesResponse = await apiRequest(
       "POST",
-      `/text/submissions/${submissionId}/teacher-feedback`,
+      `/v1/text/submissions/${submissionId}/teacher-feedback`,
       {
         answerId,
         mode: "clues",
@@ -574,7 +570,7 @@ describe("API Tests", () => {
     // Request clues again - should return the same stored feedback
     const cluesResponse2 = await apiRequest(
       "POST",
-      `/text/submissions/${submissionId}/teacher-feedback`,
+      `/v1/text/submissions/${submissionId}/teacher-feedback`,
       {
         answerId,
         mode: "clues",
@@ -587,7 +583,7 @@ describe("API Tests", () => {
     // Request explanation feedback
     const explanationResponse = await apiRequest(
       "POST",
-      `/text/submissions/${submissionId}/teacher-feedback`,
+      `/v1/text/submissions/${submissionId}/teacher-feedback`,
       {
         answerId,
         mode: "explanation",
@@ -601,7 +597,7 @@ describe("API Tests", () => {
     // Request explanation again - should return the same stored feedback
     const explanationResponse2 = await apiRequest(
       "POST",
-      `/text/submissions/${submissionId}/teacher-feedback`,
+      `/v1/text/submissions/${submissionId}/teacher-feedback`,
       {
         answerId,
         mode: "explanation",
@@ -612,7 +608,7 @@ describe("API Tests", () => {
     expect(explanationResponse2.json.message).toBe(explanationMessage1); // Should be identical (stored)
 
     // Verify stored feedback is in results (requires storeResults: true)
-    const results = await apiRequest("GET", `/text/submissions/${submissionId}`);
+    const results = await apiRequest("GET", `/v1/text/submissions/${submissionId}`);
     expect(results.status).toBe(200);
     const teacherAssessor = getAssessorResults(results.json.results.parts[0]).find(
       (a: any) => a.id === "T-TEACHER-FEEDBACK",
@@ -629,16 +625,16 @@ describe("API Tests", () => {
     const answerText = "Last weekend I go to the park with my friend.";
 
     // Create submission - results returned immediately
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": questionText,
+              questionId: questionId,
+              questionText: questionText,
               text: answerText,
             },
           ],
@@ -647,13 +643,13 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage - using assessment data from response
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     // Extract assessment data from response
     const firstPart = json.results.parts[0];
     const firstAnswer = firstPart.answers[0];
-    const assessorResults = firstAnswer["assessor-results"] || [];
+    const assessorResults = firstAnswer.assessorResults || [];
     const essayAssessor = assessorResults.find((a: any) => a.id === "T-AES-ESSAY");
     const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
 
@@ -677,7 +673,7 @@ describe("API Tests", () => {
 
     let chunks = 0;
     const response = await fetch(
-      `${API_BASE}/text/submissions/${submissionId}/ai-feedback/stream`,
+      `${API_BASE}/v1/text/submissions/${submissionId}/ai-feedback/stream`,
       {
         method: "POST",
         headers: {
@@ -733,16 +729,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     const start = Date.now();
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend. What did you do?",
+              questionId: questionId,
+              questionText: "Describe your weekend. What did you do?",
               text: "Last weekend I go to the park with my friend. We was playing football.",
             },
           ],
@@ -753,7 +749,7 @@ describe("API Tests", () => {
     });
     const duration = Date.now() - start;
 
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
     expect(duration).toBeLessThan(20000); // Synchronous processing should complete in <20s
   });
@@ -762,16 +758,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     const submissionStart = Date.now();
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend.",
+              questionId: questionId,
+              questionText: "Describe your weekend.",
               text: "I had a great weekend with my family.",
             },
           ],
@@ -782,13 +778,13 @@ describe("API Tests", () => {
     });
     const processingTime = (Date.now() - submissionStart) / 1000; // Convert to seconds
 
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
     expect(processingTime).toBeGreaterThan(0);
     expect(processingTime).toBeLessThan(20); // Synchronous processing should complete in <20s
   });
 
-  // Results are returned directly in PUT response body
+  // Results are returned directly in POST response body
 
   test.concurrent("error handling - retry logic on 5xx errors", async () => {
     // This test verifies that retry logic is implemented
@@ -799,7 +795,7 @@ describe("API Tests", () => {
 
     // Test that invalid endpoint returns proper error
     try {
-      await apiRequest("GET", `/text/submissions/invalid-uuid-format`);
+      await apiRequest("GET", `/v1/text/submissions/invalid-uuid-format`);
       // Should not reach here
       expect(true).toBe(false);
     } catch (error: any) {
@@ -813,7 +809,7 @@ describe("API Tests", () => {
 
   // Critical: Error handling and validation
   test.concurrent("validation - invalid UUID format", async () => {
-    const { status } = await apiRequest("PUT", "/text/questions/invalid-uuid", {
+    const { status } = await apiRequest("PUT", "/v1/text/questions/invalid-uuid", {
       text: "Test question",
     });
     expect(status).toBe(400);
@@ -821,7 +817,7 @@ describe("API Tests", () => {
 
   test.concurrent("validation - missing required fields", async () => {
     const { questionId } = generateIds();
-    const { status } = await apiRequest("PUT", `/text/questions/${questionId}`, {});
+    const { status } = await apiRequest("PUT", `/v1/text/questions/${questionId}`, {});
     expect(status).toBe(400);
   });
 
@@ -834,16 +830,16 @@ describe("API Tests", () => {
     // Frontend validation would reject this before API call
     // API-level test: verify API accepts text (frontend handles word count)
     const { questionId, answerId, submissionId } = generateIds();
-    const { status } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Test question",
+              questionId: questionId,
+              questionText: "Test question",
               text: shortEssay,
             },
           ],
@@ -853,7 +849,7 @@ describe("API Tests", () => {
       storeResults: false, // No server storage for tests
     });
     // API accepts it (frontend validation prevents submission)
-    expect(status).toBe(200);
+    expect(status).toBe(201);
   });
 
   test.concurrent("validation - word count maximum (frontend)", async () => {
@@ -865,16 +861,16 @@ describe("API Tests", () => {
     // Frontend validation would reject this before API call
     // API-level test: verify API accepts text (frontend handles word count)
     const { questionId, answerId, submissionId } = generateIds();
-    const { status } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Test question",
+              questionId: questionId,
+              questionText: "Test question",
               text: longEssay,
             },
           ],
@@ -884,20 +880,20 @@ describe("API Tests", () => {
       storeResults: false, // No server storage for tests
     });
     // API accepts it (frontend validation prevents submission)
-    expect(status).toBe(200);
+    expect(status).toBe(201);
   });
 
   test.concurrent("validation - missing answer text returns error", async () => {
     const { submissionId, answerId, questionId } = generateIds();
-    const { status } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
+              questionId: questionId,
               // Missing text field - should return error
             },
           ],
@@ -915,16 +911,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     // Submit without pre-creating question/answer (using inline format)
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "What did you do last weekend?",
+              questionId: questionId,
+              questionText: "What did you do last weekend?",
               text: "I went to the park and played football with friends.",
             },
           ],
@@ -933,7 +929,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     // Verify assessors are present (means auto-creation succeeded)
@@ -945,16 +941,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     // Uses "text" field for answer text
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend.",
+              questionId: questionId,
+              questionText: "Describe your weekend.",
               text: "I had a great weekend with my family.",
             },
           ],
@@ -963,7 +959,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
   });
 
@@ -971,16 +967,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     // Accepts user and type fields (ignored)
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend.",
+              questionId: questionId,
+              questionText: "Describe your weekend.",
               text: "I had a great weekend.",
             },
           ],
@@ -997,7 +993,7 @@ describe("API Tests", () => {
       type: "test",
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200); // Should accept and ignore these fields
+    expect(status).toBe(201); // Should accept and ignore these fields
     expect(json.status).toBe("success");
   });
 
@@ -1007,18 +1003,18 @@ describe("API Tests", () => {
     // Supports bypass-submission-processing? query param (though processing is always synchronous now)
     const start = Date.now();
     const { status, json } = await apiRequest(
-      "PUT",
-      `/text/submissions/${submissionId}?bypass-submission-processing=true`,
+      "POST",
+      `/v1/text/submissions?bypass-submission-processing=true`,
       {
+        submissionId,
         submission: [
           {
-            part: "1",
+            part: 1,
             answers: [
               {
                 id: answerId,
-                "question-number": 1,
-                "question-id": questionId,
-                "question-text": "Describe your weekend.",
+                questionId: questionId,
+                questionText: "Describe your weekend.",
                 text: "I had a great weekend.",
               },
             ],
@@ -1030,7 +1026,7 @@ describe("API Tests", () => {
     );
     const duration = Date.now() - start;
 
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
     // Synchronous processing should complete in <20s
     expect(duration).toBeLessThan(20000);
@@ -1041,16 +1037,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     const start = Date.now();
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Describe your weekend.",
+              questionId: questionId,
+              questionText: "Describe your weekend.",
               text: "I had a great weekend with my family.",
             },
           ],
@@ -1061,7 +1057,7 @@ describe("API Tests", () => {
     });
     const duration = Date.now() - start;
 
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
     // Synchronous processing should complete in <20s
     expect(duration).toBeLessThan(20000);
@@ -1075,16 +1071,16 @@ describe("API Tests", () => {
     const { questionId, answerId, submissionId } = generateIds();
 
     // Answer that is relevant to the question
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "What are the benefits of exercise?",
+              questionId: questionId,
+              questionText: "What are the benefits of exercise?",
               text: "Exercise has many benefits. It improves physical health, mental well-being, and helps maintain a healthy weight.",
             },
           ],
@@ -1093,7 +1089,7 @@ describe("API Tests", () => {
       template: { name: "generic", version: 1 },
       storeResults: false, // No server storage for tests
     });
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorResults = getAssessorResults(json.results.parts[0]);
@@ -1124,16 +1120,16 @@ describe("API Tests", () => {
     expect(longEssay.length).toBeGreaterThan(10000);
 
     // Use inline format (question-text and text in submission) to test truncation
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": "Write a long essay about your experiences.",
+              questionId: questionId,
+              questionText: "Write a long essay about your experiences.",
               text: longEssay,
             },
           ],
@@ -1183,16 +1179,16 @@ describe("API Tests", () => {
       "Exercise has many benefit. It improve physical health and mental well-being.";
 
     // Create submission with errors - use inline format
-    const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+      submissionId,
       submission: [
         {
-          part: "1",
+          part: 1,
           answers: [
             {
               id: answerId,
-              "question-number": 1,
-              "question-id": questionId,
-              "question-text": questionText,
+              questionId: questionId,
+              questionText: questionText,
               text: answerText,
             },
           ],
@@ -1203,17 +1199,17 @@ describe("API Tests", () => {
     });
 
     // If submission fails, log the error for debugging
-    if (status !== 200) {
+    if (status !== 201) {
       console.error("Submission failed:", json);
     }
 
-    expect(status).toBe(200);
+    expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     // Extract assessment data from response
     const firstPart = json.results.parts[0];
     const firstAnswer = firstPart.answers[0];
-    const assessorResults = firstAnswer["assessor-results"] || [];
+    const assessorResults = firstAnswer.assessorResults || [];
     const essayAssessor = assessorResults.find((a: any) => a.id === "T-AES-ESSAY");
     const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
     const llmAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LLM");
@@ -1250,7 +1246,7 @@ describe("API Tests", () => {
     // Note: API only accepts "clues" or "explanation" mode, not "initial"
     const teacherResponse = await apiRequest(
       "POST",
-      `/text/submissions/${submissionId}/teacher-feedback`,
+      `/v1/text/submissions/${submissionId}/teacher-feedback`,
       requestBody,
     );
 

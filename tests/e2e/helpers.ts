@@ -68,22 +68,24 @@ export async function createTestSubmission(
       await new Promise((resolve) => setTimeout(resolve, backoffMs));
     }
 
-    const response = await fetch(`${API_BASE}/text/submissions/${submissionId}`, {
-      method: "PUT",
+    const response = await fetch(`${API_BASE}/v1/text/submissions`, {
+      method: "POST",
       headers: {
         Authorization: `Token ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        submissionId,
         submission: [
           {
-            part: "1",
+            part: 1,
             answers: [
               {
                 id: answerId,
-                "question-number": 1,
-                "question-id": questionId,
-                ...(questionText?.trim() ? { "question-text": questionText.trim() } : {}),
+                questionId,
+                ...(questionText?.trim()
+                  ? { questionText: questionText.trim() }
+                  : { questionText: null }),
                 text: answerText,
               },
             ],

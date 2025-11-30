@@ -39,7 +39,7 @@ function getRateLimitConfig(path: string, method: string, isTest: boolean): Rate
     };
   }
 
-  if (path.startsWith("/text/submissions/") && method === "PUT") {
+  if (path.startsWith("/v1/text/submissions") && method === "POST") {
     return {
       maxRequests: isTest ? RATE_LIMITS.submissions.test : RATE_LIMITS.submissions.prod,
       limitType: "submissions",

@@ -132,16 +132,16 @@ See [COST_REVIEW.md](COST_REVIEW.md) for cost optimization details.
 ```typescript
 test.concurrent("test name", async () => {
   const { questionId, answerId, submissionId } = generateIds();
-  const { status, json } = await apiRequest("PUT", `/text/submissions/${submissionId}`, {
+  const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+    submissionId,
     submission: [
       {
-        part: "1",
+        part: 1,
         answers: [
           {
             id: answerId,
-            "question-number": 1,
-            "question-id": questionId,
-            "question-text": "Test question",
+            questionId,
+            questionText: "Test question",
             text: "Test answer",
           },
         ],

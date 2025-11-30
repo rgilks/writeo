@@ -21,15 +21,14 @@ const SubmissionEnvelopeSchema = z.object({
 
 interface AnswerPayload {
   id: string;
-  "question-number": number;
-  "question-id": string;
+  questionId: string;
   text: string;
-  "question-text"?: string;
+  questionText?: string | null;
 }
 
 interface SubmissionBody {
   submission: Array<{
-    part: string;
+    part: number;
     answers: AnswerPayload[];
   }>;
   template: { name: string; version: number };
@@ -54,16 +53,15 @@ export async function createSubmission(
 
   const answerPayload: AnswerPayload = {
     id: answerId,
-    "question-number": 1,
-    "question-id": questionId,
+    questionId: questionId,
     text: answerText,
-    ...(trimmedQuestionText && { "question-text": trimmedQuestionText }),
+    ...(trimmedQuestionText ? { questionText: trimmedQuestionText } : { questionText: null }),
   };
 
   const body: SubmissionBody = {
     submission: [
       {
-        part: "1",
+        part: 1,
         answers: [answerPayload],
       },
     ],
@@ -72,9 +70,12 @@ export async function createSubmission(
   };
 
   const response = await apiRequest({
-    endpoint: `/text/submissions/${submissionId}`,
-    method: "PUT",
-    body,
+    endpoint: `/v1/text/submissions`,
+    method: "POST",
+    body: {
+      submissionId,
+      ...body,
+    },
   });
 
   if (!response.ok) {
@@ -96,7 +97,7 @@ export async function getSubmissionResults(
 ): Promise<AssessmentResults | unknown> {
   const response = await retryWithBackoff(async () => {
     const res = await apiRequest({
-      endpoint: `/text/submissions/${submissionId}`,
+      endpoint: `/v1/text/submissions/${submissionId}`,
       method: "GET",
     });
 

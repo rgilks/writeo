@@ -15,7 +15,7 @@ export function useDataExtraction(data: AssessmentResults, submissionId?: string
   const parts = data.results?.parts ?? [];
   const [firstPart] = parts;
   const [firstAnswer] = firstPart?.answers ?? [];
-  const assessorResults = firstAnswer?.["assessor-results"] ?? [];
+  const assessorResults = firstAnswer?.assessorResults ?? [];
 
   const essayAssessor = getEssayAssessorResult(assessorResults);
   const overall = essayAssessor?.overall ?? 0;

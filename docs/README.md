@@ -21,7 +21,7 @@ This directory contains all documentation for the Writeo project.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, components, data flow, and performance
 - **[API-ARCHITECTURE.md](API-ARCHITECTURE.md)** - Detailed API Worker architecture (middleware, request flow, services)
 - **[STATE_MANAGEMENT.md](STATE_MANAGEMENT.md)** - Frontend state management (Zustand, Immer, patterns)
-- **[SPEC.md](SPEC.md)** - Complete API specification with request/response examples
+- **[Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs)** - Complete API specification with request/response examples (Swagger UI)
 
 ### Operations
 
@@ -44,7 +44,7 @@ This directory contains all documentation for the Writeo project.
 
 ## 🔗 Quick Links
 
-**API:** [SPEC.md](SPEC.md) | [Interactive Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs)  
+**API:** [Interactive Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) | [OpenAPI Spec](openapi.yaml)  
 **Status & Roadmap:** [STATUS.md](STATUS.md)  
 **Cost Analysis:** [COST_REVIEW.md](COST_REVIEW.md)  
 **Testing:** [TESTING.md](TESTING.md)  

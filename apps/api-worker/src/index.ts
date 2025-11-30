@@ -8,7 +8,11 @@ import { securityHeaders, getCorsOrigin } from "./middleware/security";
 import { questionsRouter } from "./routes/questions";
 import { healthRouter } from "./routes/health";
 import { feedbackRouter } from "./routes/feedback";
-import { processSubmissionHandler, getSubmissionHandler } from "./routes/submissions";
+import {
+  createSubmissionHandler,
+  updateSubmissionHandler,
+  getSubmissionHandler,
+} from "./routes/submissions";
 
 const app = new Hono<{ Bindings: Env; Variables: { requestId?: string } }>();
 
@@ -42,9 +46,11 @@ app.use("*", rateLimit);
 app.route("/", questionsRouter);
 app.route("/", feedbackRouter);
 
-// Submission routes (must come after feedbackRouter to avoid route conflicts)
-app.put("/text/submissions/:submission_id", processSubmissionHandler);
-app.get("/text/submissions/:submission_id", getSubmissionHandler);
+// Submission routes with versioning (must come after feedbackRouter to avoid route conflicts)
+// POST for creation, PUT for updates, GET for retrieval
+app.post("/v1/text/submissions", createSubmissionHandler);
+app.put("/v1/text/submissions/:submission_id", updateSubmissionHandler);
+app.get("/v1/text/submissions/:submission_id", getSubmissionHandler);
 
 export default {
   async fetch(

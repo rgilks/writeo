@@ -4,7 +4,7 @@
 
 import type { CreateSubmissionRequest } from "@writeo/shared";
 import { StorageService } from "../storage";
-import { errorResponse } from "../../utils/errors";
+import { errorResponse, ERROR_CODES } from "../../utils/errors";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
 import type { ValidationResult } from "./validator";
@@ -14,8 +14,11 @@ type StorageConflict = Response & { status: 409 };
 function conflictResponse(
   message: string,
   c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+  code:
+    | typeof ERROR_CODES.QUESTION_EXISTS_DIFFERENT_CONTENT
+    | typeof ERROR_CODES.SUBMISSION_EXISTS_DIFFERENT_CONTENT = ERROR_CODES.QUESTION_EXISTS_DIFFERENT_CONTENT,
 ): StorageConflict {
-  return errorResponse(409, message, c) as StorageConflict;
+  return errorResponse(409, message, c, code) as StorageConflict;
 }
 
 async function storeQuestions(
@@ -43,7 +46,11 @@ async function storeQuestions(
         );
       }
     } else if (existing.text !== question.text) {
-      return conflictResponse(`Question ${question.id} already exists with different content`, c);
+      return conflictResponse(
+        `Question ${question.id} already exists with different content`,
+        c,
+        ERROR_CODES.QUESTION_EXISTS_DIFFERENT_CONTENT,
+      );
     }
   }
   return null;
@@ -75,7 +82,7 @@ async function storeAnswers(
       }
       try {
         await storage.putAnswer(answer.id, {
-          "question-id": answer.questionId,
+          questionId: answer.questionId,
           text: answer.answerText,
         });
       } catch (error) {
@@ -87,11 +94,12 @@ async function storeAnswers(
           c,
         );
       }
-    } else if (
-      existing["question-id"] !== answer.questionId ||
-      existing.text !== answer.answerText
-    ) {
-      return conflictResponse(`Answer ${answer.id} already exists with different content`, c);
+    } else if (existing.questionId !== answer.questionId || existing.text !== answer.answerText) {
+      return conflictResponse(
+        `Answer ${answer.id} already exists with different content`,
+        c,
+        ERROR_CODES.SUBMISSION_EXISTS_DIFFERENT_CONTENT,
+      );
     }
   }
   return null;
@@ -118,7 +126,12 @@ export async function storeSubmissionEntities(
     if (JSON.stringify(existing) === JSON.stringify(body)) {
       return new Response(null, { status: 204 });
     } else {
-      return errorResponse(409, "Submission already exists with different content", c);
+      return errorResponse(
+        409,
+        "Submission already exists with different content",
+        c,
+        ERROR_CODES.SUBMISSION_EXISTS_DIFFERENT_CONTENT,
+      );
     }
   }
 

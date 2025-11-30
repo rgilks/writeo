@@ -30,7 +30,7 @@ const questionTextSchema: z.ZodType<CreateQuestionRequest> = z
   })
   .strict();
 
-questionsRouter.put("/text/questions/:question_id", async (c) => {
+questionsRouter.put("/v1/text/questions/:question_id", async (c) => {
   const questionId = c.req.param("question_id");
   const parsedQuestionId = questionIdSchema.safeParse(questionId);
   if (!parsedQuestionId.success) {
@@ -73,7 +73,13 @@ questionsRouter.put("/text/questions/:question_id", async (c) => {
     }
 
     await storage.putQuestion(parsedQuestionId.data, body);
-    return new Response(null, { status: 201 });
+    const url = new URL(c.req.url);
+    return new Response(null, {
+      status: 201,
+      headers: {
+        Location: `${url.origin}/v1/text/questions/${parsedQuestionId.data}`,
+      },
+    });
   } catch (error) {
     const sanitized = sanitizeError(error);
     safeLogError("Error creating question", sanitized, c);

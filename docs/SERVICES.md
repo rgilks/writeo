@@ -4,7 +4,7 @@ Documentation for individual services in the Writeo project.
 
 ## API Worker (Cloudflare Workers)
 
-Edge worker that exposes the public API (`/text/submissions`, `/text/.../feedback`, etc.) and orchestrates assessment services.
+Edge worker that exposes the public API (`/v1/text/submissions`, `/v1/text/.../feedback`, etc.) and orchestrates assessment services.
 
 **Location:** `apps/api-worker/`
 

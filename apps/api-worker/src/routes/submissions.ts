@@ -1,15 +1,75 @@
 import type { Context } from "hono";
 import type { Env } from "../types/env";
-import { processSubmission } from "../services/submission-processor";
-import { errorResponse } from "../utils/errors";
+import { processSubmission, updateSubmission } from "../services/submission-processor";
+import { errorResponse, ERROR_CODES } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
 import { getServices } from "../utils/context";
 import { uuidStringSchema, formatZodMessage } from "../utils/zod";
+import type { CreateSubmissionRequest } from "@writeo/shared";
+import { z } from "zod";
 
-export async function processSubmissionHandler(
+// Schema for POST request body (includes submission_id)
+const createSubmissionSchema = z.object({
+  submissionId: z.string().uuid("Invalid submissionId format"),
+  submission: z.array(z.any()),
+  template: z.object({
+    name: z.string(),
+    version: z.number(),
+  }),
+  storeResults: z.boolean().optional(),
+});
+
+export async function createSubmissionHandler(
   c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ) {
-  return processSubmission(c);
+  try {
+    const body = await c.req.json();
+    const parsed = createSubmissionSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return errorResponse(
+        400,
+        formatZodMessage(parsed.error, "Invalid request body"),
+        c,
+        ERROR_CODES.INVALID_SUBMISSION_FORMAT,
+      );
+    }
+
+    // Extract submission_id from body
+    const submissionId = parsed.data.submissionId;
+
+    // Check if submission already exists
+    const { storage } = getServices(c);
+    const existing = await storage.getSubmission(submissionId);
+    if (existing) {
+      return errorResponse(
+        409,
+        "Submission already exists. Use PUT /v1/text/submissions/{submission_id} to update.",
+        c,
+        ERROR_CODES.SUBMISSION_EXISTS_DIFFERENT_CONTENT,
+      );
+    }
+
+    // Create submission body
+    const submissionBody: CreateSubmissionRequest = {
+      submission: parsed.data.submission,
+      template: parsed.data.template,
+      storeResults: parsed.data.storeResults,
+    };
+
+    // Call processSubmission with the submission_id and body
+    return await processSubmission(c, submissionId, submissionBody);
+  } catch (error) {
+    const sanitized = sanitizeError(error);
+    safeLogError("Error creating submission", sanitized, c);
+    return errorResponse(500, "Internal server error", c, ERROR_CODES.INTERNAL_SERVER_ERROR);
+  }
+}
+
+export async function updateSubmissionHandler(
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+) {
+  return updateSubmission(c);
 }
 
 export async function getSubmissionHandler(
@@ -23,6 +83,8 @@ export async function getSubmissionHandler(
       400,
       formatZodMessage(submissionIdResult.error, "Invalid submission_id format"),
       c,
+      ERROR_CODES.INVALID_UUID_FORMAT,
+      "submission_id",
     );
   }
   const submissionId = submissionIdResult.data;
@@ -38,6 +100,7 @@ export async function getSubmissionHandler(
           404,
           "Submission not found. Results are stored in your browser by default. If you enabled server storage, the results may have expired (90-day retention).",
           c,
+          ERROR_CODES.SUBMISSION_NOT_FOUND,
         );
       }
       return c.json({ status: "pending" });
@@ -47,6 +110,6 @@ export async function getSubmissionHandler(
   } catch (error) {
     const sanitized = sanitizeError(error);
     safeLogError("Error fetching submission", sanitized, c);
-    return errorResponse(500, "Internal server error", c);
+    return errorResponse(500, "Internal server error", c, ERROR_CODES.INTERNAL_SERVER_ERROR);
   }
 }

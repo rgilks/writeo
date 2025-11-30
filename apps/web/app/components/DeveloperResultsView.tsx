@@ -331,7 +331,7 @@ function AssessorDisplay({ assessor, assessorIndex: _assessorIndex }: AssessorDi
 
 interface AnswerWithAssessors {
   id?: string;
-  "assessor-results"?: unknown[];
+  assessorResults?: unknown[];
 }
 
 export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewProps) {
@@ -350,7 +350,7 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
         acc +
         (part.answers || []).reduce((sum, answer) => {
           const answerWithAssessors = answer as AnswerWithAssessors;
-          return sum + (answerWithAssessors["assessor-results"] || []).length;
+          return sum + (answerWithAssessors.assessorResults || []).length;
         }, 0)
       );
     }, 0);
@@ -469,10 +469,7 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
 
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             {(part.answers || []).map((answer: AnswerWithAssessors, answerIndex: number) => {
-              const assessorResults = (answer["assessor-results"] || []) as Record<
-                string,
-                unknown
-              >[];
+              const assessorResults = (answer.assessorResults || []) as Record<string, unknown>[];
               const answerId = answer.id;
 
               return (

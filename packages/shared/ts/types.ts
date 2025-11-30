@@ -5,23 +5,22 @@ export interface CreateQuestionRequest {
 
 // Answer creation request
 export interface CreateAnswerRequest {
-  "question-id": string;
+  questionId: string;
   text: string;
 }
 
 // Submission creation request
 // Supports two formats:
-// 1. Reference format: answers reference existing answer IDs
+// 1. Reference format: answers reference existing question IDs
 // 2. Inline format: answers include question and answer text directly
 export interface SubmissionPart {
-  part: number;
+  part: number; // Always a number (no string coercion)
   answers: Array<{
     id: string;
-    "question-number": number;
     // Inline format (optional - if provided, question and answer will be auto-created)
-    "question-id"?: string; // UUID of the question (will be created if doesn't exist)
-    "question-text"?: string; // Question text (required for inline format)
-    text?: string; // Answer text (required for inline format)
+    questionId?: string; // UUID of the question (will be created if questionText is provided, otherwise question must exist)
+    questionText?: string | null; // Question text: if provided (non-null), create/update question; if null, free writing (no question); if omitted, question must exist
+    text: string; // Answer text (required - answers must always be sent inline)
   }>;
 }
 
@@ -154,7 +153,7 @@ export interface AssessorResult {
 // Answer result with assessor results
 export interface AnswerResult {
   id: string;
-  "assessor-results": AssessorResult[];
+  assessorResults: AssessorResult[];
 }
 
 export interface AssessmentPart {

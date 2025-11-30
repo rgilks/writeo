@@ -64,7 +64,7 @@ function extractSubmissionData(
   const parts = result.results?.parts ?? [];
   const [firstPart] = parts;
   const [firstAnswer] = firstPart?.answers ?? [];
-  const assessorResults = firstAnswer?.["assessor-results"] ?? [];
+  const assessorResults = firstAnswer?.assessorResults ?? [];
 
   const essayAssessor = getEssayAssessorResult(assessorResults);
   const overall = essayAssessor?.overall;

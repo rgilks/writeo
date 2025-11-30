@@ -33,7 +33,7 @@ function extractAssessmentData(results: AssessmentResults): {
 
   for (const part of results.results?.parts || []) {
     for (const answer of part.answers || []) {
-      for (const assessor of answer["assessor-results"] || []) {
+      for (const assessor of answer.assessorResults || []) {
         if (!essayScores && assessor.id === "T-AES-ESSAY") {
           essayScores = { overall: assessor.overall, dimensions: assessor.dimensions };
         }
@@ -67,7 +67,7 @@ async function fetchQuestionText(
   // Fall back to answer -> question lookup
   const answer = await storage.getAnswer(answerId);
   if (answer) {
-    const question = await storage.getQuestion(answer["question-id"]);
+    const question = await storage.getQuestion(answer.questionId);
     if (question) {
       return question.text;
     }

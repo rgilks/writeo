@@ -13,9 +13,17 @@ describe("errorResponse", () => {
   });
 
   it("creates error response with JSON body", async () => {
-    const response = errorResponse(400, "Bad request");
+    const c = createContext();
+    const response = errorResponse(400, "Bad request", c);
     const body = await response.json();
-    expect(body).toEqual({ error: "Bad request" });
+    expect(body.error).toMatchObject({
+      code: "INVALID_FIELD_VALUE",
+      message: "Bad request",
+    });
+    // requestId is optional
+    if (body.error.requestId) {
+      expect(typeof body.error.requestId).toBe("string");
+    }
   });
 
   it("sets Content-Type header", () => {
@@ -29,16 +37,28 @@ describe("errorResponse", () => {
     expect(response.status).toBe(500);
     // Should sanitize the message
     const body = await response.json();
-    expect(body).toEqual({
-      error: "An internal error occurred. Please try again later.",
+    expect(body.error).toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "An internal error occurred. Please try again later.",
     });
+    // requestId is optional
+    if (body.error.requestId) {
+      expect(typeof body.error.requestId).toBe("string");
+    }
   });
 
   it("does not sanitize 4xx errors", async () => {
     const prodContext = createContext({ url: "https://api.writeo.com/health" });
     const response = errorResponse(400, "Invalid input", prodContext);
     const body = await response.json();
-    expect(body).toEqual({ error: "Invalid input" });
+    expect(body.error).toMatchObject({
+      code: "INVALID_FIELD_VALUE",
+      message: "Invalid input",
+    });
+    // requestId is optional
+    if (body.error.requestId) {
+      expect(typeof body.error.requestId).toBe("string");
+    }
   });
 
   it("does not sanitize errors in development", async () => {
@@ -48,6 +68,13 @@ describe("errorResponse", () => {
     });
     const response = errorResponse(500, "Database connection failed", devContext);
     const body = await response.json();
-    expect(body).toEqual({ error: "Database connection failed" });
+    expect(body.error).toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Database connection failed",
+    });
+    // requestId is optional
+    if (body.error.requestId) {
+      expect(typeof body.error.requestId).toBe("string");
+    }
   });
 });

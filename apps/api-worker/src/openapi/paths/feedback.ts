@@ -48,7 +48,7 @@ data: {"type":"chunk","text":"good understanding of the question. "}
 data: {"type":"done","message":"Feedback generation complete"}`;
 
 export const feedbackPaths = {
-  "/text/submissions/{submission_id}/ai-feedback/stream": {
+  "/v1/text/submissions/{submission_id}/ai-feedback/stream": {
     post: {
       tags: ["Feedback"],
       summary: "Stream AI feedback generation",
@@ -76,6 +76,24 @@ export const feedbackPaths = {
       responses: {
         "200": {
           description: "Streaming feedback (Server-Sent Events)",
+          headers: {
+            "X-Request-Id": {
+              description: "Unique request identifier for debugging",
+              schema: { type: "string", example: "req-1234567890" },
+            },
+            "X-RateLimit-Limit": {
+              description: "Maximum number of requests allowed per time window",
+              schema: { type: "integer", example: 30 },
+            },
+            "X-RateLimit-Remaining": {
+              description: "Number of requests remaining in the current time window",
+              schema: { type: "integer", example: 25 },
+            },
+            "X-RateLimit-Reset": {
+              description: "Unix timestamp (seconds) when the rate limit window resets",
+              schema: { type: "integer", example: 1705689600 },
+            },
+          },
           content: {
             "text/event-stream": {
               schema: {
@@ -86,14 +104,18 @@ export const feedbackPaths = {
             },
           },
         },
-        "400": badRequestResponse("", "Missing required fields: answerId, answerText"),
+        "400": badRequestResponse(
+          "",
+          "Missing required fields: answerId, answerText",
+          "MISSING_REQUIRED_FIELD",
+        ),
         "401": unauthorizedResponse,
-        "404": notFoundResponse("Submission or answer"),
+        "404": notFoundResponse("Submission or answer", "SUBMISSION_NOT_FOUND"),
         "500": internalServerErrorResponse,
       },
     },
   },
-  "/text/submissions/{submission_id}/teacher-feedback": {
+  "/v1/text/submissions/{submission_id}/teacher-feedback": {
     post: {
       tags: ["Feedback"],
       summary: "Get Teacher feedback (clues or explanation)",
@@ -128,6 +150,24 @@ export const feedbackPaths = {
       responses: {
         "200": {
           description: "Teacher feedback response",
+          headers: {
+            "X-Request-Id": {
+              description: "Unique request identifier for debugging",
+              schema: { type: "string", example: "req-1234567890" },
+            },
+            "X-RateLimit-Limit": {
+              description: "Maximum number of requests allowed per time window",
+              schema: { type: "integer", example: 30 },
+            },
+            "X-RateLimit-Remaining": {
+              description: "Number of requests remaining in the current time window",
+              schema: { type: "integer", example: 25 },
+            },
+            "X-RateLimit-Reset": {
+              description: "Unix timestamp (seconds) when the rate limit window resets",
+              schema: { type: "integer", example: 1705689600 },
+            },
+          },
           content: {
             "application/json": {
               schema: {
@@ -156,9 +196,13 @@ export const feedbackPaths = {
             },
           },
         },
-        "400": badRequestResponse("", "Mode must be 'clues' or 'explanation'"),
+        "400": badRequestResponse(
+          "",
+          "Mode must be 'clues' or 'explanation'",
+          "INVALID_FIELD_VALUE",
+        ),
         "401": unauthorizedResponse,
-        "404": notFoundResponse("Submission or answer"),
+        "404": notFoundResponse("Submission or answer", "SUBMISSION_NOT_FOUND"),
         "500": internalServerErrorResponse,
       },
     },

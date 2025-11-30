@@ -206,4 +206,5 @@ See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis.
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
-- [SPEC.md](SPEC.md) - API specification
+- [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) - API specification (Swagger UI)
+- [OpenAPI Spec](openapi.yaml) - Machine-readable API specification

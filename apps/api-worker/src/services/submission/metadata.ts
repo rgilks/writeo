@@ -18,7 +18,7 @@ function sumErrorCounts(...errorMaps: Map<string, LanguageToolError[]>[]): numbe
 function extractOverallScore(essayAssessment: AssessmentResults | null): number | undefined {
   const firstPart = essayAssessment?.results?.parts?.[0];
   const firstAnswer = firstPart?.answers?.[0];
-  const assessorResults = firstAnswer?.["assessor-results"] ?? [];
+  const assessorResults = firstAnswer?.assessorResults ?? [];
   const essayAssessor = getEssayAssessorResult(assessorResults);
   return essayAssessor?.overall;
 }
@@ -50,11 +50,18 @@ export function buildMetadata(
   };
 }
 
-export function buildResponseHeaders(timings: Record<string, number>): Record<string, string> {
+export function buildResponseHeaders(
+  timings: Record<string, number>,
+  requestId?: string,
+): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-Timing-Data": JSON.stringify(timings),
   };
+
+  if (requestId) {
+    headers["X-Request-Id"] = requestId;
+  }
 
   const totalTime = timings["0_total"];
   if (typeof totalTime === "number") {

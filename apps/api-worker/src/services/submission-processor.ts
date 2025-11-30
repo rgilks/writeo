@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import type { Env } from "../types/env";
 import type { CreateSubmissionRequest, AssessmentResults } from "@writeo/shared";
 import { validateRequestBodySize } from "../utils/validation";
-import { errorResponse } from "../utils/errors";
+import { errorResponse, ERROR_CODES } from "../utils/errors";
 import { safeLogError, safeLogInfo, sanitizeError } from "../utils/logging";
 import { getCombinedFeedbackWithRetry } from "./feedback";
 import { mergeAssessmentResults } from "./merge-results";
@@ -240,35 +240,46 @@ async function processServiceResults(
  */
 export async function processSubmission(
   c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+  submissionId: string,
+  body?: CreateSubmissionRequest,
 ) {
-  const submissionIdResult = uuidStringSchema("submission_id").safeParse(
-    c.req.param("submission_id"),
-  );
-  if (!submissionIdResult.success) {
-    return errorResponse(
-      400,
-      formatZodMessage(submissionIdResult.error, "Invalid submission_id format"),
-      c,
-    );
-  }
-  const submissionId = submissionIdResult.data;
-
   const requestStartTime = performance.now();
   const timings: Record<string, number> = {};
 
   try {
     // Phase 1: Validate and parse request
-    const parseResult = await validateAndParseSubmission(c, timings);
-    if (parseResult instanceof Response) {
-      return parseResult;
+    let submissionBody: CreateSubmissionRequest;
+    let validation: ValidationResult;
+
+    if (body) {
+      // Body provided as parameter (from POST)
+      const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
+      if (!sizeValidation.valid) {
+        return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
+      }
+      const validateStartTime = performance.now();
+      const validationResult = validateSubmissionBody(body, c);
+      if (validationResult instanceof Response) {
+        return validationResult;
+      }
+      validation = validationResult;
+      submissionBody = body;
+      timings["1b_validate_submission"] = performance.now() - validateStartTime;
+    } else {
+      // Parse from request (from PUT with URL param)
+      const parseResult = await validateAndParseSubmission(c, timings);
+      if (parseResult instanceof Response) {
+        return parseResult;
+      }
+      submissionBody = parseResult.body;
+      validation = parseResult.validation;
     }
-    const { body, validation } = parseResult;
-    const storeResults = body.storeResults === true;
+    const storeResults = submissionBody.storeResults === true;
 
     // Phase 2: Initialize services and load data
     const { config, storage } = getServices(c);
     const loadResult = await loadSubmissionData(
-      body,
+      submissionBody,
       validation,
       storeResults,
       submissionId,
@@ -351,7 +362,24 @@ export async function processSubmission(
     }
 
     timings["0_total"] = performance.now() - requestStartTime;
-    const headersObj = buildResponseHeaders(timings);
+    const requestId = c.get("requestId") as string | undefined;
+    const headersObj = buildResponseHeaders(timings, requestId);
+
+    // Add request ID to response body for easier debugging
+    const responseBody = {
+      ...mergedAssessment,
+      ...(requestId && { requestId }),
+    };
+
+    // Determine status code: 201 for POST (creation), 200 for PUT (update)
+    const isCreation = c.req.method === "POST";
+    const statusCode = isCreation ? 201 : 200;
+
+    // Add Location header for POST (201 Created)
+    if (isCreation) {
+      const url = new URL(c.req.url);
+      headersObj["Location"] = `${url.origin}/v1/text/submissions/${submissionId}`;
+    }
 
     // Log performance metrics with request ID
     safeLogInfo(
@@ -360,13 +388,14 @@ export async function processSubmission(
         submissionId,
         endpoint: c.req.path,
         method: c.req.method,
+        statusCode,
         timings,
         totalMs: timings["0_total"]?.toFixed(2),
       },
       c,
     );
 
-    return c.json(mergedAssessment, 200, headersObj);
+    return c.json(responseBody, statusCode, headersObj);
   } catch (error) {
     const sanitized = sanitizeError(error);
     safeLogError(
@@ -378,6 +407,47 @@ export async function processSubmission(
       },
       c,
     );
-    return errorResponse(500, "Internal server error", c);
+    return errorResponse(500, "Internal server error", c, ERROR_CODES.INTERNAL_SERVER_ERROR);
   }
+}
+
+/**
+ * Updates an existing submission.
+ * PUT is idempotent - only updates if submission exists.
+ *
+ * @param c - Hono context with environment bindings
+ * @returns Response with assessment results or error
+ */
+export async function updateSubmission(
+  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
+) {
+  const submissionIdResult = uuidStringSchema("submission_id").safeParse(
+    c.req.param("submission_id"),
+  );
+  if (!submissionIdResult.success) {
+    return errorResponse(
+      400,
+      formatZodMessage(submissionIdResult.error, "Invalid submission_id format"),
+      c,
+      ERROR_CODES.INVALID_UUID_FORMAT,
+      "submission_id",
+    );
+  }
+  const submissionId = submissionIdResult.data;
+
+  // Check if submission exists
+  const { storage } = getServices(c);
+  const existing = await storage.getSubmission(submissionId);
+  if (!existing) {
+    return errorResponse(
+      404,
+      "Submission not found. Use POST /v1/text/submissions to create a new submission.",
+      c,
+      ERROR_CODES.SUBMISSION_NOT_FOUND,
+    );
+  }
+
+  // Process the update (same as creation, but submission must exist)
+  // Body will be parsed from request in processSubmission
+  return processSubmission(c, submissionId);
 }

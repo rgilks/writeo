@@ -4,7 +4,7 @@
 
 import type { CreateSubmissionRequest } from "@writeo/shared";
 import { validateText } from "../../utils/validation";
-import { errorResponse } from "../../utils/errors";
+import { errorResponse, ERROR_CODES } from "../../utils/errors";
 import { MAX_ANSWER_TEXT_LENGTH } from "../../utils/constants";
 import type { Context } from "hono";
 import type { Env } from "../../types/env";
@@ -45,25 +45,34 @@ const answerTextValidator = (
 
 const answerSchema = z.object({
   id: z.string().uuid("Invalid answer id"),
+  questionId: z.string().uuid("Invalid questionId format").optional(),
+  questionText: z
+    .union([z.string(), z.null()])
+    .optional()
+    .superRefine((val, ctx) => {
+      if (val === null || val === undefined) {
+        return; // null or undefined is allowed (null = free writing, undefined = referenced question)
+      }
+      if (val === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "questionText cannot be empty string. Use null for free writing or omit for referenced questions.",
+        });
+        return;
+      }
+      answerTextValidator(val, ctx, MAX_QUESTION_TEXT_LENGTH, "questionText");
+    }),
   text: z
     .string()
+    .min(1, "Answer text is required")
     .superRefine((val, ctx) =>
       answerTextValidator(val, ctx, MAX_ANSWER_TEXT_LENGTH, "answer text"),
     ),
-  "question-id": z.string().uuid("Invalid question-id format"),
-  "question-text": z
-    .string()
-    .optional()
-    .superRefine((val, ctx) => {
-      if (typeof val === "undefined") {
-        return;
-      }
-      answerTextValidator(val, ctx, MAX_QUESTION_TEXT_LENGTH, "question-text");
-    }),
 });
 
 const submissionPartSchema = z.object({
-  part: z.string().min(1, "Each submission part must include a part identifier"),
+  part: z.number().int().positive("Part must be a positive integer"),
   answers: z
     .array(answerSchema, { required_error: "Each submission part must include answers" })
     .min(1, "Each submission part must include at least one answer"),
@@ -93,15 +102,15 @@ const submissionSchema = z
           answerIds.add(answer.id);
         }
 
-        const questionId = answer["question-id"];
-        const questionText = answer["question-text"];
-        if (typeof questionText === "string") {
+        const questionId = answer.questionId;
+        const questionText = answer.questionText;
+        if (questionId && typeof questionText === "string" && questionText !== null) {
           const existing = questionsById.get(questionId);
           if (existing && existing !== questionText) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              message: `Conflicting question text provided for question-id ${questionId}`,
-              path: ["submission", partIndex, "answers", answerIndex, "question-text"],
+              message: `Conflicting question text provided for questionId ${questionId}`,
+              path: ["submission", partIndex, "answers", answerIndex, "questionText"],
             });
           } else if (!existing) {
             questionsById.set(questionId, questionText);
@@ -117,7 +126,16 @@ export function validateSubmissionBody(
 ): ValidationResult | Response {
   const parsed = submissionSchema.safeParse(body);
   if (!parsed.success) {
-    return errorResponse(400, formatZodMessage(parsed.error, "Invalid submission payload"), c);
+    // Extract field path from zod error for better error reporting
+    const firstError = parsed.error.errors[0];
+    const fieldPath = firstError?.path?.join(".") || "unknown";
+    return errorResponse(
+      400,
+      formatZodMessage(parsed.error, "Invalid submission payload"),
+      c,
+      ERROR_CODES.INVALID_SUBMISSION_FORMAT,
+      fieldPath,
+    );
   }
 
   const answerIds: string[] = [];
@@ -133,11 +151,28 @@ export function validateSubmissionBody(
     for (const answer of part.answers) {
       answerIds.push(answer.id);
 
-      const questionId = answer["question-id"];
-      const questionText = answer["question-text"];
-      if (typeof questionText === "string" && !questionsById.has(questionId)) {
+      const questionId = answer.questionId;
+      const questionText = answer.questionText;
+      // If questionText is provided (non-null string), create/update the question
+      if (
+        questionId &&
+        typeof questionText === "string" &&
+        questionText !== null &&
+        !questionsById.has(questionId)
+      ) {
         questionsById.set(questionId, questionText);
         questionsToCreate.push({ id: questionId, text: questionText });
+      }
+
+      // questionId is required - either provided explicitly or must exist
+      if (!questionId) {
+        return errorResponse(
+          400,
+          "questionId is required for all answers",
+          c,
+          ERROR_CODES.MISSING_REQUIRED_FIELD,
+          `submission[${part.part}].answers[${answer.id}].questionId`,
+        );
       }
 
       answersToCreate.push({

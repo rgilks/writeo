@@ -116,11 +116,12 @@ Client Request
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 7. Route Handler                                            │
-│    - Questions: PUT /text/questions/:question_id            │
-│    - Submissions: PUT /text/submissions/:submission_id      │
-│    - Results: GET /text/submissions/:submission_id          │
-│    - Feedback: POST /text/submissions/:id/ai-feedback/stream│
-│    - Feedback: POST /text/submissions/:id/teacher-feedback  │
+│    - Questions: PUT /v1/text/questions/:question_id            │
+│    - Submissions: POST /v1/text/submissions (create)            │
+│    - Submissions: PUT /v1/text/submissions/:submission_id (update)│
+│    - Results: GET /v1/text/submissions/:submission_id          │
+│    - Feedback: POST /v1/text/submissions/:id/ai-feedback/stream│
+│    - Feedback: POST /v1/text/submissions/:id/teacher-feedback  │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
@@ -192,7 +193,7 @@ Request
 The submission processing is the most complex operation. Here's the detailed flow:
 
 ```
-PUT /text/submissions/:submission_id
+POST /v1/text/submissions (create) or PUT /v1/text/submissions/:submission_id (update)
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -847,7 +848,8 @@ The architecture prioritizes maintainability and developer experience while ensu
 ## References
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System-wide architecture and design
-- [SPEC.md](SPEC.md) - Complete API specification
+- [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) - Complete API specification (Swagger UI)
+- [OpenAPI Spec](openapi.yaml) - Machine-readable API specification
 - [OPERATIONS.md](OPERATIONS.md) - Operations guide and environment configuration
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
 - [SERVICES.md](SERVICES.md) - Service documentation

@@ -38,10 +38,10 @@ function extractEssayAssessorResults(
   }
 
   const firstAnswer = essayPart.answers[0];
-  const assessorResults = firstAnswer?.["assessor-results"];
+  const assessorResults = firstAnswer?.assessorResults;
   if (!assessorResults) {
     console.warn(
-      `[merge-results] Essay answer ${firstAnswer?.id} has no assessor-results - essay assessor results will be missing`,
+      `[merge-results] Essay answer ${firstAnswer?.id} has no assessorResults - essay assessor results will be missing`,
     );
     return [];
   }
@@ -245,13 +245,13 @@ export function mergeAssessmentResults(
 
       answerResults.push({
         id: answer.id,
-        "assessor-results": assessorResults,
+        assessorResults: assessorResults,
       });
     }
 
     parts.push({
       part: part.part,
-      status: answerResults.some((ar) => ar["assessor-results"].length > 0) ? "success" : "error",
+      status: answerResults.some((ar) => ar.assessorResults.length > 0) ? "success" : "error",
       answers: answerResults,
     });
   }

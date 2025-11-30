@@ -3,6 +3,7 @@ import { questionsPath } from "./openapi/paths/questions";
 import { submissionsPath } from "./openapi/paths/submissions";
 import { feedbackPaths } from "./openapi/paths/feedback";
 import { healthPaths } from "./openapi/paths/health";
+import { sharedComponents } from "./openapi/components";
 
 /**
  * Complete OpenAPI 3.0 specification combining metadata and all API paths.
@@ -15,5 +16,9 @@ export const openApiSpec = {
     ...submissionsPath,
     ...feedbackPaths,
     ...healthPaths,
+  },
+  components: {
+    ...openApiMetadata.components,
+    ...sharedComponents,
   },
 };

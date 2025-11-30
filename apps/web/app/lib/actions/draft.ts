@@ -30,7 +30,7 @@ function getFirstAssessorResults(results: AssessmentResults) {
 
   const firstPart = parts[0];
   const firstAnswer = firstPart?.answers?.[0];
-  return firstAnswer?.["assessor-results"] || [];
+  return firstAnswer?.assessorResults || [];
 }
 
 function extractOverallScore(results: AssessmentResults): number | undefined {

@@ -15,7 +15,7 @@ export const feedbackRouter = new Hono<{
 }>();
 
 feedbackRouter.post(
-  "/text/submissions/:submission_id/ai-feedback/stream",
+  "/v1/text/submissions/:submission_id/ai-feedback/stream",
   withErrorHandling(async (c) => {
     const authError = validateApiKey(c);
     if (authError) return authError;
@@ -50,7 +50,7 @@ feedbackRouter.post(
 );
 
 feedbackRouter.post(
-  "/text/submissions/:submission_id/teacher-feedback",
+  "/v1/text/submissions/:submission_id/teacher-feedback",
   withErrorHandling(async (c) => {
     const authError = validateApiKey(c);
     if (authError) return authError;

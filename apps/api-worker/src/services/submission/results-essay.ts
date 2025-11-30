@@ -29,7 +29,7 @@ function logAssessorDetails(essayAssessment: AssessmentResults, submissionId: st
     }
 
     const firstAnswer = part.answers[0];
-    const assessorResults = firstAnswer?.["assessor-results"] as AssessorResult[] | undefined;
+    const assessorResults = firstAnswer?.assessorResults as AssessorResult[] | undefined;
     console.log(
       `[Essay Assessment][debug] Part ${part.part} has ${assessorResults?.length ?? 0} assessor result(s)`,
       {

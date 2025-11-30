@@ -13,7 +13,7 @@ A modern, scalable API for essay assessment and scoring.
 - **Answer Management**: Create and store student answers
 - **Submission Processing**: Submit essays for automated scoring
 - **Assessment Results**: Retrieve detailed scoring results with band scores and CEFR levels
-- **Synchronous Processing**: Results returned immediately in PUT response body
+- **Synchronous Processing**: Results returned immediately in POST/PUT response body
 
 ### Architecture
 - **Edge API**: Cloudflare Workers for low-latency global access
@@ -28,10 +28,20 @@ All endpoints (except /health, /docs, /openapi.json) require API key authenticat
 For API access, please contact the project maintainer via GitHub (https://github.com/rgilks/writeo) or Discord (https://discord.gg/YxuFAXWuzw).
 
 ### Rate Limits (per IP)
-- Submissions: 10 requests per minute (expensive operations)
-- Results: 60 requests per minute (read-only)
-- Questions/Answers: 30 requests per minute (data writes)
-- Other endpoints: 30 requests per minute
+- **Submissions**: 10 requests per minute (burst limit) AND 100 requests per day (daily limit)
+- **Results (GET)**: 60 requests per minute (read-only)
+- **Questions/Answers**: 30 requests per minute (data writes)
+- **Other endpoints**: 30 requests per minute
+
+For higher limits, please contact the project maintainer via GitHub (https://github.com/rgilks/writeo) or Discord (https://discord.gg/YxuFAXWuzw).
+
+### CEFR Level Mapping
+Band scores are automatically mapped to CEFR (Common European Framework of Reference) levels:
+- **A2**: < 4.0
+- **B1**: ≥ 4.0, < 5.5
+- **B2**: ≥ 5.5, < 7.0
+- **C1**: ≥ 7.0, < 8.5
+- **C2**: ≥ 8.5
 
 ### Support
 - Documentation: Available at /docs (Swagger UI)
@@ -62,6 +72,7 @@ export const openApiMetadata = {
         description: "API key authentication. Format: 'Token <your_api_key>'",
       },
     },
+    // Schemas are defined in components.ts and merged at runtime
   },
   security: [{ ApiKeyAuth: [] }],
   tags: [

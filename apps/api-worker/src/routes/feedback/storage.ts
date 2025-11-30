@@ -63,7 +63,7 @@ async function resolveQuestionText(
 
   const answer = await storage.getAnswer(answerId);
   if (answer) {
-    const question = await storage.getQuestion(answer["question-id"]);
+    const question = await storage.getQuestion(answer.questionId);
     if (question) {
       return question.text;
     }
@@ -90,7 +90,7 @@ function mergeAssessmentData(
 
   for (const part of results.results?.parts || []) {
     for (const answer of part.answers || []) {
-      const assessorResults = (answer["assessor-results"] || []) as AssessorResult[];
+      const assessorResults = (answer.assessorResults || []) as AssessorResult[];
 
       if (!essayScores) {
         const essayAssessor = getEssayAssessorResult(assessorResults);
@@ -148,7 +148,7 @@ export function getCachedTeacherFeedback(
   if (!results) return undefined;
   const firstPart = results.results?.parts?.[0];
   const teacherAssessor = findAssessorResultById(
-    firstPart?.answers?.[0]?.["assessor-results"] || [],
+    firstPart?.answers?.[0]?.assessorResults || [],
     "T-TEACHER-FEEDBACK",
   );
   if (!teacherAssessor) return undefined;
