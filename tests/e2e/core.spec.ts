@@ -65,9 +65,9 @@ test.describe("Essay Submission", () => {
     await writePage.typeEssay(repeatedContent);
 
     // Wait for auto-save (2 seconds debounce + some buffer)
-    // Also wait for "Auto-saved" indicator to appear
+    // Also wait for "Auto-saved" indicator to appear (text contains "Auto-saved")
     await expect(async () => {
-      const autoSavedIndicator = page.locator("text=Auto-saved");
+      const autoSavedIndicator = page.locator("text=/Auto-saved/i");
       await expect(autoSavedIndicator).toBeVisible({ timeout: 5000 });
     }).toPass({ timeout: 6000 });
 
@@ -318,8 +318,19 @@ test.describe("Progress Dashboard", () => {
     }).toPass({ timeout: 3000 });
     await writePage.clickSubmit();
 
-    // Wait for results
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    // Wait for results, but also check for errors
+    try {
+      await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    } catch (error) {
+      // If navigation failed, check for error messages
+      const errorElement = await writePage.getError();
+      const hasError = await errorElement.isVisible().catch(() => false);
+      if (hasError) {
+        const errorText = await errorElement.textContent();
+        throw new Error(`Submission failed with error: ${errorText}. Original error: ${error}`);
+      }
+      throw error;
+    }
     await resultsPage.waitForResults();
 
     // Wait for draft storage
@@ -360,8 +371,19 @@ test.describe("Results Persistence", () => {
     }).toPass({ timeout: 3000 });
     await writePage.clickSubmit();
 
-    // Wait for results
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    // Wait for results, but also check for errors
+    try {
+      await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    } catch (error) {
+      // If navigation failed, check for error messages
+      const errorElement = await writePage.getError();
+      const hasError = await errorElement.isVisible().catch(() => false);
+      if (hasError) {
+        const errorText = await errorElement.textContent();
+        throw new Error(`Submission failed with error: ${errorText}. Original error: ${error}`);
+      }
+      throw error;
+    }
     await resultsPage.waitForResults();
 
     // Get the results URL
@@ -390,8 +412,19 @@ test.describe("Results Persistence", () => {
     }).toPass({ timeout: 3000 });
     await writePage.clickSubmit();
 
-    // Wait for results
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    // Wait for results, but also check for errors
+    try {
+      await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    } catch (error) {
+      // If navigation failed, check for error messages
+      const errorElement = await writePage.getError();
+      const hasError = await errorElement.isVisible().catch(() => false);
+      if (hasError) {
+        const errorText = await errorElement.textContent();
+        throw new Error(`Submission failed with error: ${errorText}. Original error: ${error}`);
+      }
+      throw error;
+    }
     await resultsPage.waitForResults();
 
     // Get the results URL and submission ID
@@ -455,8 +488,19 @@ test.describe("History Page", () => {
     }).toPass({ timeout: 3000 });
     await writePage.clickSubmit();
 
-    // Wait for results
-    await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    // Wait for results, but also check for errors
+    try {
+      await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
+    } catch (error) {
+      // If navigation failed, check for error messages
+      const errorElement = await writePage.getError();
+      const hasError = await errorElement.isVisible().catch(() => false);
+      if (hasError) {
+        const errorText = await errorElement.textContent();
+        throw new Error(`Submission failed with error: ${errorText}. Original error: ${error}`);
+      }
+      throw error;
+    }
     await resultsPage.waitForResults();
 
     // Wait for draft storage

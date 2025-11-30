@@ -261,10 +261,15 @@ export class WritePage {
     // Use fill() for better performance, especially for long essays
     // Then trigger input event to ensure React state updates
     await textarea.fill(text);
-    await textarea.evaluate((el) => {
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-      el.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    // Only evaluate if element still exists (might be destroyed during navigation)
+    try {
+      await textarea.evaluate((el) => {
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    } catch (e) {
+      // Element might have been destroyed, which is fine - fill() already updated the value
+    }
   }
 
   async getWordCount() {
