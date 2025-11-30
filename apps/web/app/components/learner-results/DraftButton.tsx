@@ -60,6 +60,7 @@ export function DraftButton({
         onMouseLeave={() => setIsHovered(false)}
         disabled={!isInteractive}
         aria-pressed={isCurrent}
+        data-testid={`draft-button-${draft.draftNumber}`}
         style={{
           width: "100%",
           padding: "var(--spacing-sm) var(--spacing-md)",

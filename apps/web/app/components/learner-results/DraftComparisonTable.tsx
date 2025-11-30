@@ -42,7 +42,7 @@ export function DraftComparisonTable({
         Draft Comparison
       </h3>
       <div style={{ overflowX: "auto" }}>
-        <table style={tableStyle} lang="en">
+        <table style={tableStyle} lang="en" data-testid="draft-comparison-table">
           <DraftTableHeader />
           <tbody>
             {draftHistory.map((draft, index, drafts) => (

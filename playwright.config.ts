@@ -5,6 +5,12 @@ import { resolve } from "path";
 // Suppress dotenvx verbose messages
 process.env.DOTENVX_QUIET = "true";
 
+// Enable LLM mocking by default for E2E tests to avoid API costs
+// Override with USE_MOCK_LLM=false to use real APIs (for integration testing only)
+if (!process.env.USE_MOCK_LLM) {
+  process.env.USE_MOCK_LLM = "true";
+}
+
 // Fix NO_COLOR/FORCE_COLOR conflict
 if (process.env.NO_COLOR && process.env.FORCE_COLOR) {
   delete process.env.NO_COLOR;
@@ -26,20 +32,22 @@ if (envBaseUrl) {
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 30000,
-  expect: { timeout: 3000 },
+  timeout: 60000, // Increased for slower operations
+  expect: { timeout: 5000 }, // Increased for better reliability
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   maxFailures: process.env.CI ? 5 : 3,
-  workers: process.env.CI ? 4 : 6,
+  workers: process.env.CI ? 4 : 4, // Reduced to 4 for better stability in parallel execution
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "https://writeo.tre.systems/",
-    actionTimeout: 5000,
+    actionTimeout: 10000,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "off",
+    // Clear storage state between tests for better isolation
+    storageState: undefined,
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

@@ -236,7 +236,9 @@ export default function HistoryPage() {
 
       <div className="container" data-testid="history-page">
         <div style={{ marginBottom: "var(--spacing-xl)" }}>
-          <h1 className="page-title">History</h1>
+          <h1 className="page-title" data-testid="history-page-title">
+            History
+          </h1>
           <p className="page-subtitle">
             View and access your drafts and submissions. Continue editing unsaved drafts or review
             your past work.

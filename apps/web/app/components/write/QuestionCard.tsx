@@ -38,6 +38,7 @@ export function QuestionCard({
             rows={4}
             disabled={disabled}
             translate="no"
+            data-testid="custom-question-textarea"
             style={{
               width: "100%",
               minHeight: "80px",
@@ -58,7 +59,12 @@ export function QuestionCard({
           )}
         </>
       ) : (
-        <div className="prompt-box notranslate" style={{ whiteSpace: "pre-wrap" }} translate="no">
+        <div
+          className="prompt-box notranslate"
+          style={{ whiteSpace: "pre-wrap" }}
+          translate="no"
+          data-testid="prompt-box"
+        >
           {prompt}
         </div>
       )}

@@ -1,4 +1,4 @@
-import { Page, expect } from "@playwright/test";
+import { Page, expect as playwrightExpect } from "@playwright/test";
 import { randomUUID } from "crypto";
 // Note: Environment variables are already loaded in playwright.config.ts
 // No need to load them again here to avoid duplicate messages
@@ -26,9 +26,11 @@ export const TEST_ESSAYS = {
 const API_BASE = process.env.API_BASE || process.env.API_BASE_URL || "http://localhost:8787";
 const API_KEY = process.env.TEST_API_KEY || process.env.API_KEY || "";
 
-// Track last submission time to add delays between parallel test submissions
-let lastSubmissionTime = 0;
-const MIN_DELAY_MS = 100; // Reduced from 200ms - only needed for rate limiting
+// Track last submission time per worker to add delays between parallel test submissions
+// Use worker ID to avoid conflicts between workers
+const workerId = process.env.TEST_WORKER_INDEX || "0";
+const submissionTimers = new Map<string, number>();
+const MIN_DELAY_MS = 200; // Delay between submissions to avoid rate limits
 
 /**
  * Create a test submission via API with retry logic for rate limiting
@@ -43,13 +45,14 @@ export async function createTestSubmission(
     throw new Error("TEST_API_KEY or API_KEY environment variable required for E2E tests");
   }
 
-  // Add small delay to prevent hitting rate limits when tests run in parallel
+  // Add delay per worker to prevent hitting rate limits when tests run in parallel
   const now = Date.now();
-  const timeSinceLastSubmission = now - lastSubmissionTime;
+  const lastTime = submissionTimers.get(workerId) || 0;
+  const timeSinceLastSubmission = now - lastTime;
   if (timeSinceLastSubmission < MIN_DELAY_MS) {
     await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_MS - timeSinceLastSubmission));
   }
-  lastSubmissionTime = Date.now();
+  submissionTimers.set(workerId, Date.now());
 
   const submissionId = randomUUID();
   const questionId = randomUUID();
@@ -58,7 +61,10 @@ export async function createTestSubmission(
   for (let attempt = 0; attempt <= retries; attempt++) {
     // Exponential backoff: wait longer on each retry
     if (attempt > 0) {
-      const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Max 10 seconds
+      // Add jitter to avoid thundering herd
+      const baseBackoff = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+      const jitter = Math.random() * 1000; // Random 0-1s
+      const backoffMs = baseBackoff + jitter;
       await new Promise((resolve) => setTimeout(resolve, backoffMs));
     }
 
@@ -140,14 +146,14 @@ export async function createTestSubmission(
  */
 export async function waitForResults(page: Page, timeout = 30000): Promise<void> {
   // Wait for either success state or error state
+  // Prioritize data-testid selectors for reliability
   const selectors = [
     '[data-testid="results-loaded"]',
+    '[data-testid="overall-score-value"]',
+    '[data-testid="teacher-feedback"]',
+    '[data-testid="cefr-badge"]',
     "text=Your Writing Feedback",
-    ".overall-score-value",
-    "text=/Your Writing Level|Overall Score|Estimated Level/i",
-    "text=/A[12]|B[12]|C[12]/", // CEFR level
     "text=Results Not Available", // Error state
-    "#teacher-feedback-container", // Teacher feedback
   ];
 
   // Wait for at least one of these to appear
@@ -162,14 +168,28 @@ export class HomePage {
 
   async goto() {
     await this.page.goto("/");
+    // Wait for page to be ready (consistent pattern)
+    await this.page.waitForLoadState("networkidle", { timeout: 15000 });
   }
 
   async getTaskCards() {
-    return this.page.locator(".task-card");
+    return this.page.locator('[data-testid="task-card"]');
   }
 
   async clickTask(taskId: string) {
-    await this.page.click(`a[href="/write/${taskId}"]`);
+    // Use data-testid for reliable selection
+    const link = this.page.locator(`[data-testid="task-card-link-${taskId}"]`);
+    // Wait for link to be visible and ready
+    await link.waitFor({ state: "visible", timeout: 15000 });
+    // Wait for page to be stable (but don't fail if networkidle times out - it's optional)
+    await this.page.waitForLoadState("domcontentloaded", { timeout: 10000 });
+    // Click and wait for navigation - more reliable pattern
+    await Promise.all([
+      this.page.waitForURL(new RegExp(`/write/${taskId}`), { timeout: 20000 }),
+      link.click(),
+    ]);
+    // Wait for new page to be ready
+    await this.page.waitForLoadState("domcontentloaded", { timeout: 10000 });
   }
 
   async getProgressDashboard() {
@@ -195,7 +215,7 @@ export class HistoryPage {
   }
 
   async getTitle() {
-    return this.page.locator("h1:has-text('History')");
+    return this.page.locator('[data-testid="history-page-title"]');
   }
 
   async getEmptyState() {
@@ -233,58 +253,169 @@ export class HistoryPage {
   }
 }
 
+/**
+ * Helper to wait for navigation to results page with error handling
+ */
+export async function waitForResultsNavigation(page: Page, timeout = 60000): Promise<void> {
+  const consoleErrors: string[] = [];
+  const networkErrors: string[] = [];
+
+  const consoleHandler = (msg: any) => {
+    if (msg.type() === "error") {
+      consoleErrors.push(msg.text());
+    }
+  };
+
+  const responseHandler = (response: any) => {
+    if (response.status() === 429) {
+      networkErrors.push(`429 Rate Limit: ${response.url()}`);
+    } else if (response.status() >= 400 && response.url().includes("/submissions/")) {
+      networkErrors.push(`${response.status()} Error: ${response.url()}`);
+    }
+  };
+
+  page.on("console", consoleHandler);
+  page.on("response", responseHandler);
+
+  try {
+    // Check if page is closed before waiting
+    if (page.isClosed()) {
+      throw new Error("Page was closed before navigation could complete");
+    }
+
+    // Wait for navigation to results page
+    // Use a more robust approach that handles page closure gracefully
+    await playwrightExpect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout });
+  } catch (error: any) {
+    // Check if page was closed
+    if (
+      page.isClosed() ||
+      error?.message?.includes("Target page, context or browser has been closed")
+    ) {
+      throw new Error(
+        `Page was closed during navigation. This might indicate a crash or navigation issue. Network: ${networkErrors.join("; ")}. Console: ${consoleErrors.join("; ")}`,
+      );
+    }
+
+    // Check for rate limit errors
+    if (networkErrors.some((e) => e.includes("429"))) {
+      throw new Error(
+        `Rate limit hit. Please reduce parallel workers or add delays. Errors: ${networkErrors.join("; ")}`,
+      );
+    }
+
+    // Check for visible error messages
+    const errorSelectors = [
+      '[role="alert"]',
+      '[data-testid="error"]',
+      "text=/error/i",
+      "text=/too many/i",
+      "text=/rate limit/i",
+    ];
+
+    for (const selector of errorSelectors) {
+      const errorElement = page.locator(selector).first();
+      const isVisible = await errorElement.isVisible({ timeout: 1000 }).catch(() => false);
+      if (isVisible) {
+        const errorText = await errorElement.textContent();
+        throw new Error(
+          `Submission failed. Error: "${errorText}". Network: ${networkErrors.join("; ")}. Console: ${consoleErrors.join("; ")}`,
+        );
+      }
+    }
+
+    // If we have network or console errors, include them
+    if (networkErrors.length > 0 || consoleErrors.length > 0) {
+      throw new Error(
+        `Submission failed. Network: ${networkErrors.join("; ")}. Console: ${consoleErrors.join("; ")}`,
+      );
+    }
+
+    throw error;
+  } finally {
+    page.off("console", consoleHandler);
+    page.off("response", responseHandler);
+  }
+}
+
 export class WritePage {
   constructor(private page: Page) {}
 
   async goto(taskId: string) {
-    await this.page.goto(`/write/${taskId}`);
+    await this.page.goto(`/write/${taskId}`, { waitUntil: "domcontentloaded", timeout: 60000 });
   }
 
   async getQuestionText() {
-    // For regular pages, use .prompt-box. For custom page, use the first textarea (question input)
-    // Use .first() to avoid strict mode violations when both exist
-    return this.page.locator(".prompt-box").first();
+    // For regular pages, use prompt-box testid. For custom page, use the custom question textarea
+    return this.page
+      .locator('[data-testid="prompt-box"]')
+      .or(this.page.locator('[data-testid="custom-question-textarea"]'));
   }
 
   async getCustomQuestionTextarea() {
-    return this.page.locator(".question-card textarea").first();
+    return this.page.locator('[data-testid="custom-question-textarea"]');
   }
 
   async getTextarea() {
-    // Answer textarea has id="answer" or is the last textarea (answer comes after question)
-    return this.page.locator("textarea#answer").or(this.page.locator("textarea").last());
+    return this.page.locator('[data-testid="answer-textarea"]');
   }
 
   async typeEssay(text: string) {
-    const textarea = this.page.locator("textarea#answer");
+    const textarea = this.page.locator('[data-testid="answer-textarea"]');
     await textarea.waitFor({ state: "visible", timeout: 10000 });
-    // Use fill() for better performance, especially for long essays
-    // Then trigger input event to ensure React state updates
-    await textarea.fill(text);
-    // Only evaluate if element still exists (might be destroyed during navigation)
-    try {
-      await textarea.evaluate((el) => {
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-        el.dispatchEvent(new Event("change", { bubbles: true }));
-      });
-    } catch (e) {
-      // Element might have been destroyed, which is fine - fill() already updated the value
+    await textarea.clear();
+
+    // For short text, use type() which naturally triggers React onChange
+    // For long text, use fill() + manual event dispatch for performance
+    if (text.length < 500) {
+      await textarea.type(text, { delay: 0 });
+    } else {
+      // Use fill() for long text, then manually trigger React's onChange
+      await textarea.fill(text);
+      // Trigger React's onChange by dispatching proper input event
+      await textarea.evaluate((el, value) => {
+        // Set value directly (fill() already did this, but ensure it's set)
+        (el as HTMLTextAreaElement).value = value;
+        // Dispatch InputEvent (more accurate than Event for input elements)
+        const inputEvent = new InputEvent("input", {
+          bubbles: true,
+          cancelable: true,
+          inputType: "insertText",
+        });
+        el.dispatchEvent(inputEvent);
+        // Also dispatch change event for completeness
+        const changeEvent = new Event("change", { bubbles: true });
+        el.dispatchEvent(changeEvent);
+      }, text);
     }
+
+    // Wait for React to process the events and update word count
+    // Check both DOM value and that React state has updated
+    await this.page.waitForFunction(
+      (expectedLength) => {
+        const textarea = document.querySelector(
+          '[data-testid="answer-textarea"]',
+        ) as HTMLTextAreaElement;
+        if (!textarea) return false;
+        // Check DOM value is set
+        if (textarea.value.length < expectedLength) return false;
+        // Check word count element exists and has updated (indicates React state updated)
+        const wordCountEl = document.querySelector('[data-testid="word-count-value"]');
+        return wordCountEl !== null;
+      },
+      text.length,
+      { timeout: 10000 },
+    );
   }
 
   async getWordCount() {
-    const text = await this.page
-      .locator("text=/\\d+ (word|words)/i")
-      .first()
-      .textContent()
-      .catch(() => null);
+    const wordCountElement = this.page.locator('[data-testid="word-count-value"]');
+    const text = await wordCountElement.textContent().catch(() => null);
     return text ? parseInt(text.match(/\d+/)?.[0] || "0") : 0;
   }
 
   async getSubmitButton() {
-    return this.page
-      .locator('button[type="submit"]')
-      .or(this.page.locator('button:has-text("Submit")'));
+    return this.page.locator('[data-testid="submit-button"]');
   }
 
   async isSubmitButtonDisabled() {
@@ -294,8 +425,22 @@ export class WritePage {
 
   async clickSubmit() {
     const button = await this.getSubmitButton();
-    await button.waitFor({ state: "visible", timeout: 5000 });
-    await button.first().click();
+    await button.waitFor({ state: "visible", timeout: 15000 });
+    // Wait for button to be enabled (with timeout)
+    await this.page.waitForFunction(
+      () => {
+        const btn = document.querySelector('[data-testid="submit-button"]') as HTMLButtonElement;
+        return btn && !btn.disabled;
+      },
+      { timeout: 15000 },
+    );
+    // Wait for page to be stable before clicking
+    await this.page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+    // Click and wait for navigation to start
+    await Promise.all([
+      this.page.waitForURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 }).catch(() => {}),
+      button.first().click(),
+    ]);
   }
 
   async getLoadingState() {
@@ -335,47 +480,26 @@ export class ResultsPage {
   }
 
   async getOverallScore() {
-    return this.page
-      .locator(".overall-score-value")
-      .or(this.page.locator("text=/Overall Score|Estimated Level|Your Writing Level/"));
+    return this.page.locator('[data-testid="overall-score-value"]');
   }
 
   async getCEFRLevel() {
-    return this.page
-      .locator("text=/\\b(A1|A2|B1|B2|C1|C2)\\b/")
-      .or(
-        this.page.locator(
-          "text=/CEFR|Level|Proficient|Independent|Basic|Elementary|Intermediate|Advanced/",
-        ),
-      );
+    return this.page.locator('[data-testid="cefr-badge"]');
   }
 
   async getDimensionScores() {
-    const grid = this.page.locator(".dimensions-grid-responsive");
     return {
-      TA: this.page
-        .locator("text=/Task Achievement|TA|Answering the Question/")
-        .or(grid.locator("text=/Answering the Question/")),
-      CC: this.page
-        .locator("text=/Coherence|CC|Organization/")
-        .or(grid.locator("text=/Organization/")),
-      Vocab: this.page.locator("text=/Vocabulary|Vocab/").or(grid.locator("text=/Vocabulary/")),
-      Grammar: this.page.locator("text=/Grammar/").or(grid.locator("text=/Grammar/")),
+      TA: this.page.locator('[data-testid="dimension-score-TA"]'),
+      CC: this.page.locator('[data-testid="dimension-score-CC"]'),
+      Vocab: this.page.locator('[data-testid="dimension-score-Vocab"]'),
+      Grammar: this.page.locator('[data-testid="dimension-score-Grammar"]'),
     };
   }
 
   async getGrammarErrorsSection() {
     return this.page
-      .locator("text=Grammar & Language Feedback")
-      .or(
-        this.page
-          .locator("text=Your Writing with Feedback")
-          .or(
-            this.page
-              .locator("text=Common Areas to Improve")
-              .or(this.page.locator("text=No high-confidence errors")),
-          ),
-      );
+      .locator('[data-testid="grammar-errors-section"]')
+      .or(this.page.locator('[data-testid="heat-map-section"]'));
   }
 
   async getErrorCount() {
@@ -404,46 +528,8 @@ export class ResultsPage {
   }
 
   async getEditableEssay() {
-    // Find the textarea within the "Improve Your Writing" section
-    // The component should always render EditableEssay when finalAnswerText exists
-
-    // Wait for the "Improve Your Writing" section to appear (this is the main indicator)
-    const improveSection = this.page.locator("text=Improve Your Writing");
-    const sectionExists = await improveSection
-      .waitFor({ timeout: 10000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!sectionExists) {
-      // Section doesn't exist, return empty locator
-      return this.page.locator("textarea").filter({ hasText: /^$/ }); // Empty locator
-    }
-
-    // Look for textarea - it should be a sibling or descendant of the Improve Your Writing heading
-    // Try multiple strategies to find the textarea
-    let textarea = this.page.locator("text=Improve Your Writing").locator("..").locator("textarea");
-
-    // If not found, try finding any textarea that's near the Improve Your Writing section
-    if ((await textarea.count()) === 0) {
-      // Find the parent container and look for textarea within it
-      const container = this.page.locator("text=Improve Your Writing").locator("../..");
-      textarea = container.locator("textarea");
-    }
-
-    // If still not found, look for any textarea on the page (fallback)
-    if ((await textarea.count()) === 0) {
-      textarea = this.page.locator("textarea").filter({ hasText: /./ });
-    }
-
-    // Wait for at least one textarea to be visible (with timeout)
-    await textarea
-      .first()
-      .waitFor({ timeout: 5000 })
-      .catch(() => {
-        // If textarea doesn't appear, that's OK - return what we have
-      });
-
-    return textarea;
+    // Use data-testid for reliable selection
+    return this.page.locator('[data-testid="editable-essay-textarea"]');
   }
 
   async getDraftHistory() {
@@ -453,17 +539,12 @@ export class ResultsPage {
   }
 
   async getDraftButtons() {
-    const draftHistory = await this.getDraftHistory();
-    // Get buttons: direct children of the flex container
-    // Structure: Card > FlexContainer > Buttons
-    // So we want direct div children of direct div children of the card
-    // Filter by having "Draft" text to be safe
-    return draftHistory.locator("> div > div").filter({ hasText: /^Draft \d+/ });
+    // Use data-testid pattern for draft buttons
+    return this.page.locator('[data-testid^="draft-button-"]');
   }
 
   async getDraftButton(draftNumber: number) {
-    const draftButtons = await this.getDraftButtons();
-    return draftButtons.filter({ hasText: `Draft ${draftNumber}` }).first();
+    return this.page.locator(`[data-testid="draft-button-${draftNumber}"]`);
   }
 
   async clickDraftButton(draftNumber: number) {
@@ -490,7 +571,7 @@ export class ResultsPage {
   }
 
   async getDraftComparisonTable() {
-    return this.page.locator("text=Draft Comparison").or(this.page.locator("table"));
+    return this.page.locator('[data-testid="draft-comparison-table"]');
   }
 
   async getLoadingMessage() {
@@ -504,9 +585,7 @@ export class ResultsPage {
   }
 
   async getSubmitDraftButton() {
-    return this.page
-      .locator('button:has-text("Submit Improved Draft")')
-      .or(this.page.locator('button:has-text("Submit")').filter({ hasText: /draft|improve/i }));
+    return this.page.locator('[data-testid="submit-improved-draft-button"]');
   }
 
   /**

@@ -111,6 +111,7 @@ export function DimensionScores({
           gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
         }}
         lang="en"
+        data-testid="dimensions-grid"
       >
         {dimensionItems.map(({ key, label, score }) => {
           const isWeakest = lowestDim && lowestDim[0] === key;
@@ -118,7 +119,12 @@ export function DimensionScores({
           const scoreColor = getScoreColor(score);
 
           return (
-            <div key={key} style={getCardStyle(Boolean(isWeakest))} lang="en">
+            <div
+              key={key}
+              style={getCardStyle(Boolean(isWeakest))}
+              lang="en"
+              data-testid={`dimension-score-${key}`}
+            >
               <div style={{ ...scoreNumberStyle, color: scoreColor }} lang="en">
                 {score.toFixed(1)}
               </div>

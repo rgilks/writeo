@@ -1,12 +1,15 @@
 import { test as base, expect } from "@playwright/test";
 import { HomePage, WritePage, ResultsPage, HistoryPage } from "./helpers";
 import { createTestSubmission, generateValidEssay, getTestEssay } from "./helpers";
+import { randomUUID } from "crypto";
 
 type TestFixtures = {
   homePage: HomePage;
   writePage: WritePage;
   resultsPage: ResultsPage;
   historyPage: HistoryPage;
+  // Unique test identifier for isolation
+  testId: string;
   // Shared submission fixtures - created once per test file and reused
   sharedSubmission: { submissionId: string; questionText: string; essay: string };
   sharedSubmissionWithErrors: { submissionId: string; questionText: string; essay: string };
@@ -14,6 +17,7 @@ type TestFixtures = {
 };
 
 export const test = base.extend<TestFixtures>({
+  // Don't override page - use beforeEach in tests instead
   homePage: async ({ page }, use) => await use(new HomePage(page)),
   writePage: async ({ page }, use) => await use(new WritePage(page)),
   resultsPage: async ({ page }, use) => await use(new ResultsPage(page)),

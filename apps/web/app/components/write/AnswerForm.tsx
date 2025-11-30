@@ -19,7 +19,6 @@ interface AnswerFormProps {
     variedStructure: boolean;
   };
   storeResults: boolean;
-  activeDraftId: string | null;
   onAnswerChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   onSelfEvalChange: (updates: Partial<AnswerFormProps["selfEval"]>) => void;
@@ -35,12 +34,13 @@ export function AnswerForm({
   customQuestion,
   selfEval,
   storeResults,
-  activeDraftId,
   onAnswerChange,
   onSubmit,
   onSelfEvalChange,
   onStoreResultsChange,
 }: AnswerFormProps) {
+  const isSubmitDisabled = loading || !answer.trim() || wordCount < MIN_ESSAY_WORDS;
+
   const placeholder =
     isCustom && !customQuestion.trim()
       ? "Write your essay here. Minimum 250 words required. This is free writing practice - write about any topic you choose."
@@ -55,6 +55,7 @@ export function AnswerForm({
         </label>
         <textarea
           id="answer"
+          data-testid="answer-textarea"
           className="textarea notranslate"
           value={answer}
           onChange={onAnswerChange}
@@ -98,22 +99,12 @@ export function AnswerForm({
               alignItems: "center",
               gap: "var(--spacing-sm)",
             }}
-          >
-            {activeDraftId && (
-              <span
-                style={{
-                  fontSize: "0.875rem",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                ✓ Auto-saved
-              </span>
-            )}
-          </div>
+          ></div>
           <button
             type="submit"
+            data-testid="submit-button"
             className="btn btn-primary"
-            disabled={loading || !answer.trim() || wordCount < MIN_ESSAY_WORDS}
+            disabled={isSubmitDisabled}
             title={
               wordCount < MIN_ESSAY_WORDS
                 ? `Please write at least ${MIN_ESSAY_WORDS} words (currently ${wordCount} words)`

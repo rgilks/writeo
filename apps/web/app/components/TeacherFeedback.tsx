@@ -399,7 +399,13 @@ export function TeacherFeedback({
   const showLoading = isLoading && !streamedFeedback;
 
   return (
-    <div id="teacher-feedback-container" lang="en" translate="yes" style={CONTAINER_STYLES}>
+    <div
+      id="teacher-feedback-container"
+      lang="en"
+      translate="yes"
+      style={CONTAINER_STYLES}
+      data-testid="teacher-feedback"
+    >
       <div
         style={{
           display: "flex",

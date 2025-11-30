@@ -10,14 +10,17 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ title, description, icon, href }: TaskCardProps) {
+  // Extract task ID from href for test ID
+  const taskId = href.replace("/write/", "");
   return (
     <motion.div variants={cardVariants}>
       <Link
         href={href}
         style={{ textDecoration: "none", display: "block" }}
         className="task-card-link"
+        data-testid={`task-card-link-${taskId}`}
       >
-        <div className="task-card">
+        <div className="task-card" data-testid="task-card">
           <div className="task-header">
             <div className="task-title">{title}</div>
             <div className="task-icon">{icon}</div>

@@ -32,7 +32,7 @@ export function ErrorTypeList({ grammarErrors }: { grammarErrors: LanguageToolEr
   const listStyle = { margin: 0, paddingLeft: "var(--spacing-md)" } as const;
 
   return (
-    <div className="card" lang="en" style={cardStyle}>
+    <div className="card" lang="en" style={cardStyle} data-testid="grammar-errors-section">
       <h2 style={headingStyle} lang="en">
         Common Areas to Improve
       </h2>

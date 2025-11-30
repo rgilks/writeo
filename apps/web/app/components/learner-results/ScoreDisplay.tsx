@@ -28,7 +28,11 @@ export function ScoreDisplay({ overall }: { overall: number }) {
     return (
       <div className="overall-score-section">
         <div className="overall-score-main">
-          <div className="overall-score-value" style={{ color: scoreColor, fontSize: "2.5rem" }}>
+          <div
+            className="overall-score-value"
+            style={{ color: scoreColor, fontSize: "2.5rem" }}
+            data-testid="overall-score-value"
+          >
             —
           </div>
           <div className="overall-score-label" lang="en">
@@ -56,7 +60,11 @@ export function ScoreDisplay({ overall }: { overall: number }) {
   return (
     <div className="overall-score-section">
       <div className="overall-score-main">
-        <div className="overall-score-value" style={{ color: scoreColor }}>
+        <div
+          className="overall-score-value"
+          style={{ color: scoreColor }}
+          data-testid="overall-score-value"
+        >
           {overall.toFixed(1)}
         </div>
         <div className="overall-score-label" lang="en">

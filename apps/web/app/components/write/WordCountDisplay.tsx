@@ -9,6 +9,7 @@ interface WordCountDisplayProps {
 export function WordCountDisplay({ wordCount }: WordCountDisplayProps) {
   return (
     <div
+      data-testid="word-count-display"
       style={{
         display: "flex",
         gap: "var(--spacing-md)",
@@ -17,7 +18,7 @@ export function WordCountDisplay({ wordCount }: WordCountDisplayProps) {
         color: "var(--text-secondary)",
       }}
     >
-      <span aria-live="polite" aria-atomic="true">
+      <span aria-live="polite" aria-atomic="true" data-testid="word-count-value">
         {wordCount} {wordCount === 1 ? "word" : "words"}
       </span>
       {wordCount < MIN_ESSAY_WORDS && (

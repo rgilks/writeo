@@ -212,6 +212,7 @@ export function EditableEssay({
         disabled={isSubmitting}
         translate="no"
         lang="en"
+        data-testid="editable-essay-textarea"
         style={{
           width: "100%",
           minHeight: TEXTAREA_MIN_HEIGHT,
@@ -312,6 +313,7 @@ export function EditableEssay({
           onClick={handleSubmit}
           disabled={isSubmitting || !hasChanges}
           className="btn btn-primary"
+          data-testid="submit-improved-draft-button"
           style={{
             fontSize: "14px",
             padding: "var(--spacing-sm) var(--spacing-lg)",

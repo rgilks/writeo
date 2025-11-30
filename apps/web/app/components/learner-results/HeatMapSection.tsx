@@ -33,7 +33,7 @@ export function HeatMapSection({
   } as const;
 
   return (
-    <div className="card notranslate" translate="no" lang="en">
+    <div className="card notranslate" translate="no" lang="en" data-testid="heat-map-section">
       <h2 style={headingStyle} lang="en">
         Your Writing with Feedback
       </h2>

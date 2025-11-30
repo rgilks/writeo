@@ -37,7 +37,7 @@ export default function WritePage() {
   const storeResults = usePreferencesStore((state) => state.storeResults);
   const setStoreResults = usePreferencesStore((state) => state.setStoreResults);
 
-  const { answer, activeDraftId, handleAnswerChange } = useWriteForm();
+  const { answer, handleAnswerChange } = useWriteForm();
   const { submit, loading, error } = useEssaySubmission();
 
   const wordCount = countWords(answer);
@@ -102,7 +102,9 @@ export default function WritePage() {
 
       <div className="container" style={{ overflowY: "auto" }}>
         <div style={{ marginBottom: "var(--spacing-xl)" }}>
-          <h1 className="page-title">{task.title}</h1>
+          <h1 className="page-title" data-testid="page-title">
+            {task.title}
+          </h1>
           <p className="page-subtitle">
             Write your essay and get detailed feedback to improve your writing.
           </p>
@@ -126,7 +128,6 @@ export default function WritePage() {
             customQuestion={customQuestion}
             selfEval={selfEval}
             storeResults={storeResults}
-            activeDraftId={activeDraftId}
             onAnswerChange={handleAnswerChange}
             onSubmit={handleSubmit}
             onSelfEvalChange={handleSelfEvalChange}

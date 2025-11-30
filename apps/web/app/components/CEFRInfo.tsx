@@ -214,6 +214,7 @@ export function CEFRBadge({ level, showLabel = true }: CEFRBadgeProps) {
         border: "1px solid var(--border-color)",
       }}
       lang="en"
+      data-testid="cefr-badge"
     >
       <span
         style={{
