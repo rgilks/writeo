@@ -78,6 +78,19 @@ npm run test:e2e:ui   # Playwright UI mode
 
 **Total:** 20 test cases covering critical user flows
 
+### PWA Tests (`tests/web/pwa.test.ts` - Vitest)
+
+**Coverage:** Progressive Web App functionality
+
+**Test Cases:**
+
+- Service worker registration
+- Manifest validation
+- Install prompt handling
+- Offline functionality (manual testing recommended)
+
+See `apps/web/PWA_SETUP.md` for PWA setup and testing details.
+
 ---
 
 ## Configuration

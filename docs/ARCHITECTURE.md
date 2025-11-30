@@ -143,13 +143,13 @@ graph TB
 
 ### 3.1 Cloudflare Components
 
-| Component           | Technology                  | Responsibility                                                       | Scale-to-Zero        |
-| ------------------- | --------------------------- | -------------------------------------------------------------------- | -------------------- |
-| **Web Frontend**    | Next.js 15+ (App Router)    | User interface, form handling, result display, history page          | ✅ Yes               |
-| **API Worker**      | Cloudflare Workers          | REST API, request validation, data orchestration                     | ✅ Yes               |
-| **R2 Storage**      | Cloudflare R2               | Persistent storage for questions, answers, submissions (opt-in only) | ❌ No (storage only) |
-| **KV Store**        | Cloudflare KV               | Assessment results cache (90-day TTL, opt-in only)                   | ❌ No (storage only) |
-| **Browser Storage** | localStorage/sessionStorage | Default storage location (client-side only)                          | ✅ Yes (client-side) |
+| Component           | Technology                     | Responsibility                                                               | Scale-to-Zero        |
+| ------------------- | ------------------------------ | ---------------------------------------------------------------------------- | -------------------- |
+| **Web Frontend**    | Next.js 15+ (App Router) + PWA | User interface, form handling, result display, history page, offline support | ✅ Yes               |
+| **API Worker**      | Cloudflare Workers             | REST API, request validation, data orchestration                             | ✅ Yes               |
+| **R2 Storage**      | Cloudflare R2                  | Persistent storage for questions, answers, submissions (opt-in only)         | ❌ No (storage only) |
+| **KV Store**        | Cloudflare KV                  | Assessment results cache (90-day TTL, opt-in only)                           | ❌ No (storage only) |
+| **Browser Storage** | localStorage/sessionStorage    | Default storage location (client-side only)                                  | ✅ Yes (client-side) |
 
 ### 3.1.1 Frontend State Management
 
@@ -535,6 +535,7 @@ See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis, including per-s
 - **Language**: TypeScript 5+
 - **Styling**: Global CSS with CSS Variables
 - **API Client**: Server Actions (server-side only)
+- **PWA**: Service Worker, Web App Manifest, offline support, installable
 
 ### API Worker Stack
 

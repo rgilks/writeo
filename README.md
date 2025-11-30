@@ -23,19 +23,26 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 - **🔒 Privacy First**: "Opt-in" server storage model. By default, data never leaves the user's browser storage.
 - **⚡ High Performance**: Serverless architecture with Cloudflare Workers and Modal, supporting parallel processing and scale-to-zero.
 - **💰 Cost Effective**: Operational modes to balance cost and performance (from ~$8/month to ~$25/month for moderate usage).
+- **📱 Progressive Web App**: Installable PWA with offline support, fast loading, and app-like experience.
 
 ## 📚 Documentation
 
-| Topic                                       | Description                                                         |
-| ------------------------------------------- | ------------------------------------------------------------------- |
-| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System design, components, data flow, and technology stack.         |
-| **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**     | Step-by-step guide for deploying to production.                     |
-| **[COST_REVIEW.md](docs/COST_REVIEW.md)**   | Detailed cost analysis, guardrails, and pricing for OpenAI vs Groq. |
-| **[MODES.md](docs/MODES.md)**               | Guide to switching between Cheap Mode and Turbo Mode.               |
-| **[SERVICES.md](docs/SERVICES.md)**         | Documentation for Modal services (Essay Scoring, LanguageTool).     |
-| **[SPEC.md](docs/SPEC.md)**                 | Complete API specification.                                         |
-| **[TESTING.md](docs/TESTING.md)**           | Testing guide and strategies.                                       |
-| **[OPERATIONS.md](docs/OPERATIONS.md)**     | Operational guide for logging, monitoring, and maintenance.         |
+**📖 [Full Documentation Index](docs/README.md)** - Complete documentation index with all guides and references.
+
+| Topic                                               | Description                                                            |
+| --------------------------------------------------- | ---------------------------------------------------------------------- |
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**         | System design, components, data flow, and technology stack.            |
+| **[API-ARCHITECTURE.md](docs/API-ARCHITECTURE.md)** | Detailed API Worker architecture (middleware, request flow, services). |
+| **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**             | Step-by-step guide for deploying to production.                        |
+| **[COST_REVIEW.md](docs/COST_REVIEW.md)**           | Detailed cost analysis, guardrails, and pricing for OpenAI vs Groq.    |
+| **[MODES.md](docs/MODES.md)**                       | Quick guide for switching between Cheap Mode and Turbo Mode.           |
+| **[SERVICES.md](docs/SERVICES.md)**                 | Documentation for Modal services (Essay Scoring, LanguageTool).        |
+| **[SPEC.md](docs/SPEC.md)**                         | Complete API specification with request/response examples.             |
+| **[TESTING.md](docs/TESTING.md)**                   | Testing guide and strategies.                                          |
+| **[OPERATIONS.md](docs/OPERATIONS.md)**             | Operational guide for logging, monitoring, and maintenance.            |
+| **[STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md)** | Frontend state management (Zustand, Immer, patterns).                  |
+| **[SCRIPTS.md](docs/SCRIPTS.md)**                   | Scripts reference and usage guide.                                     |
+| **[STATUS.md](docs/STATUS.md)**                     | Current status, roadmap, and production readiness.                     |
 
 ## 🛠️ Architecture Overview
 
@@ -172,6 +179,16 @@ npx vitest tests/api.test.ts
 **Git Hooks:** Pre-commit and pre-push hooks are installed automatically. Use `QUICK_PUSH=true git push` to skip E2E tests for faster pushes.
 
 See **[TESTING.md](docs/TESTING.md)** for more info.
+
+## 🗺️ Roadmap & Status
+
+See **[STATUS.md](docs/STATUS.md)** for current production status, completed features, known limitations, and roadmap.
+
+## 💬 Support
+
+- **Discord**: [Join our Discord server](https://discord.gg/9rtwCKp2)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/rgilks/writeo/issues)
+- **Documentation**: [Full documentation index](docs/README.md)
 
 ## 📄 License
 

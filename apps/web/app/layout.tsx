@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Footer } from "./components/Footer";
 import { SkipLink } from "./components/SkipLink";
+import { PWARegistration } from "./components/PWARegistration";
 
 export const metadata: Metadata = {
   title: {
@@ -46,9 +47,26 @@ export const metadata: Metadata = {
       "Practice your writing skills and get detailed AI-powered feedback on your essays.",
   },
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
     shortcut: "/icon.svg",
-    apple: "/icon.svg",
+    apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Writeo",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "theme-color": "#3b82f6",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "Writeo",
   },
   robots: {
     index: true,
@@ -70,6 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SkipLink />
         <main id="main-content">{children}</main>
         <Footer />
+        <PWARegistration />
       </body>
     </html>
   );

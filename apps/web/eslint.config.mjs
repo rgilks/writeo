@@ -29,6 +29,8 @@ export default [
       "*.config.js",
       "*.config.mjs",
       "next-env.d.ts",
+      "public/service-worker.js",
+      "scripts/**",
     ],
   },
 ];
