@@ -82,7 +82,10 @@ export async function createSubmission(
     throw new Error(`Failed to create submission: ${await getErrorMessage(response)}`);
   }
 
-  const results = await response.json();
+  const data = await response.json();
+  // API returns { status: "success", results: AssessmentResults, requestId: string }
+  // Extract the results field
+  const results = data.results || data;
   return { submissionId, results };
 }
 
