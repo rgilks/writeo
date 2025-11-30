@@ -218,7 +218,7 @@ export default function PrivacyPage() {
               to opt out of the sale of personal information. Since Writeo does not sell personal
               information, no opt-out is necessary. However, if you have concerns or questions,
               please contact the project maintainer via{" "}
-              <ExternalLink href="https://discord.gg/9rtwCKp2">Discord server</ExternalLink>.
+              <ExternalLink href="https://discord.gg/YxuFAXWuzw">Discord server</ExternalLink>.
             </Text>
           </SectionCard>
 
@@ -277,7 +277,7 @@ export default function PrivacyPage() {
               don't have data stored on servers. This significantly reduces the risk of data
               breaches. However, if you've opted in to server storage and a breach occurs, you will
               be notified through the contact information you've provided or via the{" "}
-              <ExternalLink href="https://discord.gg/9rtwCKp2">Discord server</ExternalLink>.
+              <ExternalLink href="https://discord.gg/YxuFAXWuzw">Discord server</ExternalLink>.
             </Text>
             <Text note>
               If you believe your data may have been compromised, please contact the project
@@ -320,7 +320,7 @@ export default function PrivacyPage() {
             </Text>
             <Text>
               <strong>Support:</strong> Join the{" "}
-              <ExternalLink href="https://discord.gg/9rtwCKp2">Discord server</ExternalLink> for
+              <ExternalLink href="https://discord.gg/YxuFAXWuzw">Discord server</ExternalLink> for
               support and questions.
             </Text>
             <Text note>

@@ -18,7 +18,7 @@
 
 - Donations/payment processing section
 - Third-party service disclosures with DPA information
-- Contact information (Discord support: https://discord.gg/9rtwCKp2)
+- Contact information (Discord support: https://discord.gg/YxuFAXWuzw)
 - CCPA "Do Not Sell" section (no data sold)
 - CCPA non-discrimination policy
 - Data breach notification procedures
@@ -133,7 +133,7 @@ Required for users who opt into server storage:
 - ✅ Privacy Policy
 - ✅ Cookie Policy
 - ✅ Accessibility Statement
-- ✅ Contact information (Discord support)
+- ✅ Contact information (Discord support: https://discord.gg/YxuFAXWuzw)
 - ⚠️ Third-party licenses verification (pending)
 - ⚠️ Model licenses verification (pending)
 

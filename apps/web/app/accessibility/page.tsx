@@ -187,7 +187,7 @@ export default function AccessibilityPage() {
             <ContentList>
               <li>
                 Join our{" "}
-                <ExternalLink href="https://discord.gg/9rtwCKp2">Discord server</ExternalLink> and
+                <ExternalLink href="https://discord.gg/YxuFAXWuzw">Discord server</ExternalLink> and
                 use the support channel
               </li>
               <li>

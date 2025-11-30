@@ -6,7 +6,7 @@ import Image from "next/image";
 import { GitHubIcon } from "./icons/GitHubIcon";
 
 const KOFI_URL = "https://ko-fi.com/N4N31DPNUS";
-const DISCORD_URL = "https://discord.gg/9rtwCKp2";
+const DISCORD_URL = "https://discord.gg/YxuFAXWuzw";
 const GITHUB_URL = "https://github.com/rgilks/writeo";
 const KOFI_IMAGE_URL = "https://storage.ko-fi.com/cdn/kofi2.png?v=6";
 

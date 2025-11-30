@@ -25,7 +25,7 @@ All endpoints (except /health, /docs, /openapi.json) require API key authenticat
 
 \`Authorization: Token <your_api_key>\`
 
-For API access, please contact the project maintainer via GitHub (https://github.com/rgilks/writeo) or Discord (https://discord.gg/9rtwCKp2).
+For API access, please contact the project maintainer via GitHub (https://github.com/rgilks/writeo) or Discord (https://discord.gg/YxuFAXWuzw).
 
 ### Rate Limits (per IP)
 - Submissions: 10 requests per minute (expensive operations)

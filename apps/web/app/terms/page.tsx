@@ -108,7 +108,7 @@ export default function TermsPage() {
             <Text note>
               <strong>Note:</strong> Rate limits are applied per IP address. For API access with
               higher limits, please contact the project maintainer via{" "}
-              <ExternalLink href="https://discord.gg/9rtwCKp2">Discord server</ExternalLink>.
+              <ExternalLink href="https://discord.gg/YxuFAXWuzw">Discord server</ExternalLink>.
             </Text>
           </SectionCard>
 
@@ -171,7 +171,7 @@ export default function TermsPage() {
             <Text>
               If you have questions about these Terms of Service, please contact the project
               maintainer via{" "}
-              <ExternalLink href="https://discord.gg/9rtwCKp2">Discord server</ExternalLink>. For
+              <ExternalLink href="https://discord.gg/YxuFAXWuzw">Discord server</ExternalLink>. For
               privacy-related inquiries, please see our{" "}
               <InternalLink href="/privacy">Privacy Policy</InternalLink>.
             </Text>
