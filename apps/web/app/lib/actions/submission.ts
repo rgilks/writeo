@@ -86,6 +86,12 @@ export async function createSubmission(
   try {
     data = await response.json();
   } catch (error) {
+    console.error("[createSubmission] Failed to parse JSON:", error);
+    console.error("[createSubmission] Response status:", response.status);
+    console.error(
+      "[createSubmission] Response headers:",
+      Object.fromEntries(response.headers.entries()),
+    );
     throw new Error(
       `Invalid response format: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
@@ -95,8 +101,18 @@ export async function createSubmission(
   // The response is the assessment results object itself, not wrapped in an envelope
   // Ensure we have a valid structure
   if (!data || typeof data !== "object") {
+    console.error("[createSubmission] Invalid response structure:", { data, type: typeof data });
     throw new Error("Invalid response: expected an object");
   }
+
+  // Log response structure for debugging
+  console.log("[createSubmission] Response received:", {
+    hasStatus: "status" in data,
+    hasTemplate: "template" in data,
+    hasResults: "results" in data,
+    status: data.status,
+    submissionId,
+  });
 
   return { submissionId, results: data };
 }
