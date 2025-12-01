@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { Env } from "../types/env";
-import { processSubmission, updateSubmission } from "../services/submission-processor";
+import { processSubmission } from "../services/submission-processor";
 import { errorResponse, ERROR_CODES } from "../utils/errors";
 import { safeLogError, sanitizeError } from "../utils/logging";
 import { getServices } from "../utils/context";
@@ -44,7 +44,7 @@ export async function createSubmissionHandler(
     if (existing) {
       return errorResponse(
         409,
-        "Submission already exists. Use PUT /v1/text/submissions/{submission_id} to update.",
+        "Submission already exists. Each submission must have a unique submissionId.",
         c,
         ERROR_CODES.SUBMISSION_EXISTS_DIFFERENT_CONTENT,
       );
@@ -64,12 +64,6 @@ export async function createSubmissionHandler(
     safeLogError("Error creating submission", sanitized, c);
     return errorResponse(500, "Internal server error", c, ERROR_CODES.INTERNAL_SERVER_ERROR);
   }
-}
-
-export async function updateSubmissionHandler(
-  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
-) {
-  return updateSubmission(c);
 }
 
 export async function getSubmissionHandler(

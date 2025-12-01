@@ -10,14 +10,14 @@ A modern, scalable API for essay assessment and scoring.
 
 ### Features
 - **Question Management**: Create and store essay questions
-- **Answer Management**: Create and store student answers
-- **Submission Processing**: Submit essays for automated scoring
+- **Submission Processing**: Submit essays for automated scoring (answers are sent inline with submissions)
 - **Assessment Results**: Retrieve detailed scoring results with band scores and CEFR levels
-- **Synchronous Processing**: Results returned immediately in POST/PUT response body
+- **Synchronous Processing**: Results returned immediately in POST response body
+- **AI Feedback**: Get AI-powered feedback and teacher guidance for essay improvement
 
 ### Architecture
 - **Edge API**: Cloudflare Workers for low-latency global access
-- **Storage**: R2 for questions/answers/submissions, KV for results
+- **Storage**: R2 for questions and submissions, KV for results (when opt-in storage is enabled)
 - **ML Scoring**: Modal service for transformer-based essay scoring
 
 ### Authentication
@@ -30,7 +30,7 @@ For API access, please contact the project maintainer via GitHub (https://github
 ### Rate Limits (per IP)
 - **Submissions**: 10 requests per minute (burst limit) AND 100 requests per day (daily limit)
 - **Results (GET)**: 60 requests per minute (read-only)
-- **Questions/Answers**: 30 requests per minute (data writes)
+- **Questions**: 30 requests per minute (data writes)
 - **Other endpoints**: 30 requests per minute
 
 For higher limits, please contact the project maintainer via GitHub (https://github.com/rgilks/writeo) or Discord (https://discord.gg/YxuFAXWuzw).

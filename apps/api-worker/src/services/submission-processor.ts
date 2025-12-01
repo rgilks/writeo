@@ -20,7 +20,6 @@ import { processRelevanceResults } from "./submission/results-relevance";
 import { buildMetadata, buildResponseHeaders } from "./submission/metadata";
 import type { LLMProvider } from "./llm";
 import type { ModalRequest, LanguageToolError, RelevanceCheck } from "@writeo/shared";
-import { uuidStringSchema, formatZodMessage } from "../utils/zod";
 import {
   MAX_REQUEST_BODY_SIZE,
   RESULTS_TTL_SECONDS,
@@ -99,32 +98,6 @@ function applyMetadata(
     mergedAssessment.meta.overallScore = metadata.overallScore;
   }
   mergedAssessment.meta.timestamp = metadata.timestamp;
-}
-
-/**
- * Validates and parses the submission request.
- */
-async function validateAndParseSubmission(
-  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
-  timings: Record<string, number>,
-): Promise<{ body: CreateSubmissionRequest; validation: ValidationResult } | Response> {
-  const sizeValidation = await validateRequestBodySize(c.req.raw, MAX_REQUEST_BODY_SIZE);
-  if (!sizeValidation.valid) {
-    return errorResponse(413, sizeValidation.error || "Request body too large (max 1MB)", c);
-  }
-
-  const parseStartTime = performance.now();
-  const body = await c.req.json<CreateSubmissionRequest>();
-  timings["1_parse_request"] = performance.now() - parseStartTime;
-
-  const validateStartTime = performance.now();
-  const validation = validateSubmissionBody(body, c);
-  if (validation instanceof Response) {
-    return validation;
-  }
-  timings["1b_validate_submission"] = performance.now() - validateStartTime;
-
-  return { body, validation };
 }
 
 /**
@@ -235,7 +208,7 @@ async function processServiceResults(
  *
  * @example
  * ```typescript
- * app.put("/text/submissions/:submission_id", processSubmission);
+ * app.post("/v1/text/submissions", createSubmissionHandler);
  * ```
  */
 export async function processSubmission(
@@ -266,13 +239,13 @@ export async function processSubmission(
       submissionBody = body;
       timings["1b_validate_submission"] = performance.now() - validateStartTime;
     } else {
-      // Parse from request (from PUT with URL param)
-      const parseResult = await validateAndParseSubmission(c, timings);
-      if (parseResult instanceof Response) {
-        return parseResult;
-      }
-      submissionBody = parseResult.body;
-      validation = parseResult.validation;
+      // This should never happen - body is always provided from POST handler
+      return errorResponse(
+        400,
+        "Request body is required",
+        c,
+        ERROR_CODES.INVALID_SUBMISSION_FORMAT,
+      );
     }
     const storeResults = submissionBody.storeResults === true;
 
@@ -371,12 +344,11 @@ export async function processSubmission(
       ...(requestId && { requestId }),
     };
 
-    // Determine status code: 201 for POST (creation), 200 for PUT (update)
-    const isCreation = c.req.method === "POST";
-    const statusCode = isCreation ? 201 : 200;
+    // Always return 201 Created for new submissions
+    const statusCode = 201;
 
-    // Add Location header for POST (201 Created)
-    if (isCreation) {
+    // Add Location header for created resource
+    {
       const url = new URL(c.req.url);
       headersObj["Location"] = `${url.origin}/v1/text/submissions/${submissionId}`;
     }
@@ -409,45 +381,4 @@ export async function processSubmission(
     );
     return errorResponse(500, "Internal server error", c, ERROR_CODES.INTERNAL_SERVER_ERROR);
   }
-}
-
-/**
- * Updates an existing submission.
- * PUT is idempotent - only updates if submission exists.
- *
- * @param c - Hono context with environment bindings
- * @returns Response with assessment results or error
- */
-export async function updateSubmission(
-  c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
-) {
-  const submissionIdResult = uuidStringSchema("submission_id").safeParse(
-    c.req.param("submission_id"),
-  );
-  if (!submissionIdResult.success) {
-    return errorResponse(
-      400,
-      formatZodMessage(submissionIdResult.error, "Invalid submission_id format"),
-      c,
-      ERROR_CODES.INVALID_UUID_FORMAT,
-      "submission_id",
-    );
-  }
-  const submissionId = submissionIdResult.data;
-
-  // Check if submission exists
-  const { storage } = getServices(c);
-  const existing = await storage.getSubmission(submissionId);
-  if (!existing) {
-    return errorResponse(
-      404,
-      "Submission not found. Use POST /v1/text/submissions to create a new submission.",
-      c,
-      ERROR_CODES.SUBMISSION_NOT_FOUND,
-    );
-  }
-
-  // Process the update (same as creation, but submission must exist)
-  // Body will be parsed from request in processSubmission
-  return processSubmission(c, submissionId);
 }

@@ -8,11 +8,7 @@ import { securityHeaders, getCorsOrigin } from "./middleware/security";
 import { questionsRouter } from "./routes/questions";
 import { healthRouter } from "./routes/health";
 import { feedbackRouter } from "./routes/feedback";
-import {
-  createSubmissionHandler,
-  updateSubmissionHandler,
-  getSubmissionHandler,
-} from "./routes/submissions";
+import { createSubmissionHandler, getSubmissionHandler } from "./routes/submissions";
 
 const app = new Hono<{ Bindings: Env; Variables: { requestId?: string } }>();
 
@@ -21,7 +17,7 @@ app.use(
   "*",
   cors({
     origin: (origin, c) => getCorsOrigin(origin, c.env.ALLOWED_ORIGINS),
-    allowMethods: ["GET", "PUT", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400,
   }),
@@ -47,9 +43,8 @@ app.route("/", questionsRouter);
 app.route("/", feedbackRouter);
 
 // Submission routes with versioning (must come after feedbackRouter to avoid route conflicts)
-// POST for creation, PUT for updates, GET for retrieval
+// POST for creation, GET for retrieval
 app.post("/v1/text/submissions", createSubmissionHandler);
-app.put("/v1/text/submissions/:submission_id", updateSubmissionHandler);
 app.get("/v1/text/submissions/:submission_id", getSubmissionHandler);
 
 export default {
