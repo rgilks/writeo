@@ -391,6 +391,11 @@ export async function processSubmission(
         statusCode,
         timings,
         totalMs: timings["0_total"]?.toFixed(2),
+        hasStatus: "status" in responseBody,
+        hasTemplate: "template" in responseBody,
+        hasResults: "results" in responseBody,
+        hasParts:
+          "results" in responseBody && responseBody.results && "parts" in responseBody.results,
       },
       c,
     );
