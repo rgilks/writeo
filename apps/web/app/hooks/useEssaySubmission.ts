@@ -61,21 +61,9 @@ export function useEssaySubmission() {
 
         const response = await Promise.race([submitPromise, timeoutPromise]);
 
-        // Log response for debugging
-        console.log("[useEssaySubmission] Response received:", {
-          hasSubmissionId: !!response.submissionId,
-          hasResults: !!response.results,
-          resultsType: typeof response.results,
-          resultsKeys:
-            response.results && typeof response.results === "object"
-              ? Object.keys(response.results)
-              : null,
-        });
-
         // Validate submission response
         const responseValidation = validateSubmissionResponse(response);
         if (!responseValidation.isValid) {
-          console.error("[useEssaySubmission] Validation failed:", responseValidation.error);
           throw new Error(responseValidation.error!);
         }
 

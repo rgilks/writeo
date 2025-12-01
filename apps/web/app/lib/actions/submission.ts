@@ -101,18 +101,8 @@ export async function createSubmission(
   // The response is the assessment results object itself, not wrapped in an envelope
   // Ensure we have a valid structure
   if (!data || typeof data !== "object") {
-    console.error("[createSubmission] Invalid response structure:", { data, type: typeof data });
     throw new Error("Invalid response: expected an object");
   }
-
-  // Log response structure for debugging
-  console.log("[createSubmission] Response received:", {
-    hasStatus: "status" in data,
-    hasTemplate: "template" in data,
-    hasResults: "results" in data,
-    status: data.status,
-    submissionId,
-  });
 
   return { submissionId, results: data };
 }

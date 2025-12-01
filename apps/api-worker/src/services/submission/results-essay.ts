@@ -30,14 +30,16 @@ function logAssessorDetails(essayAssessment: AssessmentResults, submissionId: st
 
     const firstAnswer = part.answers[0];
     const assessorResults = firstAnswer?.assessorResults as AssessorResult[] | undefined;
-    console.log(
-      `[Essay Assessment][debug] Part ${part.part} has ${assessorResults?.length ?? 0} assessor result(s)`,
-      {
-        submissionId,
-        assessorIds: assessorResults?.map((ar) => ar.id) ?? [],
-        assessorNames: assessorResults?.map((ar) => ar.name) ?? [],
-      },
-    );
+    // Log assessor details for monitoring
+    if (assessorResults && assessorResults.length > 0) {
+      console.log(
+        `[Essay Assessment] Part ${part.part} has ${assessorResults.length} assessor result(s)`,
+        {
+          submissionId,
+          assessorIds: assessorResults.map((ar) => ar.id),
+        },
+      );
+    }
   }
 }
 
@@ -47,34 +49,6 @@ async function parseEssayAssessmentResponse(
 ): Promise<AssessmentResults | null> {
   try {
     const essayAssessment = await response.json<AssessmentResults>();
-    console.log(
-      `[Essay Assessment] Successfully parsed essay assessment for submission ${submissionId}`,
-      {
-        hasResults: !!essayAssessment?.results,
-        hasParts: !!essayAssessment?.results?.parts,
-        partsCount: essayAssessment?.results?.parts?.length ?? 0,
-        status: essayAssessment?.status,
-      },
-    );
-
-    // Log the actual structure to debug
-    if (essayAssessment?.results?.parts) {
-      for (const part of essayAssessment.results.parts) {
-        console.log(`[Essay Assessment][debug] Part ${part.part} structure:`, {
-          hasAnswers: !!part.answers,
-          answersCount: part.answers?.length ?? 0,
-          firstAnswerKeys: part.answers?.[0] ? Object.keys(part.answers[0]) : [],
-          firstAnswerStructure: part.answers?.[0]
-            ? {
-                id: part.answers[0].id,
-                hasAssessorResults: "assessorResults" in (part.answers[0] as any),
-                keys: Object.keys(part.answers[0] as any),
-              }
-            : null,
-        });
-      }
-    }
-
     logAssessorDetails(essayAssessment, submissionId);
 
     // Validate that we have essay assessor results
@@ -91,12 +65,6 @@ async function parseEssayAssessmentResponse(
                 answerId: answer.id,
                 assessorIds: assessorResults?.map((ar) => ar.id) ?? [],
                 assessorCount: assessorResults?.length ?? 0,
-              });
-            } else {
-              console.log(`[Essay Assessment] Found essay assessor for answer ${answer.id}`, {
-                overall: essayAssessor.overall,
-                label: essayAssessor.label,
-                hasDimensions: !!essayAssessor.dimensions,
               });
             }
           }
