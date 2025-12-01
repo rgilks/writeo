@@ -79,31 +79,41 @@ describe("validation utilities", () => {
     it("should return invalid for null", () => {
       const result = validateAssessmentResults(null);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe("Invalid results format");
+      expect(result.error).toBe(
+        "Invalid results format: missing required fields (status, template)",
+      );
     });
 
     it("should return invalid for undefined", () => {
       const result = validateAssessmentResults(undefined);
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe("Invalid results format");
+      expect(result.error).toBe(
+        "Invalid results format: missing required fields (status, template)",
+      );
     });
 
     it("should return invalid for non-object", () => {
       const result = validateAssessmentResults("not an object");
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe("Invalid results format");
+      expect(result.error).toBe(
+        "Invalid results format: missing required fields (status, template)",
+      );
     });
 
     it("should return invalid for object without status", () => {
       const result = validateAssessmentResults({ template: { name: "test" } });
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe("Invalid results format");
+      expect(result.error).toBe(
+        "Invalid results format: missing required fields (status, template)",
+      );
     });
 
     it("should return invalid for object without template", () => {
       const result = validateAssessmentResults({ status: "success" });
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe("Invalid results format");
+      expect(result.error).toBe(
+        "Invalid results format: missing required fields (status, template)",
+      );
     });
 
     it("should return valid for object with status and template", () => {
@@ -156,7 +166,9 @@ describe("validation utilities", () => {
         results: { invalid: "format" },
       });
       expect(result.isValid).toBe(false);
-      expect(result.error).toBe("Invalid results format");
+      expect(result.error).toBe(
+        "Invalid results format: missing required fields (status, template)",
+      );
     });
 
     it("should return valid when both submissionId and valid results are present", () => {
