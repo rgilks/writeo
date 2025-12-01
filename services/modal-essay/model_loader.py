@@ -2,6 +2,7 @@
 
 import os
 import time
+import traceback
 from typing import TYPE_CHECKING, Any
 
 import torch
@@ -23,12 +24,18 @@ else:
 _models: dict[str, tuple[ModelType, TokenizerType]] = {}
 
 
+def _is_tokenizer_cached(model_path: str) -> bool:
+    """Check if tokenizer is cached locally."""
+    tokenizer_config = os.path.join(model_path, "tokenizer_config.json")
+    vocab_file = os.path.join(model_path, "vocab.json")
+    return os.path.exists(tokenizer_config) or os.path.exists(vocab_file)
+
+
 def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
     """Load tokenizer from cache or HuggingFace."""
     tokenizer_start = time.time()
     try:
-        tokenizer_path = os.path.join(model_path, "tokenizer_config.json")
-        if os.path.exists(tokenizer_path) or os.path.exists(os.path.join(model_path, "vocab.json")):
+        if _is_tokenizer_cached(model_path):
             print(f"📥 Loading tokenizer from cache: {model_path}")
             tokenizer: TokenizerType = AutoTokenizer.from_pretrained(
                 model_path, local_files_only=True
@@ -53,7 +60,7 @@ def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
             except Exception as e2:
                 print(f"❌ ERROR: Failed to load base DistilBERT tokenizer: {e2}")
                 raise RuntimeError(
-                    f"Failed to load tokenizer for {model_name} and fallback also failed: {e2}"
+                    f"Failed to load tokenizer for {model_name}: workaround also failed: {e2}"
                 ) from e2
         else:
             print(f"❌ ERROR: Tokenizer loading failed for {model_name}: {e}")
@@ -122,7 +129,7 @@ def save_model_to_cache(
     print(f"💾 Model saved to cache in {save_time:.2f}s")
 
 
-def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:
+def setup_gpu(model: ModelType, model_name: str, load_start: float) -> ModelType:
     """Move model to GPU and warm up if available."""
     gpu_start = time.time()
     if torch.cuda.is_available():
@@ -143,27 +150,28 @@ def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:
         except Exception as warmup_error:
             total_load_time = time.time() - load_start
             print(f"⚠️  GPU warmup failed (non-critical): {warmup_error}")
-            print(f"✅ Model {model_name} loaded on GPU in {total_load_time:.2f}s (warmup skipped)")  # noqa: F841
+            print(f"✅ Model {model_name} loaded on GPU in {total_load_time:.2f}s (warmup skipped)")
     else:
         total_load_time = time.time() - load_start
         print(f"✅ Model {model_name} loaded successfully (CPU mode) in {total_load_time:.2f}s")
+    return model
+
+
+def _is_model_cached(model_path: str) -> bool:
+    """Check if model is cached locally."""
+    config_file = os.path.join(model_path, "config.json")
+    return os.path.exists(model_path) and os.path.exists(config_file)
 
 
 def load_model(model_key: str | None = None) -> tuple[ModelType, TokenizerType]:
     """Load model and tokenizer, caching on volume."""
     load_start = time.time()
-    if model_key is None:
-        model_key = DEFAULT_MODEL
-
-    if model_key == "fallback":
-        # Fallback mode returns None - callers should handle this case
-        return None, None  # type: ignore[return-value]
+    model_key = model_key or DEFAULT_MODEL
 
     if model_key not in MODEL_CONFIGS:
         raise ValueError(f"Unknown model key: {model_key}")
 
-    config = MODEL_CONFIGS[model_key]
-    assert isinstance(config, dict), f"Invalid config for model {model_key}"
+    config: dict[str, Any] = MODEL_CONFIGS[model_key]
     model_name = config["name"]
     model_path = os.path.join(MODEL_PATH, model_name.replace("/", "_"))
     print(f"📦 Loading model: {model_key} ({model_name})")
@@ -172,7 +180,7 @@ def load_model(model_key: str | None = None) -> tuple[ModelType, TokenizerType]:
 
     model_load_start = time.time()
     try:
-        if os.path.exists(model_path) and os.path.exists(os.path.join(model_path, "config.json")):
+        if _is_model_cached(model_path):
             print(f"📥 Loading model from cache: {model_path}")
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_path, trust_remote_code=True, local_files_only=True
@@ -191,21 +199,18 @@ def load_model(model_key: str | None = None) -> tuple[ModelType, TokenizerType]:
         print(f"❌ ERROR: Failed to load model {model_name}: {e}")
         print(f"❌ Model key: {model_key}")
         print(f"❌ Model path: {model_path}")
-        import traceback
-
         traceback.print_exc()
         raise RuntimeError(f"Failed to load model {model_name} (key: {model_key}): {e}") from e
 
     model.eval()
-    setup_gpu(model, model_name, load_start)
+    model = setup_gpu(model, model_name, load_start)
 
     return model, tokenizer
 
 
 def get_model(model_key: str | None = None) -> tuple[ModelType, TokenizerType]:
-    """Get or load model (lazy loading)."""
-    if model_key is None:
-        model_key = DEFAULT_MODEL
+    """Get or load model (lazy loading with caching)."""
+    model_key = model_key or DEFAULT_MODEL
 
     if model_key not in _models:
         _models[model_key] = load_model(model_key)

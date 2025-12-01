@@ -2,15 +2,18 @@
 name = "writeo-modal-essay"
 version = "0.1.0"
 description = "Modal service for essay scoring"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "modal>=0.64.0",
     "fastapi>=0.104.0",
-    "transformers>=4.35.0",
+    "transformers>=4.40.0",
     "torch>=2.1.0",
+    "numpy>=1.24.0,<2.0",      # torch 2.1.0 requires numpy <2.0
     "pydantic>=2.5.0",
-    "uvicorn>=0.24.0",       # Required for local testing (test_local.py)
+    "uvicorn>=0.24.0",         # Required for local testing (test_local.py)
     "sentencepiece>=0.1.99",
+    "safetensors>=0.4.2",
+    "huggingface-hub>=0.20.0",
 ]
 
 [project.optional-dependencies]
@@ -22,7 +25,7 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = [
@@ -51,7 +54,7 @@ indent-style = "space"
 known-first-party = ["schemas", "config", "model_loader", "scoring", "api"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 show_error_codes = true

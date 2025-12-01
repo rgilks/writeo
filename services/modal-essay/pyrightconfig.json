@@ -1,8 +1,21 @@
 {
   "include": ["."],
-  "exclude": ["**/node_modules", "**/__pycache__"],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.venv",
+    "**/venv",
+    "**/.pytest_cache",
+    "**/dist",
+    "**/build"
+  ],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic",
   "reportMissingImports": false,
   "reportMissingModuleSource": false,
   "reportImportCycles": false,
-  "typeCheckingMode": "basic"
+  "reportUnusedImport": true,
+  "reportUnusedClass": true,
+  "reportUnusedFunction": true,
+  "reportUnusedVariable": true
 }

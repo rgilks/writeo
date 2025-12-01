@@ -1,6 +1,7 @@
 """API module - FastAPI app creation."""
 
 import time
+import traceback
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -18,6 +19,37 @@ from .handlers_models import handle_list_models as handle_list_models_impl
 from .middleware import verify_api_key
 from .routes import handle_health
 
+# API documentation
+API_DESCRIPTION = """
+## Writeo Essay Scoring Service
+
+A high-performance API for automated essay scoring using transformer-based machine learning models.
+
+### Features
+- **Multiple Model Support**: Choose from different scoring models (engessay, distilbert)
+- **Band Scoring**: Returns scores on the 0-9 band scale with 0.5 increments
+- **CEFR Mapping**: Automatic conversion from band scores to CEFR levels (A2-C2)
+- **Multi-Dimensional Scoring**: Provides scores for Task Achievement (TA), Coherence & Cohesion (CC), Vocabulary, and Grammar
+- **GPU Acceleration**: Fast inference using GPU-accelerated transformer models
+
+### Models
+- **engessay** (default): KevSun/Engessay_grading_ML - RoBERTa-based model with 6 analytic dimensions
+  - Citation: Sun, K., & Wang, R. (2024). Automatic Essay Multi-dimensional Scoring with Fine-tuning and Multiple Regression. *ArXiv*. https://arxiv.org/abs/2406.01198
+- **distilbert**: Michau96/distilbert-base-uncased-essay_scoring - DistilBERT model with single score output
+
+### Scoring Dimensions
+- **TA** (Task Achievement): How well the task is addressed
+- **CC** (Coherence & Cohesion): Organization and linking of ideas
+- **Vocab** (Vocabulary): Range and accuracy of vocabulary
+- **Grammar**: Grammatical range and accuracy
+- **Overall**: Average of all dimensions, mapped to CEFR level
+
+### Access
+- **Swagger UI**: Available at `/docs`
+- **ReDoc**: Available at `/redoc`
+- **OpenAPI JSON**: Available at `/openapi.json`
+"""
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
@@ -26,7 +58,6 @@ async def lifespan(app: FastAPI) -> Any:
     try:
         print("=" * 60)
         print("🚀 Pre-loading default model at startup...")
-        print(f"⏱️  Startup began at: {startup_start:.2f}s")
         model_load_start = time.time()
         _ = get_model(DEFAULT_MODEL)
         model_load_time = time.time() - model_load_start
@@ -39,8 +70,6 @@ async def lifespan(app: FastAPI) -> Any:
         total_startup_time = time.time() - startup_start
         print(f"⚠️ Warning: Could not pre-load default model after {total_startup_time:.2f}s: {e}")
         print("Models will be loaded on first request (lazy loading)")
-        import traceback
-
         print(f"📜 Traceback:\n{traceback.format_exc()}")
 
     yield
@@ -52,36 +81,7 @@ def create_fastapi_app() -> FastAPI:
     """Create and configure FastAPI app."""
     api = FastAPI(
         title="Writeo Essay Scorer API",
-        description="""
-        ## Writeo Essay Scoring Service
-
-        A high-performance API for automated essay scoring using transformer-based machine learning models.
-
-        ### Features
-        - **Multiple Model Support**: Choose from different scoring models (engessay, distilbert, fallback)
-        - **Band Scoring**: Returns scores on the 0-9 band scale with 0.5 increments
-        - **CEFR Mapping**: Automatic conversion from band scores to CEFR levels (A2-C2)
-        - **Multi-Dimensional Scoring**: Provides scores for Task Achievement (TA), Coherence & Cohesion (CC), Vocabulary, and Grammar
-        - **GPU Acceleration**: Fast inference using GPU-accelerated transformer models
-
-        ### Models
-        - **engessay** (default): KevSun/Engessay_grading_ML - RoBERTa-based model with 6 analytic dimensions
-          - Citation: Sun, K., & Wang, R. (2024). Automatic Essay Multi-dimensional Scoring with Fine-tuning and Multiple Regression. *ArXiv*. https://arxiv.org/abs/2406.01198
-        - **distilbert**: Michau96/distilbert-base-uncased-essay_scoring - DistilBERT model with single score output
-        - **fallback**: Heuristic-based scoring (no ML model required)
-
-        ### Scoring Dimensions
-        - **TA** (Task Achievement): How well the task is addressed
-        - **CC** (Coherence & Cohesion): Organization and linking of ideas
-        - **Vocab** (Vocabulary): Range and accuracy of vocabulary
-        - **Grammar**: Grammatical range and accuracy
-        - **Overall**: Average of all dimensions, mapped to CEFR level
-
-        ### Access
-        - **Swagger UI**: Available at `/docs`
-        - **ReDoc**: Available at `/redoc`
-        - **OpenAPI JSON**: Available at `/openapi.json`
-        """,
+        description=API_DESCRIPTION,
         version="1.0.0",
         contact={
             "name": "Robert Gilks",
@@ -138,7 +138,7 @@ def register_routes(api: FastAPI) -> None:
         request: ModalRequest,
         model_key: str | None = Query(
             None,
-            description="Model to use: 'engessay' (default), 'distilbert', or 'fallback'",
+            description="Model to use: 'engessay' (default) or 'distilbert'",
             example="engessay",
         ),
     ) -> dict[str, Any] | JSONResponse:
@@ -146,7 +146,7 @@ def register_routes(api: FastAPI) -> None:
 
     @api.get("/health", tags=["Health"], summary="Health check")
     async def health() -> dict[str, Any]:
-        return await handle_health()
+        return handle_health()
 
     @api.get("/models", tags=["Models"], summary="List available models")
     async def list_models() -> dict[str, Any]:

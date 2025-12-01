@@ -2,17 +2,19 @@
 
 import os
 import sys
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field
 
 # Try importing from shared package first, then fall back to inline definitions
+_shared_py_path = os.path.join(os.path.dirname(__file__), "../../packages/shared/py")
 _imported = False
-shared_py_path = os.path.join(os.path.dirname(__file__), "../../packages/shared/py")
-if os.path.exists(shared_py_path):
-    sys.path.insert(0, shared_py_path)
+
+if os.path.exists(_shared_py_path):
+    sys.path.insert(0, _shared_py_path)
     try:
-        from schemas import (  # type: ignore
+        # Import from schemas module (DimensionsDict is in schemas.py but not in __init__.py)
+        from schemas import (  # type: ignore[attr-defined]
             AnswerResult,
             AssessmentPart,
             AssessmentResults,
@@ -28,7 +30,6 @@ if os.path.exists(shared_py_path):
 
 # If import failed, define schemas inline
 if not _imported:
-    from typing import TypedDict
 
     class DimensionsDict(TypedDict, total=False):
         """Essay scoring dimensions."""
@@ -82,6 +83,7 @@ if not _imported:
         error_message: str | None = None
 
     def map_score_to_cefr(overall: float) -> str:  # type: ignore[no-redef]
+        """Map overall band score to CEFR level."""
         if overall >= 8.5:
             return "C2"
         elif overall >= 7.0:

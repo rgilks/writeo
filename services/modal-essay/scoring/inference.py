@@ -1,6 +1,6 @@
 """Model inference utilities."""
 
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
@@ -8,8 +8,10 @@ import torch
 if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizer
 
+    ModelType = PreTrainedModel
     TokenizerType = PreTrainedTokenizer
 else:
+    ModelType = Any
     TokenizerType = Any
 
 
@@ -25,24 +27,19 @@ def encode_input(
 
 
 def run_model_inference(
-    model: Union[Any, "PreTrainedModel"] if TYPE_CHECKING else Any,  # type: ignore
+    model: ModelType,
     encoded_input: dict[str, torch.Tensor],
 ) -> np.ndarray:
     """Run model inference and return logits."""
-    if next(model.parameters()).is_cuda:
-        encoded_input = {k: v.cuda() for k, v in encoded_input.items()}
+    # Move input to same device as model
+    device = next(model.parameters()).device
+    encoded_input = {k: v.to(device) for k, v in encoded_input.items()}
 
     model.eval()
     with torch.no_grad():
         outputs = model(**encoded_input)
         logits = outputs.logits.squeeze()
 
-    logits_np: np.ndarray[Any, Any] = (
-        logits.cpu().numpy() if hasattr(logits, "cpu") else logits.numpy()
-    )
-    print(f"Model output shape: {logits_np.shape}, dtype: {logits_np.dtype}")
-    print(f"Model output sample: {logits_np.flatten()[:10]}")
-    print(
-        f"Model output range: min={np.min(logits_np):.2f}, max={np.max(logits_np):.2f}, mean={np.mean(logits_np):.2f}"
-    )
+    # Convert to numpy array
+    logits_np: np.ndarray = logits.cpu().numpy()
     return logits_np

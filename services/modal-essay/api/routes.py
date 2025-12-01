@@ -1,6 +1,6 @@
-"""API route handlers - main exports."""
+"""API route handlers."""
 
 
-async def handle_health() -> dict[str, str]:
+def handle_health() -> dict[str, str]:
     """Handle health check endpoint."""
     return {"status": "ok"}

@@ -30,15 +30,12 @@ async def handle_list_models() -> ModelsResponseDict:
     for key, config in MODEL_CONFIGS.items():
         status = "unknown"
         try:
-            if key == "fallback":
-                status = "available"
-            else:
-                model, tokenizer = get_model(key)
-                status = "loaded" if model is not None and tokenizer is not None else "error"
+            model, tokenizer = get_model(key)
+            status = "loaded" if model is not None and tokenizer is not None else "error"
         except Exception as e:
             status = f"error: {str(e)[:50]}"
 
-        config_dict: dict[str, Any] = dict(config)  # type: ignore[call-overload]
+        config_dict: dict[str, Any] = config
         model_status: ModelStatusDict = {
             "name": str(config_dict.get("name", "")),
             "type": str(config_dict.get("type", "")),
@@ -71,20 +68,19 @@ async def handle_compare_models(request: ModalRequest) -> ComparisonResponseDict
     """Handle compare models endpoint."""
     results: dict[str, ComparisonResultDict] = {}
 
-    for model_key in MODEL_CONFIGS:
-        if model_key == "fallback":
-            continue
+    # Extract answer from request if available
+    if not request.parts or not request.parts[0].answers:
+        return {"comparison": results}
 
+    answer = request.parts[0].answers[0]
+
+    for model_key in MODEL_CONFIGS:
         try:
             model, tokenizer = get_model(model_key)
-            # Note: get_model() is typed to never return None since we skip fallback models above
-
-            if request.parts and request.parts[0].answers:
-                answer = request.parts[0].answers[0]
-                scores = score_essay(
-                    answer.question_text, answer.answer_text, model, tokenizer, model_key=model_key
-                )
-                results[model_key] = scores
+            scores = score_essay(
+                answer.question_text, answer.answer_text, model, tokenizer, model_key=model_key
+            )
+            results[model_key] = scores
         except Exception as e:
             results[model_key] = {"error": str(e)}
 
