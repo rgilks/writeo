@@ -34,11 +34,11 @@ export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60000, // Increased for slower operations
   expect: { timeout: 5000 }, // Increased for better reliability
-  fullyParallel: false, // Disable parallel execution to reduce flakiness
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   maxFailures: process.env.CI ? 5 : 3,
-  workers: 1, // Run tests sequentially to avoid resource contention and flakiness
+  workers: process.env.CI ? 4 : 4, // Reduced to 4 for better stability in parallel execution
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000",
