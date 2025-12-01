@@ -67,7 +67,7 @@ if not _imported:
 
         id: str
         assessor_results: list[AssessorResult] = Field(
-            ..., alias="assessor-results", serialization_alias="assessor-results"
+            ..., alias="assessorResults", serialization_alias="assessorResults"
         )
 
     class AssessmentPart(BaseModel):  # type: ignore[no-redef]

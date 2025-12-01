@@ -82,7 +82,7 @@ def test_local_processing(model_key: str = "engessay") -> dict[str, Any]:
                 print(f"\n  Part {part.get('part')}:")
                 for answer in part.get("answers", []):
                     print(f"    Answer ID: {answer.get('id')}")
-                    assessor_results = answer.get("assessor-results", [])
+                    assessor_results = answer.get("assessorResults", [])
                     for ar in assessor_results:
                         print(f"      Assessor: {ar.get('id')} ({ar.get('name')})")
                         print(f"        Overall: {ar.get('overall')} ({ar.get('label')})")
@@ -136,7 +136,7 @@ def test_remote_endpoint(url: str, api_key: str, model_key: str = "engessay") ->
                     print(f"\n  Part {part.get('part')}:")
                     for answer in part.get("answers", []):
                         print(f"    Answer ID: {answer.get('id')}")
-                        assessor_results = answer.get("assessor-results", [])
+                        assessor_results = answer.get("assessorResults", [])
                         for ar in assessor_results:
                             print(f"      Assessor: {ar.get('id')} ({ar.get('name')})")
                             print(f"        Overall: {ar.get('overall')} ({ar.get('label')})")
