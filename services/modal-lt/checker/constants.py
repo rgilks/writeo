@@ -1,8 +1,15 @@
 """Constants for text checking."""
 
-MAX_TEXT_LENGTH = 10000
+from typing import Final
 
-GRAMMAR_RULE_PREFIXES = (
+# Maximum text length for performance (characters)
+MAX_TEXT_LENGTH: Final[int] = 10000
+
+# Rule ID prefix for Morfologik spelling checker
+MORFOLOGIK_PREFIX: Final[str] = "MORFOLOGIK"
+
+# Grammar rule ID prefixes (LanguageTool rule IDs that start with these indicate grammar issues)
+GRAMMAR_RULE_PREFIXES: Final[tuple[str, ...]] = (
     "SVA",
     "AGREEMENT",
     "CONFUSION",
@@ -26,19 +33,38 @@ GRAMMAR_RULE_PREFIXES = (
     "RUN_ON",
 )
 
-GRAMMAR_CATEGORIES = {
-    "GRAMMAR",
-    "TYPOS",
-    "CONFUSED_WORDS",
-    "TYPOGRAPHY",
-    "CASING",
-}
+# LanguageTool categories that indicate grammar issues
+GRAMMAR_CATEGORIES: Final[frozenset[str]] = frozenset(
+    {
+        "GRAMMAR",
+        "TYPOS",
+        "CONFUSED_WORDS",
+        "TYPOGRAPHY",
+        "CASING",
+    }
+)
 
-STYLE_CATEGORIES = {"STYLE", "REDUNDANCY", "PUNCTUATION", "SEMANTICS"}
+# LanguageTool categories that indicate style issues
+STYLE_CATEGORIES: Final[frozenset[str]] = frozenset(
+    {
+        "STYLE",
+        "REDUNDANCY",
+        "PUNCTUATION",
+        "SEMANTICS",
+    }
+)
 
-SPELLING_CATEGORIES = {"MORFOLOGIK", "SPELLING", "MORFOLOGIK_RULE"}
+# LanguageTool categories that indicate spelling issues
+SPELLING_CATEGORIES: Final[frozenset[str]] = frozenset(
+    {
+        "MORFOLOGIK",
+        "SPELLING",
+        "MORFOLOGIK_RULE",
+    }
+)
 
-STYLE_RULE_PREFIXES = (
+# Style rule ID prefixes (LanguageTool rule IDs that start with these indicate style issues)
+STYLE_RULE_PREFIXES: Final[tuple[str, ...]] = (
     "REDUNDANCY",
     "WORDINESS",
     "REPETITION",

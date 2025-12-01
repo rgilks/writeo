@@ -2,6 +2,8 @@
 
 import sys
 import time
+import traceback
+from typing import Any
 
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
@@ -12,7 +14,22 @@ from schemas import CheckRequest
 from tool_loader import get_languagetool_tool, lt_tool
 
 
-async def handle_health() -> dict:
+def _create_empty_response(language: str) -> dict[str, Any]:
+    """Create empty response structure for empty text."""
+    return {
+        "software": {"name": "LanguageTool", "version": LT_VERSION},
+        "language": {"name": "English (GB)", "code": language},
+        "matches": [],
+        "meta": {
+            "textLength": 0,
+            "wordCount": 0,
+            "checkTimeMs": 0,
+            "totalMatches": 0,
+        },
+    }
+
+
+async def handle_health() -> dict[str, str | bool]:
     """Handle health check endpoint."""
     try:
         get_languagetool_tool("en-GB")
@@ -30,7 +47,6 @@ async def handle_check(request: CheckRequest) -> JSONResponse:
     request_start = time.time()
     print(f"\n{'=' * 60}")
     print("📥 POST /check request received")
-    print(f"⏱️  Request time: {request_start:.2f}s")
     print(f"🌐 Language: {request.language}")
     print(f"📝 Text length: {len(request.text) if request.text else 0} chars")
     if request.answer_id:
@@ -40,17 +56,7 @@ async def handle_check(request: CheckRequest) -> JSONResponse:
         if not request.text or not request.text.strip():
             print("⚠️  Empty text provided, returning empty matches")
             return JSONResponse(
-                content={
-                    "software": {"name": "LanguageTool", "version": LT_VERSION},
-                    "language": {"name": "English (GB)", "code": request.language},
-                    "matches": [],
-                    "meta": {
-                        "textLength": 0,
-                        "wordCount": 0,
-                        "checkTimeMs": 0,
-                        "totalMatches": 0,
-                    },
-                },
+                content=_create_empty_response(request.language),
                 status_code=200,
             )
 
@@ -71,7 +77,5 @@ async def handle_check(request: CheckRequest) -> JSONResponse:
         request_time = time.time() - request_start
         error_msg = f"Internal server error after {request_time:.3f}s: {str(e)}"
         print(f"❌ {error_msg}", file=sys.stderr)
-        import traceback
-
         print(f"📜 Traceback:\n{traceback.format_exc()}", file=sys.stderr)
         raise HTTPException(status_code=500, detail=error_msg) from None

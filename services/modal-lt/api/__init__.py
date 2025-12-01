@@ -1,6 +1,7 @@
 """API module - FastAPI app creation."""
 
 import time
+import traceback
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -21,7 +22,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         print("=" * 60)
         print("🚀 Pre-initializing LanguageTool on container startup...")
-        print(f"⏱️  Startup began at: {startup_start:.2f}s")
         get_languagetool_tool("en-GB")
         startup_time = time.time() - startup_start
         print(f"✅ LanguageTool pre-initialized successfully in {startup_time:.2f}s")
@@ -29,8 +29,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception as e:
         startup_time = time.time() - startup_start
         print(f"⚠️  Warning: Failed to pre-initialize LanguageTool after {startup_time:.2f}s: {e}")
-        import traceback
-
         print(f"📜 Traceback:\n{traceback.format_exc()}")
 
     yield
@@ -47,11 +45,12 @@ def create_fastapi_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Validate API key configuration (prints warning if missing)
     get_api_key()
     api.middleware("http")(verify_api_key)
 
     @api.get("/health", tags=["Health"])
-    async def health() -> dict:
+    async def health() -> dict[str, str | bool]:
         """Health check endpoint."""
         return await handle_health()
 
