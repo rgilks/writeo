@@ -151,9 +151,9 @@ def register_routes(api: FastAPI) -> None:
     @api.get("/models", tags=["Models"], summary="List available models")
     async def list_models() -> dict[str, Any]:
         result = await handle_list_models_impl()
-        return dict(result)  # type: ignore[arg-type]
+        return dict(result)
 
     @api.post("/grade/compare", tags=["Models"], summary="Compare models on same submission")
     async def compare_models(request: ModalRequest) -> dict[str, Any]:
         result = await handle_compare_models_impl(request)
-        return dict(result)  # type: ignore[arg-type]
+        return dict(result)

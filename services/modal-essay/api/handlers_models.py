@@ -77,11 +77,7 @@ async def handle_compare_models(request: ModalRequest) -> ComparisonResponseDict
 
         try:
             model, tokenizer = get_model(model_key)
-            # Check for None (can happen with fallback model when model_key == "fallback")
-            # Skip comparison for models that didn't load
-            if model is None or tokenizer is None:
-                results[model_key] = {"error": "Model or tokenizer is None"}
-                continue
+            # Note: get_model() is typed to never return None since we skip fallback models above
 
             if request.parts and request.parts[0].answers:
                 answer = request.parts[0].answers[0]

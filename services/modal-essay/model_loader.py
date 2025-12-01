@@ -126,7 +126,7 @@ def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:
     """Move model to GPU and warm up if available."""
     gpu_start = time.time()
     if torch.cuda.is_available():
-        model = model.cuda()
+        model = model.cuda()  # type: ignore[call-arg]
         gpu_move_time = time.time() - gpu_start
         print(f"🚀 Model moved to GPU in {gpu_move_time:.2f}s")
         warmup_start = time.time()
@@ -134,9 +134,7 @@ def setup_gpu(model: ModelType, model_name: str, load_start: float) -> None:
             dummy_input_ids = torch.randint(0, 1000, (1, 10), device="cuda")
             dummy_attention_mask = torch.ones(1, 10, device="cuda")
             with torch.no_grad():
-                _ = model(  # type: ignore[call-arg]
-                    input_ids=dummy_input_ids, attention_mask=dummy_attention_mask
-                )
+                _ = model(input_ids=dummy_input_ids, attention_mask=dummy_attention_mask)
             torch.cuda.empty_cache()
             warmup_time = time.time() - warmup_start
             total_load_time = time.time() - load_start

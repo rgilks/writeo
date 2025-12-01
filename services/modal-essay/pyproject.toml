@@ -2,23 +2,19 @@
 name = "writeo-modal-essay"
 version = "0.1.0"
 description = "Modal service for essay scoring"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "modal>=0.64.0",
     "fastapi>=0.104.0",
     "transformers>=4.35.0",
     "torch>=2.1.0",
     "pydantic>=2.5.0",
-    "uvicorn>=0.24.0",
+    "uvicorn>=0.24.0",       # Required for local testing (test_local.py)
     "sentencepiece>=0.1.99",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "ruff>=0.1.0",
-    "mypy>=1.5.0",
-    "types-requests",
-]
+dev = ["ruff>=0.4.0", "mypy>=1.8.0", "types-requests"]
 
 [build-system]
 requires = ["hatchling"]
@@ -26,7 +22,7 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [
@@ -41,8 +37,8 @@ select = [
     "SIM", # flake8-simplify
 ]
 ignore = [
-    "E501",  # line too long (handled by formatter)
-    "B008",  # do not perform function calls in argument defaults
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
     "ARG001", # unused function argument (we use _ prefix)
     "ARG002", # unused method argument
 ]
@@ -55,34 +51,28 @@ indent-style = "space"
 known-first-party = ["schemas", "config", "model_loader", "scoring", "api"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
+show_error_codes = true
 # Strict type checking - require type annotations
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+disallow_untyped_calls = true
 check_untyped_defs = true
 no_implicit_optional = true
+strict_equality = true
+# Warnings
 warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
-strict_equality = true
-show_error_codes = true
-# Additional strict checks
-disallow_untyped_decorators = true
-disallow_untyped_calls = true
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = [
-    "transformers.*",
-    "torch.*",
-    "modal.*",
-    "huggingface_hub.*",
-]
+module = ["transformers.*", "torch.*", "modal.*", "huggingface_hub.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "schemas"
 warn_unused_ignores = false
-

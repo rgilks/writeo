@@ -18,10 +18,10 @@ def encode_input(
 ) -> dict[str, torch.Tensor]:
     """Encode input text for model inference."""
     input_text = f"{question_text}\n\n{answer_text}"
-    result = tokenizer(  # type: ignore[no-untyped-call]
+    result = tokenizer(
         input_text, return_tensors="pt", padding=True, truncation=True, max_length=512
     )
-    return dict(result)  # type: ignore[arg-type]
+    return dict(result)
 
 
 def run_model_inference(
