@@ -51,6 +51,7 @@ export async function buildModalRequest(
   body: CreateSubmissionRequest,
   storeResults: boolean,
   storage: StorageService,
+  submissionId: string,
   c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<ModalRequest | Response> {
   const modalParts: ModalRequest["parts"] = [];
@@ -100,7 +101,7 @@ export async function buildModalRequest(
   }
 
   return {
-    submission_id: c.req.param("submission_id"),
+    submission_id: submissionId,
     template: body.template,
     parts: modalParts,
   };

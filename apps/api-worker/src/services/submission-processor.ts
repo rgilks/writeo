@@ -153,7 +153,7 @@ async function loadSubmissionData(
   timings["1c_auto_create_entities"] = performance.now() - autoCreateStartTime;
 
   const loadDataStartTime = performance.now();
-  const modalRequestResult = await buildModalRequest(body, storeResults, storage, c);
+  const modalRequestResult = await buildModalRequest(body, storeResults, storage, submissionId, c);
   if (modalRequestResult instanceof Response) {
     return modalRequestResult;
   }
