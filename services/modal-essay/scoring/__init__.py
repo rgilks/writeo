@@ -1,7 +1,7 @@
 """Essay scoring module."""
 
 import traceback
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 
@@ -19,13 +19,13 @@ from .logits_processing import (
 from .quality_analysis import analyze_essay_quality
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedModel, PreTrainedTokenizer
+    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore[import-untyped]
 
-    ModelType = PreTrainedModel
-    TokenizerType = PreTrainedTokenizer
+    ModelType: TypeAlias = PreTrainedModel
+    TokenizerType: TypeAlias = PreTrainedTokenizer
 else:
-    ModelType = Any
-    TokenizerType = Any
+    ModelType: TypeAlias = Any
+    TokenizerType: TypeAlias = Any
 
 
 def process_engessay_scoring(logits_np: np.ndarray, answer_text: str) -> DimensionsDict:

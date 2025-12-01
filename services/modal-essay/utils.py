@@ -1,13 +1,13 @@
 """Utility functions."""
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedTokenizer
+    from transformers import PreTrainedTokenizer  # type: ignore[import-untyped]
 
-    TokenizerType = PreTrainedTokenizer
+    TokenizerType: TypeAlias = PreTrainedTokenizer
 else:
-    TokenizerType = Any
+    TokenizerType: TypeAlias = Any
 
 
 def chunk_text(text: str, tokenizer: TokenizerType, max_tokens: int, overlap: int) -> list[str]:

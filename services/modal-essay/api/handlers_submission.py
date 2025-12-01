@@ -1,6 +1,6 @@
 """Submission processing handler."""
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from config import DEFAULT_MODEL, MODEL_CONFIGS
 from model_loader import get_model
@@ -17,13 +17,13 @@ from schemas import (
 from scoring import score_essay
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedModel, PreTrainedTokenizer
+    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore[import-untyped]
 
-    ModelType = PreTrainedModel
-    TokenizerType = PreTrainedTokenizer
+    ModelType: TypeAlias = PreTrainedModel
+    TokenizerType: TypeAlias = PreTrainedTokenizer
 else:
-    ModelType = Any
-    TokenizerType = Any
+    ModelType: TypeAlias = Any
+    TokenizerType: TypeAlias = Any
 
 
 def create_assessor_result(

@@ -1,18 +1,18 @@
 """Model inference utilities."""
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 import torch
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedModel, PreTrainedTokenizer
+    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore[import-untyped]
 
-    ModelType = PreTrainedModel
-    TokenizerType = PreTrainedTokenizer
+    ModelType: TypeAlias = PreTrainedModel
+    TokenizerType: TypeAlias = PreTrainedTokenizer
 else:
-    ModelType = Any
-    TokenizerType = Any
+    ModelType: TypeAlias = Any
+    TokenizerType: TypeAlias = Any
 
 
 def encode_input(

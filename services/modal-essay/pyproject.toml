@@ -54,7 +54,7 @@ indent-style = "space"
 known-first-party = ["schemas", "config", "model_loader", "scoring", "api"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 show_error_codes = true
@@ -78,4 +78,8 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "schemas"
+warn_unused_ignores = false
+
+[[tool.mypy.overrides]]
+module = ["model_loader", "api.handlers_submission", "scoring.*", "utils"]
 warn_unused_ignores = false

@@ -27,7 +27,7 @@ app = modal.App(APP_NAME)
 shared_py_path = os.path.join(os.path.dirname(__file__), "../../packages/shared/py")
 
 # Create image with dependencies
-base_image = modal.Image.debian_slim(python_version="3.11").pip_install(
+base_image = modal.Image.debian_slim(python_version="3.12").pip_install(
     "fastapi==0.104.1",
     "uvicorn==0.24.0",
     "transformers>=4.40.0",

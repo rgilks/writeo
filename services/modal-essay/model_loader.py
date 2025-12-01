@@ -3,22 +3,28 @@
 import os
 import time
 import traceback
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
-import torch
-from huggingface_hub import list_repo_files, snapshot_download
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+import torch  # type: ignore[import-untyped]
+from huggingface_hub import (  # type: ignore[import-untyped]
+    list_repo_files,
+    snapshot_download,
+)
+from transformers import (  # type: ignore[import-untyped]
+    AutoModelForSequenceClassification,
+    AutoTokenizer,
+)
 
 from config import DEFAULT_MODEL, MODEL_CONFIGS, MODEL_PATH
 
 if TYPE_CHECKING:
-    from transformers import PreTrainedModel, PreTrainedTokenizer
+    from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore[import-untyped]
 
-    ModelType = PreTrainedModel
-    TokenizerType = PreTrainedTokenizer
+    ModelType: TypeAlias = PreTrainedModel
+    TokenizerType: TypeAlias = PreTrainedTokenizer
 else:
-    ModelType = Any
-    TokenizerType = Any
+    ModelType: TypeAlias = Any
+    TokenizerType: TypeAlias = Any
 
 # Global model storage (loaded on first call, per model)
 _models: dict[str, tuple[ModelType, TokenizerType]] = {}
@@ -37,9 +43,9 @@ def load_tokenizer(model_name: str, model_path: str) -> TokenizerType:
     try:
         if _is_tokenizer_cached(model_path):
             print(f"📥 Loading tokenizer from cache: {model_path}")
-            tokenizer: TokenizerType = AutoTokenizer.from_pretrained(
+            tokenizer: TokenizerType = AutoTokenizer.from_pretrained(  # type: ignore[no-untyped-call]
                 model_path, local_files_only=True
-            )  # type: ignore[no-untyped-call]
+            )
             tokenizer_time = time.time() - tokenizer_start
             print(f"✅ Tokenizer loaded from cache in {tokenizer_time:.2f}s")
             return tokenizer
