@@ -20,9 +20,10 @@ def analyze_matches(matches: list) -> dict[str, Any]:
     unknown_count = 0
 
     for match in matches:
-        cat = match.category if hasattr(match, "category") else "UNKNOWN"
+        # Handle both camelCase and snake_case attribute names
+        cat = getattr(match, "category", "UNKNOWN")
         categories[cat] = categories.get(cat, 0) + 1
-        rule_id = match.ruleId if hasattr(match, "ruleId") else "UNKNOWN"
+        rule_id = getattr(match, "rule_id", getattr(match, "ruleId", "UNKNOWN"))
         rule_types[rule_id] = rule_types.get(rule_id, 0) + 1
 
         is_grammar_rule = any(rule_id.startswith(p) for p in GRAMMAR_RULE_PREFIXES)

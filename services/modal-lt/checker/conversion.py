@@ -31,19 +31,25 @@ def determine_issue_type(category: str, rule_id: str) -> str:
 
 def convert_match_to_dict(match: Any) -> dict[str, Any]:
     """Convert LanguageTool match to dictionary."""
-    category = match.category if hasattr(match, "category") else "UNKNOWN"
-    rule_id = match.ruleId if hasattr(match, "ruleId") else "UNKNOWN"
+    # Handle both camelCase and snake_case attribute names for compatibility
+    category = getattr(match, "category", "UNKNOWN")
+    rule_id = getattr(match, "rule_id", getattr(match, "ruleId", "UNKNOWN"))
+    error_length = getattr(match, "error_length", getattr(match, "errorLength", 0))
+    offset = getattr(match, "offset", 0)
+    message = getattr(match, "message", "")
+    replacements = getattr(match, "replacements", [])
+
     issue_type = determine_issue_type(category, rule_id)
 
     return {
-        "message": match.message,
-        "shortMessage": match.message[:50] if len(match.message) > 50 else match.message,
-        "offset": match.offset,
-        "length": match.errorLength,
-        "replacements": [{"value": r} for r in match.replacements[:5]],
+        "message": message,
+        "shortMessage": message[:50] if len(message) > 50 else message,
+        "offset": offset,
+        "length": error_length,
+        "replacements": [{"value": r} for r in replacements[:5]],
         "rule": {
             "id": rule_id,
-            "description": match.message,
+            "description": message,
             "category": {"id": category, "name": category},
         },
         "issueType": issue_type,

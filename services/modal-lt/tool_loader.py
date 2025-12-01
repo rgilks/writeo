@@ -81,9 +81,11 @@ def create_tool_with_config(language: str, ngram_path: str | None) -> Any:
 
     if test_matches:
         for match in test_matches[:3]:
-            rule_id = match.ruleId if hasattr(match, "ruleId") else "UNKNOWN"
-            category = match.category if hasattr(match, "category") else "UNKNOWN"
-            print(f"   - Rule: {rule_id}, Category: {category}, Message: {match.message[:50]}")
+            # Handle both camelCase and snake_case attribute names
+            rule_id = getattr(match, "rule_id", getattr(match, "ruleId", "UNKNOWN"))
+            category = getattr(match, "category", "UNKNOWN")
+            message = getattr(match, "message", "")
+            print(f"   - Rule: {rule_id}, Category: {category}, Message: {message[:50]}")
     else:
         print("⚠️  WARNING: No grammar errors detected in test text!")
 
