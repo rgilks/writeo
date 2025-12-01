@@ -2,14 +2,24 @@ name = "writeo-api-worker"
 main = "src/index.ts"
 compatibility_date = "2024-01-15"
 
-# Observability: Logs are captured automatically (view in Cloudflare Dashboard or via ./scripts/check-logs.sh)
+# Observability: Logs and traces are captured automatically
+# View in Cloudflare Dashboard: Workers & Pages → Your Worker → Observability
+# Or via command line: ./scripts/check-logs.sh api-worker
 [observability]
 enabled = true
+
+# Logging: All console.log/error/warn statements are captured
 [observability.logs]
 enabled = true
 head_sampling_rate = 1
 invocation_logs = true
 persist = true
+
+# Tracing: Automatic end-to-end request visibility (free during beta)
+# 5% sampling rate balances visibility with cost (200k events/day free tier after beta)
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.05
 
 [[r2_buckets]]
 binding = "WRITEO_DATA"

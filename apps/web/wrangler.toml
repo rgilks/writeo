@@ -12,6 +12,21 @@ routes = [{ pattern = "writeo.tre.systems/*", zone_name = "tre.systems" }]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+# Observability: Logs and traces for Next.js app
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+# Tracing: Automatic request visibility (5% sampling for cost efficiency)
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.05
+
 # Environment variables injected into process.env at runtime
 # These are available to both server-side code and Next.js Server Actions
 [vars]

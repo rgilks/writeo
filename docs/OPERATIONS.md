@@ -95,7 +95,9 @@ PLAYWRIGHT_BASE_URL=http://localhost:3000
 
 **Note:** `API_KEY` must match the API worker key (or use `TEST_API_KEY` for higher rate limits).
 
-## Logging
+## Observability
+
+### Logging
 
 **Cloudflare Workers Logging:**
 
@@ -104,7 +106,7 @@ Logging is **enabled by default** for all Workers. All `console.log()`, `console
 **View Logs:**
 
 1. **Cloudflare Dashboard (Recommended for Production):**
-   - Go to: https://dash.cloudflare.com → Workers & Pages → Your Worker → Logs
+   - Go to: https://dash.cloudflare.com → Workers & Pages → Your Worker → Observability → Logs
    - Real-time logs with filtering and search
    - No timeout issues, best for production monitoring
 
@@ -130,6 +132,45 @@ Logging is **enabled by default** for all Workers. All `console.log()`, `console
 
 **Log Format:**
 All logs are automatically sanitized to remove sensitive data (API keys, tokens, etc.) via `safeLogError()`, `safeLogWarn()`, and `safeLogInfo()` utilities.
+
+### Tracing
+
+**Automatic Tracing (Enabled):**
+
+End-to-end request tracing is enabled with 5% sampling rate. This provides:
+
+- **Automatic instrumentation** of:
+  - Outbound HTTP requests (fetch calls)
+  - KV/R2 binding operations
+  - Worker invocation lifecycle
+  - CPU time and wall time metrics
+
+- **View Traces:**
+  - Cloudflare Dashboard → Workers & Pages → Your Worker → Observability → Traces
+  - See complete request flows, identify bottlenecks, and debug issues
+
+- **Cost:**
+  - Free during beta period
+  - After beta: 200,000 events/day included in free tier (5% sampling = ~10k requests/day)
+  - Each span in a trace counts as one event
+
+- **Export to External Tools (Future):**
+  - Can export to OTLP-compatible tools (Grafana, Honeycomb, etc.)
+  - Configure in Dashboard → Workers → Observability → Destinations
+
+### Observability Dashboard
+
+**Unified View:**
+
+Access comprehensive observability data:
+
+- **Location:** Cloudflare Dashboard → Workers & Pages → Your Worker → Observability
+- **Features:**
+  - Logs with query builder
+  - Traces with timeline visualization
+  - Metrics (CPU time, wall time, request counts)
+  - Invocation view (grouped logs per request)
+  - Custom visualizations
 
 **Modal Services:**
 
