@@ -56,6 +56,25 @@ async function parseEssayAssessmentResponse(
         status: essayAssessment?.status,
       },
     );
+
+    // Log the actual structure to debug
+    if (essayAssessment?.results?.parts) {
+      for (const part of essayAssessment.results.parts) {
+        console.log(`[Essay Assessment][debug] Part ${part.part} structure:`, {
+          hasAnswers: !!part.answers,
+          answersCount: part.answers?.length ?? 0,
+          firstAnswerKeys: part.answers?.[0] ? Object.keys(part.answers[0]) : [],
+          firstAnswerStructure: part.answers?.[0]
+            ? {
+                id: part.answers[0].id,
+                hasAssessorResults: "assessorResults" in (part.answers[0] as any),
+                keys: Object.keys(part.answers[0] as any),
+              }
+            : null,
+        });
+      }
+    }
+
     logAssessorDetails(essayAssessment, submissionId);
 
     // Validate that we have essay assessor results
