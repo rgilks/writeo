@@ -25,6 +25,11 @@ function extractEssayAssessorResults(
   if (!essay?.results?.parts) {
     console.warn(
       `[merge-results] Essay assessment missing for part ${partId} - essay assessor results will be missing`,
+      {
+        hasEssay: !!essay,
+        hasResults: !!essay?.results,
+        status: essay?.status,
+      },
     );
     return [];
   }
@@ -33,21 +38,46 @@ function extractEssayAssessorResults(
   if (!essayPart?.answers?.length) {
     console.warn(
       `[merge-results] Essay part ${partId} has no answers - essay assessor results will be missing`,
+      {
+        availableParts: essay.results.parts.map((p) => p.part),
+      },
     );
     return [];
   }
 
   const firstAnswer = essayPart.answers[0];
   const assessorResults = firstAnswer?.assessorResults;
-  if (!assessorResults) {
+  if (!assessorResults || assessorResults.length === 0) {
     console.warn(
       `[merge-results] Essay answer ${firstAnswer?.id} has no assessorResults - essay assessor results will be missing`,
+      {
+        answerId: firstAnswer?.id,
+        hasAssessorResults: !!assessorResults,
+        assessorResultsLength: assessorResults?.length ?? 0,
+      },
     );
     return [];
   }
 
+  // Check if we have the essay assessor (T-AES-ESSAY)
+  const essayAssessor = assessorResults.find((ar) => ar.id === "T-AES-ESSAY");
+  if (!essayAssessor) {
+    console.warn(
+      `[merge-results] Essay answer ${firstAnswer?.id} missing T-AES-ESSAY assessor - essay scores will be missing`,
+      {
+        answerId: firstAnswer?.id,
+        availableAssessorIds: assessorResults.map((ar) => ar.id),
+        assessorCount: assessorResults.length,
+      },
+    );
+  }
+
   console.log(
     `[merge-results] Extracted ${assessorResults.length} essay assessor result(s) for part ${partId}`,
+    {
+      assessorIds: assessorResults.map((ar) => ar.id),
+      hasEssayAssessor: !!essayAssessor,
+    },
   );
   return [...assessorResults];
 }

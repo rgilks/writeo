@@ -53,9 +53,38 @@ async function parseEssayAssessmentResponse(
         hasResults: !!essayAssessment?.results,
         hasParts: !!essayAssessment?.results?.parts,
         partsCount: essayAssessment?.results?.parts?.length ?? 0,
+        status: essayAssessment?.status,
       },
     );
     logAssessorDetails(essayAssessment, submissionId);
+
+    // Validate that we have essay assessor results
+    if (essayAssessment?.results?.parts) {
+      for (const part of essayAssessment.results.parts) {
+        if (part.answers?.length) {
+          for (const answer of part.answers) {
+            const assessorResults = answer.assessorResults as AssessorResult[] | undefined;
+            const essayAssessor = assessorResults?.find((ar) => ar.id === "T-AES-ESSAY");
+            if (!essayAssessor) {
+              safeLogError("Essay assessment missing T-AES-ESSAY assessor result", {
+                submissionId,
+                part: part.part,
+                answerId: answer.id,
+                assessorIds: assessorResults?.map((ar) => ar.id) ?? [],
+                assessorCount: assessorResults?.length ?? 0,
+              });
+            } else {
+              console.log(`[Essay Assessment] Found essay assessor for answer ${answer.id}`, {
+                overall: essayAssessor.overall,
+                label: essayAssessor.label,
+                hasDimensions: !!essayAssessor.dimensions,
+              });
+            }
+          }
+        }
+      }
+    }
+
     return essayAssessment;
   } catch (parseError) {
     const errorMsg = parseError instanceof Error ? parseError.message : String(parseError);
