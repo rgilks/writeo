@@ -7,11 +7,11 @@ dependencies = [
     "modal>=0.64.0",
     "fastapi>=0.104.0",
     "transformers>=4.40.0",
-    "torch>=2.1.0",
-    "numpy>=1.24.0,<2.0",      # torch 2.1.0 requires numpy <2.0
+    "torch>=2.2.0",
+    "numpy>=1.24.0,<2.0",      # torch requires numpy <2.0
     "pydantic>=2.5.0",
     "uvicorn>=0.24.0",         # Required for local testing (test_local.py)
-    "sentencepiece>=0.1.99",
+    "sentencepiece>=0.2.0",
     "safetensors>=0.4.2",
     "huggingface-hub>=0.20.0",
 ]

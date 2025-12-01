@@ -34,7 +34,7 @@ base_image = modal.Image.debian_slim(python_version="3.12").pip_install(
     "torch==2.2.0",
     "numpy>=1.24.0,<2.0",  # torch requires numpy <2.0
     "pydantic==2.5.0",
-    "sentencepiece==0.1.99",
+    "sentencepiece>=0.2.0",
     "safetensors==0.4.2",
     "huggingface-hub>=0.20.0",
 )
