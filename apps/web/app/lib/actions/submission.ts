@@ -82,9 +82,22 @@ export async function createSubmission(
     throw new Error(`Failed to create submission: ${await getErrorMessage(response)}`);
   }
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new Error(
+      `Invalid response format: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
   // API returns AssessmentResults directly (with optional requestId field)
   // The response is the assessment results object itself, not wrapped in an envelope
+  // Ensure we have a valid structure
+  if (!data || typeof data !== "object") {
+    throw new Error("Invalid response: expected an object");
+  }
+
   return { submissionId, results: data };
 }
 

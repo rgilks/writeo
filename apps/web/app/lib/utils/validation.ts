@@ -60,7 +60,7 @@ export function validateAssessmentResults(results: unknown): {
   ) {
     return {
       isValid: false,
-      error: "Invalid results format",
+      error: "Invalid results format: missing required fields (status, template)",
     };
   }
 
