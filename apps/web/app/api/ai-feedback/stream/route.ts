@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       ...(questionText ? { questionText } : {}),
       ...(assessmentData !== undefined ? { assessmentData } : {}),
     };
-    const response = await fetch(`${apiBase}/text/submissions/${submissionId}/ai-feedback/stream`, {
+    const response = await fetch(`${apiBase}/v1/text/submissions/${submissionId}/ai-feedback/stream`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
