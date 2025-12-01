@@ -459,27 +459,44 @@ export class WritePage {
     // Wait for React to process the events and update word count
     // Check both DOM value and that React state has updated
     // Only wait if we're still on the write page
-    const currentUrl = this.page.url();
-    if (currentUrl.includes("/write/") && !this.page.isClosed()) {
-      await this.page
-        .waitForFunction(
-          (expectedLength) => {
-            const textarea = document.querySelector(
-              '[data-testid="answer-textarea"]',
-            ) as HTMLTextAreaElement;
-            if (!textarea) return false;
-            // Check DOM value is set
-            if (textarea.value.length < expectedLength) return false;
-            // Check word count element exists and has updated (indicates React state updated)
-            const wordCountEl = document.querySelector('[data-testid="word-count-value"]');
-            return wordCountEl !== null;
-          },
-          text.length,
-          { timeout: 10000 },
-        )
-        .catch(() => {
-          // If page navigated, that's okay - the value was already set
-        });
+    try {
+      if (this.page.isClosed()) {
+        return; // Page closed, can't wait
+      }
+      const currentUrl = this.page.url();
+      if (currentUrl.includes("/write/")) {
+        await this.page
+          .waitForFunction(
+            (expectedLength) => {
+              const textarea = document.querySelector(
+                '[data-testid="answer-textarea"]',
+              ) as HTMLTextAreaElement;
+              if (!textarea) return false;
+              // Check DOM value is set
+              if (textarea.value.length < expectedLength) return false;
+              // Check word count element exists and has updated (indicates React state updated)
+              const wordCountEl = document.querySelector('[data-testid="word-count-value"]');
+              return wordCountEl !== null;
+            },
+            text.length,
+            { timeout: 10000 },
+          )
+          .catch(() => {
+            // If page navigated or closed, that's okay - the value was already set
+          });
+      }
+    } catch (error: any) {
+      // If page.url() throws (page closed/navigating), that's okay
+      // The fill() or type() already set the value, React will process it
+      if (
+        error?.message?.includes("Target page, context or browser has been closed") ||
+        this.page.isClosed()
+      ) {
+        // Page closed/navigated, value was set, continue
+        return;
+      }
+      // Re-throw other errors
+      throw error;
     }
   }
 
