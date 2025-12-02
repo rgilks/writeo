@@ -17,10 +17,12 @@ interface GroqAPIResponse {
   };
 }
 
-function shouldUseMock(apiKey: string): boolean {
+function shouldUseMock(apiKey: string, useMockServices?: boolean): boolean {
+  // USE_MOCK_SERVICES enables deterministic mock responses (saves API costs)
+  if (useMockServices === true) return true;
+  // Fallback: check global process.env (for Node.js test environments)
   const globalProcess = (globalThis as any).process;
-  // USE_MOCK_LLM enables deterministic mock responses (saves API costs)
-  if (globalProcess?.env?.USE_MOCK_LLM === "true") return true;
+  if (globalProcess?.env?.USE_MOCK_SERVICES === "true") return true;
   // API key-based mocking for local development
   return apiKey === "MOCK" || apiKey.startsWith("test_");
 }
@@ -38,8 +40,9 @@ export async function callGroqAPI(
   modelName: string,
   messages: Array<{ role: string; content: string }>,
   maxTokens: number,
+  useMockServices?: boolean,
 ): Promise<string> {
-  if (shouldUseMock(apiKey)) {
+  if (shouldUseMock(apiKey, useMockServices)) {
     const { mockCallLLMAPI } = await import("./llm.mock");
     return mockCallLLMAPI(apiKey, modelName, messages, maxTokens);
   }

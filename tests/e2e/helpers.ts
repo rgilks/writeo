@@ -469,22 +469,9 @@ export class WritePage {
     // Clear the textarea first
     await textarea.clear();
 
-    // Fill the textarea and trigger React events manually
-    // This ensures React state updates and word count recalculates
+    // Fill the textarea
+    // Playwright's fill triggers input events which React listens to
     await textarea.fill(text);
-
-    // Manually trigger input event to ensure React processes the change
-    // This is needed because fill() might not always trigger React's onChange/onInput
-    await this.page.evaluate(() => {
-      const textarea = document.querySelector(
-        '[data-testid="answer-textarea"]',
-      ) as HTMLTextAreaElement;
-      if (textarea) {
-        // Trigger both input and change events to match React's handlers
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
-        textarea.dispatchEvent(new Event("change", { bubbles: true }));
-      }
-    });
 
     // Wait for word count to update - check both the attribute and the display element
     // The word count is calculated from the answer prop which uses local React state

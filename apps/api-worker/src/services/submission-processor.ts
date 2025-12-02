@@ -26,6 +26,7 @@ import {
   FEEDBACK_RETRY_OPTIONS,
 } from "../utils/constants";
 import { getServices } from "../utils/context";
+import { createModalService } from "./modal/factory";
 
 interface FeedbackMaps {
   llmFeedbackByAnswerId: Map<string, AIFeedback>;
@@ -133,7 +134,13 @@ async function loadSubmissionData(
   const modalRequest = modalRequestResult as ModalRequest;
   timings["4_load_data_from_r2"] = performance.now() - loadDataStartTime;
 
-  const serviceRequests = prepareServiceRequests(modalRequest.parts, config, c.env.AI);
+  const modalService = createModalService(config);
+  const serviceRequests = prepareServiceRequests(
+    modalRequest.parts,
+    config,
+    c.env.AI,
+    modalService,
+  );
 
   return { modalRequest, serviceRequests };
 }
@@ -302,6 +309,10 @@ export async function processSubmission(
 
     // Phase 6: Merge results and apply metadata
     const mergeStartTime = performance.now();
+    // LanguageTool is enabled if the map has entries (meaning LT was run)
+    const languageToolEnabled = processedResults.ltErrorsByAnswerId.size > 0;
+    // LLM assessment is enabled if the map has entries (meaning LLM assessment was run)
+    const llmAssessmentEnabled = processedResults.llmErrorsByAnswerId.size > 0;
     const mergedAssessment = mergeAssessmentResults(
       processedResults.essayAssessment,
       processedResults.ltErrorsByAnswerId,
@@ -314,6 +325,8 @@ export async function processSubmission(
       llmFeedbackByAnswerId,
       processedResults.relevanceByAnswerId,
       teacherFeedbackByAnswerId,
+      languageToolEnabled,
+      llmAssessmentEnabled,
     );
     timings["10_merge_results"] = performance.now() - mergeStartTime;
 

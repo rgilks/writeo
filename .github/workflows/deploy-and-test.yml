@@ -12,7 +12,7 @@ env:
 
 jobs:
   test:
-    name: Run Unit Tests (Before Deploy)
+    name: Run All Tests (With Mocks)
     runs-on: ubuntu-latest
 
     steps:
@@ -34,8 +34,52 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Run unit tests
-        run: npm run test:unit
+      - name: Run unit and integration tests (with mocks)
+        # All tests use USE_MOCK_SERVICES=true by default to avoid API costs
+        # This includes api.test.ts which tests the full submission flow with mocked services
+        run: npm test
+        env:
+          CI: true
+          USE_MOCK_SERVICES: "true"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Start local dev servers
+        # Start API worker and web app with mocked services for E2E tests
+        run: |
+          cd apps/api-worker && USE_MOCK_SERVICES=true npm run dev > /tmp/writeo-api-worker.log 2>&1 &
+          cd ../web && API_BASE=http://localhost:8787 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev > /tmp/writeo-web.log 2>&1 &
+          sleep 15
+        env:
+          USE_MOCK_SERVICES: "true"
+
+      - name: Run E2E tests (with mocks)
+        # E2E tests use mocked services to avoid API costs and ensure fast, reliable tests
+        run: npm run test:e2e -- --reporter=github
+        env:
+          CI: true
+          USE_MOCK_SERVICES: "true"
+          PLAYWRIGHT_BASE_URL: "http://localhost:3000"
+          API_BASE: "http://localhost:8787"
+          NEXT_PUBLIC_API_BASE: "http://localhost:8787"
+
+      - name: Show server logs on failure
+        if: failure()
+        run: |
+          echo "=== API Worker Logs ==="
+          tail -100 /tmp/writeo-api-worker.log || echo "No API worker logs"
+          echo "=== Web App Logs ==="
+          tail -100 /tmp/writeo-web.log || echo "No web app logs"
 
   deploy:
     name: Build and Deploy
@@ -65,6 +109,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Production worker should NOT have USE_MOCK_SERVICES set (or set to false)
+          # This ensures production uses real APIs
 
       - name: Deploy Web App
         working-directory: apps/web
@@ -75,8 +121,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-  test-deployed:
-    name: Test Deployed Site (Integration & E2E)
+  smoke-test:
+    name: Smoke Test (Real APIs)
     runs-on: ubuntu-latest
     needs: [deploy]
 
@@ -93,6 +139,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build shared package
+        run: npm run build --workspace=@writeo/shared
+
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
@@ -105,31 +154,19 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run integration tests against production
-        # Integration tests (including api.test.ts) verify the deployed API works correctly
-        # IMPORTANT: These tests use REAL APIs (not mocks) to verify production functionality.
-        # The production worker must have USE_MOCK_LLM unset or false in Cloudflare secrets.
-        run: npm run test:integration
+      - name: Run smoke test against production
+        # Single E2E submission test to verify production deployment works with real APIs
+        # This is the only test that hits real Modal/Groq/OpenAI endpoints
+        # Tests the full user flow: navigate, type essay, submit, view results
+        run: npx playwright test tests/e2e/smoke.spec.ts --reporter=github
         env:
           CI: true
-          API_BASE: ${{ env.PRODUCTION_API_URL }}
-          API_BASE_FORCE_REMOTE: "true"
-          API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
-          # Tests call production API with real API keys - no mocks used
-          # Production worker must have USE_MOCK_LLM unset/false to use real LLM APIs
-
-      - name: Run E2E tests against deployed site
-        # IMPORTANT: These tests use REAL APIs (not mocks) to verify production functionality.
-        # The production worker must have USE_MOCK_LLM unset or false in Cloudflare secrets.
-        run: npm run test:e2e -- --reporter=github
-        env:
           PLAYWRIGHT_BASE_URL: ${{ env.PRODUCTION_WEB_URL }}
           API_BASE: ${{ env.PRODUCTION_API_URL }}
           API_BASE_FORCE_REMOTE: "true"
           API_KEY: ${{ secrets.TEST_API_KEY || secrets.API_KEY }}
           TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
-          CI: true
-          # Tests call production API with real API keys - no mocks used
-          # Production worker must have USE_MOCK_LLM unset/false to use real LLM APIs
-
-      # Note: HTML reports disabled - using github reporter only for CI output
+          # Explicitly disable mocks for production smoke test
+          USE_MOCK_SERVICES: "false"
+          # Production worker must have real API keys configured
+          # and USE_MOCK_SERVICES unset or false

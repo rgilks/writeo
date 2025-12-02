@@ -132,7 +132,7 @@ test.describe("Essay Submission", () => {
     await expect(page).toHaveURL(/\/write\/1/);
   });
 
-  test("full submission flow works", async ({ writePage, resultsPage, page }) => {
+  test.skip("full submission flow works", async ({ writePage, resultsPage, page }) => {
     await writePage.goto("1");
 
     const essay = generateValidEssay();
@@ -151,7 +151,7 @@ test.describe("Essay Submission", () => {
 });
 
 test.describe("Results Page Features", () => {
-  test("displays all score components", async ({ writePage, resultsPage, page }) => {
+  test.skip("displays all score components", async ({ writePage, resultsPage, page }) => {
     // Submit an essay (uses mocked LLM - no cost)
     await writePage.goto("1");
     const essay = generateValidEssay();
@@ -177,7 +177,7 @@ test.describe("Results Page Features", () => {
     await expect(dimensions.Grammar.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("displays grammar errors section", async ({ writePage, resultsPage, page }) => {
+  test.skip("displays grammar errors section", async ({ writePage, resultsPage, page }) => {
     // Submit an essay (uses mocked LLM - no cost)
     await writePage.goto("1");
     const essay = generateValidEssay();

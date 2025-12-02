@@ -46,10 +46,13 @@ export async function getLLMAssessment(
   questionText: string,
   answerText: string,
   modelName: string,
+  useMockServices?: boolean,
 ): Promise<LanguageToolError[]> {
   const prompt = buildAssessmentPrompt(questionText, answerText);
 
   try {
+    // Check if we should use mocks - pass undefined to let callLLMAPI check internally
+    // This maintains backward compatibility while allowing explicit control
     const text = await retryWithBackoff(() =>
       callLLMAPI(
         llmProvider,
@@ -60,6 +63,7 @@ export async function getLLMAssessment(
           { role: "user", content: prompt },
         ],
         MAX_TOKENS_GRAMMAR_CHECK,
+        useMockServices, // Pass through the mock flag
       ),
     );
 

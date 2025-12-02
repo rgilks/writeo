@@ -78,6 +78,7 @@ export async function createStreamingResponse(
   apiKey: string,
   aiModel: string,
   prompt: string,
+  useMockServices?: boolean,
 ): Promise<ReadableStream> {
   return new ReadableStream({
     async start(controller) {
@@ -96,6 +97,7 @@ export async function createStreamingResponse(
             aiModel,
             buildLLMMessages(prompt),
             STREAMING_MAX_TOKENS,
+            useMockServices,
           )) {
             hasContent = true;
             enqueueSSE(controller, encoder, { type: "chunk", text: chunk });
@@ -108,6 +110,7 @@ export async function createStreamingResponse(
             aiModel,
             buildLLMMessages(prompt),
             STREAMING_MAX_TOKENS,
+            useMockServices,
           );
 
           if (responseText && responseText.trim().length > 0) {

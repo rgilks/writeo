@@ -31,6 +31,7 @@ export interface AppConfig {
       enabled: boolean;
       language: string;
     };
+    mockServices: boolean;
   };
   allowedOrigins?: string;
 }
@@ -87,6 +88,7 @@ export function buildConfig(env: Env): AppConfig {
         enabled: !!env.MODAL_LT_URL,
         language: env.LT_LANGUAGE || DEFAULT_LT_LANGUAGE,
       },
+      mockServices: env.USE_MOCK_SERVICES === "true",
     },
     allowedOrigins: env.ALLOWED_ORIGINS,
   };

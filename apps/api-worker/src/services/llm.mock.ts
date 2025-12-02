@@ -8,12 +8,18 @@ const MOCK_DELAY_MS_MAX = 50;
 const STREAM_DELAY_MS_MIN = 5;
 const STREAM_DELAY_MS_MAX = 15;
 
-const GRAMMAR_CHECK_KEYWORDS = ["grammar and language checker", "identify ALL grammar"];
+const GRAMMAR_CHECK_KEYWORDS = [
+  "grammar and language checker",
+  "identify ALL grammar",
+  "Find ALL grammar",
+  "Check the ENTIRE text systematically",
+];
 const FEEDBACK_REQUEST_KEYWORDS = ["expert English language tutor", "Provide feedback"];
 const TEACHER_FEEDBACK_KEYWORDS = ["professional writing tutor", "Give clear, direct feedback"];
 
-const MOCK_GRAMMAR_RESPONSE = `0|5|I go|GRAMMAR|Verb tense error: Use past tense for past events|I went|Verb tense|The verb 'go' should be in past tense 'went' when describing past events|error
-20|27|We was|GRAMMAR|Subject-verb agreement error|We were|Subject-verb agreement|'We' requires 'were', not 'was'|error`;
+const MOCK_GRAMMAR_RESPONSE = `I go|weekend|to|GRAMMAR|Verb tense error: Use past tense for past events|went|Verb tense|The verb 'go' should be in past tense 'went' when describing past events|error
+We was|park.|playing|GRAMMAR|Subject-verb agreement error|were|Subject-verb agreement|'We' requires 'were', not 'was'|error
+I have|football.|a|GRAMMAR|Verb tense error: Use past tense for past events|had|Verb tense|The verb 'have' should be in past tense 'had' when describing past events|error`;
 
 const MOCK_TEACHER_FEEDBACK_CLUES =
   "Try checking your verb tenses - look for words like 'yesterday' or 'last week' that indicate past time.";

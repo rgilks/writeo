@@ -32,11 +32,14 @@ feedbackRouter.post(
       requestData.ltErrors,
     );
 
+    // Pass mockServices flag from env to ensure mocking works in Cloudflare Workers
+    const useMockServices = c.env.USE_MOCK_SERVICES === "true";
     const stream = await createStreamingResponse(
       requestData.llmProvider,
       requestData.apiKey,
       requestData.aiModel,
       prompt,
+      useMockServices,
     );
 
     return new Response(stream, {

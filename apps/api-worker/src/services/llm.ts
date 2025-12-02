@@ -33,11 +33,12 @@ export async function callLLMAPI(
   modelName: string,
   messages: Array<{ role: string; content: string }>,
   maxTokens: number,
+  useMockServices?: boolean,
 ): Promise<string> {
   if (provider === "groq") {
-    return callGroqAPI(apiKey, modelName, messages, maxTokens);
+    return callGroqAPI(apiKey, modelName, messages, maxTokens, useMockServices);
   }
-  return callOpenAIAPI(apiKey, modelName, messages, maxTokens);
+  return callOpenAIAPI(apiKey, modelName, messages, maxTokens, useMockServices);
 }
 
 export function parseLLMProvider(provider?: string): LLMProvider {
@@ -61,15 +62,16 @@ export async function* streamLLMAPI(
   modelName: string,
   messages: Array<{ role: string; content: string }>,
   maxTokens: number,
+  useMockServices?: boolean,
 ): AsyncGenerator<string, void, unknown> {
   if (provider === "openai") {
     const { streamOpenAIAPI } = await import("./openai");
-    yield* streamOpenAIAPI(apiKey, modelName, messages, maxTokens);
+    yield* streamOpenAIAPI(apiKey, modelName, messages, maxTokens, useMockServices);
     return;
   }
 
   // Groq streaming not yet implemented, fall back to non-streaming with simulated streaming
   const { callGroqAPI } = await import("./groq");
-  const response = await callGroqAPI(apiKey, modelName, messages, maxTokens);
+  const response = await callGroqAPI(apiKey, modelName, messages, maxTokens, useMockServices);
   yield* simulateStreaming(response);
 }

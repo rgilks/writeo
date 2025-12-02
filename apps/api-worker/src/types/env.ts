@@ -17,6 +17,8 @@ export type Env = {
   API_KEY: string;
   /** Test API key with higher rate limits */
   TEST_API_KEY?: string;
+  /** Enable mocked services */
+  USE_MOCK_SERVICES?: string;
 
   // AI services
   AI: Ai;

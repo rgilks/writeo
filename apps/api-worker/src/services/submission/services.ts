@@ -8,7 +8,7 @@ import { checkAnswerRelevance } from "../relevance";
 import type { AppConfig } from "../config";
 import type { LLMProvider } from "../llm";
 import { iterateAnswers } from "./utils";
-import { postJsonWithAuth } from "../../utils/http";
+import type { ModalService } from "../modal/types";
 
 export interface ServiceRequests {
   ltRequests: Array<{ answerId: string; request: Promise<Response> }>;
@@ -27,16 +27,18 @@ export interface ServiceRequests {
   llmProvider: LLMProvider;
   apiKey: string;
   aiModel: string;
+  modalService: ModalService;
 }
 
 export function prepareServiceRequests(
   modalParts: ModalRequest["parts"],
   config: AppConfig,
   ai: Ai,
+  modalService: ModalService,
 ): ServiceRequests {
   const language = config.features.languageTool.language;
 
-  const ltRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
+  let ltRequests: Array<{ answerId: string; request: Promise<Response> }>;
   const relevanceRequests: Array<{
     answerId: string;
     questionText: string;
@@ -50,21 +52,16 @@ export function prepareServiceRequests(
     request: Promise<LanguageToolError[]>;
   }> = [];
 
-  const ltEnabled = config.features.languageTool.enabled && config.modal.ltUrl;
+  // Enable LT if configured OR if using mock services (to test the flow)
+  const ltEnabled =
+    (config.features.languageTool.enabled && config.modal.ltUrl) || config.features.mockServices;
+  const requests: Array<{ answerId: string; request: Promise<Response> }> = [];
+
   for (const answer of iterateAnswers(modalParts)) {
     if (ltEnabled) {
-      ltRequests.push({
+      requests.push({
         answerId: answer.id,
-        request: postJsonWithAuth(
-          `${config.modal.ltUrl}/check`,
-          config.api.key,
-          {
-            language,
-            text: answer.answer_text,
-            answer_id: answer.id,
-          },
-          30000,
-        ),
+        request: modalService.checkGrammar(answer.answer_text, language, answer.id),
       });
     }
 
@@ -85,9 +82,12 @@ export function prepareServiceRequests(
         answer.question_text,
         answer.answer_text,
         config.llm.model,
+        config.features.mockServices, // Pass mock flag from config
       ),
     });
   }
+
+  ltRequests = requests;
 
   return {
     ltRequests,
@@ -96,13 +96,14 @@ export function prepareServiceRequests(
     llmProvider: config.llm.provider,
     apiKey: config.llm.apiKey,
     aiModel: config.llm.model,
+    modalService,
   };
 }
 
 export async function executeServiceRequests(
   modalRequest: ModalRequest,
   serviceRequests: ServiceRequests,
-  config: AppConfig,
+  _config: AppConfig,
   timings: Record<string, number>,
 ): Promise<{
   essayResult: PromiseSettledResult<Response>;
@@ -111,17 +112,12 @@ export async function executeServiceRequests(
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>;
 }> {
   const essayStartTime = performance.now();
-  const { ltRequests, llmAssessmentRequests, relevanceRequests } = serviceRequests;
+  const { ltRequests, llmAssessmentRequests, relevanceRequests, modalService } = serviceRequests;
 
   const [essayResult, ltResults, llmResults, relevanceResults] = await Promise.allSettled([
     (async () => {
       const start = performance.now();
-      const result = await postJsonWithAuth(
-        `${config.modal.gradeUrl}/grade`,
-        config.api.key,
-        modalRequest,
-        60000,
-      );
+      const result = await modalService.gradeEssay(modalRequest);
       timings["5a_essay_fetch"] = performance.now() - start;
       return result;
     })(),

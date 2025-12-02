@@ -71,7 +71,6 @@ export function AnswerForm({
           className="textarea notranslate"
           value={answer}
           onChange={onAnswerChange}
-          onInput={onAnswerChange}
           aria-describedby={error ? "answer-error" : "answer-help"}
           aria-invalid={!!error || wordCount < MIN_ESSAY_WORDS || wordCount > MAX_ESSAY_WORDS}
           placeholder={placeholder}

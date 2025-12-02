@@ -19,10 +19,10 @@ if (process.env.API_BASE_OVERRIDE) {
   process.env.API_BASE_URL = process.env.API_BASE_OVERRIDE;
 }
 
-// Enable LLM mocking by default to avoid API costs
-// Override with USE_MOCK_LLM=false to use real APIs
-if (!process.env.USE_MOCK_LLM) {
-  process.env.USE_MOCK_LLM = "true";
+// Enable Service mocking by default to avoid API costs
+// Override with USE_MOCK_SERVICES=false to use real APIs
+if (!process.env.USE_MOCK_SERVICES) {
+  process.env.USE_MOCK_SERVICES = "true";
 }
 
 const shouldSkipApiTests = process.env.SKIP_API_TESTS === "true";
@@ -61,7 +61,7 @@ export default defineConfig({
     },
     retry: 1,
     env: {
-      USE_MOCK_LLM: process.env.USE_MOCK_LLM,
+      USE_MOCK_SERVICES: process.env.USE_MOCK_SERVICES,
     },
   },
 });

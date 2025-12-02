@@ -200,8 +200,10 @@ export async function rateLimit(
     return next();
   }
 
+  // Skip rate limiting for test keys or when using mocked services (test environment)
   const isTest = (c.get("isTestKey") as boolean) || false;
-  if (isTest) {
+  const useMockServices = c.env.USE_MOCK_SERVICES === "true";
+  if (isTest || useMockServices) {
     return next();
   }
 

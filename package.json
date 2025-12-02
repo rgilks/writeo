@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:unit": "TEST_TYPE=unit vitest run",
     "test:integration": "TEST_TYPE=integration vitest run",
+    "test:smoke": "playwright test tests/e2e/smoke.spec.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",

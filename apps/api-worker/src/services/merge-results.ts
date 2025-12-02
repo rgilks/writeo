@@ -188,7 +188,7 @@ function createTeacherFeedbackAssessor(
 }
 
 function buildAssessorResults(
-  answerId: string,
+  _answerId: string,
   essayAssessorResults: AssessorResult[],
   ltErrors: LanguageToolError[],
   llmErrors: LanguageToolError[],
@@ -198,19 +198,22 @@ function buildAssessorResults(
   language: string,
   llmProvider: string,
   aiModel: string,
+  languageToolEnabled: boolean = false,
+  llmAssessmentEnabled: boolean = false,
 ): AssessorResult[] {
   const assessorResults: AssessorResult[] = [...essayAssessorResults];
 
-  if (ltErrors.length > 0) {
+  // Always include LT assessor when LanguageTool is enabled (even if no errors found)
+  if (languageToolEnabled) {
     assessorResults.push(createLanguageToolAssessor(ltErrors, language));
   }
 
-  if (llmErrors.length > 0) {
+  // Always include LLM assessor when LLM assessment is enabled (even if no errors found)
+  if (llmAssessmentEnabled) {
     assessorResults.push(createLLMAssessor(llmErrors, llmProvider, aiModel));
-  } else {
-    console.log(
-      `[merge-results] LLM assessor not added for answer ${answerId}: no errors found (provider: ${llmProvider})`,
-    );
+  } else if (llmErrors.length > 0) {
+    // Fallback: include if there are errors even if not explicitly enabled
+    assessorResults.push(createLLMAssessor(llmErrors, llmProvider, aiModel));
   }
 
   if (llmFeedback) {
@@ -252,6 +255,8 @@ export function mergeAssessmentResults(
   llmFeedback: Map<string, AIFeedback> = new Map(),
   relevanceChecks: Map<string, RelevanceCheck> = new Map(),
   teacherFeedback: Map<string, TeacherFeedback> = new Map(),
+  languageToolEnabled: boolean = false,
+  llmAssessmentEnabled: boolean = false,
 ): AssessmentResults {
   const parts: AssessmentPart[] = [];
 
@@ -271,6 +276,8 @@ export function mergeAssessmentResults(
         language,
         llmProvider,
         aiModel,
+        languageToolEnabled,
+        llmAssessmentEnabled,
       );
 
       answerResults.push({

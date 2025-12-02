@@ -9,6 +9,10 @@ API_KEY=your-api-key-here
 # Optional: Test API key with higher rate limits for automated testing
 TEST_API_KEY=your-test-api-key-here
 
+# Optional: Enable mocked services (avoids external API calls)
+# Set to "true" to use mock implementations for Modal and LLM services
+USE_MOCK_SERVICES=true
+
 # Modal Essay Scoring service URL
 # Get this after deploying: cd services/modal-essay && modal deploy app.py
 MODAL_GRADE_URL=https://your-username--writeo-essay-fastapi-app.modal.run
