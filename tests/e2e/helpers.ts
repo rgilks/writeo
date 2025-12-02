@@ -21,6 +21,8 @@ export const TEST_ESSAYS = {
     "I goes to park yesterday. The dog was happy and we plays together.",
 };
 
+const MIN_ESSAY_WORDS = 250;
+
 // API configuration - loaded from .env or .env.local
 // Always prefer TEST_API_KEY for tests (higher rate limits)
 const API_BASE = process.env.API_BASE || process.env.API_BASE_URL || "http://localhost:8787";
@@ -168,9 +170,8 @@ export class HomePage {
   constructor(private page: Page) {}
 
   async goto() {
-    await this.page.goto("/");
-    // Wait for page to be ready (consistent pattern)
-    await this.page.waitForLoadState("networkidle", { timeout: 15000 });
+    await this.page.goto("/", { waitUntil: "domcontentloaded" });
+    await this.page.waitForSelector('[data-testid="task-card"]', { timeout: 15000 });
   }
 
   async getTaskCards() {
@@ -178,19 +179,18 @@ export class HomePage {
   }
 
   async clickTask(taskId: string) {
-    // Use data-testid for reliable selection
     const link = this.page.locator(`[data-testid="task-card-link-${taskId}"]`);
-    // Wait for link to be visible and ready
     await link.waitFor({ state: "visible", timeout: 15000 });
-    // Wait for page to be stable (but don't fail if networkidle times out - it's optional)
-    await this.page.waitForLoadState("domcontentloaded", { timeout: 10000 });
-    // Click and wait for navigation - more reliable pattern
+    await link.scrollIntoViewIfNeeded();
     await Promise.all([
       this.page.waitForURL(new RegExp(`/write/${taskId}`), { timeout: 20000 }),
       link.click(),
     ]);
-    // Wait for new page to be ready
-    await this.page.waitForLoadState("domcontentloaded", { timeout: 10000 });
+    const readySelector =
+      taskId === "custom"
+        ? '[data-testid="custom-question-textarea"]'
+        : '[data-testid="answer-textarea"]';
+    await this.page.waitForSelector(readySelector, { timeout: 15000 });
   }
 
   async getProgressDashboard() {
@@ -406,98 +406,50 @@ export class WritePage {
   }
 
   async typeEssay(text: string) {
+    await this.page.waitForSelector('[data-testid="answer-form"][data-hydrated="true"]', {
+      timeout: 15000,
+    });
     const textarea = this.page.locator('[data-testid="answer-textarea"]');
     await textarea.waitFor({ state: "visible", timeout: 10000 });
     await textarea.clear();
 
-    // For short text, use type() which naturally triggers React onChange
-    // For long text, use fill() + manual event dispatch for performance
-    if (text.length < 500) {
-      await textarea.type(text, { delay: 0 });
-    } else {
-      // Use fill() for long text, then manually trigger React's onChange
-      await textarea.fill(text);
+    await textarea.fill(text);
 
-      // Check if page is still on write page before calling evaluate
-      // Navigation might have occurred (e.g., auto-save redirect)
-      const currentUrl = this.page.url();
-      const isOnWritePage = currentUrl.includes("/write/");
+    await this.page.waitForFunction(
+      (minChars) => {
+        const textarea = document.querySelector(
+          '[data-testid="answer-textarea"]',
+        ) as HTMLTextAreaElement | null;
+        if (!textarea) return false;
+        if (textarea.value.length < minChars) return false;
+        const count = parseInt(textarea.getAttribute("data-word-count") || "0", 10);
+        return count > 0;
+      },
+      Math.min(text.length, 1000),
+      { timeout: 10000 },
+    );
+  }
 
-      if (isOnWritePage && !this.page.isClosed()) {
-        // Trigger React's onChange by dispatching proper input event
-        // Wrap in try-catch to handle case where page navigates during evaluate
-        try {
-          await textarea.evaluate((el, value) => {
-            // Set value directly (fill() already did this, but ensure it's set)
-            (el as HTMLTextAreaElement).value = value;
-            // Dispatch InputEvent (more accurate than Event for input elements)
-            const inputEvent = new InputEvent("input", {
-              bubbles: true,
-              cancelable: true,
-              inputType: "insertText",
-            });
-            el.dispatchEvent(inputEvent);
-            // Also dispatch change event for completeness
-            const changeEvent = new Event("change", { bubbles: true });
-            el.dispatchEvent(changeEvent);
-          }, text);
-        } catch (error: any) {
-          // If page navigated during evaluate, that's okay - fill() already set the value
-          if (
-            error?.message?.includes("Execution context was destroyed") ||
-            error?.message?.includes("Target page, context or browser has been closed")
-          ) {
-            // Page navigated, which is fine - fill() already set the value
-            // Continue to wait for word count update
-          } else {
-            throw error;
-          }
-        }
-      }
-    }
+  async waitForSubmitButtonEnabled(timeout = 20000) {
+    await this.page.waitForFunction(
+      (minWords) => {
+        const textarea = document.querySelector(
+          '[data-testid="answer-textarea"]',
+        ) as HTMLTextAreaElement | null;
+        if (!textarea) return false;
+        const count = parseInt(textarea.getAttribute("data-word-count") || "0", 10);
+        return count >= minWords;
+      },
+      MIN_ESSAY_WORDS,
+      { timeout },
+    );
 
-    // Wait for React to process the events and update word count
-    // Check both DOM value and that React state has updated
-    // Only wait if we're still on the write page
-    try {
-      if (this.page.isClosed()) {
-        return; // Page closed, can't wait
+    await playwrightExpect(async () => {
+      const disabled = await this.isSubmitButtonDisabled();
+      if (disabled) {
+        throw new Error("Submit button is still disabled after reaching minimum word count");
       }
-      const currentUrl = this.page.url();
-      if (currentUrl.includes("/write/")) {
-        await this.page
-          .waitForFunction(
-            (expectedLength) => {
-              const textarea = document.querySelector(
-                '[data-testid="answer-textarea"]',
-              ) as HTMLTextAreaElement;
-              if (!textarea) return false;
-              // Check DOM value is set
-              if (textarea.value.length < expectedLength) return false;
-              // Check word count element exists and has updated (indicates React state updated)
-              const wordCountEl = document.querySelector('[data-testid="word-count-value"]');
-              return wordCountEl !== null;
-            },
-            text.length,
-            { timeout: 10000 },
-          )
-          .catch(() => {
-            // If page navigated or closed, that's okay - the value was already set
-          });
-      }
-    } catch (error: any) {
-      // If page.url() throws (page closed/navigating), that's okay
-      // The fill() or type() already set the value, React will process it
-      if (
-        error?.message?.includes("Target page, context or browser has been closed") ||
-        this.page.isClosed()
-      ) {
-        // Page closed/navigated, value was set, continue
-        return;
-      }
-      // Re-throw other errors
-      throw error;
-    }
+    }).toPass({ timeout: 5000 });
   }
 
   async getWordCount() {
@@ -518,19 +470,9 @@ export class WritePage {
   async clickSubmit() {
     const button = await this.getSubmitButton();
     await button.waitFor({ state: "visible", timeout: 15000 });
-    // Wait for button to be enabled (with timeout)
-    await this.page.waitForFunction(
-      () => {
-        const btn = document.querySelector('[data-testid="submit-button"]') as HTMLButtonElement;
-        return btn && !btn.disabled;
-      },
-      { timeout: 15000 },
-    );
-    // Wait for page to be stable before clicking
-    await this.page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
-    // Click and wait for navigation to start
+    await playwrightExpect(button.first()).toBeEnabled({ timeout: 20000 });
     await Promise.all([
-      this.page.waitForURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 }).catch(() => {}),
+      this.page.waitForURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 }),
       button.first().click(),
     ]);
   }

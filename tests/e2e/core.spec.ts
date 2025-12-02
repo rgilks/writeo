@@ -97,12 +97,8 @@ test.describe("Essay Submission", () => {
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
 
-    // Wait for word count to update and button to be enabled
-    // The typeEssay helper already waits for word count to update, so we just need to verify button state
-    await expect(async () => {
-      const isDisabled = await writePage.isSubmitButtonDisabled();
-      expect(isDisabled).toBe(false);
-    }).toPass({ timeout: 10000 });
+    // Wait for submit button to become enabled once minimum word count is met
+    await writePage.waitForSubmitButtonEnabled();
   });
 
   test("word count validation prevents short essays", async ({ writePage, page }) => {
@@ -143,9 +139,7 @@ test.describe("Essay Submission", () => {
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
 
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
 
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
@@ -163,9 +157,7 @@ test.describe("Results Page Features", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
     await resultsPage.waitForResults();
@@ -191,9 +183,7 @@ test.describe("Results Page Features", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
     await resultsPage.waitForResults();
@@ -212,9 +202,7 @@ test.describe("Results Page Features", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
     await resultsPage.waitForResults();
@@ -229,9 +217,7 @@ test.describe("Results Page Features", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
     await resultsPage.waitForResults();
@@ -249,9 +235,7 @@ test.describe("Results Page Features", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
     await resultsPage.waitForResults();
@@ -313,9 +297,7 @@ test.describe("Custom Question", () => {
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
 
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 3000 });
+    await writePage.waitForSubmitButtonEnabled();
 
     await writePage.clickSubmit();
     await expect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: 30000 });
@@ -332,9 +314,7 @@ test.describe("Draft History", () => {
     await writePage.goto("1");
     const essay1 = generateValidEssay();
     await writePage.typeEssay(essay1);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
     await resultsPage.waitForResults();
@@ -391,9 +371,7 @@ test.describe("Draft History", () => {
     await writePage.goto("1");
     const essay1 = generateValidEssay();
     await writePage.typeEssay(essay1);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
     await resultsPage.waitForResults();
@@ -422,9 +400,7 @@ test.describe("Draft History", () => {
     await writePage.goto("1");
     const essay1 = generateValidEssay();
     await writePage.typeEssay(essay1);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 10000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
     await resultsPage.waitForResults();
@@ -464,9 +440,7 @@ test.describe("Progress Dashboard", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 3000 });
+    await writePage.waitForSubmitButtonEnabled();
 
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
@@ -505,9 +479,7 @@ test.describe("Results Persistence", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 3000 });
+    await writePage.waitForSubmitButtonEnabled();
 
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
@@ -534,9 +506,7 @@ test.describe("Results Persistence", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 3000 });
+    await writePage.waitForSubmitButtonEnabled();
 
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
@@ -597,9 +567,7 @@ test.describe("History Page", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 3000 });
+    await writePage.waitForSubmitButtonEnabled();
 
     await writePage.clickSubmit();
     await waitForResultsNavigation(page);
@@ -671,9 +639,7 @@ test.describe("History Page", () => {
     await writePage.goto("1");
     const essay = generateValidEssay();
     await writePage.typeEssay(essay);
-    await expect(async () => {
-      expect(await writePage.isSubmitButtonDisabled()).toBe(false);
-    }).toPass({ timeout: 3000 });
+    await writePage.waitForSubmitButtonEnabled();
     await writePage.clickSubmit();
 
     // Wait for results and get submission ID
