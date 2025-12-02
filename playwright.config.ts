@@ -40,19 +40,20 @@ if (envBaseUrl) {
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 60000, // Increased for slower operations
-  expect: { timeout: 5000 }, // Increased for better reliability
+  timeout: process.env.CI ? 120000 : 60000, // Increased for CI/production
+  expect: { timeout: process.env.CI ? 10000 : 5000 }, // Increased for CI
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  maxFailures: process.env.CI ? 5 : 3,
+  retries: process.env.CI ? 2 : 0, // More retries in CI
+  maxFailures: process.env.CI ? 10 : 3, // Allow more failures before stopping
   // Tests are now resilient to localStorage state and hydration timing
   // They clear localStorage at start and work regardless of hydration state
-  workers: process.env.CI ? 4 : 4,
+  workers: process.env.CI ? 2 : 4, // Reduce workers in CI to avoid rate limits
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000",
-    actionTimeout: 10000,
+    actionTimeout: process.env.CI ? 30000 : 10000, // Longer timeout for CI
+    navigationTimeout: process.env.CI ? 60000 : 30000, // Longer navigation timeout
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "off",

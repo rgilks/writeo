@@ -32,7 +32,8 @@ const API_KEY = process.env.TEST_API_KEY || process.env.API_KEY || "";
 // Use worker ID to avoid conflicts between workers
 const workerId = process.env.TEST_WORKER_INDEX || "0";
 const submissionTimers = new Map<string, number>();
-const MIN_DELAY_MS = 200; // Delay between submissions to avoid rate limits
+// Increase delay in CI to avoid rate limits on production API
+const MIN_DELAY_MS = process.env.CI ? 500 : 200; // Delay between submissions to avoid rate limits
 
 /**
  * Create a test submission via API with retry logic for rate limiting
@@ -182,16 +183,44 @@ export class HomePage {
     const link = this.page.locator(`[data-testid="task-card-link-${taskId}"]`);
     await link.waitFor({ state: "visible", timeout: 15000 });
     await link.scrollIntoViewIfNeeded();
-    await Promise.all([
-      this.page.waitForURL(new RegExp(`/write/${taskId}`), { timeout: 20000 }),
-      link.click(),
-    ]);
+
+    // Use a more reliable navigation pattern: wait for navigation promise first
+    const navigationPromise = this.page.waitForURL(new RegExp(`/write/${taskId}`), {
+      timeout: 30000,
+      waitUntil: "domcontentloaded",
+    });
+
+    // Click and wait for navigation
+    await link.click();
+    await navigationPromise;
+
     // Wait for the appropriate textarea - form works regardless of hydration state
+    // Use a more robust wait that checks for both visibility and interactivity
     const readySelector =
       taskId === "custom"
         ? '[data-testid="custom-question-textarea"]'
         : '[data-testid="answer-textarea"]';
-    await this.page.waitForSelector(readySelector, { timeout: 15000 });
+
+    // Wait for element to be visible and in DOM
+    await this.page.waitForSelector(readySelector, {
+      timeout: 20000,
+      state: "visible",
+    });
+
+    // Additional wait to ensure element is ready for interaction
+    await this.page
+      .waitForFunction(
+        (selector) => {
+          const el = document.querySelector(selector);
+          return el && el instanceof HTMLElement && !el.hasAttribute("disabled");
+        },
+        readySelector,
+        { timeout: 5000 },
+      )
+      .catch(() => {
+        // If element doesn't have disabled attribute check, that's fine
+        // Just ensure it's visible
+      });
   }
 
   async getProgressDashboard() {
@@ -258,7 +287,9 @@ export class HistoryPage {
 /**
  * Helper to wait for navigation to results page with error handling
  */
-export async function waitForResultsNavigation(page: Page, timeout = 60000): Promise<void> {
+export async function waitForResultsNavigation(page: Page, timeout?: number): Promise<void> {
+  // Increase timeout for CI/production
+  const actualTimeout = timeout || (process.env.CI ? 120000 : 60000);
   const consoleErrors: string[] = [];
   const networkErrors: string[] = [];
 
@@ -293,7 +324,7 @@ export async function waitForResultsNavigation(page: Page, timeout = 60000): Pro
     }
 
     // Wait for navigation to results page
-    await playwrightExpect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout });
+    await playwrightExpect(page).toHaveURL(/\/results\/[a-f0-9-]+/, { timeout: actualTimeout });
   } catch (error: any) {
     // Check if page was closed - but only throw if we haven't already navigated
     const isClosed = page.isClosed();
@@ -388,18 +419,30 @@ export class WritePage {
   constructor(private page: Page) {}
 
   async goto(taskId: string) {
-    await this.page.goto(`/write/${taskId}`, { waitUntil: "networkidle", timeout: 60000 });
+    // Use domcontentloaded for faster navigation, then wait for specific elements
+    await this.page.goto(`/write/${taskId}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
 
     // Wait for the textarea to be visible - this is what we actually need
     // The form works regardless of Zustand hydration state (user input uses local state)
     // For custom pages, wait for custom question textarea; otherwise wait for answer textarea
-    if (taskId === "custom") {
-      await this.page.waitForSelector('[data-testid="custom-question-textarea"]', {
-        timeout: 15000,
-      });
-    } else {
-      await this.page.waitForSelector('[data-testid="answer-textarea"]', { timeout: 15000 });
-    }
+    const selector =
+      taskId === "custom"
+        ? '[data-testid="custom-question-textarea"]'
+        : '[data-testid="answer-textarea"]';
+
+    await this.page.waitForSelector(selector, {
+      timeout: 20000,
+      state: "visible",
+    });
+
+    // Additional wait to ensure page is fully interactive
+    await this.page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {
+      // If networkidle times out, that's okay - page might still be loading resources
+      // The important thing is the textarea is visible
+    });
   }
 
   async getQuestionText() {
@@ -533,10 +576,48 @@ export class WritePage {
     const button = await this.getSubmitButton();
     await button.waitFor({ state: "visible", timeout: 15000 });
     await playwrightExpect(button.first()).toBeEnabled({ timeout: 20000 });
-    await Promise.all([
-      this.page.waitForURL(/\/results\/[a-f0-9-]+/, { timeout: 60000 }),
-      button.first().click(),
-    ]);
+
+    // Use a more reliable navigation pattern
+    // Start navigation promise before clicking
+    const navigationPromise = this.page.waitForURL(/\/results\/[a-f0-9-]+/, {
+      timeout: 90000, // Increased timeout for CI/production
+      waitUntil: "domcontentloaded",
+    });
+
+    // Click and wait for navigation
+    await button.first().click();
+
+    // Wait for navigation with better error handling
+    try {
+      await navigationPromise;
+    } catch (error: any) {
+      // Check if we're already on results page (race condition)
+      const currentUrl = this.page.url();
+      if (/\/results\/[a-f0-9-]+/.test(currentUrl)) {
+        // Already navigated, that's fine
+        return;
+      }
+
+      // Check for error messages on page
+      const errorSelectors = [
+        '[role="alert"]',
+        '[data-testid="error"]',
+        "text=/error/i",
+        "text=/rate limit/i",
+        "text=/too many/i",
+      ];
+
+      for (const selector of errorSelectors) {
+        const errorEl = this.page.locator(selector).first();
+        const isVisible = await errorEl.isVisible({ timeout: 1000 }).catch(() => false);
+        if (isVisible) {
+          const errorText = await errorEl.textContent();
+          throw new Error(`Submission failed: ${errorText || "Unknown error"}`);
+        }
+      }
+
+      throw error;
+    }
   }
 
   async getLoadingState() {
@@ -726,18 +807,21 @@ export class ResultsPage {
    * Wait for draft history to appear (requires 2+ drafts)
    * Simply waits for the Draft History UI to become visible
    */
-  async waitForDraftHistory(timeout = 10000): Promise<void> {
+  async waitForDraftHistory(timeout = 20000): Promise<void> {
     // Wait for the draft history section to be visible in the UI
     // This is the reliable indicator that drafts are being displayed
+    // Increased timeout for CI/production
+    const ciTimeout = process.env.CI ? timeout * 2 : timeout;
+
     try {
       await this.page.waitForSelector('[data-testid="draft-history"]', {
-        timeout,
+        timeout: ciTimeout,
         state: "visible",
       });
     } catch {
       // Fallback to h2 heading if testid selector fails
       await this.page.waitForSelector('h2:has-text("Draft History")', {
-        timeout,
+        timeout: ciTimeout,
         state: "visible",
       });
     }

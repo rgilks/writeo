@@ -48,20 +48,20 @@ test.describe("Homepage", () => {
     await homePage.goto();
     // Wait for task cards to be visible (ensures page is fully rendered)
     const taskCards = await homePage.getTaskCards();
-    await taskCards.first().waitFor({ state: "visible", timeout: 15000 });
-    // clickTask already waits for navigation, so we just verify the URL
+    await taskCards.first().waitFor({ state: "visible", timeout: 20000 });
+    // clickTask already waits for navigation and textarea, so we just verify the URL
     await homePage.clickTask("1");
-    await expect(page).toHaveURL(/\/write\/1/);
+    await expect(page).toHaveURL(/\/write\/1/, { timeout: 10000 });
   });
 
   test("custom question card navigates correctly", async ({ homePage, page }) => {
     await homePage.goto();
     // Wait for task cards to be visible (ensures page is fully rendered)
     const taskCards = await homePage.getTaskCards();
-    await taskCards.first().waitFor({ state: "visible", timeout: 15000 });
-    // clickTask already waits for navigation, so we just verify the URL
+    await taskCards.first().waitFor({ state: "visible", timeout: 20000 });
+    // clickTask already waits for navigation and textarea, so we just verify the URL
     await homePage.clickTask("custom");
-    await expect(page).toHaveURL(/\/write\/custom/);
+    await expect(page).toHaveURL(/\/write\/custom/, { timeout: 10000 });
   });
 });
 
