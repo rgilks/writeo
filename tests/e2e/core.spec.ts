@@ -14,18 +14,17 @@ import { generateValidEssay, waitForResultsNavigation } from "./helpers";
  */
 
 // Clear localStorage before each test for better isolation
+// Tests are designed to work regardless of hydration state or localStorage contents
 test.beforeEach(async ({ page }) => {
-  // Clear localStorage without navigating (non-blocking)
-  // This avoids navigation conflicts when tests start from different pages
+  // Clear all storage to ensure clean state
+  // The app should work fine whether Zustand has hydrated or not
   try {
-    // Try to clear storage directly if page context is available
     await page.evaluate(() => {
       localStorage.clear();
       sessionStorage.clear();
     });
   } catch {
-    // If page context isn't ready, that's okay - storage will be cleared when test navigates
-    // Don't navigate here as it can conflict with test setup
+    // If page context isn't ready, storage will be cleared when test navigates
   }
 });
 

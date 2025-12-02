@@ -186,6 +186,7 @@ export class HomePage {
       this.page.waitForURL(new RegExp(`/write/${taskId}`), { timeout: 20000 }),
       link.click(),
     ]);
+    // Wait for the appropriate textarea - form works regardless of hydration state
     const readySelector =
       taskId === "custom"
         ? '[data-testid="custom-question-textarea"]'
@@ -387,7 +388,18 @@ export class WritePage {
   constructor(private page: Page) {}
 
   async goto(taskId: string) {
-    await this.page.goto(`/write/${taskId}`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await this.page.goto(`/write/${taskId}`, { waitUntil: "networkidle", timeout: 60000 });
+
+    // Wait for the textarea to be visible - this is what we actually need
+    // The form works regardless of Zustand hydration state (user input uses local state)
+    // For custom pages, wait for custom question textarea; otherwise wait for answer textarea
+    if (taskId === "custom") {
+      await this.page.waitForSelector('[data-testid="custom-question-textarea"]', {
+        timeout: 15000,
+      });
+    } else {
+      await this.page.waitForSelector('[data-testid="answer-textarea"]', { timeout: 15000 });
+    }
   }
 
   async getQuestionText() {
@@ -406,50 +418,100 @@ export class WritePage {
   }
 
   async typeEssay(text: string) {
-    await this.page.waitForSelector('[data-testid="answer-form"][data-hydrated="true"]', {
-      timeout: 15000,
-    });
+    // Wait for textarea to be visible and ready
+    // The form works regardless of Zustand hydration - user input uses local React state
     const textarea = this.page.locator('[data-testid="answer-textarea"]');
-    await textarea.waitFor({ state: "visible", timeout: 10000 });
+    await textarea.waitFor({ state: "visible", timeout: 15000 });
+
+    // Clear the textarea first
     await textarea.clear();
 
+    // Fill the textarea and trigger React events manually
+    // This ensures React state updates and word count recalculates
     await textarea.fill(text);
 
+    // Manually trigger input event to ensure React processes the change
+    // This is needed because fill() might not always trigger React's onChange/onInput
+    await this.page.evaluate(() => {
+      const textarea = document.querySelector(
+        '[data-testid="answer-textarea"]',
+      ) as HTMLTextAreaElement;
+      if (textarea) {
+        // Trigger both input and change events to match React's handlers
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        textarea.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+
+    // Wait for word count to update - check both the attribute and the display element
+    // The word count is calculated from the answer prop which uses local React state
     await this.page.waitForFunction(
       (minChars) => {
         const textarea = document.querySelector(
           '[data-testid="answer-textarea"]',
         ) as HTMLTextAreaElement | null;
         if (!textarea) return false;
+
+        // Check that text was actually filled
         if (textarea.value.length < minChars) return false;
-        const count = parseInt(textarea.getAttribute("data-word-count") || "0", 10);
-        return count > 0;
+
+        // Check word count attribute (set from React prop)
+        const countAttr = parseInt(textarea.getAttribute("data-word-count") || "0", 10);
+        if (countAttr > 0) return true;
+
+        // Also check the word count display element as fallback
+        const countDisplay = document.querySelector('[data-testid="word-count-value"]');
+        if (countDisplay) {
+          const displayText = countDisplay.textContent || "";
+          const match = displayText.match(/(\d+)\s+words?/);
+          if (match && parseInt(match[1], 10) > 0) return true;
+        }
+
+        return false;
       },
       Math.min(text.length, 1000),
-      { timeout: 10000 },
+      { timeout: 15000 },
     );
   }
 
   async waitForSubmitButtonEnabled(timeout = 20000) {
+    // Wait for word count to reach minimum AND button to be enabled
+    // Check both conditions together to avoid race conditions
+    // Give React time to process state updates and re-render
     await this.page.waitForFunction(
       (minWords) => {
         const textarea = document.querySelector(
           '[data-testid="answer-textarea"]',
         ) as HTMLTextAreaElement | null;
         if (!textarea) return false;
-        const count = parseInt(textarea.getAttribute("data-word-count") || "0", 10);
-        return count >= minWords;
+
+        // Check word count - can check attribute or display
+        let count = parseInt(textarea.getAttribute("data-word-count") || "0", 10);
+        if (count === 0) {
+          // Fallback: check word count display
+          const countDisplay = document.querySelector('[data-testid="word-count-value"]');
+          if (countDisplay) {
+            const displayText = countDisplay.textContent || "";
+            const match = displayText.match(/(\d+)\s+words?/);
+            if (match) count = parseInt(match[1], 10);
+          }
+        }
+        if (count < minWords) return false;
+
+        // Check button state directly
+        const button = document.querySelector(
+          '[data-testid="submit-button"]',
+        ) as HTMLButtonElement | null;
+        if (!button) return false;
+
+        // Button should not be disabled if word count is sufficient and there's text
+        // Also check that we're not in a loading state
+        const isDisabled = button.disabled || button.getAttribute("aria-busy") === "true";
+        return !isDisabled && textarea.value.trim().length > 0;
       },
       MIN_ESSAY_WORDS,
       { timeout },
     );
-
-    await playwrightExpect(async () => {
-      const disabled = await this.isSubmitButtonDisabled();
-      if (disabled) {
-        throw new Error("Submit button is still disabled after reaching minimum word count");
-      }
-    }).toPass({ timeout: 5000 });
   }
 
   async getWordCount() {

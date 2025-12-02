@@ -18,16 +18,24 @@ if (process.env.NO_COLOR && process.env.FORCE_COLOR) {
 
 // Load .env files (.env.local takes precedence)
 // Preserve PLAYWRIGHT_BASE_URL precedence: environment > .env.local > .env
+// But default to localhost:3000 for local development if not explicitly set
 const envBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 config({ path: resolve(process.cwd(), ".env") });
 const envFileBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 config({ path: resolve(process.cwd(), ".env.local"), override: true });
 // Restore environment variable if it was set (highest precedence)
 // Otherwise fall back to .env if .env.local didn't set it
+// But if it's pointing to production and we're not in CI, default to localhost
 if (envBaseUrl) {
   process.env.PLAYWRIGHT_BASE_URL = envBaseUrl;
 } else if (!process.env.PLAYWRIGHT_BASE_URL && envFileBaseUrl) {
-  process.env.PLAYWRIGHT_BASE_URL = envFileBaseUrl;
+  // Only use .env.local URL if it's not production or if we're in CI
+  if (envFileBaseUrl.includes("writeo.tre.systems") && !process.env.CI) {
+    // Default to localhost for local development
+    process.env.PLAYWRIGHT_BASE_URL = "http://localhost:3000";
+  } else {
+    process.env.PLAYWRIGHT_BASE_URL = envFileBaseUrl;
+  }
 }
 
 export default defineConfig({
@@ -38,7 +46,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   maxFailures: process.env.CI ? 5 : 3,
-  workers: process.env.CI ? 4 : 4, // Reduced to 4 for better stability in parallel execution
+  // Tests are now resilient to localStorage state and hydration timing
+  // They clear localStorage at start and work regardless of hydration state
+  workers: process.env.CI ? 4 : 4,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000",
