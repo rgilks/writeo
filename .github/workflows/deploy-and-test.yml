@@ -56,9 +56,12 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Start local dev servers
-        # Start API worker and web app with mocked services for E2E tests
+      - name: Start local dev servers and run E2E tests
+        # Start API worker and web app with mocked services, then run E2E tests
         run: |
+          # Create log files upfront to ensure they exist
+          touch /tmp/writeo-api-worker.log /tmp/writeo-web.log
+
           # Create .dev.vars file for API worker with test API key
           cd apps/api-worker
           cat > .dev.vars << EOF
@@ -66,34 +69,79 @@ jobs:
           API_KEY=test-key-for-mocked-services
           TEST_API_KEY=test-key-for-mocked-services
           EOF
+
+          echo "Starting API worker..."
+          echo "Verifying wrangler is available..."
+          npx wrangler --version || echo "Warning: wrangler version check failed"
           USE_MOCK_SERVICES=true npm run dev > /tmp/writeo-api-worker.log 2>&1 &
           API_PID=$!
-          cd ../web && API_BASE=http://localhost:8787 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev > /tmp/writeo-web.log 2>&1 &
+          echo $API_PID > /tmp/writeo-api-worker.pid
+          disown $API_PID 2>/dev/null || true
+          echo "API worker started with PID: $API_PID"
+
+          # Wait a moment and check if process is still alive
+          sleep 2
+          if ! kill -0 $API_PID 2>/dev/null; then
+            echo "❌ API worker process died immediately after start"
+            echo "=== API Worker Logs ==="
+            cat /tmp/writeo-api-worker.log || echo "No logs available"
+            exit 1
+          fi
+          # Check for immediate errors in logs
+          if [ -f /tmp/writeo-api-worker.log ]; then
+            if grep -i "error\|failed\|fatal" /tmp/writeo-api-worker.log | head -5; then
+              echo "⚠️  Early errors detected in API worker logs (may be non-fatal):"
+              tail -20 /tmp/writeo-api-worker.log
+            fi
+          fi
+
+          # Start web app from correct directory
+          cd ../web
+          echo "Starting web app..."
+          echo "Verifying next is available..."
+          npx next --version || echo "Warning: next version check failed"
+          API_BASE=http://localhost:8787 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev > /tmp/writeo-web.log 2>&1 &
           WEB_PID=$!
-          
-          echo "Started API worker (PID: $API_PID) and web app (PID: $WEB_PID)"
-          echo "Giving servers a few seconds to start binding to ports..."
-          sleep 5
-          
+          echo $WEB_PID > /tmp/writeo-web.pid
+          disown $WEB_PID 2>/dev/null || true
+          echo "Web app started with PID: $WEB_PID"
+
+          # Wait a moment and check if process is still alive
+          sleep 2
+          if ! kill -0 $WEB_PID 2>/dev/null; then
+            echo "❌ Web app process died immediately after start"
+            echo "=== Web App Logs ==="
+            cat /tmp/writeo-web.log || echo "No logs available"
+            exit 1
+          fi
+          # Check for immediate errors in logs
+          if [ -f /tmp/writeo-web.log ]; then
+            if grep -i "error\|failed\|fatal" /tmp/writeo-web.log | head -5; then
+              echo "⚠️  Early errors detected in web app logs (may be non-fatal):"
+              tail -20 /tmp/writeo-web.log
+            fi
+          fi
+
+          echo "Both processes are running. Waiting for servers to be ready..."
+
           # Wait for servers to be ready with health checks
-          echo "Waiting for servers to start..."
           MAX_WAIT=60
           ELAPSED=0
           API_READY=false
           WEB_READY=false
-          
+
           while [ $ELAPSED -lt $MAX_WAIT ]; do
             # Check if processes are still running
             if ! kill -0 $API_PID 2>/dev/null; then
               echo "❌ API worker process died"
-              echo "API worker logs:"
-              tail -50 /tmp/writeo-api-worker.log || true
+              echo "=== API Worker Logs ==="
+              cat /tmp/writeo-api-worker.log || echo "No logs available"
               exit 1
             fi
             if ! kill -0 $WEB_PID 2>/dev/null; then
               echo "❌ Web app process died"
-              echo "Web app logs:"
-              tail -50 /tmp/writeo-web.log || true
+              echo "=== Web App Logs ==="
+              cat /tmp/writeo-web.log || echo "No logs available"
               exit 1
             fi
             
@@ -124,33 +172,50 @@ jobs:
             ELAPSED=$((ELAPSED + 2))
             if [ $((ELAPSED % 10)) -eq 0 ]; then
               echo "Still waiting... (${ELAPSED}s/${MAX_WAIT}s)"
-              echo "Checking process status..."
-              ps aux | grep -E "(wrangler|next)" | grep -v grep || true
+              echo "Process status:"
+              ps aux | grep -E "(wrangler|next)" | grep -v grep || echo "No matching processes found"
+              echo "Recent API worker logs:"
+              tail -20 /tmp/writeo-api-worker.log || echo "No API logs"
+              echo "Recent web app logs:"
+              tail -20 /tmp/writeo-web.log || echo "No web logs"
             fi
           done
-          
+
           # Check if servers are ready
           if [ "$API_READY" = false ]; then
             echo "❌ API worker failed to start within ${MAX_WAIT} seconds"
-            echo "API worker logs:"
-            tail -50 /tmp/writeo-api-worker.log || true
+            echo "=== API Worker Logs ==="
+            cat /tmp/writeo-api-worker.log || echo "No logs available"
+            echo "=== Process Status ==="
+            ps aux | grep -E "(wrangler|node)" | grep -v grep || echo "No matching processes"
             exit 1
           fi
-          
+
           if [ "$WEB_READY" = false ]; then
             echo "❌ Web app failed to start within ${MAX_WAIT} seconds"
-            echo "Web app logs:"
-            tail -50 /tmp/writeo-web.log || true
+            echo "=== Web App Logs ==="
+            cat /tmp/writeo-web.log || echo "No logs available"
+            echo "=== Process Status ==="
+            ps aux | grep -E "(next|node)" | grep -v grep || echo "No matching processes"
             exit 1
           fi
-          
-          echo "✓ Both servers are ready"
-        env:
-          USE_MOCK_SERVICES: "true"
 
-      - name: Run E2E tests (with mocks)
-        # E2E tests use mocked services to avoid API costs and ensure fast, reliable tests
-        run: npm run test:e2e -- --reporter=github
+          echo "✓ Both servers are ready"
+          echo "Servers are running in background (PIDs: $API_PID, $WEB_PID)"
+
+          # Now run E2E tests while servers are running
+          echo "Starting E2E tests..."
+          cd ../..
+          npm run test:e2e -- --reporter=github || TEST_EXIT_CODE=$?
+
+          # Cleanup: kill background processes
+          echo "Cleaning up background processes..."
+          kill $API_PID $WEB_PID 2>/dev/null || true
+          sleep 2
+          kill -9 $API_PID $WEB_PID 2>/dev/null || true
+
+          # Exit with test result
+          exit ${TEST_EXIT_CODE:-0}
         env:
           CI: true
           USE_MOCK_SERVICES: "true"
