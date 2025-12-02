@@ -205,6 +205,7 @@ export async function handleTeacherFeedbackRequest(
     feedbackData?.ltErrors || body.assessmentData?.ltErrors,
     feedbackData?.llmErrors || body.assessmentData?.llmErrors,
     feedbackData?.relevanceCheck || body.assessmentData?.relevanceCheck,
+    c.env.USE_MOCK_SERVICES === "true", // Pass mock flag
   );
 
   // Save to storage if results exist

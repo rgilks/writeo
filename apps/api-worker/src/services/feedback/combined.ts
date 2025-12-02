@@ -22,6 +22,7 @@ export interface CombinedFeedbackParams {
   languageToolErrors?: FeedbackError[];
   llmErrors?: FeedbackError[];
   relevanceCheck?: RelevanceCheck;
+  useMockServices?: boolean;
 }
 
 export async function getCombinedFeedback({
@@ -34,6 +35,7 @@ export async function getCombinedFeedback({
   languageToolErrors,
   llmErrors,
   relevanceCheck,
+  useMockServices,
 }: CombinedFeedbackParams): Promise<CombinedFeedback> {
   const prompt = buildCombinedFeedbackPrompt(
     questionText,
@@ -59,6 +61,7 @@ export async function getCombinedFeedback({
       },
     ],
     MAX_TOKENS_DETAILED_FEEDBACK,
+    useMockServices,
   );
 
   const trimmedResponse = responseText.trim();

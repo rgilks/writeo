@@ -44,6 +44,7 @@ async function generateCombinedFeedback(
   llmErrorsByAnswerId: Map<string, any>,
   relevanceByAnswerId: Map<string, any>,
   serviceRequests: { llmProvider: LLMProvider; apiKey: string; aiModel: string },
+  config: ReturnType<typeof getServices>["config"],
   c: Context<{ Bindings: Env; Variables: { requestId?: string } }>,
 ): Promise<FeedbackMaps> {
   const llmFeedbackByAnswerId = new Map<string, AIFeedback>();
@@ -61,6 +62,7 @@ async function generateCombinedFeedback(
         languageToolErrors: ltErrorsByAnswerId.get(answer.id),
         llmErrors: llmErrorsByAnswerId.get(answer.id),
         relevanceCheck: relevanceByAnswerId.get(answer.id),
+        useMockServices: config.features.mockServices, // Pass mock flag from config
       },
       FEEDBACK_RETRY_OPTIONS,
     );
@@ -303,6 +305,7 @@ export async function processSubmission(
       processedResults.llmErrorsByAnswerId,
       processedResults.relevanceByAnswerId,
       serviceRequests,
+      config,
       c,
     );
     timings["8_ai_feedback"] = performance.now() - aiFeedbackStartTime;

@@ -46,6 +46,7 @@ export async function getTeacherFeedback(
   languageToolErrors?: FeedbackError[],
   llmErrors?: FeedbackError[],
   relevanceCheck?: RelevanceCheck,
+  useMockServices?: boolean,
 ): Promise<TeacherFeedback> {
   const normalizedScores = essayScores ? normalizeEssayScores(essayScores) : undefined;
   const { systemMessage, maxTokens } = MODE_CONFIG[mode];
@@ -75,6 +76,7 @@ export async function getTeacherFeedback(
       },
     ],
     maxTokens,
+    useMockServices,
   );
 
   const trimmedResponseText = responseText.trim();
