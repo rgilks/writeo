@@ -34,15 +34,16 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Run unit and integration tests (with mocks)
-        # All tests use USE_MOCK_SERVICES=true by default to avoid API costs
+      - name: Run unit tests (with mocks)
+        # Unit tests use USE_MOCK_SERVICES=true by default to avoid API costs
         # This includes api.test.ts which tests the full submission flow with mocked services
-        run: npm test
+        run: npm run test:unit
         env:
           CI: true
           USE_MOCK_SERVICES: "true"
           # Test API key for mocked services (tests/helpers.ts will use default if not set)
           TEST_API_KEY: "test-key-for-mocked-services"
+          API_KEY: "test-key-for-mocked-services"
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
@@ -66,20 +67,30 @@ jobs:
           touch /tmp/writeo-api-worker.log /tmp/writeo-web.log
 
           # Create .dev.vars file for API worker with test API key
+          # Note: MODAL_GRADE_URL and LLM API keys are required even with mocks
+          # because buildConfig validates them at startup (mocks are checked at runtime)
           cd apps/api-worker
           cat > .dev.vars << EOF
           USE_MOCK_SERVICES=true
           API_KEY=test-key-for-mocked-services
           TEST_API_KEY=test-key-for-mocked-services
+          MODAL_GRADE_URL=https://mock-modal-url.modal.run
+          MODAL_LT_URL=https://mock-modal-lt-url.modal.run
+          LLM_PROVIDER=groq
+          GROQ_API_KEY=mock-groq-key-for-ci
+          OPENAI_API_KEY=mock-openai-key-for-ci
+          LT_LANGUAGE=en-GB
           EOF
 
           echo "Starting API worker..."
           echo "Verifying wrangler is available..."
           npx wrangler --version || echo "Warning: wrangler version check failed"
+          # USE_MOCK_SERVICES is set in .dev.vars, but also set in env for consistency
           USE_MOCK_SERVICES=true npm run dev > /tmp/writeo-api-worker.log 2>&1 &
           API_PID=$!
           echo $API_PID > /tmp/writeo-api-worker.pid
           echo "API worker started with PID: $API_PID"
+          echo "Using mocked services (USE_MOCK_SERVICES=true)"
 
           # Wait a moment and check if process is still alive
           sleep 2
@@ -102,7 +113,11 @@ jobs:
           echo "Starting web app..."
           echo "Verifying next is available..."
           npx next --version || echo "Warning: next version check failed"
-          API_BASE=http://localhost:8787 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev > /tmp/writeo-web.log 2>&1 &
+          # Load API_KEY from .dev.vars for web app (matching pre-push hook pattern)
+          # Use same API_KEY value from .dev.vars file we created
+          API_KEY_FOR_WEB="test-key-for-mocked-services"
+          # Set API configuration for server actions (API_BASE_URL, API_KEY) and client (NEXT_PUBLIC_API_BASE)
+          API_BASE_URL="http://localhost:8787" API_KEY="$API_KEY_FOR_WEB" NEXT_PUBLIC_API_BASE="http://localhost:8787" npm run dev > /tmp/writeo-web.log 2>&1 &
           WEB_PID=$!
           echo $WEB_PID > /tmp/writeo-web.pid
           echo "Web app started with PID: $WEB_PID"
@@ -204,10 +219,39 @@ jobs:
           echo "✓ Both servers are ready"
           echo "Servers are running in background (PIDs: $API_PID, $WEB_PID)"
 
+          # Run API integration tests first (requires running server)
+          echo "Starting API integration tests..."
+          cd ../..
+          # Load API_KEY from .dev.vars for tests (matching pre-push hook pattern)
+          TEST_API_KEY_FOR_TESTS="test-key-for-mocked-services"
+          set +e  # Temporarily disable exit on error to capture test result
+          npm run test:integration
+          INTEGRATION_TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          if [ $INTEGRATION_TEST_EXIT_CODE -ne 0 ]; then
+            echo "❌ API integration tests failed (exit code: $INTEGRATION_TEST_EXIT_CODE)"
+            # Cleanup before exiting
+            kill $API_PID $WEB_PID 2>/dev/null || true
+            sleep 2
+            kill -9 $API_PID $WEB_PID 2>/dev/null || true
+            exit $INTEGRATION_TEST_EXIT_CODE
+          else
+            echo "✓ API integration tests passed"
+          fi
+
           # Now run E2E tests while servers are running
           echo "Starting E2E tests..."
-          cd ../..
-          npm run test:e2e -- --reporter=github || TEST_EXIT_CODE=$?
+          set +e  # Temporarily disable exit on error to capture test result
+          npm run test:e2e -- --reporter=github
+          TEST_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+
+          if [ $TEST_EXIT_CODE -ne 0 ]; then
+            echo "❌ E2E tests failed (exit code: $TEST_EXIT_CODE)"
+          else
+            echo "✓ E2E tests passed"
+          fi
 
           # Cleanup: kill background processes
           echo "Cleaning up background processes..."
@@ -216,14 +260,15 @@ jobs:
           kill -9 $API_PID $WEB_PID 2>/dev/null || true
 
           # Exit with test result
-          exit ${TEST_EXIT_CODE:-0}
+          exit $TEST_EXIT_CODE
         env:
           CI: true
           USE_MOCK_SERVICES: "true"
           PLAYWRIGHT_BASE_URL: "http://localhost:3000"
           API_BASE: "http://localhost:8787"
+          API_BASE_URL: "http://localhost:8787"
           NEXT_PUBLIC_API_BASE: "http://localhost:8787"
-          # Test API key for mocked services
+          # Test API key for mocked services (used by both integration and E2E tests)
           TEST_API_KEY: "test-key-for-mocked-services"
           API_KEY: "test-key-for-mocked-services"
           WRANGLER_LOG: "info"
