@@ -113,7 +113,7 @@ if [ "$CHECK_DOCS_ONLY" = "true" ]; then
   echo "  1. Run unit tests (quick check)"
   SKIP_E2E=true
 elif [ "$SKIP_E2E" = "true" ]; then
-  echo "  ⚡ Quick mode - skipping E2E tests"
+  echo "  ⚡ Quick mode - skipping integration/E2E tests"
   echo "  1. Check/start API worker (port 8787)"
   echo "  2. Check/start web app (port 3000)"
   echo "  3. Wait for servers to be ready"
@@ -123,7 +123,8 @@ else
   echo "  2. Check/start web app (port 3000)"
   echo "  3. Wait for servers to be ready"
   echo "  4. Run unit tests"
-  echo "  5. Run E2E tests"
+  echo "  5. Run API integration tests (with mocked services)"
+  echo "  6. Run E2E tests"
 fi
 echo ""
 
@@ -308,6 +309,9 @@ fi
 # Set environment variables for tests
 export PLAYWRIGHT_BASE_URL="$WEB_URL"
 export API_BASE="$API_URL"
+export API_BASE_URL="$API_URL"
+# Ensure mock services are enabled for all tests (saves API costs)
+export USE_MOCK_SERVICES="true"
 # Prevent Playwright from serving HTML report (which blocks the hook)
 export CI=true
 # API_KEY is now loaded from .dev.vars above, or should be set in environment
@@ -332,7 +336,36 @@ show_time
 echo "${GREEN}✓ Unit tests passed${NC}"
 
 echo ""
-# Run integration tests (unless skipped)
+# Run API integration tests (requires running server, uses mocked services)
+if [ "$SKIP_E2E" = "true" ]; then
+  show_time
+  echo "${YELLOW}⏭️  Skipping API integration tests${NC}"
+  if [ "$CHECK_DOCS_ONLY" = "true" ]; then
+    echo "  (docs-only changes detected)"
+  else
+    echo "  (quick mode enabled)"
+  fi
+else
+  show_time
+  echo "${CYAN}Running API integration tests (with mocked services)...${NC}"
+  echo ""
+  set +e  # Temporarily disable exit on error to capture test result
+  npm run test:integration 2>&1
+  API_INTEGRATION_TEST_EXIT_CODE=$?
+  set -e  # Re-enable exit on error
+  if [ $API_INTEGRATION_TEST_EXIT_CODE -ne 0 ]; then
+    echo ""
+    show_time
+    echo "${RED}✗ API integration tests failed (exit code: $API_INTEGRATION_TEST_EXIT_CODE)!${NC}"
+    echo "${YELLOW}Stopping pre-push hook. To skip this check, use: git push --no-verify${NC}"
+    exit 1
+  fi
+  show_time
+  echo "${GREEN}✓ API integration tests passed${NC}"
+fi
+
+echo ""
+# Run E2E tests (unless skipped)
 if [ "$SKIP_E2E" = "true" ]; then
   show_time
   echo "${YELLOW}⏭️  Skipping integration tests${NC}"
