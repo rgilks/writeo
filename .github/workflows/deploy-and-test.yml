@@ -67,8 +67,84 @@ jobs:
           TEST_API_KEY=test-key-for-mocked-services
           EOF
           USE_MOCK_SERVICES=true npm run dev > /tmp/writeo-api-worker.log 2>&1 &
+          API_PID=$!
           cd ../web && API_BASE=http://localhost:8787 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev > /tmp/writeo-web.log 2>&1 &
-          sleep 15
+          WEB_PID=$!
+          
+          echo "Started API worker (PID: $API_PID) and web app (PID: $WEB_PID)"
+          echo "Giving servers a few seconds to start binding to ports..."
+          sleep 5
+          
+          # Wait for servers to be ready with health checks
+          echo "Waiting for servers to start..."
+          MAX_WAIT=60
+          ELAPSED=0
+          API_READY=false
+          WEB_READY=false
+          
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            # Check if processes are still running
+            if ! kill -0 $API_PID 2>/dev/null; then
+              echo "❌ API worker process died"
+              echo "API worker logs:"
+              tail -50 /tmp/writeo-api-worker.log || true
+              exit 1
+            fi
+            if ! kill -0 $WEB_PID 2>/dev/null; then
+              echo "❌ Web app process died"
+              echo "Web app logs:"
+              tail -50 /tmp/writeo-web.log || true
+              exit 1
+            fi
+            
+            # Check API worker health (try both IPv4 and IPv6)
+            if [ "$API_READY" = false ]; then
+              if curl -s -f --max-time 2 http://127.0.0.1:8787/health > /dev/null 2>&1 || \
+                 curl -s -f --max-time 2 http://localhost:8787/health > /dev/null 2>&1; then
+                API_READY=true
+                echo "✓ API worker is ready"
+              fi
+            fi
+            
+            # Check web app (try both IPv4 and IPv6)
+            if [ "$WEB_READY" = false ]; then
+              if curl -s -f --max-time 2 http://127.0.0.1:3000 > /dev/null 2>&1 || \
+                 curl -s -f --max-time 2 http://localhost:3000 > /dev/null 2>&1; then
+                WEB_READY=true
+                echo "✓ Web app is ready"
+              fi
+            fi
+            
+            # If both are ready, break
+            if [ "$API_READY" = true ] && [ "$WEB_READY" = true ]; then
+              break
+            fi
+            
+            sleep 2
+            ELAPSED=$((ELAPSED + 2))
+            if [ $((ELAPSED % 10)) -eq 0 ]; then
+              echo "Still waiting... (${ELAPSED}s/${MAX_WAIT}s)"
+              echo "Checking process status..."
+              ps aux | grep -E "(wrangler|next)" | grep -v grep || true
+            fi
+          done
+          
+          # Check if servers are ready
+          if [ "$API_READY" = false ]; then
+            echo "❌ API worker failed to start within ${MAX_WAIT} seconds"
+            echo "API worker logs:"
+            tail -50 /tmp/writeo-api-worker.log || true
+            exit 1
+          fi
+          
+          if [ "$WEB_READY" = false ]; then
+            echo "❌ Web app failed to start within ${MAX_WAIT} seconds"
+            echo "Web app logs:"
+            tail -50 /tmp/writeo-web.log || true
+            exit 1
+          fi
+          
+          echo "✓ Both servers are ready"
         env:
           USE_MOCK_SERVICES: "true"
 
