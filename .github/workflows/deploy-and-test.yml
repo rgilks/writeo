@@ -41,6 +41,8 @@ jobs:
         env:
           CI: true
           USE_MOCK_SERVICES: "true"
+          # Test API key for mocked services (tests/helpers.ts will use default if not set)
+          TEST_API_KEY: "test-key-for-mocked-services"
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
@@ -57,7 +59,14 @@ jobs:
       - name: Start local dev servers
         # Start API worker and web app with mocked services for E2E tests
         run: |
-          cd apps/api-worker && USE_MOCK_SERVICES=true npm run dev > /tmp/writeo-api-worker.log 2>&1 &
+          # Create .dev.vars file for API worker with test API key
+          cd apps/api-worker
+          cat > .dev.vars << EOF
+          USE_MOCK_SERVICES=true
+          API_KEY=test-key-for-mocked-services
+          TEST_API_KEY=test-key-for-mocked-services
+          EOF
+          USE_MOCK_SERVICES=true npm run dev > /tmp/writeo-api-worker.log 2>&1 &
           cd ../web && API_BASE=http://localhost:8787 NEXT_PUBLIC_API_BASE=http://localhost:8787 npm run dev > /tmp/writeo-web.log 2>&1 &
           sleep 15
         env:
@@ -72,6 +81,9 @@ jobs:
           PLAYWRIGHT_BASE_URL: "http://localhost:3000"
           API_BASE: "http://localhost:8787"
           NEXT_PUBLIC_API_BASE: "http://localhost:8787"
+          # Test API key for mocked services
+          TEST_API_KEY: "test-key-for-mocked-services"
+          API_KEY: "test-key-for-mocked-services"
 
       - name: Show server logs on failure
         if: failure()

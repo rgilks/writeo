@@ -11,7 +11,12 @@ export const API_BASE =
   process.env.API_BASE_URL ||
   DEFAULT_LOCAL_API_BASE;
 // Always prefer TEST_API_KEY for tests (higher rate limits)
-export const API_KEY = process.env.TEST_API_KEY || process.env.API_KEY || "";
+// When using mocked services, allow a default test key to avoid requiring secrets in CI
+const useMockServices = process.env.USE_MOCK_SERVICES === "true";
+export const API_KEY =
+  process.env.TEST_API_KEY ||
+  process.env.API_KEY ||
+  (useMockServices ? "test-key-for-mocked-services" : "");
 
 if (!API_KEY) {
   throw new Error("TEST_API_KEY or API_KEY environment variable required");
