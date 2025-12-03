@@ -63,10 +63,10 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command:
-      "npm run dev --workspace=@writeo/api-worker -- --port 8788 --var API_KEY:test-key-for-mocked-services --var TEST_API_KEY:test-key-for-mocked-services --var USE_MOCK_SERVICES:true & npm run dev --workspace=@writeo/web",
+      "npm run dev --workspace=@writeo/api-worker -- --port 8788 --var API_KEY:test-key-for-mocked-services --var TEST_API_KEY:test-key-for-mocked-services --var USE_MOCK_SERVICES:true & cross-env NEXT_PUBLIC_API_BASE=http://localhost:8788 NEXT_PUBLIC_API_KEY=test-key-for-mocked-services USE_MOCK_SERVICES=true npm run dev --workspace=@writeo/web -- --port 3000",
     port: 3000,
     reuseExistingServer: !process.env.CI,
-    stdout: "ignore",
+    stdout: "pipe",
     stderr: "pipe",
     timeout: 120 * 1000,
     env: {

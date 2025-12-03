@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --ip 0.0.0.0",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
     "type-check": "tsc --noEmit"
