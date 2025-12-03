@@ -13,33 +13,50 @@ export function ErrorTypeList({ grammarErrors }: { grammarErrors: LanguageToolEr
     return null;
   }
 
-  const cardStyle = {
-    padding: "var(--spacing-md)",
-  } as const;
-
-  const headingStyle = {
-    fontSize: "20px",
-    marginBottom: "var(--spacing-md)",
-    fontWeight: 600,
-  } as const;
-
-  const descriptionStyle = {
-    marginBottom: "var(--spacing-md)",
-    fontSize: "16px",
-    color: "var(--text-secondary)",
-  } as const;
-
-  const listStyle = { margin: 0, paddingLeft: "var(--spacing-md)" } as const;
-
   return (
-    <div className="card" lang="en" style={cardStyle} data-testid="grammar-errors-section">
-      <h2 style={headingStyle} lang="en">
+    <div
+      className="card"
+      lang="en"
+      style={{
+        padding: "var(--spacing-lg, 24px)",
+        background: "var(--bg-surface, #fff)",
+        borderRadius: "var(--border-radius-lg, 12px)",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+      }}
+      data-testid="grammar-errors-section"
+    >
+      <h2
+        style={{
+          fontSize: "20px",
+          marginBottom: "var(--spacing-sm, 8px)",
+          fontWeight: 700,
+          color: "var(--text-primary, #1e293b)",
+        }}
+        lang="en"
+      >
         Common Areas to Improve
       </h2>
-      <p style={descriptionStyle} lang="en">
+      <p
+        style={{
+          marginBottom: "var(--spacing-lg, 24px)",
+          fontSize: "16px",
+          color: "var(--text-secondary, #64748b)",
+        }}
+        lang="en"
+      >
         You made these types of errors most often:
       </p>
-      <ul style={listStyle} lang="en">
+      <ul
+        style={{
+          margin: 0,
+          padding: 0,
+          listStyle: "none",
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--spacing-md, 16px)",
+        }}
+        lang="en"
+      >
         {topErrorTypes.map(({ type, count }) => {
           const exampleErrors = grammarErrors
             .filter((err) => (err.errorType || err.category) === type)

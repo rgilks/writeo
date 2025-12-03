@@ -90,6 +90,8 @@ const ERROR_EXPLANATIONS: Record<string, string> = {
     "Use consistent verb tenses. Check if actions happened in the past, present, or future.",
   "Article use":
     "Use 'a' before consonant sounds, 'an' before vowel sounds, and 'the' for specific things.",
+  "Article usage":
+    "Use 'a' before consonant sounds, 'an' before vowel sounds, and 'the' for specific things. Articles help define nouns.",
   Preposition:
     "Prepositions show relationships (in, on, at, with, etc.). Choose the correct one for the context.",
   Spelling:
@@ -97,6 +99,14 @@ const ERROR_EXPLANATIONS: Record<string, string> = {
   Punctuation: "Use punctuation marks correctly: periods, commas, question marks, etc.",
   "Word order": "English follows a specific word order: Subject-Verb-Object.",
   "Grammar error": "A grammatical mistake that affects clarity or correctness.",
+  Grammar:
+    "A grammatical mistake that affects clarity or correctness. Check sentence structure and word forms.",
+  "Possible Typo": "This looks like a typing error. Check the spelling.",
+  Capitalization:
+    "Sentences should start with a capital letter. Proper nouns (names, places) should also be capitalized.",
+  Compound: "Check if these words should be written as one word, two words, or with a hyphen.",
+  Redundancy: "Avoid using extra words that don't add meaning. Conciseness improves clarity.",
+  Style: "Consider a different word choice to improve the flow or tone of your writing.",
 };
 
 export function getErrorExplanation(errorType: string, count: number): string {
