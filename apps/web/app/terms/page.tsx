@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
 import {
@@ -10,13 +11,20 @@ import {
   InternalLink,
 } from "@/app/components/ContentComponents";
 
-const LAST_UPDATED = new Date().toLocaleDateString("en-US", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
-
 export default function TermsPage() {
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+
+  useEffect(() => {
+    // Only compute date on client to avoid hydration mismatch
+    setLastUpdated(
+      new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    );
+  }, []);
+
   return (
     <>
       <header className="header" lang="en">
@@ -35,7 +43,7 @@ export default function TermsPage() {
       <div className="container" lang="en">
         <div style={{ maxWidth: "800px", margin: "0 auto" }}>
           <h1 className="page-title">Terms of Service</h1>
-          <p className="page-subtitle">Last updated: {LAST_UPDATED}</p>
+          {lastUpdated && <p className="page-subtitle">Last updated: {lastUpdated}</p>}
 
           <SectionCard title="📋 Agreement to Terms" isFirst>
             <Text>

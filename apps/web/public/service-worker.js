@@ -141,13 +141,23 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
+    return;
   }
 
   if (event.data && event.data.type === "CACHE_URLS") {
+    // Use waitUntil to keep the service worker alive during async operation
+    // Wrap in try-catch to prevent unhandled promise rejections
     event.waitUntil(
-      caches.open(RUNTIME_CACHE).then((cache) => {
-        return cache.addAll(event.data.urls);
-      }),
+      caches
+        .open(RUNTIME_CACHE)
+        .then((cache) => {
+          return cache.addAll(event.data.urls);
+        })
+        .catch((error) => {
+          console.error("[Service Worker] Failed to cache URLs:", error);
+          // Don't throw - allow the promise to resolve to prevent message channel errors
+        }),
     );
+    return;
   }
 });

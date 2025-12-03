@@ -15,6 +15,7 @@ import { ResultsLoadingSkeleton } from "@/app/components/LoadingSkeleton";
 import { Logo } from "@/app/components/Logo";
 import type { AssessmentResults } from "@writeo/shared";
 import { errorLogger } from "@/app/lib/utils/error-logger";
+import { useStoreHydration } from "@/app/hooks/useStoreHydration";
 
 import { getErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/app/lib/utils/error-messages";
 
@@ -41,6 +42,8 @@ export default function ResultsPage() {
   const mode = usePreferencesStore((state) => state.viewMode);
   const getResult = useDraftStore((state) => state.getResult);
   const setResult = useDraftStore((state) => state.setResult);
+  const isStoreHydrated = useStoreHydration(useDraftStore);
+  const [isMounted, setIsMounted] = useState(false);
 
   const [data, setData] = useState<AssessmentResults | null>(() => {
     // Try to get from store on initial render (Zustand handles hydration automatically)
@@ -54,6 +57,11 @@ export default function ResultsPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [answerText, setAnswerText] = useState<string>("");
+
+  // Track client-side mount to avoid hydration mismatches
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Fetch results if we don't have them
   useEffect(() => {
@@ -164,7 +172,7 @@ export default function ResultsPage() {
               <span>History</span>
             </Link>
             <ModeSwitcher />
-            {status !== "pending" && (
+            {isMounted && status !== "pending" && (
               <Link href="/" className="nav-back-link">
                 <span aria-hidden="true">←</span> Back to Home
               </Link>
@@ -234,7 +242,7 @@ export default function ResultsPage() {
           >
             {mode === "developer" ? (
               <DeveloperResultsView data={data} answerText={answerText} />
-            ) : (
+            ) : isStoreHydrated ? (
               <ErrorBoundary>
                 <LearnerResultsView
                   data={data}
@@ -243,6 +251,10 @@ export default function ResultsPage() {
                   onDraftSwitch={switchDraft}
                 />
               </ErrorBoundary>
+            ) : (
+              <div role="status" aria-live="polite" aria-busy="true">
+                <ResultsLoadingSkeleton />
+              </div>
             )}
           </div>
         )}

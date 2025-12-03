@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Logo } from "@/app/components/Logo";
 
@@ -61,13 +62,20 @@ function ExternalLink({ href, children }: { href: string; children: React.ReactN
   );
 }
 
-const LAST_UPDATED = new Date().toLocaleDateString("en-US", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
-
 export default function AccessibilityPage() {
+  const [lastUpdated, setLastUpdated] = useState<string>("");
+
+  useEffect(() => {
+    // Only compute date on client to avoid hydration mismatch
+    setLastUpdated(
+      new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    );
+  }, []);
+
   return (
     <>
       <header className="header">
@@ -86,7 +94,7 @@ export default function AccessibilityPage() {
       <div className="container">
         <div style={{ maxWidth: "800px", margin: "0 auto" }}>
           <h1 className="page-title">Accessibility Statement</h1>
-          <p className="page-subtitle">Last updated: {LAST_UPDATED}</p>
+          {lastUpdated && <p className="page-subtitle">Last updated: {lastUpdated}</p>}
 
           <SectionCard title="♿ Our Commitment" isFirst>
             <Text>
