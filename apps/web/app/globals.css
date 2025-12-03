@@ -1330,6 +1330,29 @@ footer > div > div > div:last-child {
 }
 
 /* ========================================
+   ERROR HIGHLIGHTING STYLES
+   ======================================== */
+[data-error-span] {
+  cursor: pointer !important;
+  position: relative;
+  display: inline-block;
+}
+
+[data-error-span]:hover {
+  cursor: pointer !important;
+}
+
+[data-error-span]:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+[data-error-span]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ========================================
    UTILITY CLASSES
    ======================================== */
 

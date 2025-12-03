@@ -16,6 +16,7 @@ const EXPLANATION_STYLES = {
   transition: "all 0.2s ease",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
+  boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
 };
 
 const PLACEHOLDER_STYLES = {
@@ -25,6 +26,8 @@ const PLACEHOLDER_STYLES = {
   color: "var(--text-secondary)",
   fontSize: "14px",
   padding: "var(--spacing-sm)",
+  fontStyle: "italic" as const,
+  textAlign: "center" as const,
 };
 
 const TEXT_CONTAINER_STYLES = {
@@ -148,7 +151,7 @@ export function AnnotatedTextRevealed({
           />
         ) : (
           <div style={PLACEHOLDER_STYLES}>
-            Click on highlighted text to see suggestions for improvement.
+            👆 Hover over highlighted text to see it's clickable, then click for feedback
           </div>
         )}
       </div>
