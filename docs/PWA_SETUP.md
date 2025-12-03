@@ -128,4 +128,3 @@ The PWA works automatically with your existing Cloudflare Workers deployment. No
 - [MDN: Progressive Web Apps](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
 - [Web.dev: PWA Checklist](https://web.dev/pwa-checklist/)
 - [Service Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)
-

@@ -155,7 +155,7 @@ export function useAIFeedbackStream(): UseAIFeedbackStreamReturn {
               }
             }
           }
-          
+
           // Stream ended without a "done" event - ensure we mark as not streaming
           setIsStreaming(false);
         } finally {

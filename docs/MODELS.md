@@ -98,4 +98,3 @@ Models were tested across essays of varying quality:
 - If a model fails to load, the system falls back to heuristic scoring
 - All scores are normalized to 0-9 band scale
 - Engessay model successfully differentiates between essay quality levels
-

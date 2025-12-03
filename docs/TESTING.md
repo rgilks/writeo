@@ -7,24 +7,43 @@
 ## Quick Start
 
 ```bash
-npm test              # API tests (Vitest)
-npm run test:e2e      # E2E tests (Playwright)
-npm run test:all      # Both API + E2E
-npm run test:watch    # Watch mode (API tests)
-npm run test:e2e:ui   # Playwright UI mode
+npm test                    # All Vitest tests (unit + integration)
+npm run test:unit           # Unit tests only (fast, no server required)
+npm run test:integration   # Integration tests (requires running server)
+npm run test:e2e           # E2E tests (Playwright)
+npm run test:smoke         # Smoke test (production verification)
+npm run test:all           # All tests (unit + integration + E2E)
+npm run test:watch         # Watch mode (Vitest)
+npm run test:ui            # Vitest UI mode
+npm run test:e2e:ui        # Playwright UI mode
+npm run test:e2e:debug     # Playwright debug mode
 ```
-
-> Temporarily need the old lightweight run? Set `SKIP_API_TESTS=true` before invoking
-> Vitest (for example, `SKIP_API_TESTS=true npm test`) to skip the API suite. By default,
-> API tests now run locally.
 
 ---
 
 ## Test Structure
 
-### API Tests (`tests/api.test.ts` - Vitest)
+### Unit Tests (`npm run test:unit` - Vitest)
+
+**Coverage:** Utilities, middleware, validation, error handling, storage, shared packages
+
+**Test Files (30 files):**
+
+- **API Worker** (11 files): Auth, rate limiting, security, validation, errors, context, HTTP utilities, Zod utilities, fetch-with-timeout, request-id, middleware integration
+- **Web App** (13 files): Error handling, validation, progress, storage, submission, text utils, UUID utils, grammar rules, error logger, API client, learner results, error utils
+- **Shared Package** (4 files): Validation, text utils, retry logic, type guards
+- **Integration** (1 file): Position validation
+- **PWA** (1 file): Service worker, manifest, install prompt
+
+**Total:** 453 unit tests covering critical utilities and middleware
+
+**Note:** Unit tests run fast and don't require a running server. They're excluded from integration test runs.
+
+### Integration Tests (`npm run test:integration` - Vitest)
 
 **Coverage:** Core API functionality, error handling, validation, synchronous processing
+
+**Test File:** `tests/api.test.ts`
 
 **Test Cases:**
 
@@ -44,25 +63,13 @@ npm run test:e2e:ui   # Playwright UI mode
 
 **Total:** 28 test cases covering critical API functionality
 
-### Unit Tests (`tests/**/*.test.ts` - Vitest)
-
-**Coverage:** Utilities, middleware, validation, error handling, storage, shared packages
-
-**Test Files (31 files):**
-
-- **API Worker** (11 files): Auth, rate limiting, security, validation, errors, context, HTTP utilities, Zod utilities, fetch-with-timeout, request-id
-- **Web App** (13 files): Error handling, validation, progress, storage, submission, text utils, UUID utils, grammar rules, error logger, API client, learner results, error utils
-- **Shared Package** (4 files): Validation, text utils, retry logic, type guards
-- **Integration** (1 file): Position validation
-- **API Integration** (1 file): Full E2E API workflows
-
-**Total:** 453 unit tests covering critical utilities and middleware
+**Note:** Integration tests require a running API server and are excluded from unit test runs.
 
 ### E2E Tests (`tests/e2e/*.spec.ts` - Playwright)
 
 **Coverage:** User-facing flows, UI interactions, visual design, responsive layout
 
-**Test Files (3 files):**
+**Test Files (4 files):**
 
 - `core.spec.ts` - Comprehensive core functionality:
   - Homepage and navigation (including custom question card)
@@ -75,6 +82,7 @@ npm run test:e2e:ui   # Playwright UI mode
   - Progress dashboard
 - `responsive.spec.ts` - Responsive layouts (mobile/tablet/desktop)
 - `visual.spec.ts` - Visual design verification (contrast, touch targets)
+- `smoke.spec.ts` - Production smoke test (verifies deployment with real APIs, only runs in CI against production)
 
 **Total:** 20 test cases covering critical user flows
 
@@ -105,21 +113,26 @@ PLAYWRIGHT_BASE_URL=http://localhost:3000
 
 ---
 
-## Cost Control: LLM API Mocking
+## Cost Control: Service Mocking
 
-**Tests automatically use mocked LLM API responses by default** to avoid API costs.
+**Tests automatically use mocked service responses by default** to avoid API costs.
 
 **Mocking System:**
 
 - ✅ **No API costs** - Tests use deterministic mock responses
-- ✅ **Automatic detection** - Enabled when `USE_MOCK_LLM=true` or API key is `MOCK`/`test_*`
+- ✅ **Automatic detection** - Enabled when `USE_MOCK_SERVICES=true` (default in test configs)
 - ✅ **Realistic responses** - Mocks return proper data structures for testing
+- ✅ **All services mocked** - Modal, Groq, OpenAI, and other external services
 
-**To use real API (for integration tests only):**
+**To use real APIs (for integration testing only):**
 
 ```bash
-USE_MOCK_LLM=false npm test
+USE_MOCK_SERVICES=false npm test
+USE_MOCK_SERVICES=false npm run test:integration
+USE_MOCK_SERVICES=false npm run test:e2e
 ```
+
+**Note:** The smoke test (`npm run test:smoke`) is designed to run against production with real APIs and will skip if mocks are enabled.
 
 See [COST_REVIEW.md](COST_REVIEW.md) for cost optimization details.
 
@@ -196,14 +209,17 @@ Some visual and subjective aspects require manual browser verification:
 
 - Security check (prevents committing sensitive files)
 - Formats code with Prettier (only staged files for speed)
-- Runs linting
-- Type checking
+- Formats Python code with ruff (if Python files changed)
+- Runs linting (TypeScript/JavaScript and Python)
+- Type checking (TypeScript and Python with mypy)
+- Runs unit tests (fast feedback before commit)
 - Commit message format hints
 
 **Pre-push hook:**
 
 - Checks/starts local dev servers (reuses if already running)
 - Runs unit tests
+- Runs API integration tests (with mocked services)
 - Runs E2E tests (can be skipped in quick mode)
 
 **Install hooks:**
@@ -214,13 +230,13 @@ npm run install-hooks
 ./scripts/install-hooks.sh
 ```
 
-**Quick push mode (skip E2E tests):**
+**Quick push mode (skip integration/E2E tests):**
 
 ```bash
-QUICK_PUSH=true git push  # Saves ~20 seconds by skipping E2E tests
+QUICK_PUSH=true git push  # Saves time by skipping API integration and E2E tests
 ```
 
-The hook automatically detects docs-only changes and skips E2E tests in that case.
+The hook automatically detects docs-only changes and skips integration/E2E tests in that case.
 
 **Bypass hooks (if needed):**
 

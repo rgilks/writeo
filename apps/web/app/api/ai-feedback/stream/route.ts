@@ -71,14 +71,17 @@ export async function POST(request: NextRequest) {
       ...(questionText ? { questionText } : {}),
       ...(assessmentData !== undefined ? { assessmentData } : {}),
     };
-    const response = await fetch(`${apiBase}/v1/text/submissions/${submissionId}/ai-feedback/stream`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${apiKey}`,
+    const response = await fetch(
+      `${apiBase}/v1/text/submissions/${submissionId}/ai-feedback/stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
       },
-      body: JSON.stringify(requestBody),
-    });
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
