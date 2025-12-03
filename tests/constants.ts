@@ -1,0 +1,7 @@
+export const ASSESSOR_IDS = {
+  LT: "T-GEC-LT",
+  LLM: "T-GEC-LLM",
+  TEACHER: "T-TEACHER-FEEDBACK",
+  ESSAY: "T-AES-ESSAY",
+  AI_FEEDBACK: "T-AI-FEEDBACK",
+} as const;

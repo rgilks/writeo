@@ -70,3 +70,32 @@ export function generateIds() {
 
 // Note: Cleanup endpoint has been removed for security reasons.
 // Tests should use unique IDs to avoid conflicts and be independent.
+
+export async function createSubmission(
+  text: string,
+  questionText: string = "Describe your weekend. What did you do?",
+  storeResults: boolean = false,
+  templateName: string = "generic",
+) {
+  const { questionId, answerId, submissionId } = generateIds();
+  const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
+    submissionId,
+    submission: [
+      {
+        part: 1,
+        answers: [
+          {
+            id: answerId,
+            questionId: questionId,
+            questionText,
+            text,
+          },
+        ],
+      },
+    ],
+    template: { name: templateName, version: 1 },
+    storeResults,
+  });
+
+  return { status, json, questionId, answerId, submissionId };
+}

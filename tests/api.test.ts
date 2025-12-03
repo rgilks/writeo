@@ -1,5 +1,13 @@
 import { test, expect, describe } from "vitest";
-import { apiRequest, pollResults, generateIds, API_BASE, API_KEY } from "./helpers";
+import {
+  apiRequest,
+  pollResults,
+  generateIds,
+  API_BASE,
+  API_KEY,
+  createSubmission,
+} from "./helpers";
+import { ASSESSOR_IDS } from "./constants";
 
 function getAssessorResults(part: any): any[] {
   return part.answers?.[0]?.assessorResults || [];
@@ -17,118 +25,52 @@ describe("API Tests", () => {
   //   allowing them to work without storage (matching real-world usage where frontend has the data)
 
   test.concurrent("smoke - full E2E workflow", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend. What did you do?",
-              text: "I goes to the park yesterday and played football with my friends. It was a sunny day and we was having a great time.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // Default: no server storage
-    });
+    const { status, json } = await createSubmission(
+      "I goes to the park yesterday and played football with my friends. It was a sunny day and we was having a great time.",
+    );
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorIds = getAssessorResults(json.results.parts[0]).map((a: any) => a.id);
     expect(assessorIds.length).toBeGreaterThan(0);
-    expect(assessorIds).toContain("T-GEC-LT");
+    expect(assessorIds).toContain(ASSESSOR_IDS.LT);
   });
 
   test.concurrent("ai-feedback - AI feedback included in results", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend. What did you do?",
-              text: "Last weekend I go to the park with my friend. We was playing football and having a really fun time.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(
+      "Last weekend I go to the park with my friend. We was playing football and having a really fun time.",
+    );
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorIds = getAssessorResults(json.results.parts[0]).map((a: any) => a.id);
-    expect(assessorIds).toContain("T-AI-FEEDBACK");
+    expect(assessorIds).toContain(ASSESSOR_IDS.AI_FEEDBACK);
   });
 
   test.concurrent("lt - grammar error detection", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend. What did you do?",
-              text: "I goes to park yesterday. The dog was happy and we plays together. It was fun time.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(
+      "I goes to park yesterday. The dog was happy and we plays together. It was fun time.",
+    );
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json.results.parts[0]).find(
-      (a: any) => a.id === "T-GEC-LT",
+      (a: any) => a.id === ASSESSOR_IDS.LT,
     );
     expect(ltAssessor).toBeDefined();
     expect(ltAssessor.errors.length).toBeGreaterThan(0);
   });
 
   test.concurrent("lt - confidence scores and tiers", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-
     // Text with tense errors that should get context-aware confidence boost
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend. What did you do?",
-              text: "Last weekend I go to the park. We was playing football. I have a lot of fun.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(
+      "Last weekend I go to the park. We was playing football. I have a lot of fun.",
+    );
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json.results.parts[0]).find(
-      (a: any) => a.id === "T-GEC-LT",
+      (a: any) => a.id === ASSESSOR_IDS.LT,
     );
     expect(ltAssessor).toBeDefined();
     expect(ltAssessor.errors.length).toBeGreaterThan(0);
@@ -157,32 +99,16 @@ describe("API Tests", () => {
   });
 
   test.concurrent("lt - context-aware tense detection", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-
     // Text with past tense indicators that should boost confidence for tense errors
-    const { status: status2, json: json2 } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "What did you do last weekend?",
-              text: "Yesterday I go to the store. Last week we was visiting friends. I have a good time.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status: status2, json: json2 } = await createSubmission(
+      "Yesterday I go to the store. Last week we was visiting friends. I have a good time.",
+      "What did you do last weekend?",
+    );
     expect(status2).toBe(201);
     expect(json2.status).toBe("success");
 
     const ltAssessor = getAssessorResults(json2.results.parts[0]).find(
-      (a: any) => a.id === "T-GEC-LT",
+      (a: any) => a.id === ASSESSOR_IDS.LT,
     );
     expect(ltAssessor).toBeDefined();
 
@@ -233,27 +159,10 @@ describe("API Tests", () => {
   });
 
   test.concurrent("llm - assessment integration", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-
     // Text with errors that LLM should catch (tense errors with past indicators)
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend. What did you do?",
-              text: "Last weekend I go to the park. We was playing football. I have a lot of fun.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(
+      "Last weekend I go to the park. We was playing football. I have a lot of fun.",
+    );
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
@@ -261,12 +170,12 @@ describe("API Tests", () => {
     const assessorResults = getAssessorResults(json.results.parts[0]);
 
     // Verify LanguageTool assessor exists (separate from LLM)
-    const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
+    const ltAssessor = assessorResults.find((a: any) => a.id === ASSESSOR_IDS.LT);
     expect(ltAssessor).toBeDefined();
     expect(ltAssessor.name).toBe("LanguageTool (OSS)"); // Should be separate, not merged
 
     // Verify AI assessor exists (separate from LanguageTool)
-    const llmAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LLM");
+    const llmAssessor = assessorResults.find((a: any) => a.id === ASSESSOR_IDS.LLM);
     expect(llmAssessor).toBeDefined();
     expect(llmAssessor.name).toBe("AI Assessment");
 
@@ -308,33 +217,18 @@ describe("API Tests", () => {
   });
 
   test.concurrent("llm - position validation and word boundary alignment", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
     const answerText =
       "I believe universities should increase their focus on engineering and understanding that graduates can contribute to the economy.";
 
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "What should universities focus on?",
-              text: answerText,
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(
+      answerText,
+      "What should universities focus on?",
+    );
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorResults = getAssessorResults(json.results.parts[0]);
-    const llmAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LLM");
+    const llmAssessor = assessorResults.find((a: any) => a.id === ASSESSOR_IDS.LLM);
 
     if (llmAssessor && llmAssessor.errors && llmAssessor.errors.length > 0) {
       const llmErrors = llmAssessor.errors;
@@ -387,32 +281,14 @@ describe("API Tests", () => {
   });
 
   test.concurrent("llm - suggestions match highlighted text", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
     const answerText = "Last weekend I go to the park. We was playing football.";
 
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend.",
-              text: answerText,
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(answerText, "Describe your weekend.");
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorResults = getAssessorResults(json.results.parts[0]);
-    const llmAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LLM");
+    const llmAssessor = assessorResults.find((a: any) => a.id === ASSESSOR_IDS.LLM);
 
     if (llmAssessor && llmAssessor.errors && llmAssessor.errors.length > 0) {
       const llmErrors = llmAssessor.errors;
@@ -443,33 +319,15 @@ describe("API Tests", () => {
   });
 
   test.concurrent("llm - error positions align with word boundaries", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
     const answerText =
       "I believe this is correct. Today many employers also said they need graduates.";
 
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "What do employers need?",
-              text: answerText,
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(answerText, "What do employers need?");
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
     const assessorResults = getAssessorResults(json.results.parts[0]);
-    const llmAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LLM");
+    const llmAssessor = assessorResults.find((a: any) => a.id === ASSESSOR_IDS.LLM);
 
     if (llmAssessor && llmAssessor.errors && llmAssessor.errors.length > 0) {
       const llmErrors = llmAssessor.errors;
@@ -528,28 +386,13 @@ describe("API Tests", () => {
   });
 
   test.concurrent("teacher-feedback - persistence and modes", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-
     // Create submission - results returned immediately
     // Note: storeResults: true is required for GET endpoint to work
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend. What did you do?",
-              text: "Last weekend I go to the park with my friend. We was playing football.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: true, // Required for GET endpoint to retrieve results
-    });
+    const { status, json, submissionId, answerId } = await createSubmission(
+      "Last weekend I go to the park with my friend. We was playing football.",
+      "Describe your weekend. What did you do?",
+      true, // Required for GET endpoint to retrieve results
+    );
     expect(status).toBe(201);
     expect(json.status).toBe("success");
 
@@ -611,7 +454,7 @@ describe("API Tests", () => {
     const results = await apiRequest("GET", `/v1/text/submissions/${submissionId}`);
     expect(results.status).toBe(200);
     const teacherAssessor = getAssessorResults(results.json.results.parts[0]).find(
-      (a: any) => a.id === "T-TEACHER-FEEDBACK",
+      (a: any) => a.id === ASSESSOR_IDS.TEACHER,
     );
     expect(teacherAssessor).toBeDefined();
     expect(teacherAssessor.meta).toBeDefined();
@@ -726,27 +569,10 @@ describe("API Tests", () => {
   });
 
   test.concurrent("timing - performance check", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-
     const start = Date.now();
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend. What did you do?",
-              text: "Last weekend I go to the park with my friend. We was playing football.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(
+      "Last weekend I go to the park with my friend. We was playing football.",
+    );
     const duration = Date.now() - start;
 
     expect(status).toBe(201);
@@ -755,27 +581,11 @@ describe("API Tests", () => {
   });
 
   test.concurrent("timing - processing time tracking", async () => {
-    const { questionId, answerId, submissionId } = generateIds();
-
     const submissionStart = Date.now();
-    const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
-      submissionId,
-      submission: [
-        {
-          part: 1,
-          answers: [
-            {
-              id: answerId,
-              questionId: questionId,
-              questionText: "Describe your weekend.",
-              text: "I had a great weekend with my family.",
-            },
-          ],
-        },
-      ],
-      template: { name: "generic", version: 1 },
-      storeResults: false, // No server storage for tests
-    });
+    const { status, json } = await createSubmission(
+      "I had a great weekend with my family.",
+      "Describe your weekend.",
+    );
     const processingTime = (Date.now() - submissionStart) / 1000; // Convert to seconds
 
     expect(status).toBe(201);
