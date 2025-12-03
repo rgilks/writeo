@@ -307,15 +307,8 @@ export function ProgressDashboard() {
         Your Progress
       </motion.h2>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "var(--spacing-lg)",
-          marginBottom: "var(--spacing-xl)",
-        }}
-      >
-        <AnimatePresence mode="wait">
+      <div style={{ position: "relative", marginBottom: "var(--spacing-xl)" }}>
+        <AnimatePresence mode="popLayout" initial={false}>
           {!isReady ? (
             <motion.div
               key="skeletons"
@@ -323,7 +316,12 @@ export function ProgressDashboard() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              style={{ display: "contents" }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: "var(--spacing-lg)",
+                width: "100%",
+              }}
             >
               {[1, 2, 3, 4].map((i) => (
                 <StatCardSkeleton key={`skeleton-${i}`} />
@@ -335,7 +333,12 @@ export function ProgressDashboard() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.15 }}
-              style={{ display: "contents" }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: "var(--spacing-lg)",
+                width: "100%",
+              }}
             >
               {statCards
                 .filter((card) => card.condition !== false)
