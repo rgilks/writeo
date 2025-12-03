@@ -15,7 +15,7 @@
     "deploy:modal": "./scripts/deploy-modal.sh",
     "test": "vitest run",
     "test:local": "./scripts/test-local.sh",
-    "test:unit": "vitest run --exclude tests/e2e",
+    "test:unit": "TEST_TYPE=unit vitest run --exclude tests/e2e",
     "test:integration": "TEST_TYPE=integration vitest run",
     "test:smoke": "playwright test tests/e2e/smoke.spec.ts",
     "test:watch": "vitest",
