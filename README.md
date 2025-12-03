@@ -6,7 +6,7 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 
 ![License](https://img.shields.io/badge/license-Apache%202.0-blue)
 ![Status](https://img.shields.io/badge/status-production--ready-green)
-![LLM](https://img.shields.io/badge/LLM-Groq%20Llama%203.3%2070B%20%7C%20OpenAI%20GPT--4o--mini-orange)
+![LLM](https://img.shields.io/badge/LLM-Groq%20or%20OpenAI-orange)
 
 [Live Demo](https://writeo.tre.systems)
 
@@ -22,7 +22,7 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 - **📊 CEFR Mapping**: Automatic mapping of scores to Common European Framework of Reference for Languages (A2-C2).
 - **🔒 Privacy First**: "Opt-in" server storage model. By default, data never leaves the user's browser storage.
 - **⚡ High Performance**: Serverless architecture with Cloudflare Workers and Modal, supporting parallel processing and scale-to-zero.
-- **💰 Cost Effective**: Operational modes to balance cost and performance (from ~$8/month to ~$25/month for moderate usage).
+- **💰 Cost Effective**: Operational modes to balance cost and performance (from ~$8/month to ~$25/month for moderate usage). See [COST_REVIEW.md](docs/COST_REVIEW.md) for details.
 - **📱 Progressive Web App**: Installable PWA with offline support, fast loading, and app-like experience.
 
 ## 📚 Documentation

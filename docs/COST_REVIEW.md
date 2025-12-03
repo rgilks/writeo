@@ -1,6 +1,7 @@
 # Cost Review & Optimization Guide
 
-**Review Frequency:** Quarterly
+**Review Frequency:** Quarterly  
+**Last Reviewed:** 2025-01-18
 
 ---
 

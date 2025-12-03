@@ -41,7 +41,7 @@ Writeo supports two operational modes optimized for different use cases:
 **Configuration:**
 
 - **LLM:** OpenAI GPT-4o-mini
-- **Modal Services:** Scale-to-zero after 30 seconds
+- **Modal Services:** Scale-to-zero (Essay Scoring: 30s, LanguageTool: 60s)
 
 **Processing Flow:**
 
@@ -303,43 +303,48 @@ sequenceDiagram
       {
         "part": "1",
         "status": "success",
-        "assessor-results": [
+        "answers": [
           {
-            "id": "T-AES-ESSAY",
-            "name": "Essay scorer",
-            "type": "grader",
-            "overall": 6.5,
-            "label": "B2",
-            "dimensions": {
-              "TA": 6.0,
-              "CC": 6.5,
-              "Vocab": 6.5,
-              "Grammar": 6.0,
-              "Overall": 6.5
-            }
-          },
-          {
-            "id": "T-GEC-LT",
-            "name": "LanguageTool (OSS)",
-            "type": "feedback",
-            "errors": [
+            "id": "answer-id",
+            "assessorResults": [
               {
-                "start": 2,
-                "end": 6,
-                "length": 4,
-                "category": "GRAMMAR",
-                "rule_id": "SVA",
-                "message": "Possible subject–verb agreement error.",
-                "suggestions": ["go", "went"],
-                "source": "LT",
-                "severity": "error"
+                "id": "T-AES-ESSAY",
+                "name": "Essay scorer",
+                "type": "grader",
+                "overall": 6.5,
+                "label": "B2",
+                "dimensions": {
+                  "TA": 6.0,
+                  "CC": 6.5,
+                  "Vocab": 6.5,
+                  "Grammar": 6.0,
+                  "Overall": 6.5
+                }
+              },
+              {
+                "id": "T-GEC-LT",
+                "name": "LanguageTool (OSS)",
+                "type": "feedback",
+                "errors": [
+                  {
+                    "start": 2,
+                    "end": 6,
+                    "length": 4,
+                    "category": "GRAMMAR",
+                    "rule_id": "SVA",
+                    "message": "Possible subject–verb agreement error.",
+                    "suggestions": ["go", "went"],
+                    "source": "LT",
+                    "severity": "error"
+                  }
+                ],
+                "meta": {
+                  "language": "en-GB",
+                  "engine": "LT-OSS",
+                  "errorCount": 1
+                }
               }
-            ],
-            "meta": {
-              "language": "en-GB",
-              "engine": "LT-OSS",
-              "errorCount": 1
-            }
+            ]
           }
         ]
       }
@@ -391,7 +396,7 @@ sequenceDiagram
 
 ### 5.2 R2 Object Storage (Opt-in Only)
 
-**Bucket:** `writeo-data`  
+**Bucket:** `writeo-data-1`  
 **Usage:** Only when `storeResults: true`
 
 | Path Pattern                       | Content Type       | Structure                                    |

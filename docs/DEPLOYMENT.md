@@ -20,7 +20,7 @@ Writeo supports two operational modes:
 **Setup:**
 
 - Set `LLM_PROVIDER=openai` and `OPENAI_API_KEY`
-- Modal services automatically scale-to-zero (default 30-second scaledown)
+- Modal services automatically scale-to-zero (Essay Scoring: 30s, LanguageTool: 60s default scaledown)
 - **Cost:** ~$7.60-8.50/month (100 submissions/day)
 - **Performance:** 8-15s cold start, 3-10s warm
 
@@ -29,7 +29,7 @@ Writeo supports two operational modes:
 **Setup:**
 
 - Set `LLM_PROVIDER=groq` and `GROQ_API_KEY`
-- Configure Modal services with reduced `scaledown_window` or keep warm
+- Update Modal services: Set `scaledown_window=2` in both `services/modal-essay/app.py` and `services/modal-lt/app.py`, then redeploy both services
 - **Cost:** ~$25-40/month (100 submissions/day)
 - **Performance:** 2-5s first request, 1-3s warm
 
@@ -152,7 +152,7 @@ wrangler secret list
 
 Check `apps/api-worker/wrangler.toml`:
 
-- R2 bucket: `writeo-data`
+- R2 bucket: `writeo-data-1`
 - KV namespace IDs set (production + preview)
 
 ### Step 5: Deploy API Worker
@@ -284,7 +284,7 @@ See [docs/OPERATIONS.md](docs/OPERATIONS.md) for detailed logging and monitoring
 
 **R2 access errors:**
 
-- Verify bucket name matches: `writeo-data`
+- Verify bucket name matches: `writeo-data-1`
 - Check R2 bucket exists: `wrangler r2 bucket list`
 - Verify bucket bindings in wrangler.toml
 - Check bucket permissions
