@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mergeQuestionTextIntoResults } from "../../apps/web/app/lib/utils/submission";
 import type { AssessmentResults } from "@writeo/shared";
 
@@ -7,14 +7,27 @@ const mockWindow = {
   location: { href: "http://localhost" },
 };
 
-describe("submission utilities", () => {
+describe.sequential("submission utilities", () => {
+  let originalWindow: any;
+
   beforeEach(() => {
-    vi.stubGlobal("window", mockWindow);
+    originalWindow = global.window;
+    global.window = mockWindow as any;
+  });
+
+  afterEach(() => {
+    if (originalWindow !== undefined) {
+      global.window = originalWindow;
+    } else {
+      // @ts-ignore
+      delete global.window;
+    }
   });
 
   describe("mergeQuestionTextIntoResults", () => {
     it("should return results unchanged when window is undefined", () => {
-      vi.stubGlobal("window", undefined);
+      // @ts-ignore
+      global.window = undefined;
       const results: AssessmentResults = {
         status: "success",
         template: { name: "test", version: 1 },

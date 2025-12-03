@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { apiRequest } from "../../apps/web/app/lib/utils/api-client";
 import * as apiConfigModule from "../../apps/web/app/lib/api-config";
 
-describe("apiRequest", () => {
+describe.sequential("apiRequest", () => {
   const originalFetch = global.fetch;
   const originalProcessEnv = process.env;
 

@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { errorLogger } from "../../apps/web/app/lib/utils/error-logger";
 
-describe("ErrorLogger", () => {
+describe.sequential("ErrorLogger", () => {
   let mockLocalStorage: Record<string, string>;
   let originalLocalStorage: Storage | undefined;
   let originalWindow: Window | undefined;

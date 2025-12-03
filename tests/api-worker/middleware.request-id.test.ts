@@ -6,12 +6,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { requestId } from "../../apps/api-worker/src/middleware/request-id";
 import { createContext } from "./helpers";
 
-describe("requestId middleware", () => {
+describe.sequential("requestId middleware", () => {
   const mockNext = vi.fn().mockResolvedValue(undefined);
   const originalCrypto = global.crypto;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNext.mockClear();
     // Mock crypto.randomUUID - ensure it's a function
     if (!global.crypto) {
       global.crypto = {} as any;

@@ -7,7 +7,7 @@ import { authenticate } from "../../apps/api-worker/src/middleware/auth";
 import { createContext } from "./helpers";
 import { KEY_OWNER } from "../../apps/api-worker/src/utils/constants";
 
-describe("authenticate middleware", () => {
+describe.sequential("auth middleware", () => {
   const mockNext = vi.fn().mockResolvedValue(undefined);
   const mockKvStore = {
     get: vi.fn(),
@@ -18,6 +18,7 @@ describe("authenticate middleware", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNext.mockClear();
   });
 
   it("allows public paths without authentication", async () => {

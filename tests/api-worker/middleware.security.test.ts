@@ -6,11 +6,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { securityHeaders, getCorsOrigin } from "../../apps/api-worker/src/middleware/security";
 import { createContext } from "./helpers";
 
-describe("securityHeaders middleware", () => {
+describe.sequential("securityHeaders middleware", () => {
   const mockNext = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNext.mockClear();
   });
 
   it("should add security headers to response", async () => {

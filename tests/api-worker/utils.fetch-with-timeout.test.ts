@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fetchWithTimeout } from "../../apps/api-worker/src/utils/fetch-with-timeout";
 
-describe("fetchWithTimeout", () => {
+describe.sequential("fetchWithTimeout", () => {
   const originalFetch = global.fetch;
   const originalAbortController = global.AbortController;
   const originalSetTimeout = global.setTimeout;

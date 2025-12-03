@@ -7,7 +7,7 @@ import { rateLimit } from "../../apps/api-worker/src/middleware/rate-limit";
 import { createContext } from "./helpers";
 import { KEY_OWNER } from "../../apps/api-worker/src/utils/constants";
 
-describe("rateLimit middleware", () => {
+describe.sequential("rateLimit middleware", () => {
   const mockKvStore = {
     get: vi.fn(),
     put: vi.fn(),
@@ -19,6 +19,9 @@ describe("rateLimit middleware", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNext.mockClear();
+    mockKvStore.get.mockClear();
+    mockKvStore.put.mockClear();
     mockKvStore.get.mockResolvedValue(null);
     mockKvStore.put.mockResolvedValue(undefined);
   });
