@@ -61,7 +61,27 @@ jobs:
         # Start API worker and web app with mocked services, then run E2E tests
         run: |
           # Ensure cleanup of background processes on exit
-          trap "echo 'Cleaning up background processes...'; kill \$(cat /tmp/writeo-api-worker.pid) \$(cat /tmp/writeo-web.pid) 2>/dev/null || true; echo 'Cleanup complete.'" EXIT
+          # Store PIDs in variables that persist in trap
+          API_PID=""
+          WEB_PID=""
+          cleanup() {
+            echo "Cleaning up background processes..."
+            if [ ! -z "$API_PID" ]; then
+              kill $API_PID 2>/dev/null || true
+              sleep 1
+              kill -9 $API_PID 2>/dev/null || true
+            fi
+            if [ ! -z "$WEB_PID" ]; then
+              kill $WEB_PID 2>/dev/null || true
+              sleep 1
+              kill -9 $WEB_PID 2>/dev/null || true
+            fi
+            # Also kill by port in case PIDs are stale
+            lsof -ti:8787 | xargs kill -9 2>/dev/null || true
+            lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+            echo "Cleanup complete."
+          }
+          trap cleanup EXIT INT TERM
 
           # Create log files upfront to ensure they exist
           touch /tmp/writeo-api-worker.log /tmp/writeo-web.log
@@ -90,6 +110,8 @@ jobs:
           API_PID=$!
           echo $API_PID > /tmp/writeo-api-worker.pid
           echo "API worker started with PID: $API_PID"
+          # Export for trap
+          export API_PID
           echo "Using mocked services (USE_MOCK_SERVICES=true)"
 
           # Wait a moment and check if process is still alive
@@ -121,6 +143,8 @@ jobs:
           WEB_PID=$!
           echo $WEB_PID > /tmp/writeo-web.pid
           echo "Web app started with PID: $WEB_PID"
+          # Export for trap
+          export WEB_PID
 
           # Wait a moment and check if process is still alive
           sleep 2
@@ -241,23 +265,41 @@ jobs:
           fi
 
           # Now run E2E tests while servers are running
-          echo "Starting E2E tests..."
+          # Add timeout to prevent hanging (30 minutes = 1800 seconds)
+          # With 31 tests, 2 workers, 2 retries, and 120s per-test timeout:
+          # Worst case: ~31 tests × 120s / 2 workers = ~31 minutes (without retries)
+          # With retries: could be longer, so 30 minutes is a reasonable upper bound
+          echo "Starting E2E tests (with 30 minute timeout)..."
           set +e  # Temporarily disable exit on error to capture test result
-          npm run test:e2e -- --reporter=github
+          timeout 1800 npm run test:e2e -- --reporter=github
           TEST_EXIT_CODE=$?
           set -e  # Re-enable exit on error
 
-          if [ $TEST_EXIT_CODE -ne 0 ]; then
+          if [ $TEST_EXIT_CODE -eq 124 ]; then
+            echo "❌ E2E tests timed out after 30 minutes"
+            echo "This may indicate hanging tests or performance issues"
+            echo "=== Recent Test Output ==="
+            echo "Check Playwright test output above for details"
+            echo "=== Server Status ==="
+            ps aux | grep -E "(wrangler|next)" | grep -v grep || echo "No matching processes"
+            echo "=== Recent API Worker Logs ==="
+            tail -50 /tmp/writeo-api-worker.log || echo "No API logs"
+            echo "=== Recent Web App Logs ==="
+            tail -50 /tmp/writeo-web.log || echo "No web logs"
+          elif [ $TEST_EXIT_CODE -ne 0 ]; then
             echo "❌ E2E tests failed (exit code: $TEST_EXIT_CODE)"
+            echo "=== Server Status ==="
+            ps aux | grep -E "(wrangler|next)" | grep -v grep || echo "No matching processes"
+            echo "=== Recent API Worker Logs ==="
+            tail -50 /tmp/writeo-api-worker.log || echo "No API logs"
+            echo "=== Recent Web App Logs ==="
+            tail -50 /tmp/writeo-web.log || echo "No web logs"
           else
             echo "✓ E2E tests passed"
           fi
 
-          # Cleanup: kill background processes
-          echo "Cleaning up background processes..."
-          kill $API_PID $WEB_PID 2>/dev/null || true
-          sleep 2
-          kill -9 $API_PID $WEB_PID 2>/dev/null || true
+          # Cleanup will be handled by trap, but do explicit cleanup here too
+          cleanup
 
           # Exit with test result
           exit $TEST_EXIT_CODE
