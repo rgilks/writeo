@@ -433,13 +433,13 @@ export function ProgressDashboard() {
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.5 }}
             style={{
-              padding: "var(--spacing-xl)",
-              background:
-                "linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%)",
-              border: "2px dashed rgba(59, 130, 246, 0.3)",
+              padding: "var(--spacing-2xl) var(--spacing-xl)",
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-color)",
               borderRadius: "var(--border-radius-lg)",
               textAlign: "center",
               marginTop: "var(--spacing-lg)",
+              boxShadow: "var(--shadow-sm)",
             }}
           >
             <motion.div
