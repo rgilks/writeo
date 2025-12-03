@@ -1,25 +1,46 @@
 /**
  * Shared mock implementation for LLM APIs (OpenAI, Groq)
  * Returns deterministic responses to avoid API costs during tests
+ * Enhanced with better detection, error scenarios, and input validation
  */
 
-const MOCK_DELAY_MS_MIN = 10;
-const MOCK_DELAY_MS_MAX = 50;
-const STREAM_DELAY_MS_MIN = 5;
-const STREAM_DELAY_MS_MAX = 15;
+// Minimal delays for fast tests - can be overridden for specific scenarios
+const MOCK_DELAY_MS_MIN = 1;
+const MOCK_DELAY_MS_MAX = 5;
+const STREAM_DELAY_MS_MIN = 1;
+const STREAM_DELAY_MS_MAX = 3;
 
+// Comprehensive keyword detection for better mock routing
 const GRAMMAR_CHECK_KEYWORDS = [
   "grammar and language checker",
   "identify ALL grammar",
   "Find ALL grammar",
   "Check the ENTIRE text systematically",
+  "expert English grammar checker",
+  "pipe-delimited",
+  "errorText|wordBefore|wordAfter",
 ];
-const FEEDBACK_REQUEST_KEYWORDS = ["expert English language tutor", "Provide feedback"];
-const TEACHER_FEEDBACK_KEYWORDS = ["professional writing tutor", "Give clear, direct feedback"];
+const FEEDBACK_REQUEST_KEYWORDS = [
+  "expert English language tutor",
+  "Provide feedback",
+  "detailed feedback",
+  "strengths",
+  "improvements",
+  "JSON only",
+];
+const TEACHER_FEEDBACK_KEYWORDS = [
+  "professional writing tutor",
+  "Give clear, direct feedback",
+  "writing instructor",
+  "experienced writing instructor",
+];
 
+// Enhanced grammar response with more error patterns
 const MOCK_GRAMMAR_RESPONSE = `I go|weekend|to|GRAMMAR|Verb tense error: Use past tense for past events|went|Verb tense|The verb 'go' should be in past tense 'went' when describing past events|error
 We was|park.|playing|GRAMMAR|Subject-verb agreement error|were|Subject-verb agreement|'We' requires 'were', not 'was'|error
-I have|football.|a|GRAMMAR|Verb tense error: Use past tense for past events|had|Verb tense|The verb 'have' should be in past tense 'had' when describing past events|error`;
+I have|football.|a|GRAMMAR|Verb tense error: Use past tense for past events|had|Verb tense|The verb 'have' should be in past tense 'had' when describing past events|error
+they plays|together|GRAMMAR|Subject-verb agreement error|play|Subject-verb agreement|'They' requires plural verb 'play'|error
+he are|nice|GRAMMAR|Subject-verb agreement error|is|Subject-verb agreement|'He' requires singular verb 'is'|error`;
 
 const MOCK_TEACHER_FEEDBACK_CLUES =
   "Try checking your verb tenses - look for words like 'yesterday' or 'last week' that indicate past time.";
@@ -69,6 +90,25 @@ const MOCK_FEEDBACK_RESPONSE = {
   },
 };
 
+// Mock error scenarios for testing error handling
+export const MOCK_ERROR_SCENARIOS = {
+  TIMEOUT: "MOCK_TIMEOUT",
+  RATE_LIMIT: "MOCK_RATE_LIMIT",
+  SERVER_ERROR: "MOCK_SERVER_ERROR",
+  INVALID_RESPONSE: "MOCK_INVALID_RESPONSE",
+} as const;
+
+// Global flag to enable error scenarios in tests
+let mockErrorScenario: string | null = null;
+
+export function setMockErrorScenario(scenario: string | null): void {
+  mockErrorScenario = scenario;
+}
+
+export function getMockErrorScenario(): string | null {
+  return mockErrorScenario;
+}
+
 function getRandomDelay(min: number, max: number): number {
   return Math.random() * (max - min) + min;
 }
@@ -77,27 +117,56 @@ function getUserMessage(messages: Array<{ role: string; content: string }>): str
   return messages.find((m) => m.role === "user")?.content || "";
 }
 
-function detectRequestType(userMessage: string): "grammar" | "feedback" | "teacher" | "default" {
-  if (GRAMMAR_CHECK_KEYWORDS.some((keyword) => userMessage.includes(keyword))) {
+function getSystemMessage(messages: Array<{ role: string; content: string }>): string {
+  return messages.find((m) => m.role === "system")?.content || "";
+}
+
+function detectRequestType(
+  userMessage: string,
+  systemMessage: string,
+): "grammar" | "feedback" | "teacher" | "default" {
+  const combinedText = `${systemMessage} ${userMessage}`.toLowerCase();
+
+  // Check for grammar check patterns
+  if (GRAMMAR_CHECK_KEYWORDS.some((keyword) => combinedText.includes(keyword.toLowerCase()))) {
     return "grammar";
   }
-  if (FEEDBACK_REQUEST_KEYWORDS.some((keyword) => userMessage.includes(keyword))) {
-    return "feedback";
-  }
-  if (TEACHER_FEEDBACK_KEYWORDS.some((keyword) => userMessage.includes(keyword))) {
+
+  // Check for teacher feedback patterns
+  if (TEACHER_FEEDBACK_KEYWORDS.some((keyword) => combinedText.includes(keyword.toLowerCase()))) {
     return "teacher";
   }
+
+  // Check for combined feedback patterns
+  if (FEEDBACK_REQUEST_KEYWORDS.some((keyword) => combinedText.includes(keyword.toLowerCase()))) {
+    return "feedback";
+  }
+
   return "default";
 }
 
-function getTeacherFeedbackResponse(userMessage: string): string {
-  if (userMessage.includes("clues")) {
+function getTeacherFeedbackResponse(userMessage: string, systemMessage: string): string {
+  const combinedText = `${systemMessage} ${userMessage}`.toLowerCase();
+
+  if (combinedText.includes("clues") || combinedText.includes("hint")) {
     return MOCK_TEACHER_FEEDBACK_CLUES;
   }
-  if (userMessage.includes("explanation")) {
+  if (combinedText.includes("explanation") || combinedText.includes("detailed analysis")) {
     return MOCK_TEACHER_FEEDBACK_EXPLANATION;
   }
   return MOCK_TEACHER_FEEDBACK_DEFAULT;
+}
+
+function validateInput(messages: Array<{ role: string; content: string }>): void {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error("Mock LLM API: messages array is required and cannot be empty");
+  }
+
+  for (const msg of messages) {
+    if (!msg.role || !msg.content) {
+      throw new Error("Mock LLM API: each message must have 'role' and 'content'");
+    }
+  }
 }
 
 export async function mockCallLLMAPI(
@@ -106,18 +175,45 @@ export async function mockCallLLMAPI(
   messages: Array<{ role: string; content: string }>,
   _maxTokens: number,
 ): Promise<string> {
+  // Validate input
+  validateInput(messages);
+
+  // Handle error scenarios for testing
+  if (mockErrorScenario === MOCK_ERROR_SCENARIOS.TIMEOUT) {
+    await new Promise((resolve) => setTimeout(resolve, 35000)); // Longer than timeout
+    throw new Error("Mock LLM API: Request timeout");
+  }
+
+  if (mockErrorScenario === MOCK_ERROR_SCENARIOS.RATE_LIMIT) {
+    const error = new Error("Mock LLM API: Rate limit exceeded") as any;
+    error.status = 429;
+    throw error;
+  }
+
+  if (mockErrorScenario === MOCK_ERROR_SCENARIOS.SERVER_ERROR) {
+    const error = new Error("Mock LLM API: Internal server error") as any;
+    error.status = 500;
+    throw error;
+  }
+
+  if (mockErrorScenario === MOCK_ERROR_SCENARIOS.INVALID_RESPONSE) {
+    return "Invalid JSON response {";
+  }
+
+  // Minimal delay for fast tests
   await new Promise((resolve) =>
     setTimeout(resolve, getRandomDelay(MOCK_DELAY_MS_MIN, MOCK_DELAY_MS_MAX)),
   );
 
   const userMessage = getUserMessage(messages);
-  const requestType = detectRequestType(userMessage);
+  const systemMessage = getSystemMessage(messages);
+  const requestType = detectRequestType(userMessage, systemMessage);
 
   switch (requestType) {
     case "grammar":
       return MOCK_GRAMMAR_RESPONSE;
     case "teacher":
-      return getTeacherFeedbackResponse(userMessage);
+      return getTeacherFeedbackResponse(userMessage, systemMessage);
     case "feedback":
       return JSON.stringify(MOCK_FEEDBACK_RESPONSE);
     default:
@@ -131,11 +227,27 @@ export async function* mockStreamLLMAPI(
   messages: Array<{ role: string; content: string }>,
   maxTokens: number,
 ): AsyncGenerator<string, void, unknown> {
+  // Validate input
+  validateInput(messages);
+
+  // Handle error scenarios
+  if (mockErrorScenario === MOCK_ERROR_SCENARIOS.TIMEOUT) {
+    await new Promise((resolve) => setTimeout(resolve, 35000));
+    throw new Error("Mock LLM API: Stream timeout");
+  }
+
+  if (mockErrorScenario === MOCK_ERROR_SCENARIOS.RATE_LIMIT) {
+    const error = new Error("Mock LLM API: Rate limit exceeded") as any;
+    error.status = 429;
+    throw error;
+  }
+
   const fullResponse = await mockCallLLMAPI(apiKey, modelName, messages, maxTokens);
   const words = fullResponse.match(/\S+|\s+/g) || [];
 
   for (const word of words) {
     yield word;
+    // Minimal delay for fast streaming
     await new Promise((resolve) =>
       setTimeout(resolve, getRandomDelay(STREAM_DELAY_MS_MIN, STREAM_DELAY_MS_MAX)),
     );

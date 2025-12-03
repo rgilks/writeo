@@ -51,17 +51,40 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    testTimeout: 60000,
-    hookTimeout: 60000,
+    testTimeout: 30000, // Reduced from 60s - tests should be fast with mocks
+    hookTimeout: 10000, // Reduced from 60s
     include: ["tests/**/*.test.ts"],
     exclude: buildExcludeList(),
+    // Setup file to validate mocks are enabled
+    setupFiles: ["./tests/setup.ts"],
     pool: "threads",
     poolOptions: {
-      threads: { maxThreads: 3, minThreads: 1 },
+      threads: {
+        // Optimize for parallel execution - use more threads for faster tests
+        // Cap at CPU count to avoid overhead, but allow more parallelism
+        maxThreads: process.env.CI ? 4 : Math.max(2, Math.min(8, require("os").cpus().length || 4)),
+        minThreads: 1,
+        // Use single fork for faster startup
+        isolate: true,
+      },
     },
-    retry: 1,
+    // Enable test isolation for better parallelization
+    isolate: true,
+    // Run tests in parallel by default (can be overridden per test)
+    sequence: {
+      shuffle: false, // Deterministic order for reliability
+      concurrent: true, // Allow concurrent execution
+    },
+    retry: process.env.CI ? 1 : 0, // Only retry in CI
+    // Faster bail - fail fast on errors
+    bail: 0, // Don't bail, but can be set to 1 for faster feedback
     env: {
-      USE_MOCK_SERVICES: process.env.USE_MOCK_SERVICES,
+      USE_MOCK_SERVICES: process.env.USE_MOCK_SERVICES || "true",
+    },
+    // Coverage settings (if needed)
+    coverage: {
+      enabled: false, // Disable by default for speed
+      provider: "v8",
     },
   },
 });

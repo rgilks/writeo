@@ -134,9 +134,14 @@ const API_KEY = process.env.TEST_API_KEY || process.env.API_KEY || "";
 // Use worker ID to avoid conflicts between workers
 const workerId = process.env.TEST_WORKER_INDEX || "0";
 const submissionTimers = new Map<string, number>();
-// Increase delay in CI to avoid rate limits on production API
-// Also add delay locally to reduce race conditions in parallel test execution
-const MIN_DELAY_MS = process.env.CI ? 500 : 300; // Delay between submissions to avoid rate limits and race conditions
+// Minimal delay - only needed if not using mocks (mocks are instant)
+// With mocks enabled, we can reduce delays significantly
+const useMockServices = process.env.USE_MOCK_SERVICES === "true";
+const MIN_DELAY_MS = useMockServices
+  ? 10 // Minimal delay with mocks - just to avoid any potential race conditions
+  : process.env.CI
+    ? 500 // Longer delay in CI without mocks
+    : 300; // Standard delay without mocks
 
 /**
  * Create a test submission via API with retry logic for rate limiting

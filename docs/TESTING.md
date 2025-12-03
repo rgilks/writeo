@@ -123,6 +123,10 @@ PLAYWRIGHT_BASE_URL=http://localhost:3000
 - ✅ **Automatic detection** - Enabled when `USE_MOCK_SERVICES=true` (default in test configs)
 - ✅ **Realistic responses** - Mocks return proper data structures for testing
 - ✅ **All services mocked** - Modal, Groq, OpenAI, and other external services
+- ✅ **Enhanced error scenarios** - Mocks support timeout, rate limit, and server error simulation
+- ✅ **Input validation** - Mocks validate inputs to catch bugs early
+- ✅ **Fast execution** - Minimal delays (1-5ms) for rapid test iteration
+- ✅ **Mock validation** - Automatic checks ensure mocks are actually being used
 
 **To use real APIs (for integration testing only):**
 
@@ -134,9 +138,54 @@ USE_MOCK_SERVICES=false npm run test:e2e
 
 **Note:** The smoke test (`npm run test:smoke`) is designed to run against production with real APIs and will skip if mocks are enabled.
 
+### Enhanced Mock Features
+
+**Error Scenario Testing:**
+
+Mocks now support simulating error scenarios for comprehensive error handling tests:
+
+```typescript
+import { setLLMErrorScenario, MOCK_ERROR_SCENARIOS } from "./helpers/error-scenarios";
+
+test("handles timeout errors", async () => {
+  setLLMErrorScenario("TIMEOUT");
+  // Test timeout handling
+  setLLMErrorScenario(null); // Clear after test
+});
+```
+
+Available error scenarios:
+
+- `TIMEOUT` - Simulates request timeout
+- `RATE_LIMIT` - Simulates rate limiting (429)
+- `SERVER_ERROR` - Simulates server errors (500)
+- `INVALID_RESPONSE` - Simulates malformed responses
+
+**Mock Validation:**
+
+Tests automatically validate that mocks are enabled. If mocks are disabled, tests will warn (or fail in strict mode) to prevent accidental real API usage.
+
 See [COST_REVIEW.md](COST_REVIEW.md) for cost optimization details.
 
 ---
+
+## Test Performance & Parallelization
+
+**Optimized for Speed:**
+
+- ✅ **Fast execution** - Unit tests run in <1s, integration tests in <30s
+- ✅ **Parallel execution** - Tests run concurrently by default
+- ✅ **Optimized thread pool** - Uses CPU count for optimal parallelism
+- ✅ **Minimal delays** - Mock delays reduced to 1-5ms (was 10-50ms)
+- ✅ **Test isolation** - Each test runs in isolation for reliability
+- ✅ **Fast E2E tests** - Delays reduced when mocks are enabled (10ms vs 300-500ms)
+
+**Configuration:**
+
+- Vitest uses thread pool with up to 8 threads (or CPU count, whichever is lower)
+- Tests run concurrently unless explicitly marked as sequential
+- Test timeout reduced to 30s (from 60s) - tests should be fast with mocks
+- Hook timeout reduced to 10s (from 60s)
 
 ## Writing Tests
 
