@@ -27,10 +27,11 @@ export function ErrorTypeList({ grammarErrors }: { grammarErrors: LanguageToolEr
     >
       <h2
         style={{
-          fontSize: "20px",
-          marginBottom: "var(--spacing-sm, 8px)",
+          fontSize: "22px",
+          marginBottom: "var(--spacing-xs, 4px)",
           fontWeight: 700,
           color: "var(--text-primary, #1e293b)",
+          letterSpacing: "-0.01em",
         }}
         lang="en"
       >
@@ -39,8 +40,9 @@ export function ErrorTypeList({ grammarErrors }: { grammarErrors: LanguageToolEr
       <p
         style={{
           marginBottom: "var(--spacing-lg, 24px)",
-          fontSize: "16px",
+          fontSize: "15px",
           color: "var(--text-secondary, #64748b)",
+          lineHeight: 1.5,
         }}
         lang="en"
       >
