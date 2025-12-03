@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ProgressDashboard } from "@/app/components/ProgressDashboard";
 import { TaskCard } from "@/app/components/TaskCard";
+import { Logo } from "@/app/components/Logo";
 import { TASKS } from "@/app/lib/constants/tasks";
 import { fadeInUp, fadeInUpDelayed, staggerContainer } from "@/app/lib/constants/animations";
 
@@ -13,21 +14,7 @@ export default function HomePage() {
       <header className="header">
         <div className="header-content">
           <div className="logo-group">
-            <Link href="/" className="logo">
-              <img
-                src="/icon-192.png"
-                alt="Writeo Logo"
-                width={32}
-                height={32}
-                style={{
-                  display: "block",
-                  flexShrink: 0,
-                  width: "32px",
-                  height: "32px",
-                }}
-              />
-              Writeo
-            </Link>
+            <Logo />
           </div>
           <nav className="header-actions" aria-label="Primary navigation">
             <Link href="/history" className="nav-history-link">

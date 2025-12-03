@@ -12,6 +12,7 @@ import { ModeSwitcher } from "@/app/components/ModeSwitcher";
 import { ErrorBoundary } from "@/app/components/ErrorBoundary";
 import { LiveRegion } from "@/app/components/LiveRegion";
 import { ResultsLoadingSkeleton } from "@/app/components/LoadingSkeleton";
+import { Logo } from "@/app/components/Logo";
 import type { AssessmentResults } from "@writeo/shared";
 import { errorLogger } from "@/app/lib/utils/error-logger";
 
@@ -155,9 +156,7 @@ export default function ResultsPage() {
       <header className="header">
         <div className="header-content">
           <div className="logo-group">
-            <Link href="/" className="logo">
-              Writeo
-            </Link>
+            <Logo />
           </div>
           <nav className="header-actions" aria-label="Results actions">
             <Link href="/history" className="nav-history-link">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Logo } from "@/app/components/Logo";
 
 // Helper component for section cards
 function SectionCard({
@@ -72,9 +73,7 @@ export default function AccessibilityPage() {
       <header className="header">
         <div className="header-content">
           <div className="logo-group">
-            <Link href="/" className="logo">
-              Writeo
-            </Link>
+            <Logo />
           </div>
           <nav className="header-actions" aria-label="Accessibility actions">
             <Link href="/" className="nav-back-link">

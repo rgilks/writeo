@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { Logo } from "@/app/components/Logo";
 import { countWords, MIN_ESSAY_WORDS, MAX_ESSAY_WORDS } from "@writeo/shared";
 import { TASK_DATA } from "@/app/lib/constants/tasks";
 import { usePreferencesStore } from "@/app/lib/stores/preferences-store";
@@ -84,9 +85,7 @@ export default function WritePage() {
       <header className="header" lang="en">
         <div className="header-content">
           <div className="logo-group">
-            <Link href="/" className="logo">
-              Writeo
-            </Link>
+            <Logo />
           </div>
           <nav className="header-actions" aria-label="Writing actions">
             <Link href="/history" className="nav-history-link">

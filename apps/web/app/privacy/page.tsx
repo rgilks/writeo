@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Logo } from "@/app/components/Logo";
 import { SectionCard, ContentList, Text, ExternalLink } from "@/app/components/ContentComponents";
 
 export default function PrivacyPage() {
@@ -9,9 +10,7 @@ export default function PrivacyPage() {
       <header className="header" lang="en">
         <div className="header-content">
           <div className="logo-group">
-            <Link href="/" className="logo">
-              Writeo
-            </Link>
+            <Logo />
           </div>
           <nav className="header-actions" aria-label="Privacy actions">
             <Link href="/" className="nav-back-link">

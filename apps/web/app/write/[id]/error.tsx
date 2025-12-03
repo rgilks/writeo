@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { Logo } from "@/app/components/Logo";
 import { getErrorMessage } from "@/app/lib/utils/error-messages";
 
 const isDevelopment = typeof process !== "undefined" && process.env?.NODE_ENV === "development";
@@ -24,9 +25,7 @@ export default function Error({
       <header className="header">
         <div className="header-content">
           <div className="logo-group">
-            <Link href="/" className="logo">
-              Writeo
-            </Link>
+            <Logo />
           </div>
           <nav className="header-actions" aria-label="Error actions">
             <Link href="/" className="nav-back-link">

@@ -9,6 +9,7 @@ import { getEssayAssessorResult } from "@writeo/shared";
 import { mapScoreToCEFR } from "@writeo/shared";
 import type { AssessmentResults } from "@writeo/shared";
 import { getScoreColor } from "@/app/components/learner-results/utils";
+import { Logo } from "@/app/components/Logo";
 
 interface GroupedItem {
   dateLabel: string;
@@ -191,9 +192,7 @@ export default function HistoryPage() {
         <header className="header">
           <div className="header-content">
             <div className="logo-group">
-              <Link href="/" className="logo">
-                Writeo
-              </Link>
+              <Logo />
             </div>
             <nav className="header-actions" aria-label="Primary navigation">
               <Link href="/history" className="nav-history-link nav-history-link--active">
