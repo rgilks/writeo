@@ -26,24 +26,30 @@ describe("rateLimit middleware", () => {
   it("should allow public paths without rate limiting", async () => {
     const c = createContext({
       path: "/health",
+      url: "http://localhost:8787/health",
       env: { WRITEO_RESULTS: mockKvStore as any },
     });
     await rateLimit(c, mockNext);
     expect(mockNext).toHaveBeenCalled();
+    // Public paths should return early, so KV should not be accessed
     expect(mockKvStore.get).not.toHaveBeenCalled();
+    expect(mockKvStore.put).not.toHaveBeenCalled();
   });
 
   it("should allow test keys without rate limiting", async () => {
     const c = createContext({
       path: "/text/submissions/123",
-      env: { WRITEO_RESULTS: mockKvStore as any },
+      url: "http://localhost:8787/text/submissions/123",
+      env: { WRITEO_RESULTS: mockKvStore as any, USE_MOCK_SERVICES: "true" },
     });
     c.set("isTestKey", true);
     c.set("apiKeyOwner", KEY_OWNER.TEST_RUNNER);
 
     await rateLimit(c, mockNext);
     expect(mockNext).toHaveBeenCalled();
+    // Test keys should return early, so KV should not be accessed
     expect(mockKvStore.get).not.toHaveBeenCalled();
+    expect(mockKvStore.put).not.toHaveBeenCalled();
   });
 
   it("should allow requests under rate limit", async () => {
@@ -70,9 +76,10 @@ describe("rateLimit middleware", () => {
 
     const c = createContext({
       path: "/v1/text/submissions",
+      url: "http://localhost:8787/v1/text/submissions",
       method: "POST",
       headers: { "CF-Connecting-IP": "192.168.1.1" },
-      env: { WRITEO_RESULTS: mockKvStore as any },
+      env: { WRITEO_RESULTS: mockKvStore as any, USE_MOCK_SERVICES: "false" },
     });
     c.set("apiKeyOwner", KEY_OWNER.ADMIN);
     c.set("isTestKey", false);
@@ -125,13 +132,16 @@ describe("rateLimit middleware", () => {
 
   it("should apply different rate limits for submissions", async () => {
     const now = Date.now();
-    mockKvStore.get.mockResolvedValue(JSON.stringify({ count: 9, resetTime: now + 60000 }));
+    mockKvStore.get
+      .mockResolvedValueOnce(JSON.stringify({ count: 9, resetTime: now + 60000 }))
+      .mockResolvedValueOnce("99"); // Daily count
 
     const c = createContext({
       path: "/v1/text/submissions",
+      url: "http://localhost:8787/v1/text/submissions",
       method: "POST",
       headers: { "CF-Connecting-IP": "192.168.1.1" },
-      env: { WRITEO_RESULTS: mockKvStore as any },
+      env: { WRITEO_RESULTS: mockKvStore as any, USE_MOCK_SERVICES: "false" },
     });
     c.set("apiKeyOwner", KEY_OWNER.ADMIN);
     c.set("isTestKey", false);
@@ -140,7 +150,9 @@ describe("rateLimit middleware", () => {
     expect(mockNext).toHaveBeenCalled();
 
     // Should allow 10th request (limit is 10)
-    mockKvStore.get.mockResolvedValue(JSON.stringify({ count: 10, resetTime: now + 60000 }));
+    mockKvStore.get
+      .mockResolvedValueOnce(JSON.stringify({ count: 10, resetTime: now + 60000 }))
+      .mockResolvedValueOnce("99"); // Daily count
     const result = await rateLimit(c, mockNext);
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).status).toBe(429);
@@ -173,12 +185,14 @@ describe("rateLimit middleware", () => {
     mockKvStore.get
       .mockResolvedValueOnce(JSON.stringify({ count: 0, resetTime: now + 60000 }))
       .mockResolvedValueOnce("99"); // Daily count
+    mockKvStore.put.mockResolvedValue(undefined);
 
     const c = createContext({
       path: "/v1/text/submissions",
+      url: "http://localhost:8787/v1/text/submissions",
       method: "POST",
       headers: { "CF-Connecting-IP": "192.168.1.1" },
-      env: { WRITEO_RESULTS: mockKvStore as any },
+      env: { WRITEO_RESULTS: mockKvStore as any, USE_MOCK_SERVICES: "false" },
     });
     c.set("apiKeyOwner", KEY_OWNER.ADMIN);
     c.set("isTestKey", false);
@@ -188,7 +202,7 @@ describe("rateLimit middleware", () => {
 
     // Check that daily limit key was checked
     const getCalls = mockKvStore.get.mock.calls;
-    expect(getCalls.some((call) => call[0].includes("daily_submissions"))).toBe(true);
+    expect(getCalls.some((call) => call[0]?.includes("daily_submissions"))).toBe(true);
   });
 
   it("should reject when daily limit exceeded", async () => {

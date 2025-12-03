@@ -132,14 +132,14 @@ function detectRequestType(
     return "grammar";
   }
 
+  // Check for combined feedback patterns (prioritize this over teacher feedback as it's more specific)
+  if (FEEDBACK_REQUEST_KEYWORDS.some((keyword) => combinedText.includes(keyword.toLowerCase()))) {
+    return "feedback";
+  }
+
   // Check for teacher feedback patterns
   if (TEACHER_FEEDBACK_KEYWORDS.some((keyword) => combinedText.includes(keyword.toLowerCase()))) {
     return "teacher";
-  }
-
-  // Check for combined feedback patterns
-  if (FEEDBACK_REQUEST_KEYWORDS.some((keyword) => combinedText.includes(keyword.toLowerCase()))) {
-    return "feedback";
   }
 
   return "default";

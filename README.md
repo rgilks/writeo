@@ -163,22 +163,26 @@ Switch modes easily:
 
 See **[MODES.md](docs/MODES.md)** and **[COST_REVIEW.md](docs/COST_REVIEW.md)** for details.
 
-## 🧪 Testing
+### Testing
 
 Run the test suite:
 
 ```bash
-# Run all tests
+# Run all tests (requires local server to be running for API tests)
 npm test
 
-# Run E2E tests
-npm run test:e2e
+# Run unit tests only
+npm run test:unit
 
-# Run specific test file
-npx vitest tests/api.test.ts
+# Run tests with local server automatically started
+npm run test:local
 ```
 
-**Git Hooks:** Pre-commit and pre-push hooks are installed automatically. Use `QUICK_PUSH=true git push` to skip E2E tests for faster pushes.
+For more details, see [TESTING.md](./docs/TESTING.md). run test:e2e
+
+# Run specific test file
+
+npx vitest tests/api.test.ts
 
 See **[TESTING.md](docs/TESTING.md)** for more info.
 

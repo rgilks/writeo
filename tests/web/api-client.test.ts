@@ -12,7 +12,6 @@ describe("apiRequest", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
     process.env = { ...originalProcessEnv };
   });
 
@@ -24,7 +23,8 @@ describe("apiRequest", () => {
 
   it("should make GET request with auth header", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-api-key");
@@ -32,8 +32,8 @@ describe("apiRequest", () => {
     const result = await apiRequest({ endpoint: "/test" });
 
     expect(result).toBe(mockResponse);
-    expect(global.fetch).toHaveBeenCalled();
-    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(mockFetch).toHaveBeenCalled();
+    const fetchCall = mockFetch.mock.calls[0];
     expect(fetchCall[0]).toBe("https://api.example.com/test");
     expect(fetchCall[1].method).toBe("GET");
     expect(fetchCall[1].headers.get("Content-Type")).toBe("application/json");
@@ -42,7 +42,8 @@ describe("apiRequest", () => {
 
   it("should make POST request with JSON body", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-api-key");
@@ -50,7 +51,7 @@ describe("apiRequest", () => {
     const body = { name: "test", value: 123 };
     await apiRequest({ endpoint: "/test", method: "POST", body });
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "https://api.example.com/test",
       expect.objectContaining({
         method: "POST",
@@ -61,15 +62,16 @@ describe("apiRequest", () => {
 
   it("should use Token prefix for Authorization header", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("my-api-key");
 
     await apiRequest({ endpoint: "/test" });
 
-    expect(global.fetch).toHaveBeenCalled();
-    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(mockFetch).toHaveBeenCalled();
+    const fetchCall = mockFetch.mock.calls[0];
     expect(fetchCall[1].headers.get("Authorization")).toBe("Token my-api-key");
   });
 
@@ -87,7 +89,8 @@ describe("apiRequest", () => {
 
   it("should pass through additional fetch options", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-key");
@@ -98,8 +101,8 @@ describe("apiRequest", () => {
       cache: "no-cache",
     });
 
-    expect(global.fetch).toHaveBeenCalled();
-    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(mockFetch).toHaveBeenCalled();
+    const fetchCall = mockFetch.mock.calls[0];
     expect(fetchCall[1].cache).toBe("no-cache");
     expect(fetchCall[1].headers.get("Content-Type")).toBe("application/json");
     expect(fetchCall[1].headers.get("Authorization")).toBe("Token test-key");
@@ -108,20 +111,22 @@ describe("apiRequest", () => {
 
   it("should not include body for GET requests", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-key");
 
     await apiRequest({ endpoint: "/test", method: "GET" });
 
-    const fetchCall = (global.fetch as any).mock.calls[0];
+    const fetchCall = mockFetch.mock.calls[0];
     expect(fetchCall[1].body).toBeUndefined();
   });
 
   it("should stringify body for POST requests", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-key");
@@ -129,7 +134,7 @@ describe("apiRequest", () => {
     const body = { test: "data", count: 42 };
     await apiRequest({ endpoint: "/test", method: "POST", body });
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "https://api.example.com/test",
       expect.objectContaining({
         body: JSON.stringify(body),
@@ -139,20 +144,24 @@ describe("apiRequest", () => {
 
   it("should handle undefined body", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-key");
 
     await apiRequest({ endpoint: "/test", method: "GET", body: undefined });
 
-    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(mockFetch).toHaveBeenCalled();
+    const fetchCall = mockFetch.mock.calls[0];
+    expect(fetchCall).toBeDefined();
     expect(fetchCall[1].body).toBeUndefined();
   });
 
   it("should merge custom headers with default headers", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-key");
@@ -165,8 +174,8 @@ describe("apiRequest", () => {
       },
     });
 
-    expect(global.fetch).toHaveBeenCalled();
-    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(mockFetch).toHaveBeenCalled();
+    const fetchCall = mockFetch.mock.calls[0];
     // Default Content-Type is set after custom headers, so it overwrites
     expect(fetchCall[1].headers.get("Content-Type")).toBe("application/json");
     expect(fetchCall[1].headers.get("X-Custom")).toBe("value");
@@ -175,7 +184,8 @@ describe("apiRequest", () => {
 
   it("should return response from fetch", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     vi.spyOn(apiConfigModule, "getApiBase").mockReturnValue("https://api.example.com");
     vi.spyOn(apiConfigModule, "getApiKey").mockReturnValue("test-key");

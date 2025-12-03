@@ -27,13 +27,14 @@ describe("fetchWithTimeout", () => {
 
   it("should make fetch request successfully", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     const promise = fetchWithTimeout("https://example.com", { timeout: 10 });
     // Don't wait for timeout, just let fetch resolve immediately
     const result = await promise;
     expect(result).toBe(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "https://example.com",
       expect.objectContaining({
         signal: expect.any(AbortSignal),
@@ -119,7 +120,8 @@ describe("fetchWithTimeout", () => {
 
   it("should pass through fetch options", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     const promise = fetchWithTimeout("https://example.com", {
       method: "POST",
@@ -130,7 +132,7 @@ describe("fetchWithTimeout", () => {
 
     await promise;
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "https://example.com",
       expect.objectContaining({
         method: "POST",
@@ -144,18 +146,20 @@ describe("fetchWithTimeout", () => {
   it("should clear timeout on successful request", async () => {
     const mockResponse = new Response("OK", { status: 200 });
     global.fetch = vi.fn().mockResolvedValue(mockResponse);
-    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
+    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout").mockImplementation(() => {});
 
     const promise = fetchWithTimeout("https://example.com");
     await promise;
 
     expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
   });
 
   it("should clear timeout on error", async () => {
     const error = new Error("Network error");
-    global.fetch = vi.fn().mockRejectedValue(error);
-    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout");
+    const mockFetch = vi.fn().mockRejectedValue(error);
+    global.fetch = mockFetch;
+    const clearTimeoutSpy = vi.spyOn(global, "clearTimeout").mockImplementation(() => {});
 
     const promise = fetchWithTimeout("https://example.com");
 
@@ -166,6 +170,7 @@ describe("fetchWithTimeout", () => {
     }
 
     expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
   });
 
   it("should propagate non-timeout errors", async () => {
@@ -179,12 +184,13 @@ describe("fetchWithTimeout", () => {
 
   it("should handle abort signal correctly", async () => {
     const mockResponse = new Response("OK", { status: 200 });
-    global.fetch = vi.fn().mockResolvedValue(mockResponse);
+    const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+    global.fetch = mockFetch;
 
     const promise = fetchWithTimeout("https://example.com", { timeout: 1000 });
     await promise;
 
-    const fetchCall = (global.fetch as any).mock.calls[0];
+    const fetchCall = mockFetch.mock.calls[0];
     const signal = fetchCall[1].signal;
     expect(signal).toBeInstanceOf(AbortSignal);
   });
