@@ -93,6 +93,7 @@ export async function processEssayResult(
   if (essayResult.status === "rejected") {
     const errorMsg =
       essayResult.reason instanceof Error ? essayResult.reason.message : String(essayResult.reason);
+    console.error(`[Essay Grading] Request rejected for ${submissionId}:`, errorMsg);
     safeLogError("Essay grading request failed", {
       error: errorMsg,
       submissionId,
@@ -104,6 +105,12 @@ export async function processEssayResult(
 
   if (!response.ok) {
     const errorText = await readErrorTextWithTimeout(response);
+    console.error(
+      `[Essay Grading] Service returned error for ${submissionId}:`,
+      response.status,
+      response.statusText,
+      errorText.substring(0, 200),
+    );
     safeLogError("Essay grading service failed", {
       status: response.status,
       statusText: response.statusText,

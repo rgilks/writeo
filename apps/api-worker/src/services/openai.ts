@@ -24,12 +24,15 @@ interface OpenAIStreamDelta {
 }
 
 function shouldUseMock(apiKey: string, useMockServices?: boolean): boolean {
+  // USE_MOCK_SERVICES explicitly disables mocking when false
+  if (useMockServices === false) return false;
   // USE_MOCK_SERVICES enables deterministic mock responses (saves API costs)
   if (useMockServices === true) return true;
   // Fallback: check global process.env (for Node.js test environments)
   const globalProcess = (globalThis as any).process;
   if (globalProcess?.env?.USE_MOCK_SERVICES === "true") return true;
-  // API key-based mocking for local development
+  if (globalProcess?.env?.USE_MOCK_SERVICES === "false") return false;
+  // API key-based mocking for local development (only if USE_MOCK_SERVICES is not set)
   return apiKey === "MOCK" || apiKey.startsWith("test_");
 }
 

@@ -7,11 +7,12 @@ export class ModalClient implements ModalService {
   constructor(private config: AppConfig) {}
 
   async gradeEssay(request: ModalRequest): Promise<Response> {
+    // Modal services have ~11-13s cold start times, so we need a longer timeout
     return postJsonWithAuth(
       `${this.config.modal.gradeUrl}/grade`,
       this.config.api.key,
       request,
-      60000,
+      90000, // 90 seconds to account for cold starts
     );
   }
 
