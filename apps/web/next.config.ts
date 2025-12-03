@@ -95,6 +95,15 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/icon.svg",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "image/svg+xml",
+          },
+        ],
+      },
     ];
   },
 };

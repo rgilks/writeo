@@ -157,14 +157,30 @@ html {
   color: var(--primary-color);
   text-decoration: none;
   letter-spacing: -0.5px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
   animation: logoFadeIn 0.8s ease-out;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
+.logo img {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  width: 32px !important;
+  height: 32px !important;
+  object-fit: contain;
+  filter: none !important;
+}
+
 .logo:hover {
   transform: scale(1.05);
-  opacity: 0.9;
+}
+
+.logo:hover img {
+  opacity: 1 !important;
+  filter: none !important;
 }
 
 @keyframes logoFadeIn {
