@@ -20,7 +20,7 @@ class TrainingConfig:
     test_file: str = "test.jsonl"
 
     # Training hyperparameters
-    learning_rate: float = 3e-5  # 5e-5 for DistilBERT
+    learning_rate: float = 2e-5  # 2e-5 to 5e-5 for DeBERTa-v3, 3e-5 for RoBERTa
     batch_size: int = 16
     num_epochs: int = 10
     max_seq_length: int = 512
@@ -45,6 +45,31 @@ class TrainingConfig:
     # Output (IELTS-aligned CEFR mapping: A1=2.0 to C2=8.5)
     target_score_min: float = 2.0
     target_score_max: float = 8.5
+
+    # Ordinal Regression Options
+    use_ordinal_regression: bool = (
+        True  # Use ordinal regression instead of standard regression
+    )
+    num_classes: int = (
+        11  # 11 CEFR levels: A1, A1+, A2, A2+, B1, B1+, B2, B2+, C1, C1+, C2
+    )
+
+    # Loss Function
+    loss_type: str = (
+        "coral"  # Options: "mse" (baseline), "coral", "soft_labels", "focal", "cdw_ce"
+    )
+    soft_label_sigma: float = 1.0  # For soft_labels loss
+    focal_alpha: float = 0.25  # For focal loss
+    focal_gamma: float = 2.0  # For focal loss
+
+    # Class Imbalance Handling
+    use_class_weights: bool = False  # Enable class weighting in loss
+    class_weight_power: float = 0.5  # Weight = 1 / (class_freq ** power)
+
+    # Data Augmentation (for minority classes)
+    augment_minority_classes: bool = False  # Enable data augmentation
+    augmentation_factor: int = 2  # Oversample minority classes by this factor
+    min_class_samples: int = 100  # Classes below this threshold get augmented
 
     def get_train_path(self) -> Path:
         """Get path to training data file."""
