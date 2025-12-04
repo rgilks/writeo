@@ -16,6 +16,7 @@ from .logits_processing import (
     process_distilbert_logits,
     process_engessay_logits,
 )
+from .overall_score import process_overall_score_scoring
 from .quality_analysis import analyze_essay_quality
 
 if TYPE_CHECKING:
@@ -84,9 +85,22 @@ def score_essay(
         model_key = model_key or DEFAULT_MODEL
         config: dict[str, Any] = MODEL_CONFIGS.get(model_key, MODEL_CONFIGS[DEFAULT_MODEL])
 
-        if config.get("type") == "roberta" and config.get("output_dims") == 6:
+        output_dims = config.get("output_dims", 1)
+        model_type = config.get("type", "")
+
+        # Route to appropriate processing function
+        if model_type == "roberta" and output_dims == 6:
             return process_engessay_scoring(logits_np, answer_text)
+        elif output_dims == 1:
+            # Single output models (corpus-trained, distilbert, etc.)
+            if config.get("is_custom"):
+                # Custom trained overall score model
+                return process_overall_score_scoring(logits_np, answer_text)
+            else:
+                # DistilBERT or other single-output models
+                return process_distilbert_scoring(logits_np)
         else:
+            # Fallback to distilbert processing
             return process_distilbert_scoring(logits_np)
 
     except Exception as e:

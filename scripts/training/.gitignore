@@ -1,0 +1,31 @@
+# Data files (DO NOT COMMIT - corpus terms of use)
+data/*.jsonl
+data/metadata.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Model checkpoints (these are large)
+*.pt
+*.pth
+*.bin
+*.ckpt
+
+# Logs
+*.log

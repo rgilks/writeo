@@ -179,34 +179,56 @@ def load_model(model_key: str | None = None) -> tuple[ModelType, TokenizerType]:
 
     config: dict[str, Any] = MODEL_CONFIGS[model_key]
     model_name = config["name"]
-    model_path = os.path.join(MODEL_PATH, model_name.replace("/", "_"))
-    print(f"📦 Loading model: {model_key} ({model_name})")
 
-    tokenizer = load_tokenizer(model_name, model_path)
+    # Check if this is a custom trained model
+    is_custom = config.get("is_custom", False)
 
-    model_load_start = time.time()
-    try:
-        if _is_model_cached(model_path):
-            print(f"📥 Loading model from cache: {model_path}")
-            model = AutoModelForSequenceClassification.from_pretrained(
-                model_path, trust_remote_code=True, local_files_only=True
+    if is_custom:
+        # Custom trained models are stored at a specific path on Modal volume
+        model_path = config.get("model_path", os.path.join(MODEL_PATH, model_name))
+        print(f"📦 Loading custom model: {model_key} from {model_path}")
+
+        if not os.path.exists(model_path):
+            raise RuntimeError(
+                f"Custom model not found at {model_path}. "
+                f"Model may not be trained yet. Run training script first."
             )
-            model_load_time = time.time() - model_load_start
-            print(f"✅ Model loaded from cache in {model_load_time:.2f}s")
-        else:
-            print(f"Downloading model: {model_name} (key: {model_key})")
-            check_model_repo(model_name)
-            download_model(model_name, model_path)
-            model = load_model_from_hf(model_name)
-            save_model_to_cache(model, tokenizer, model_path)
-            model_load_time = time.time() - model_load_start
-            print(f"✅ Model loaded and cached in {model_load_time:.2f}s")
-    except Exception as e:
-        print(f"❌ ERROR: Failed to load model {model_name}: {e}")
-        print(f"❌ Model key: {model_key}")
-        print(f"❌ Model path: {model_path}")
-        traceback.print_exc()
-        raise RuntimeError(f"Failed to load model {model_name} (key: {model_key}): {e}") from e
+
+        # Load directly from custom path
+        tokenizer = AutoTokenizer.from_pretrained(model_path)  # type: ignore[no-untyped-call]
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_path, trust_remote_code=True, local_files_only=True
+        )
+    else:
+        # Standard HuggingFace models
+        model_path = os.path.join(MODEL_PATH, model_name.replace("/", "_"))
+        print(f"📦 Loading model: {model_key} ({model_name})")
+
+        tokenizer = load_tokenizer(model_name, model_path)
+
+        model_load_start = time.time()
+        try:
+            if _is_model_cached(model_path):
+                print(f"📥 Loading model from cache: {model_path}")
+                model = AutoModelForSequenceClassification.from_pretrained(
+                    model_path, trust_remote_code=True, local_files_only=True
+                )
+                model_load_time = time.time() - model_load_start
+                print(f"✅ Model loaded from cache in {model_load_time:.2f}s")
+            else:
+                print(f"Downloading model: {model_name} (key: {model_key})")
+                check_model_repo(model_name)
+                download_model(model_name, model_path)
+                model = load_model_from_hf(model_name)
+                save_model_to_cache(model, tokenizer, model_path)
+                model_load_time = time.time() - model_load_start
+                print(f"✅ Model loaded and cached in {model_load_time:.2f}s")
+        except Exception as e:
+            print(f"❌ ERROR: Failed to load model {model_name}: {e}")
+            print(f"❌ Model key: {model_key}")
+            print(f"❌ Model path: {model_path}")
+            traceback.print_exc()
+            raise RuntimeError(f"Failed to load model {model_name} (key: {model_key}): {e}") from e
 
     model.eval()
     model = setup_gpu(model, model_name, load_start)
