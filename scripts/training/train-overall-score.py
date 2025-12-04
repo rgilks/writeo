@@ -110,8 +110,8 @@ def create_regression_trainer_class():
 @app.function(
     image=training_image,
     volumes={"/vol": volume},
-    gpu="T4" if True else "A10G",  # Use T4 for test runs, A10G for full training
-    timeout=3600 * 2,  # 2 hours max for test runs
+    gpu="A10G",  # Use A10G for training (faster and similar cost to T4)
+    timeout=3600 * 4,  # 4 hours max for full training
     # No secrets needed - HuggingFace models are public
 )
 def train_model(
