@@ -59,12 +59,47 @@ def load_jsonl_dataset(file_path: str) -> list[dict]:
     return data
 
 
-def prepare_dataset(data: list[dict], tokenizer: Any, max_length: int = 512):
-    """Prepare dataset for training."""
+def prepare_dataset(
+    data: list[dict], tokenizer: Any, max_length: int = 512, use_ordinal: bool = False
+):
+    """Prepare dataset for training.
+
+    Args:
+        data: List of dictionaries with 'input' and 'target' keys
+        tokenizer: HuggingFace tokenizer
+        max_length: Maximum sequence length
+        use_ordinal: If True, convert float scores to ordinal class indices
+    """
     from datasets import Dataset
 
     inputs = [item["input"] for item in data]
-    targets = [float(item["target"]) for item in data]
+    targets = [item["target"] for item in data]
+
+    # Convert to appropriate format
+    if use_ordinal:
+        # For ordinal regression: convert float scores to integer class indices
+        # Score 2.0 -> class 0, 2.5 -> class 1, etc.
+        # CEFR_TO_SCORE maps to [2.0, 2.5, 3.0, 3.5, 4.5, 5.0, 6.0, 6.5, 7.5, 8.0, 8.5]
+        score_to_class = {
+            2.0: 0,
+            2.5: 1,
+            3.0: 2,
+            3.5: 3,
+            4.5: 4,
+            5.0: 5,
+            5.5: 5,  # Old B1+ score, map to class 5
+            6.0: 6,
+            6.5: 7,
+            7.5: 8,
+            8.0: 9,
+            8.5: 10,
+        }
+        labels = [
+            score_to_class.get(float(t), 4) for t in targets
+        ]  # Default to B1 (class 4)
+    else:
+        # For regression: use float scores as-is
+        labels = [float(t) for t in targets]
 
     # Tokenize
     encodings = tokenizer(
@@ -75,7 +110,7 @@ def prepare_dataset(data: list[dict], tokenizer: Any, max_length: int = 512):
     )
 
     # Add labels
-    encodings["labels"] = targets
+    encodings["labels"] = labels
 
     return Dataset.from_dict(encodings)
 
@@ -212,7 +247,13 @@ def train_model(
 
     # Load tokenizer and model
     print(f"Loading tokenizer and model: {config.base_model}...")
-    tokenizer = AutoTokenizer.from_pretrained(config.base_model)
+
+    # Use slow tokenizer for DeBERTa-v3 (fast tokenizer has issues in Modal)
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.base_model,
+        use_fast=False,  # Slow tokenizer is more reliable
+    )
+
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -252,9 +293,17 @@ def train_model(
     # Prepare datasets
     print("Preparing datasets...")
     train_dataset = prepare_dataset(
-        train_data, tokenizer, max_length=config.max_seq_length
+        train_data,
+        tokenizer,
+        max_length=config.max_seq_length,
+        use_ordinal=config.use_ordinal_regression,
     )
-    dev_dataset = prepare_dataset(dev_data, tokenizer, max_length=config.max_seq_length)
+    dev_dataset = prepare_dataset(
+        dev_data,
+        tokenizer,
+        max_length=config.max_seq_length,
+        use_ordinal=config.use_ordinal_regression,
+    )
 
     # Training arguments
     output_dir = config.output_dir

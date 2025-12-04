@@ -4,7 +4,14 @@ This directory contains scripts for training a custom overall score model using 
 
 ## Overview
 
-The training pipeline trains a RoBERTa-base model to predict overall essay scores (band 2-9) from the Write and Improve corpus, which contains ~5,050 essays with human-annotated CEFR labels.
+The training pipeline trains a **DeBERTa-v3-base** model to predict CEFR levels (A1 to C2) from the Write and Improve corpus, which contains ~4,741 essays with human-annotated CEFR labels.
+
+**Key Features**:
+
+- **Ordinal Regression**: Treats CEFR as ordered categories (not continuous scores) using CORAL loss
+- **IELTS-Aligned Scoring**: Corrected CEFR-to-score mapping aligned with IELTS bands
+- **QWK Evaluation**: Quadratic Weighted Kappa as primary metric (gold standard for AES)
+- **State-of-the-Art Model**: DeBERTa-v3-base (outperforms RoBERTa on most benchmarks)
 
 ## Prerequisites
 
@@ -79,18 +86,42 @@ modal run scripts/training/evaluate-model.py \
 
 Edit `scripts/training/config.py` to adjust:
 
-- Base model (RoBERTa vs DistilBERT)
-- Learning rate, batch size, epochs
-- Test run limits
-- Model output path
+### Model & Architecture
+
+- Base model (DeBERTa-v3 vs RoBERTa)
+- Use ordinal regression vs standard regression
+- Number of CEFR classes (11)
+
+### Loss Functions
+
+- **CORAL** (recommended): Rank-consistent ordinal regression
+- **Soft Labels**: Gaussian soft labels for ordinal data
+- **Focal Loss**: Addresses class imbalance
+- **CDW-CE**: Class distance weighted cross-entropy
+- **MSE**: Baseline regression (for comparison)
+
+### Training Hyperparameters
+
+- Learning rate (2e-5 for DeBERTa-v3)
+- Batch size, epochs
+- Early stopping patience
+- Max sequence length
+
+See [`QUICKSTART.md`](QUICKSTART.md) for detailed configuration guide.
 
 ## Model Integration
 
 Once trained, the model is automatically available in the application:
 
-- Model key: `corpus-roberta`
+- Model key: `corpus-deberta` (or `corpus-roberta` for legacy)
 - Assessor ID: `T-AES-CORPUS`
-- Can be used via API: `POST /grade?model_key=corpus-roberta`
+- Can be used via API: `POST /grade?model_key=corpus-deberta`
+
+**Expected Performance**:
+
+- QWK: 0.75-0.80 (approaching human-level agreement)
+- MAE: 0.4-0.5
+- Adjacent Accuracy (±1 level): ~92%
 
 ## Training on Modal
 
