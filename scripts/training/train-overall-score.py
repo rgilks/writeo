@@ -21,9 +21,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 try:
     from config import DEFAULT_CONFIG  # type: ignore[import-untyped]
+    from models import create_coral_model, create_soft_label_model  # type: ignore[import-untyped]
+    from losses import coral_loss, soft_label_cross_entropy, focal_loss, cdw_ce_loss  # type: ignore[import-untyped]
 except ImportError as e:
     raise ImportError(
-        f"Could not import config. Tried paths: {sys.path[:2]}. Error: {e}"
+        f"Could not import config/models/losses. Tried paths: {sys.path[:2]}. Error: {e}"
     ) from e
 
 # Modal setup
@@ -78,8 +80,52 @@ def prepare_dataset(data: list[dict], tokenizer: Any, max_length: int = 512):
     return Dataset.from_dict(encodings)
 
 
+def create_trainer_class_for_ordinal(config):
+    """Create custom trainer for ordinal regression with specified loss function."""
+    import torch
+    from transformers import Trainer
+
+    class OrdinalRegressionTrainer(Trainer):
+        """Custom trainer for ordinal regression with configurable loss."""
+
+        def compute_loss(
+            self, model, inputs, return_outputs=False, num_items_in_batch=None
+        ):
+            """Compute loss based on configured loss type."""
+            labels = inputs.pop("labels")
+            outputs = model(**inputs)
+            logits = outputs.logits
+
+            # Choose loss function based on config
+            if config.loss_type == "coral":
+                loss = coral_loss(logits, labels.long(), config.num_classes)
+            elif config.loss_type == "soft_labels":
+                loss = soft_label_cross_entropy(
+                    logits,
+                    labels.long(),
+                    config.num_classes,
+                    sigma=config.soft_label_sigma,
+                )
+            elif config.loss_type == "focal":
+                loss = focal_loss(
+                    logits,
+                    labels.long(),
+                    alpha=config.focal_alpha,
+                    gamma=config.focal_gamma,
+                )
+            elif config.loss_type == "cdw_ce":
+                loss = cdw_ce_loss(logits, labels.long(), config.num_classes)
+            else:
+                # Standard cross-entropy
+                loss = torch.nn.functional.cross_entropy(logits, labels.long())
+
+            return (loss, outputs) if return_outputs else loss
+
+    return OrdinalRegressionTrainer
+
+
 def create_regression_trainer_class():
-    """Create RegressionTrainer class (needs to be inside function to access torch)."""
+    """Create RegressionTrainer class for standard MSE regression (baseline)."""
     import torch
     from transformers import Trainer
 
@@ -130,11 +176,15 @@ def train_model(
     config = DEFAULT_CONFIG
 
     print("=" * 80)
-    print("TRAINING OVERALL SCORE MODEL")
+    print("TRAINING CONFIGURATION")
     print("=" * 80)
     print(f"Base model: {config.base_model}")
     print(f"Test run: {test_run}")
     print(f"Data dir: {data_dir}")
+    print(f"Use ordinal regression: {config.use_ordinal_regression}")
+    if config.use_ordinal_regression:
+        print(f"Loss type: {config.loss_type}")
+        print(f"Number of classes: {config.num_classes}")
     print("=" * 80)
 
     # Load data
@@ -166,26 +216,38 @@ def train_model(
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = AutoModelForSequenceClassification.from_pretrained(
-        config.base_model,
-        num_labels=1,  # Single output for regression
-        problem_type="regression",  # Explicitly set as regression
-    )
+    # Create model based on configuration
+    if config.use_ordinal_regression:
+        print(f"Using ORDINAL REGRESSION with {config.loss_type} loss")
 
-    # Initialize regression head to predict near the mean target value (~5.86)
-    # This helps the model start closer to reasonable predictions
-    import torch.nn as nn
+        if config.loss_type == "coral":
+            # CORAL requires special model architecture
+            model = create_coral_model(config.base_model, config.num_classes)
+        else:
+            # Other ordinal methods use standard classification model
+            model = create_soft_label_model(config.base_model, config.num_classes)
+    else:
+        print("Using STANDARD REGRESSION (MSE loss)")
+        model = AutoModelForSequenceClassification.from_pretrained(
+            config.base_model,
+            num_labels=1,  # Single output for regression
+            problem_type="regression",  # Explicitly set as regression
+        )
 
-    if hasattr(model, "classifier") and hasattr(model.classifier, "out_proj"):
-        # Initialize bias to predict mean (targets are ~5.86)
-        if (
-            hasattr(model.classifier.out_proj, "bias")
-            and model.classifier.out_proj.bias is not None
-        ):
-            nn.init.constant_(model.classifier.out_proj.bias, 5.86)
-        # Initialize weights to small values
-        if hasattr(model.classifier.out_proj, "weight"):
-            nn.init.normal_(model.classifier.out_proj.weight, mean=0.0, std=0.02)
+        # Initialize regression head to predict near the mean target value (~4.5 for corrected mapping)
+        # This helps the model start closer to reasonable predictions
+        import torch.nn as nn
+
+        if hasattr(model, "classifier") and hasattr(model.classifier, "out_proj"):
+            # Initialize bias to predict mean (targets are ~4.5-5.0 for corrected IELTS mapping)
+            if (
+                hasattr(model.classifier.out_proj, "bias")
+                and model.classifier.out_proj.bias is not None
+            ):
+                nn.init.constant_(model.classifier.out_proj.bias, 4.5)
+            # Initialize weights to small values
+            if hasattr(model.classifier.out_proj, "weight"):
+                nn.init.normal_(model.classifier.out_proj.weight, mean=0.0, std=0.02)
 
     # Prepare datasets
     print("Preparing datasets...")
@@ -219,11 +281,14 @@ def train_model(
         max_steps=config.test_run_max_steps if test_run else -1,
     )
 
-    # Create trainer class
-    RegressionTrainer = create_regression_trainer_class()
+    # Create trainer class based on configuration
+    if config.use_ordinal_regression:
+        TrainerClass = create_trainer_class_for_ordinal(config)
+    else:
+        TrainerClass = create_regression_trainer_class()
 
     # Trainer
-    trainer = RegressionTrainer(
+    trainer = TrainerClass(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
