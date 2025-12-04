@@ -200,6 +200,7 @@ export function isValidUUID(uuid: string): boolean {
 // Utility types for AssessorResult lookups
 export type AssessorResultId =
   | "T-AES-ESSAY"
+  | "T-AES-CORPUS" // Corpus-trained RoBERTa model (dev mode)
   | "T-GEC-LT"
   | "T-GEC-LLM"
   | "T-TEACHER-FEEDBACK"
@@ -250,6 +251,30 @@ export function getEssayAssessorResult(results: AssessorResult[]):
       id: "T-AES-ESSAY";
       overall: number;
       dimensions: NonNullable<AssessorResult["dimensions"]>;
+    };
+  }
+  return undefined;
+}
+
+/**
+ * Type-safe helper to get corpus assessor result from an array of assessor results.
+ *
+ * @param results - Array of assessor results to search
+ * @returns Corpus assessor result with guaranteed overall score and label, or undefined if not found
+ */
+export function getCorpusAssessorResult(results: AssessorResult[]):
+  | (AssessorResult & {
+      id: "T-AES-CORPUS";
+      overall: number;
+      label: string;
+    })
+  | undefined {
+  const result = findAssessorResultById(results, "T-AES-CORPUS");
+  if (result && result.overall !== undefined && result.label) {
+    return result as AssessorResult & {
+      id: "T-AES-CORPUS";
+      overall: number;
+      label: string;
     };
   }
   return undefined;

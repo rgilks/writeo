@@ -31,4 +31,13 @@ export class ModalClient implements ModalService {
       30000,
     );
   }
+
+  async scoreCorpus(text: string): Promise<Response> {
+    // Corpus scoring for dev mode - no auth required for public service
+    return fetch(`${this.config.modal.corpusUrl}/score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, max_length: 512 }),
+    });
+  }
 }

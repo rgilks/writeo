@@ -16,6 +16,7 @@ export interface AppConfig {
   modal: {
     gradeUrl: string;
     ltUrl?: string;
+    corpusUrl: string; // Default to deployed service URL
   };
   llm: {
     provider: LLMProvider;
@@ -77,6 +78,7 @@ export function buildConfig(env: Env): AppConfig {
     modal: {
       gradeUrl: requireEnv("MODAL_GRADE_URL", env.MODAL_GRADE_URL),
       ltUrl: env.MODAL_LT_URL,
+      corpusUrl: env.MODAL_CORPUS_URL || "https://rob-gilks--writeo-corpus-fastapi-app.modal.run",
     },
     llm: buildLLMConfig(env),
     storage: {

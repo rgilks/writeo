@@ -155,6 +155,7 @@ async function processServiceResults(
   ltResults: PromiseSettledResult<Response[]>,
   llmResults: PromiseSettledResult<LanguageToolError[][]>,
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>,
+  corpusResults: PromiseSettledResult<Response[]>,
   serviceRequests: ReturnType<typeof prepareServiceRequests>,
   modalRequest: ModalRequest,
   submissionId: string,
@@ -192,6 +193,26 @@ async function processServiceResults(
   );
   timings["9_process_relevance"] = performance.now() - processRelevanceStartTime;
 
+  // Process corpus scoring results (dev mode)
+  const processCorpusStartTime = performance.now();
+  const corpusScoresByAnswerId = new Map<string, { score: number; cefr_level: string }>();
+  if (corpusResults.status === "fulfilled" && config.features.mockServices) {
+    const responses = corpusResults.value;
+    for (let i = 0; i < responses.length; i++) {
+      const response = responses[i];
+      const answerId = serviceRequests.corpusRequests[i]?.answerId;
+      if (answerId && response && response.ok) {
+        try {
+          const data = (await response.json()) as { score: number; cefr_level: string };
+          corpusScoresByAnswerId.set(answerId, data);
+        } catch (e) {
+          // Ignore parsing errors for corpus results
+        }
+      }
+    }
+  }
+  timings["9b_process_corpus"] = performance.now() - processCorpusStartTime;
+
   return {
     essayAssessment,
     ltErrorsByAnswerId,
@@ -199,6 +220,7 @@ async function processServiceResults(
     answerTextsByAnswerId,
     essayScoresByAnswerId,
     relevanceByAnswerId,
+    corpusScoresByAnswerId,
   };
 }
 
@@ -276,12 +298,8 @@ export async function processSubmission(
     const { modalRequest, serviceRequests } = loadResult;
 
     // Phase 3: Execute assessment services in parallel
-    const { essayResult, ltResults, llmResults, relevanceResults } = await executeServiceRequests(
-      modalRequest,
-      serviceRequests,
-      config,
-      timings,
-    );
+    const { essayResult, ltResults, llmResults, relevanceResults, corpusResults } =
+      await executeServiceRequests(modalRequest, serviceRequests, config, timings);
 
     // Phase 4: Process service results
     const processedResults = await processServiceResults(
@@ -289,6 +307,7 @@ export async function processSubmission(
       ltResults,
       llmResults,
       relevanceResults,
+      corpusResults,
       serviceRequests,
       modalRequest,
       submissionId,
@@ -330,6 +349,7 @@ export async function processSubmission(
       teacherFeedbackByAnswerId,
       languageToolEnabled,
       llmAssessmentEnabled,
+      processedResults.corpusScoresByAnswerId, // Add corpus scores
     );
     timings["10_merge_results"] = performance.now() - mergeStartTime;
 

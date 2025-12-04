@@ -16,6 +16,7 @@ const ASSESSOR_IDS = {
   AI_FEEDBACK: "T-AI-FEEDBACK",
   RELEVANCE: "T-RELEVANCE-CHECK",
   TEACHER: "T-TEACHER-FEEDBACK",
+  CORPUS: "T-AES-CORPUS", // Dev mode corpus scoring
 } as const;
 
 function extractEssayAssessorResults(
@@ -187,6 +188,21 @@ function createTeacherFeedbackAssessor(
   };
 }
 
+function createCorpusAssessor(corpusData: { score: number; cefr_level: string }): AssessorResult {
+  return {
+    id: ASSESSOR_IDS.CORPUS,
+    name: "Corpus-Trained RoBERTa",
+    type: "grader",
+    overall: corpusData.score,
+    label: corpusData.cefr_level,
+    meta: {
+      model: "roberta-base",
+      source: "Write & Improve corpus",
+      devMode: true,
+    },
+  };
+}
+
 function buildAssessorResults(
   _answerId: string,
   essayAssessorResults: AssessorResult[],
@@ -195,6 +211,7 @@ function buildAssessorResults(
   llmFeedback: AIFeedback | undefined,
   relevance: RelevanceCheck | undefined,
   teacher: TeacherFeedback | undefined,
+  corpusData: { score: number; cefr_level: string } | undefined,
   language: string,
   llmProvider: string,
   aiModel: string,
@@ -228,6 +245,11 @@ function buildAssessorResults(
     assessorResults.push(createTeacherFeedbackAssessor(teacher, llmProvider, aiModel));
   }
 
+  // Add corpus assessor if available (dev mode)
+  if (corpusData) {
+    assessorResults.push(createCorpusAssessor(corpusData));
+  }
+
   return assessorResults;
 }
 
@@ -257,6 +279,7 @@ export function mergeAssessmentResults(
   teacherFeedback: Map<string, TeacherFeedback> = new Map(),
   languageToolEnabled: boolean = false,
   llmAssessmentEnabled: boolean = false,
+  corpusScores: Map<string, { score: number; cefr_level: string }> = new Map(),
 ): AssessmentResults {
   const parts: AssessmentPart[] = [];
 
@@ -273,6 +296,7 @@ export function mergeAssessmentResults(
         llmFeedback.get(answer.id),
         relevanceChecks.get(answer.id),
         teacherFeedback.get(answer.id),
+        corpusScores.get(answer.id),
         language,
         llmProvider,
         aiModel,

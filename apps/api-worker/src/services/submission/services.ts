@@ -24,6 +24,7 @@ export interface ServiceRequests {
     answerText: string;
     request: Promise<LanguageToolError[]>;
   }>;
+  corpusRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode corpus scoring
   llmProvider: LLMProvider;
   apiKey: string;
   aiModel: string;
@@ -57,6 +58,9 @@ export function prepareServiceRequests(
     (config.features.languageTool.enabled && config.modal.ltUrl) || config.features.mockServices;
   const requests: Array<{ answerId: string; request: Promise<Response> }> = [];
 
+  // Corpus scoring requests (dev mode / mock services)
+  const corpusRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
+
   for (const answer of iterateAnswers(modalParts)) {
     if (ltEnabled) {
       requests.push({
@@ -85,6 +89,14 @@ export function prepareServiceRequests(
         config.features.mockServices, // Pass mock flag from config
       ),
     });
+
+    // Add corpus scoring in dev mode
+    if (config.features.mockServices) {
+      corpusRequests.push({
+        answerId: answer.id,
+        request: modalService.scoreCorpus(answer.answer_text),
+      });
+    }
   }
 
   ltRequests = requests;
@@ -93,6 +105,7 @@ export function prepareServiceRequests(
     ltRequests,
     relevanceRequests,
     llmAssessmentRequests,
+    corpusRequests,
     llmProvider: config.llm.provider,
     apiKey: config.llm.apiKey,
     aiModel: config.llm.model,
@@ -110,38 +123,47 @@ export async function executeServiceRequests(
   ltResults: PromiseSettledResult<Response[]>;
   llmResults: PromiseSettledResult<LanguageToolError[][]>;
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>;
+  corpusResults: PromiseSettledResult<Response[]>;
 }> {
   const essayStartTime = performance.now();
-  const { ltRequests, llmAssessmentRequests, relevanceRequests, modalService } = serviceRequests;
+  const { ltRequests, llmAssessmentRequests, relevanceRequests, corpusRequests, modalService } =
+    serviceRequests;
 
-  const [essayResult, ltResults, llmResults, relevanceResults] = await Promise.allSettled([
-    (async () => {
-      const start = performance.now();
-      const result = await modalService.gradeEssay(modalRequest);
-      timings["5a_essay_fetch"] = performance.now() - start;
-      return result;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(ltRequests.map((r) => r.request));
-      timings["5b_languagetool_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(llmAssessmentRequests.map((r) => r.request));
-      timings["5d_ai_assessment_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(relevanceRequests.map((r) => r.request));
-      timings["5c_relevance_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-  ]);
+  const [essayResult, ltResults, llmResults, relevanceResults, corpusResults] =
+    await Promise.allSettled([
+      (async () => {
+        const start = performance.now();
+        const result = await modalService.gradeEssay(modalRequest);
+        timings["5a_essay_fetch"] = performance.now() - start;
+        return result;
+      })(),
+      (async () => {
+        const start = performance.now();
+        const resolved = await Promise.all(ltRequests.map((r) => r.request));
+        timings["5b_languagetool_fetch"] = performance.now() - start;
+        return resolved;
+      })(),
+      (async () => {
+        const start = performance.now();
+        const resolved = await Promise.all(llmAssessmentRequests.map((r) => r.request));
+        timings["5d_ai_assessment_fetch"] = performance.now() - start;
+        return resolved;
+      })(),
+      (async () => {
+        const start = performance.now();
+        const resolved = await Promise.all(relevanceRequests.map((r) => r.request));
+        timings["5c_relevance_fetch"] = performance.now() - start;
+        return resolved;
+      })(),
+      (async () => {
+        const start = performance.now();
+        const resolved = await Promise.all(corpusRequests.map((r) => r.request));
+        timings["5e_corpus_fetch"] = performance.now() - start;
+        return resolved;
+      })(),
+    ]);
 
   timings["5_parallel_services_total"] = performance.now() - essayStartTime;
 
-  return { essayResult, ltResults, llmResults, relevanceResults };
+  return { essayResult, ltResults, llmResults, relevanceResults, corpusResults };
 }
