@@ -1,23 +1,6 @@
-# Training Overall Score Model
+# CEFR Training Pipeline
 
-This directory contains scripts for training a custom overall score model using the Write and Improve corpus.
-
-## Overview
-
-The training pipeline trains a **DeBERTa-v3-base** model to predict CEFR levels (A1 to C2) from the Write and Improve corpus, which contains ~4,741 essays with human-annotated CEFR labels.
-
-**Key Features**:
-
-- **Ordinal Regression**: Treats CEFR as ordered categories (not continuous scores) using CORAL loss
-- **IELTS-Aligned Scoring**: Corrected CEFR-to-score mapping aligned with IELTS bands
-- **QWK Evaluation**: Quadratic Weighted Kappa as primary metric (gold standard for AES)
-- **State-of-the-Art Model**: DeBERTa-v3-base (outperforms RoBERTa on most benchmarks)
-
-## Prerequisites
-
-- Write and Improve corpus (2024 v2) located at `~/Desktop/write-and-improve-corpus-2024-v2/`
-- Modal account with GPU access
-- Python 3.12+
+Complete training pipeline for custom CEFR scoring models using the Write & Improve corpus.
 
 ## Quick Start
 
@@ -27,123 +10,200 @@ The training pipeline trains a **DeBERTa-v3-base** model to predict CEFR levels 
 python scripts/training/prepare-corpus.py
 ```
 
-This will:
+Processes ~23K essays from Write & Improve corpus → 4,741 filtered essays with CEFR labels.
 
-- Load corpus data from the default paths
-- Filter for final versions with human CEFR labels
-- Convert CEFR levels to band scores (2-9)
-- Split into train/dev/test sets
-- Save to `scripts/training/data/`
-
-### 2. Test Run (Quick Validation)
-
-Before full training, run a quick test to verify everything works:
+### 2. Run Training on Modal
 
 ```bash
-modal run scripts/training/train-overall-score.py --test-run
+# Test run (5-10 minutes, 100 samples)
+modal run scripts/training/train-overall-score.py
+
+# Production training disabled by default - see config.py
 ```
 
-This will:
+### 3. Deployed Model
 
-- Train on a small subset (100 samples)
-- Run for a limited number of steps (50)
-- Verify the training pipeline works
-- Save model to Modal volume
+The corpus-trained model is deployed as a Modal service:
 
-### 3. Full Training
+- **URL**: https://rob-gilks--writeo-corpus-fastapi-app.modal.run
+- **Endpoints**: `/health`, `/model/info`, `/score`
+- **Model**: RoBERTa-base trained on 4,741 essays
+- **Performance**: Train loss 0.27, Eval loss 0.43
 
-Once test run succeeds, run full training:
+## Architecture
 
-```bash
-modal run scripts/training/train-overall-score.py --full
-```
+### Training Pipeline
 
-This will:
+1. **Data Preparation** (`prepare-corpus.py`)
+   - Loads Write & Improve corpus
+   - Filters for final versions with CEFR labels
+   - Maps CEFR to IELTS-aligned scores (A1/2.0 → C2/8.5)
+   - Creates train/dev/test splits (80/10/10)
 
-- Train on full dataset (~4,000+ training samples)
-- Run for multiple epochs with early stopping
-- Save best model to Modal volume at `/vol/models/corpus-trained-roberta/`
+2. **Model Training** (`train-overall-score.py`)
+   - Fine-tunes transformer models (RoBERTa or DeBERTa-v3)
+   - Supports MSE regression or ordinal regression (CORAL)
+   - Runs on Modal with GPU acceleration (T4/A10G)
+   - Saves to Modal volume: `/vol/models/corpus-trained-roberta`
 
-### 4. Evaluate
+3. **Evaluation** (`evaluate-on-modal.py`)
+   - Computes QWK (Quadratic Weighted Kappa)
+   - Calculates MAE, RMSE, adjacent accuracy
+   - Per-CEFR-level analysis
 
-Evaluate the trained model:
+### Deployment
 
-```bash
-python scripts/training/evaluate-model.py \
-  --model-path /vol/models/corpus-trained-roberta \
-  --data-dir scripts/training/data
-```
+**Modal Service** (`services/modal-corpus/`)
 
-Or if running on Modal:
-
-```bash
-modal run scripts/training/evaluate-model.py \
-  --model-path /vol/models/corpus-trained-roberta \
-  --data-dir /training/data
-```
+- FastAPI REST API
+- Loads trained model from Modal volume
+- GPU-accelerated inference
+- Automatic CEFR level conversion
 
 ## Configuration
 
-Edit `scripts/training/config.py` to adjust:
+Edit `config.py` for:
 
-### Model & Architecture
-
-- Base model (DeBERTa-v3 vs RoBERTa)
-- Use ordinal regression vs standard regression
-- Number of CEFR classes (11)
+| Setting                  | Default        | Options                     |
+| ------------------------ | -------------- | --------------------------- |
+| `base_model`             | `roberta-base` | `microsoft/deberta-v3-base` |
+| `use_ordinal_regression` | `False`        | `True` (CORAL loss)         |
+| `learning_rate`          | `3e-5`         | `2e-5` for DeBERTa-v3       |
+| `batch_size`             | `16`           | Reduce to 8 if OOM          |
+| `max_seq_length`         | `512`          | 99.9% essays fit            |
 
 ### Loss Functions
 
-- **CORAL** (recommended): Rank-consistent ordinal regression
-- **Soft Labels**: Gaussian soft labels for ordinal data
-- **Focal Loss**: Addresses class imbalance
-- **CDW-CE**: Class distance weighted cross-entropy
-- **MSE**: Baseline regression (for comparison)
+| Loss              | Use Case        | Pros                     | Cons                   |
+| ----------------- | --------------- | ------------------------ | ---------------------- |
+| **MSE** (default) | Baseline        | Simple, stable           | Ignores ordinality     |
+| **CORAL**         | Ordinal data    | Rank-consistent          | Complex implementation |
+| **Soft Labels**   | Ordinal data    | Smooth predictions       | Requires tuning        |
+| **Focal**         | Class imbalance | Focuses on hard examples | Can be unstable        |
 
-### Training Hyperparameters
+## Data
 
-- Learning rate (2e-5 for DeBERTa-v3)
-- Batch size, epochs
-- Early stopping patience
-- Max sequence length
+### CEFR→Score Mapping (IELTS-aligned)
 
-See [`QUICKSTART.md`](QUICKSTART.md) for detailed configuration guide.
+```python
+A1 → 2.0    B1  → 4.5    C1  → 7.5
+A1+  → 2.5    B1+ → 5.0    C1+ → 8.0
+A2  → 3.0    B2  → 6.0    C2  → 8.5
+A2+ → 3.5    B2+ → 6.5
+```
 
-## Model Integration
+### Dataset Statistics
 
-Once trained, the model is automatically available in the application:
+- **Total**: 4,741 essays
+- **Train**: 3,784 (80%)
+- **Dev**: 476 (10%)
+- **Test**: 481 (10%)
+- **Class imbalance**: 119:1 (B1+ peak, A1+ minority)
+- **Sequence lengths**: Median 245 tokens, p99 448 tokens
 
-- Model key: `corpus-deberta` (or `corpus-roberta` for legacy)
-- Assessor ID: `T-AES-CORPUS`
-- Can be used via API: `POST /grade?model_key=corpus-deberta`
+### Format (JSONL)
 
-**Expected Performance**:
+```json
+{
+  "input": "Combined prompt + essay text",
+  "target": 5.0,
+  "cefr": "B1+",
+  "essay_id": "unique-id"
+}
+```
 
-- QWK: 0.75-0.80 (approaching human-level agreement)
-- MAE: 0.4-0.5
-- Adjacent Accuracy (±1 level): ~92%
+## Performance
 
-## Training on Modal
+### Current (RoBERTa + MSE)
 
-The training script uses Modal for GPU-accelerated training:
+- **Eval Loss**: 0.43 (excellent)
+- **Expected QWK**: 0.65-0.70
+- **Expected MAE**: 0.6-0.7
 
-- Default GPU: A10G (can be changed in script)
-- Training runs as a separate Modal app: `writeo-training`
-- Model is saved to Modal volume: `writeo-models`
+### With Ordinal Regression (Goal)
 
-## Data Format
+- **Target QWK**: 0.75-0.80
+- **Target MAE**: 0.4-0.5
+- **Adjacent Accuracy**: ~92%
 
-Training data is in JSONL format with:
+## Project Files
 
-- `input`: Combined prompt and essay text
-- `target`: Band score (2.0-9.0)
-- `cefr`: Original CEFR label
-- `split`: train/dev/test
-- `essay_id`: Unique essay identifier
+### Core Scripts
+
+- `prepare-corpus.py` - Data preparation pipeline
+- `train-overall-score.py` - Training script (Modal)
+- `evaluate-on-modal.py` - Model evaluation
+- `config.py` - Training configuration
+- `analyze-data.py` - Dataset statistics
+
+### Model Architecture
+
+- `models.py` - CORAL & soft label models
+- `losses.py` - Ordinal regression losses
+
+### Data Protection
+
+- `.gitignore` - Prevents committing corpus data (terms of use)
 
 ## Troubleshooting
 
-- **Model not found**: Ensure training completed and model was saved to Modal volume
-- **Out of memory**: Reduce batch size in config
-- **Training too slow**: Use A10 or A100 GPU instead of T4
-- **Data not found**: Check corpus paths in `prepare-corpus.py`
+**Model not found**
+
+```bash
+# Check if training completed
+modal volume ls writeo-models
+```
+
+**Out of memory**
+
+```python
+# config.py
+batch_size = 8  # Reduce from 16
+max_seq_length = 256  # Reduce from 512
+```
+
+**Slow training**
+
+- Use test run first to validate
+- Switch to smaller model: `microsoft/deberta-v3-small`
+- Increase GPU type in Modal
+
+**Low QWK (\u003c0.60)**
+
+- Enable ordinal regression: `use_ordinal_regression = True`
+- Try CORAL loss: `loss_type = "coral"`
+- Check CEFR mapping is correct
+
+## Next Steps
+
+After successful baseline training:
+
+1. **Enable Ordinal Regression**: Set `use_ordinal_regression = True`
+2. **Data Augmentation**: For minority classes (A1+, C2)
+3. **Hyperparameter Tuning**: Grid search learning rate
+4. **DeBERTa-v3**: Switch to stronger model (after fixing Modal issues)
+5. **Ensemble**: Train multiple models, average predictions
+
+## Integration
+
+The trained model is integrated as a Modal service:
+
+```python
+# Service endpoint
+POST https://rob-gilks--writeo-corpus-fastapi-app.modal.run/score
+
+# Request
+{"text": "Essay text here", "max_length": 512}
+
+# Response
+{"score": 3.74, "cefr_level": "A2+", "model": "corpus-roberta"}
+```
+
+See `services/modal-corpus/` for deployment code.
+
+## References
+
+- **Write & Improve Corpus**: Cambridge English
+- **CORAL**: Rank Consistent Ordinal Regression (Cao et al., 2020)
+- **QWK**: Standard metric for automated essay scoring
+- **DeBERTa-v3**: Enhanced BERT with disentangled attention

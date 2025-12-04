@@ -32,17 +32,22 @@ This service supports multiple essay scoring models for comparison and selection
 - **Performance**: Produces similar scores to Engessay (may need calibration)
 - **Best For**: Comparison/testing, lighter model option
 
-### 3. `corpus-roberta`
+### 3. `corpus-roberta` ✅ Deployed
 
 - **Model**: Custom trained RoBERTa-base model
+- **Service URL**: https://rob-gilks--writeo-corpus-fastapi-app.modal.run
 - **Type**: RoBERTa-based regression
-- **Output**: Single overall score (2-9 band scale)
-- **Training**: Fine-tuned on Write and Improve corpus (2024 v2) with ~5,050 essays
-- **Status**: ⚠️ Requires training (see training scripts)
-- **Performance**: Trained specifically on Write and Improve data with human CEFR labels
+- **Output**: Single overall CEFR score (2.0-8.5 scale) + CEFR level
+- **Training**: Fine-tuned on Write & Improve corpus with 4,741 essays
+- **Performance**: Train loss 0.27, Eval loss 0.43 (excellent)
+- **Status**: ✅ Deployed on Modal
 - **Assessor ID**: `T-AES-CORPUS`
-- **Best For**: Comparison with engessay model, potentially better alignment with Write and Improve corpus annotations
-- **Note**: Model must be trained before use. See `scripts/training/` for training instructions.
+- **Best For**: CEFR-specific scoring, Write & Improve aligned annotations
+- **Endpoints**:
+  - `GET /health` - Service health check
+  - `GET /model/info` - Model information
+  - `POST /score` - Score essay (returns score + CEFR level)
+- **Example Response**: `{"score": 3.74, "cefr_level": "A2+", "model": "corpus-roberta"}`
 
 ### 4. `fallback`
 
@@ -106,14 +111,18 @@ Models were tested across essays of varying quality:
 
 ## Training Custom Models
 
-The `corpus-roberta` model can be trained using the Write and Improve corpus:
+The `corpus-roberta` model has been trained and deployed on Modal:
 
-1. **Prepare data**: Run `scripts/training/prepare-corpus.py` to prepare training data
-2. **Train model**: Run `scripts/training/train-overall-score.py` with `--test-run` for quick validation, or `--full` for full training
-3. **Evaluate**: Run `scripts/training/evaluate-model.py` to evaluate on test set
-4. **Deploy**: Trained model is automatically available on Modal volume
+1. **Trained model**: Available at `/vol/models/corpus-trained-roberta` on Modal volume
+2. **Deployed service**: https://rob-gilks--writeo-corpus-fastapi-app.modal.run
+3. **Service code**: `services/modal-corpus/`
+4. **Training scripts**: `scripts/training/`
 
-See `scripts/training/README.md` (to be created) for detailed training instructions.
+To retrain or fine-tune:
+
+- See `scripts/training/README.md` for detailed instructions
+- Training data: `scripts/training/data/` (4,741 essays)
+- Configuration: `scripts/training/config.py`
 
 ## Notes
 
