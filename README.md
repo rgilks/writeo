@@ -168,17 +168,23 @@ See **[MODES.md](docs/MODES.md)** and **[COST_REVIEW.md](docs/COST_REVIEW.md)** 
 Run the test suite:
 
 ```bash
-# Run all tests (requires local server to be running for API tests)
-npm test
+# Run all tests (unit + E2E)
+npm run test:all
 
 # Run unit tests only
 npm run test:unit
 
-# Run tests with local server automatically started
-npm run test:local
+# Run E2E tests (automatically starts test server)
+npm run test:e2e
+
+# Run E2E tests with UI
+npm run test:e2e:ui
+
+# Manually start test environment (API Worker + Web App)
+npm run start:test-server
 ```
 
-For more details, see [TESTING.md](./docs/TESTING.md). run test:e2e
+For more details, see [TESTING.md](./docs/TESTING.md).
 
 # Run specific test file
 

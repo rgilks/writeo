@@ -14,12 +14,8 @@ interface EditableEssayProps {
 }
 
 const SUCCESS_MESSAGE_DURATION = 3000;
-const TEXTAREA_MIN_HEIGHT = "300px";
-const REFLECTION_MIN_HEIGHT = "60px";
-
-const BROWN_BORDER = "rgba(139, 69, 19, 0.2)";
-const BROWN_BORDER_LIGHT = "rgba(139, 69, 19, 0.3)";
-const BROWN_BG = "rgba(139, 69, 19, 0.1)";
+const TEXTAREA_MIN_HEIGHT = "500px";
+const REFLECTION_MIN_HEIGHT = "80px";
 
 type WordCountStatus = "too-short" | "valid" | "too-long";
 
@@ -36,7 +32,6 @@ export function EditableEssay({
   parentSubmissionId,
   onSubmit,
 }: EditableEssayProps) {
-  const [showQuestion, setShowQuestion] = useState(false);
   const [editedText, setEditedText] = useState(initialText);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reflection, setReflection] = useState("");
@@ -98,12 +93,11 @@ export function EditableEssay({
   return (
     <div
       lang="en"
+      className="card"
       style={{
-        marginTop: "var(--spacing-lg)",
-        padding: "var(--spacing-lg)",
-        backgroundColor: "var(--bg-secondary)",
-        border: `2px solid ${BROWN_BORDER}`,
-        borderRadius: "var(--border-radius-lg)",
+        marginTop: "var(--spacing-xl)",
+        padding: "var(--spacing-xl)",
+        border: "1px solid var(--border-color)",
       }}
     >
       <div
@@ -114,13 +108,14 @@ export function EditableEssay({
           marginBottom: "var(--spacing-md)",
         }}
       >
-        <span style={{ fontSize: "24px" }}>✏️</span>
+        <span style={{ fontSize: "28px" }}>✏️</span>
         <h3
           style={{
-            fontSize: "18px",
-            fontWeight: 600,
+            fontSize: "24px",
+            fontWeight: 700,
             margin: 0,
             color: "var(--text-primary)",
+            letterSpacing: "-0.5px",
           }}
         >
           Improve Your Writing
@@ -131,8 +126,8 @@ export function EditableEssay({
         style={{
           fontSize: "16px",
           color: "var(--text-secondary)",
-          marginBottom: "var(--spacing-md)",
-          lineHeight: "1.5",
+          marginBottom: "var(--spacing-lg)",
+          lineHeight: "1.6",
         }}
       >
         Make changes based on the feedback, then submit another draft to see your progress. Try
@@ -143,42 +138,35 @@ export function EditableEssay({
       {questionText && (
         <div
           style={{
-            marginBottom: "var(--spacing-md)",
-            padding: "var(--spacing-sm) var(--spacing-md)",
-            backgroundColor: BROWN_BG,
-            border: `1px solid ${BROWN_BORDER}`,
+            marginBottom: "var(--spacing-lg)",
+            padding: "var(--spacing-lg)",
+            backgroundColor: "var(--bg-secondary)",
+            border: "1px solid var(--border-color)",
             borderRadius: "var(--border-radius)",
           }}
         >
-          <button
-            onClick={() => setShowQuestion(!showQuestion)}
+          <div
             style={{
-              background: "none",
-              border: "none",
-              padding: 0,
               fontSize: "14px",
               fontWeight: 600,
-              color: "var(--primary-color)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--spacing-xs)",
+              color: "var(--text-secondary)",
+              marginBottom: "var(--spacing-xs)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
             }}
           >
-            {showQuestion ? "▼" : "▶"} {showQuestion ? "Hide" : "Show"} Question
-          </button>
-          {showQuestion && (
-            <p
-              style={{
-                marginTop: "var(--spacing-sm)",
-                fontSize: "14px",
-                lineHeight: "1.6",
-                color: "var(--text-primary)",
-              }}
-            >
-              {questionText}
-            </p>
-          )}
+            Question
+          </div>
+          <p
+            style={{
+              fontSize: "16px",
+              lineHeight: "1.6",
+              color: "var(--text-primary)",
+              margin: 0,
+            }}
+          >
+            {questionText}
+          </p>
         </div>
       )}
 
@@ -193,15 +181,19 @@ export function EditableEssay({
             style={{
               marginBottom: "var(--spacing-md)",
               padding: "var(--spacing-md)",
-              backgroundColor: "rgba(16, 185, 129, 0.1)",
-              border: "1px solid rgba(16, 185, 129, 0.3)",
+              backgroundColor: "var(--success-bg)",
+              border: "1px solid var(--success-border)",
               borderRadius: "var(--border-radius)",
-              color: "var(--secondary-accent)",
+              color: "var(--success-text)",
               fontWeight: 600,
               textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--spacing-sm)",
             }}
           >
-            ✅ Draft submitted successfully! Analyzing your improvements...
+            <span>✅</span> Draft submitted successfully! Analyzing your improvements...
           </motion.div>
         )}
       </AnimatePresence>
@@ -216,16 +208,26 @@ export function EditableEssay({
         style={{
           width: "100%",
           minHeight: TEXTAREA_MIN_HEIGHT,
-          padding: "var(--spacing-md)",
+          padding: "var(--spacing-lg)",
           fontSize: "16px",
-          lineHeight: "1.5",
+          lineHeight: "1.6",
           fontFamily: "inherit",
-          border: `1px solid ${BROWN_BORDER_LIGHT}`,
+          border: "1px solid var(--border-color)",
           borderRadius: "var(--border-radius)",
           backgroundColor: "var(--bg-primary)",
           color: "var(--text-primary)",
           resize: "vertical",
-          marginBottom: "var(--spacing-sm)",
+          marginBottom: "var(--spacing-md)",
+          boxShadow: "var(--shadow-sm)",
+          transition: "border-color 0.2s, box-shadow 0.2s",
+        }}
+        onFocus={(e) => {
+          e.target.style.borderColor = "var(--primary-color)";
+          e.target.style.boxShadow = "0 0 0 3px var(--primary-bg-light)";
+        }}
+        onBlur={(e) => {
+          e.target.style.borderColor = "var(--border-color)";
+          e.target.style.boxShadow = "var(--shadow-sm)";
         }}
       />
 
@@ -233,13 +235,14 @@ export function EditableEssay({
       {hasChanges && (
         <div
           style={{
-            marginBottom: "var(--spacing-md)",
+            marginBottom: "var(--spacing-lg)",
             padding: "var(--spacing-md)",
-            backgroundColor: "var(--primary-bg-light)",
+            backgroundColor: "var(--bg-secondary)",
             borderRadius: "var(--border-radius)",
+            border: "1px solid var(--border-color)",
           }}
         >
-          <p style={{ marginBottom: "var(--spacing-sm)", fontSize: "14px", fontWeight: 600 }}>
+          <p style={{ marginBottom: "var(--spacing-xs)", fontSize: "15px", fontWeight: 600 }}>
             💭 Reflection (optional)
           </p>
           <p
@@ -262,7 +265,7 @@ export function EditableEssay({
               padding: "var(--spacing-sm)",
               fontSize: "14px",
               fontFamily: "inherit",
-              border: `1px solid ${BROWN_BORDER_LIGHT}`,
+              border: "1px solid var(--border-color)",
               borderRadius: "var(--border-radius)",
               backgroundColor: "var(--bg-primary)",
               color: "var(--text-primary)",
@@ -277,7 +280,7 @@ export function EditableEssay({
       {/* Word count display */}
       <div
         style={{
-          marginBottom: "var(--spacing-md)",
+          marginBottom: "var(--spacing-lg)",
           fontSize: "14px",
           color: "var(--text-secondary)",
           display: "flex",
@@ -285,7 +288,7 @@ export function EditableEssay({
           alignItems: "center",
         }}
       >
-        <span>
+        <span style={{ fontWeight: 500 }}>
           {wordCount} {pluralize(wordCount, "word")}
         </span>
         {wordCountStatus === "too-short" && (
@@ -293,7 +296,19 @@ export function EditableEssay({
             (Need at least {MIN_ESSAY_WORDS} {pluralize(MIN_ESSAY_WORDS, "word")})
           </span>
         )}
-        {wordCountStatus === "valid" && <span style={{ color: "var(--secondary-accent)" }}>✓</span>}
+        {wordCountStatus === "valid" && (
+          <span
+            style={{
+              color: "var(--success-color)",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              fontWeight: 600,
+            }}
+          >
+            <span>✓</span> Good length
+          </span>
+        )}
         {wordCountStatus === "too-long" && (
           <span style={{ color: "var(--error-color)", fontWeight: 600 }}>
             (Too long - maximum {MAX_ESSAY_WORDS} {pluralize(MAX_ESSAY_WORDS, "word")})
@@ -315,10 +330,14 @@ export function EditableEssay({
           className="btn btn-primary"
           data-testid="submit-improved-draft-button"
           style={{
-            fontSize: "14px",
-            padding: "var(--spacing-sm) var(--spacing-lg)",
+            fontSize: "16px",
+            padding: "var(--spacing-md) var(--spacing-xl)",
             opacity: isSubmitting || !hasChanges ? 0.6 : 1,
             cursor: isSubmitting || !hasChanges ? "not-allowed" : "pointer",
+            minWidth: "200px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
           }}
           whileHover={!isSubmitting && hasChanges ? { scale: 1.02 } : {}}
           whileTap={!isSubmitting && hasChanges ? { scale: 0.98 } : {}}
@@ -334,15 +353,15 @@ export function EditableEssay({
               <span
                 style={{
                   display: "inline-block",
-                  width: "14px",
-                  height: "14px",
+                  width: "16px",
+                  height: "16px",
                   border: "2px solid rgba(255, 255, 255, 0.3)",
                   borderTopColor: "white",
                   borderRadius: "50%",
                   animation: "spin 0.6s linear infinite",
                 }}
               />
-              Submitting your improved draft…
+              Submitting...
             </motion.span>
           ) : (
             "Submit Improved Draft"
@@ -356,8 +375,8 @@ export function EditableEssay({
               disabled={isSubmitting}
               className="btn btn-secondary"
               style={{
-                fontSize: "14px",
-                padding: "var(--spacing-sm) var(--spacing-lg)",
+                fontSize: "16px",
+                padding: "var(--spacing-md) var(--spacing-lg)",
               }}
             >
               Reset Changes
@@ -367,6 +386,7 @@ export function EditableEssay({
                 fontSize: "14px",
                 color: "var(--text-secondary)",
                 fontStyle: "italic",
+                marginLeft: "auto",
               }}
             >
               You have unsaved changes
