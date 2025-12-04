@@ -99,3 +99,7 @@ export async function createSubmission(
 
   return { status, json, questionId, answerId, submissionId };
 }
+
+export function getAssessorResults(part: any): any[] {
+  return part.answers?.[0]?.assessorResults || [];
+}

@@ -11,32 +11,9 @@ if (!process.env.USE_MOCK_SERVICES) {
   process.env.USE_MOCK_SERVICES = "true";
 }
 
-// Fix NO_COLOR/FORCE_COLOR conflict
-if (process.env.NO_COLOR && process.env.FORCE_COLOR) {
-  delete process.env.NO_COLOR;
-}
-
 // Load .env files (.env.local takes precedence)
-// Preserve PLAYWRIGHT_BASE_URL precedence: environment > .env.local > .env
-// But default to localhost:3000 for local development if not explicitly set
-const envBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 config({ path: resolve(process.cwd(), ".env") });
-const envFileBaseUrl = process.env.PLAYWRIGHT_BASE_URL;
 config({ path: resolve(process.cwd(), ".env.local"), override: true });
-// Restore environment variable if it was set (highest precedence)
-// Otherwise fall back to .env if .env.local didn't set it
-// But if it's pointing to production and we're not in CI, default to localhost
-if (envBaseUrl) {
-  process.env.PLAYWRIGHT_BASE_URL = envBaseUrl;
-} else if (!process.env.PLAYWRIGHT_BASE_URL && envFileBaseUrl) {
-  // Only use .env.local URL if it's not production or if we're in CI
-  if (envFileBaseUrl.includes("writeo.tre.systems") && !process.env.CI) {
-    // Default to localhost for local development
-    process.env.PLAYWRIGHT_BASE_URL = "http://localhost:3000";
-  } else {
-    process.env.PLAYWRIGHT_BASE_URL = envFileBaseUrl;
-  }
-}
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -62,8 +39,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command:
-      "npm run dev --workspace=@writeo/api-worker -- --port 8787 --var API_KEY:test-key-for-mocked-services --var TEST_API_KEY:test-key-for-mocked-services --var USE_MOCK_SERVICES:true & npm run dev --workspace=@writeo/web -- --port 3000",
+    command: "npm run start:test-server",
     url: "http://localhost:3000",
     reuseExistingServer: true,
     stdout: "ignore",

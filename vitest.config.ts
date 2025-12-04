@@ -27,25 +27,22 @@ if (!process.env.USE_MOCK_SERVICES) {
 
 const shouldSkipApiTests = process.env.SKIP_API_TESTS === "true";
 
-const buildExcludeList = (): string[] => {
-  const baseExclude = ["tests/e2e/**"];
-  if (!process.env.CI && shouldSkipApiTests) {
-    baseExclude.push("tests/api.test.ts");
-  }
-  // Exclude integration tests from unit test runs
+const getTestIncludes = (): string[] => {
   if (process.env.TEST_TYPE === "unit") {
-    baseExclude.push("tests/**/integration.*.test.ts");
-    baseExclude.push("tests/api.test.ts"); // api.test.ts requires running server
+    return ["tests/**/*.unit.test.ts"];
   }
-  // Exclude unit tests from integration test runs
   if (process.env.TEST_TYPE === "integration") {
-    baseExclude.push("tests/**/middleware.*.test.ts");
-    baseExclude.push("tests/**/utils.*.test.ts");
-    baseExclude.push("tests/web/storage.test.ts"); // Unit test, not integration
-    // Include api.test.ts in integration tests (requires running server)
-    // This is handled by not excluding it when TEST_TYPE=integration
+    return ["tests/**/*.integration.test.ts", "tests/api.test.ts"];
   }
-  return baseExclude;
+  return ["tests/**/*.test.ts"];
+};
+
+const getTestExcludes = (): string[] => {
+  const excludes = ["tests/e2e/**"];
+  // If running all tests (no specific type), exclude nothing else
+  // If running unit tests, the include pattern handles it
+  // If running integration tests, the include pattern handles it
+  return excludes;
 };
 
 export default defineConfig({
@@ -54,8 +51,8 @@ export default defineConfig({
     environment: "node",
     testTimeout: 30000, // Reduced from 60s - tests should be fast with mocks
     hookTimeout: 10000, // Reduced from 60s
-    include: ["tests/**/*.test.ts"],
-    exclude: buildExcludeList(),
+    include: getTestIncludes(),
+    exclude: getTestExcludes(),
     // Setup file to validate mocks are enabled
     setupFiles: ["./tests/setup.ts"],
     pool: "threads",
