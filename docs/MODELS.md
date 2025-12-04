@@ -42,6 +42,7 @@ This service supports multiple essay scoring models for comparison and selection
 - **Performance**: Train loss 0.27, Eval loss 0.43 (excellent)
 - **Status**: ✅ Deployed on Modal
 - **Assessor ID**: `T-AES-CORPUS`
+- **Dev Mode**: ✅ Integrated - appears in results when `USE_MOCK_SERVICES=true`
 - **Best For**: CEFR-specific scoring, Write & Improve aligned annotations
 - **Endpoints**:
   - `GET /health` - Service health check
