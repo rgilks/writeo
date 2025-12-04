@@ -98,9 +98,8 @@ def create_regression_trainer_class():
             if isinstance(logits, torch.Tensor):
                 logits = logits.to(labels.device)
 
-            # Clamp predictions to valid range
-            logits = torch.clamp(logits, min=2.0, max=9.0)
-
+            # Don't clamp during training - let model learn the full range
+            # Clamping is only for inference/display
             loss = torch.nn.functional.mse_loss(logits, labels.float())
             return (loss, outputs) if return_outputs else loss
 
