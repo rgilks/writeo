@@ -27,8 +27,10 @@ class TrainingConfig:
     weight_decay: float = 0.01
 
     # Early stopping
-    early_stopping_patience: int = 3
-    early_stopping_threshold: float = 0.001
+    early_stopping_patience: int = 5  # Increased to allow more time for learning
+    early_stopping_threshold: float = (
+        0.01  # Increased threshold (0.01 point improvement)
+    )
 
     # Evaluation
     eval_steps: int = 100  # Evaluate every N steps

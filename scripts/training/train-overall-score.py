@@ -173,6 +173,21 @@ def train_model(
         problem_type="regression",  # Explicitly set as regression
     )
 
+    # Initialize regression head to predict near the mean target value (~5.86)
+    # This helps the model start closer to reasonable predictions
+    import torch.nn as nn
+
+    if hasattr(model, "classifier") and hasattr(model.classifier, "out_proj"):
+        # Initialize bias to predict mean (targets are ~5.86)
+        if (
+            hasattr(model.classifier.out_proj, "bias")
+            and model.classifier.out_proj.bias is not None
+        ):
+            nn.init.constant_(model.classifier.out_proj.bias, 5.86)
+        # Initialize weights to small values
+        if hasattr(model.classifier.out_proj, "weight"):
+            nn.init.normal_(model.classifier.out_proj.weight, mean=0.0, std=0.02)
+
     # Prepare datasets
     print("Preparing datasets...")
     train_dataset = prepare_dataset(
@@ -216,7 +231,8 @@ def train_model(
         eval_dataset=dev_dataset,
         callbacks=[
             EarlyStoppingCallback(
-                early_stopping_patience=config.early_stopping_patience
+                early_stopping_patience=config.early_stopping_patience,
+                early_stopping_threshold=config.early_stopping_threshold,
             )
         ]
         if not test_run
@@ -271,7 +287,8 @@ if __name__ == "__main__":
     parser.add_argument("--full", action="store_true", help="Run full training")
     args = parser.parse_args()
 
-    if args.full:
-        train_model.remote(test_run=False)
-    else:
-        train_model.remote(test_run=True)
+    # Default to full training if no flag specified
+    is_test_run = args.test_run and not args.full
+
+    with app.run():
+        train_model.remote(test_run=is_test_run)
