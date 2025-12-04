@@ -9,9 +9,9 @@ class TrainingConfig:
     """Configuration for model training."""
 
     # Model
-    base_model: str = "microsoft/deberta-v3-base"  # DeBERTa-v3 outperforms RoBERTa
-    # Alternative: "roberta-base", "microsoft/deberta-v3-small" (smaller/faster)
-    output_dir: str = "/vol/models/corpus-trained-deberta"
+    base_model: str = "roberta-base"  # Using RoBERTa (proven working on Modal)
+    # Note: DeBERTa-v3-base will be used in future after resolving Modal tokenizer issues
+    output_dir: str = "/vol/models/corpus-trained-roberta"
 
     # Data
     data_dir: str = "scripts/training/data"
@@ -20,7 +20,7 @@ class TrainingConfig:
     test_file: str = "test.jsonl"
 
     # Training hyperparameters
-    learning_rate: float = 2e-5  # 2e-5 to 5e-5 for DeBERTa-v3, 3e-5 for RoBERTa
+    learning_rate: float = 3e-5  # Optimal for RoBERTa
     batch_size: int = 16
     num_epochs: int = 10
     max_seq_length: int = 512
@@ -48,8 +48,9 @@ class TrainingConfig:
 
     # Ordinal Regression Options
     use_ordinal_regression: bool = (
-        True  # Use ordinal regression instead of standard regression
+        False  # Temporarily disabled for Modal test (caching issue)
     )
+    # TODO: Enable for full training run (ordinal regression improves QWK)
     num_classes: int = (
         11  # 11 CEFR levels: A1, A1+, A2, A2+, B1, B1+, B2, B2+, C1, C1+, C2
     )
