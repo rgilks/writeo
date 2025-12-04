@@ -193,10 +193,10 @@ async function processServiceResults(
   );
   timings["9_process_relevance"] = performance.now() - processRelevanceStartTime;
 
-  // Process corpus scoring results (dev mode)
+  // Process corpus scoring results
   const processCorpusStartTime = performance.now();
   const corpusScoresByAnswerId = new Map<string, { score: number; cefr_level: string }>();
-  if (corpusResults.status === "fulfilled" && config.features.mockServices) {
+  if (corpusResults.status === "fulfilled") {
     const responses = corpusResults.value;
     for (let i = 0; i < responses.length; i++) {
       const response = responses[i];

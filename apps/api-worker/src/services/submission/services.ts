@@ -90,13 +90,11 @@ export function prepareServiceRequests(
       ),
     });
 
-    // Add corpus scoring in dev mode
-    if (config.features.mockServices) {
-      corpusRequests.push({
-        answerId: answer.id,
-        request: modalService.scoreCorpus(answer.answer_text),
-      });
-    }
+    // Add corpus scoring (always enabled - deployed model)
+    corpusRequests.push({
+      answerId: answer.id,
+      request: modalService.scoreCorpus(answer.answer_text),
+    });
   }
 
   ltRequests = requests;
