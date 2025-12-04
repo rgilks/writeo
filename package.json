@@ -14,7 +14,6 @@
     "deploy:all": "./scripts/deploy-all.sh",
     "deploy:modal": "./scripts/deploy-modal.sh",
     "test": "npm run test:unit",
-    "test:all": "vitest run",
     "test:local": "./scripts/test-local.sh",
     "test:unit": "TEST_TYPE=unit vitest run --exclude tests/e2e",
     "test:integration": "TEST_TYPE=integration vitest run",
