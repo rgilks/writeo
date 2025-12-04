@@ -681,8 +681,9 @@ export class WritePage {
         if (error?.message && !error.message.includes("Timeout")) {
           errorParts.push(`Original: ${error.message}`);
         }
-
-        throw new Error(`Submission failed. ${errorParts.join(". ")}`);
+        if (errorParts.length > 0) {
+          throw new Error(`Submission failed. ${errorParts.join(". ")}`);
+        }
       }
     } finally {
       errorMonitoring.cleanup();

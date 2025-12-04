@@ -41,6 +41,7 @@ const buildExcludeList = (): string[] => {
   if (process.env.TEST_TYPE === "integration") {
     baseExclude.push("tests/**/middleware.*.test.ts");
     baseExclude.push("tests/**/utils.*.test.ts");
+    baseExclude.push("tests/web/storage.test.ts"); // Unit test, not integration
     // Include api.test.ts in integration tests (requires running server)
     // This is handled by not excluding it when TEST_TYPE=integration
   }
