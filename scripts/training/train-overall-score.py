@@ -12,23 +12,19 @@ from pathlib import Path
 from typing import Any
 
 import modal
-import torch
-from datasets import Dataset
-from transformers import (
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-    EarlyStoppingCallback,
-    Trainer,
-    TrainingArguments,
-)
 
 # Import config (will need to be available in Modal)
+# In Modal, files are at /training/, locally they're in the same directory
+# Add /training to path for Modal, and current directory for local
+sys.path.insert(0, "/training")
+sys.path.insert(0, str(Path(__file__).parent))
+
 try:
-    from config import TrainingConfig, DEFAULT_CONFIG
-except ImportError:
-    # Fallback if running locally
-    sys.path.insert(0, str(Path(__file__).parent))
-    from config import TrainingConfig, DEFAULT_CONFIG
+    from config import DEFAULT_CONFIG  # type: ignore[import-untyped]
+except ImportError as e:
+    raise ImportError(
+        f"Could not import config. Tried paths: {sys.path[:2]}. Error: {e}"
+    ) from e
 
 # Modal setup
 app = modal.App("writeo-training")
@@ -42,6 +38,8 @@ training_image = (
         "datasets>=2.14.0",
         "numpy>=1.24.0,<2.0",
         "scikit-learn>=1.3.0",
+        "pandas>=2.0.0",
+        "accelerate>=0.26.0",  # Required for Trainer with PyTorch
     )
     .add_local_dir(str(Path(__file__).parent), remote_path="/training")
 )
@@ -59,8 +57,10 @@ def load_jsonl_dataset(file_path: str) -> list[dict]:
     return data
 
 
-def prepare_dataset(data: list[dict], tokenizer: Any, max_length: int = 512) -> Dataset:
+def prepare_dataset(data: list[dict], tokenizer: Any, max_length: int = 512):
     """Prepare dataset for training."""
+    from datasets import Dataset
+
     inputs = [item["input"] for item in data]
     targets = [float(item["target"]) for item in data]
 
@@ -78,44 +78,57 @@ def prepare_dataset(data: list[dict], tokenizer: Any, max_length: int = 512) -> 
     return Dataset.from_dict(encodings)
 
 
-class RegressionTrainer(Trainer):
-    """Custom trainer for regression task."""
+def create_regression_trainer_class():
+    """Create RegressionTrainer class (needs to be inside function to access torch)."""
+    import torch
+    from transformers import Trainer
 
-    def compute_loss(self, model, inputs, return_outputs=False):
-        """Compute MSE loss for regression."""
-        labels = inputs.pop("labels")
-        outputs = model(**inputs)
-        logits = outputs.logits.squeeze()
+    class RegressionTrainer(Trainer):
+        """Custom trainer for regression task."""
 
-        # Ensure logits and labels are on same device
-        if isinstance(logits, torch.Tensor):
-            logits = logits.to(labels.device)
+        def compute_loss(
+            self, model, inputs, return_outputs=False, num_items_in_batch=None
+        ):
+            """Compute MSE loss for regression."""
+            labels = inputs.pop("labels")
+            outputs = model(**inputs)
+            logits = outputs.logits.squeeze()
 
-        # Clamp predictions to valid range
-        logits = torch.clamp(logits, min=2.0, max=9.0)
+            # Ensure logits and labels are on same device
+            if isinstance(logits, torch.Tensor):
+                logits = logits.to(labels.device)
 
-        loss = torch.nn.functional.mse_loss(logits, labels.float())
-        return (loss, outputs) if return_outputs else loss
+            # Clamp predictions to valid range
+            logits = torch.clamp(logits, min=2.0, max=9.0)
+
+            loss = torch.nn.functional.mse_loss(logits, labels.float())
+            return (loss, outputs) if return_outputs else loss
+
+    return RegressionTrainer
 
 
 @app.function(
     image=training_image,
     volumes={"/vol": volume},
-    gpu="A10G",  # Use A10 for training (can switch to T4 for test runs)
-    timeout=3600 * 4,  # 4 hours max
-    secrets=[modal.Secret.from_name("api-key")],  # In case we need API access
+    gpu="T4" if True else "A10G",  # Use T4 for test runs, A10G for full training
+    timeout=3600 * 2,  # 2 hours max for test runs
+    # No secrets needed - HuggingFace models are public
 )
 def train_model(
-    config_dict: dict[str, Any] | None = None,
     test_run: bool = False,
     data_dir: str = "/training/data",
 ):
     """Train the overall score model."""
-    # Load config
-    if config_dict:
-        config = TrainingConfig(**config_dict)
-    else:
-        config = DEFAULT_CONFIG
+    # Import here so they're only needed on Modal
+    from transformers import (
+        AutoModelForSequenceClassification,
+        AutoTokenizer,
+        EarlyStoppingCallback,
+        TrainingArguments,
+    )
+
+    # Load config (use default for now, can be customized later)
+    config = DEFAULT_CONFIG
 
     print("=" * 80)
     print("TRAINING OVERALL SCORE MODEL")
@@ -182,7 +195,7 @@ def train_model(
         logging_steps=config.logging_steps,
         eval_steps=config.eval_steps,
         save_steps=config.save_steps,
-        evaluation_strategy="steps",
+        eval_strategy="steps",  # Changed from evaluation_strategy
         save_strategy="steps",
         load_best_model_at_end=True,
         metric_for_best_model="eval_loss",
@@ -191,6 +204,9 @@ def train_model(
         report_to=None,  # Disable wandb/tensorboard for now
         max_steps=config.test_run_max_steps if test_run else -1,
     )
+
+    # Create trainer class
+    RegressionTrainer = create_regression_trainer_class()
 
     # Trainer
     trainer = RegressionTrainer(

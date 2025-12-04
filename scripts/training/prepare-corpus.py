@@ -37,11 +37,21 @@ def load_corpus_data(corpus_path: str, metadata_path: str) -> pd.DataFrame:
     metadata_df = pd.read_csv(metadata_path, sep="\t", low_memory=False)
 
     # Merge on essay ID
+    # Use split from metadata file (it has train/dev/test), corpus file split may be incomplete
+    # Rename split columns to avoid conflict
+    metadata_subset = metadata_df[["public_essay_id", "n.edits", "split"]].copy()
+    metadata_subset = metadata_subset.rename(columns={"split": "split_meta"})
+
     merged = corpus_df.merge(
-        metadata_df[["public_essay_id", "n.edits", "split"]],
+        metadata_subset,
         on="public_essay_id",
         how="left",
     )
+
+    # Use metadata split if available, otherwise fall back to corpus split
+    if "split_meta" in merged.columns:
+        merged["split"] = merged["split_meta"].fillna(merged.get("split", "unknown"))
+        merged = merged.drop(columns=["split_meta"])
 
     return merged
 
