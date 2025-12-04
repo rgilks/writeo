@@ -41,9 +41,9 @@ class TrainingConfig:
     test_run_max_samples: int = 100  # Limit samples for test runs
     test_run_max_steps: int = 50  # Limit steps for test runs
 
-    # Output
+    # Output (IELTS-aligned CEFR mapping: A1=2.0 to C2=8.5)
     target_score_min: float = 2.0
-    target_score_max: float = 9.0
+    target_score_max: float = 8.5
 
     def get_train_path(self) -> Path:
         """Get path to training data file."""

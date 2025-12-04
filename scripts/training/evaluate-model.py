@@ -15,6 +15,7 @@ from typing import Any
 import numpy as np
 import torch
 from datasets import Dataset
+from sklearn.metrics import cohen_kappa_score, confusion_matrix
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 try:
@@ -116,40 +117,80 @@ def evaluate_model(
     rmse = np.sqrt(np.mean((predictions - true_scores) ** 2))
     correlation = np.corrcoef(predictions, true_scores)[0, 1]
 
-    # CEFR classification accuracy
+    # CEFR classification accuracy (updated to match corrected IELTS-aligned mapping)
     def score_to_cefr(score: float) -> str:
-        if score >= 8.5:
+        """Convert numeric score to CEFR level (IELTS-aligned)"""
+        if score >= 8.25:
             return "C2"
+        elif score >= 7.75:
+            return "C1+"
         elif score >= 7.0:
             return "C1"
+        elif score >= 6.25:
+            return "B2+"
         elif score >= 5.5:
             return "B2"
+        elif score >= 4.75:
+            return "B1+"
         elif score >= 4.0:
             return "B1"
-        else:
+        elif score >= 3.25:
+            return "A2+"
+        elif score >= 2.75:
             return "A2"
+        elif score >= 2.25:
+            return "A1+"
+        else:
+            return "A1"
 
     def cefr_to_score(cefr: str) -> float:
+        """Convert CEFR level to numeric score (IELTS-aligned)"""
         mapping = {
-            "A2": 4.0,
-            "A2+": 4.5,
-            "B1": 5.0,
-            "B1+": 5.5,
-            "B2": 6.5,
-            "B2+": 7.0,
-            "C1": 8.0,
-            "C1+": 8.5,
-            "C2": 9.0,
+            "A1": 2.0,
+            "A1+": 2.5,
+            "A2": 3.0,
+            "A2+": 3.5,
+            "B1": 4.5,
+            "B1+": 5.0,
+            "B2": 6.0,
+            "B2+": 6.5,
+            "C1": 7.5,
+            "C1+": 8.0,
+            "C2": 8.5,
         }
-        return mapping.get(cefr, 5.0)
+        return mapping.get(cefr, 4.5)
 
     # Get true CEFR labels from test data
     true_cefrs = [item["cefr"] for item in test_data]
     pred_cefrs = [score_to_cefr(p) for p in predictions]
 
-    # Calculate accuracy (exact match)
+    # Calculate CEFR classification metrics
     cefr_accuracy = sum(p == t for p, t in zip(pred_cefrs, true_cefrs)) / len(
         true_cefrs
+    )
+
+    # Quadratic Weighted Kappa (QWK) - gold standard for AES evaluation
+    # QWK accounts for ordinal nature and severity of disagreement
+    cefr_to_idx = {
+        cefr: i
+        for i, cefr in enumerate(
+            ["A1", "A1+", "A2", "A2+", "B1", "B1+", "B2", "B2+", "C1", "C1+", "C2"]
+        )
+    }
+    true_cefr_indices = [cefr_to_idx.get(c, 4) for c in true_cefrs]  # Default to B1
+    pred_cefr_indices = [cefr_to_idx.get(c, 4) for c in pred_cefrs]
+
+    qwk = cohen_kappa_score(true_cefr_indices, pred_cefr_indices, weights="quadratic")
+
+    # Adjacent accuracy - predictions within ±1 CEFR level
+    adjacent_accuracy = sum(
+        abs(cefr_to_idx.get(p, 4) - cefr_to_idx.get(t, 4)) <= 1
+        for p, t in zip(pred_cefrs, true_cefrs)
+    ) / len(true_cefrs)
+
+    # Confusion matrix for detailed analysis
+    conf_matrix = confusion_matrix(
+        true_cefr_indices, pred_cefr_indices, labels=list(range(len(cefr_to_idx)))
     )
 
     # Per-CEFR level analysis
@@ -171,28 +212,47 @@ def evaluate_model(
     print("\n" + "=" * 80)
     print("EVALUATION RESULTS")
     print("=" * 80)
-    print(f"Mean Absolute Error (MAE): {mae:.4f}")
-    print(f"Root Mean Squared Error (RMSE): {rmse:.4f}")
-    print(f"Pearson Correlation: {correlation:.4f}")
-    print(f"CEFR Classification Accuracy: {cefr_accuracy:.2%}")
-    print("\nPer-CEFR Level Analysis:")
+    print(f"\n📊 PRIMARY METRIC (Gold Standard for AES):")
+    print(f"   Quadratic Weighted Kappa (QWK): {qwk:.4f}")
+    if qwk >= 0.75:
+        print(f"   ✅ EXCELLENT - Approaching human-level agreement")
+    elif qwk >= 0.60:
+        print(f"   ✅ GOOD - Strong agreement")
+    elif qwk >= 0.40:
+        print(f"   ⚠️  MODERATE - Acceptable agreement")
+    else:
+        print(f"   ❌ POOR - Needs improvement")
+
+    print(f"\n📈 REGRESSION METRICS:")
+    print(f"   Mean Absolute Error (MAE): {mae:.4f}")
+    print(f"   Root Mean Squared Error (RMSE): {rmse:.4f}")
+    print(f"   Pearson Correlation: {correlation:.4f}")
+
+    print(f"\n🎯 CLASSIFICATION METRICS:")
+    print(f"   CEFR Exact Match Accuracy: {cefr_accuracy:.2%}")
+    print(f"   Adjacent Accuracy (±1 level): {adjacent_accuracy:.2%}")
+
+    print("\n📋 Per-CEFR Level Analysis:")
     for cefr, stats in sorted(cefr_stats.items()):
         print(f"  {cefr}: {stats['count']} samples, MAE: {stats['mae']:.4f}")
         print(
             f"    Mean predicted: {stats['mean_pred']:.2f}, Mean true: {stats['mean_true']:.2f}"
         )
 
-    print("=" * 80)
+    print("\n" + "=" * 80)
 
     # Save results
     results = {
+        "qwk": float(qwk),  # Primary metric
         "mae": float(mae),
         "rmse": float(rmse),
         "correlation": float(correlation),
         "cefr_accuracy": float(cefr_accuracy),
+        "adjacent_accuracy": float(adjacent_accuracy),
         "cefr_stats": cefr_stats,
         "predictions": predictions.tolist(),
         "true_scores": true_scores.tolist(),
+        "confusion_matrix": conf_matrix.tolist(),
     }
 
     results_path = Path(model_path) / "evaluation_results.json"

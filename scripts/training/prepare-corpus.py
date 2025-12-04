@@ -14,18 +14,24 @@ from pathlib import Path
 
 import pandas as pd
 
-# CEFR to band score mapping
+# CEFR to band score mapping (IELTS-aligned)
+# Based on CEFR-IELTS correspondence for accurate proficiency prediction
 CEFR_TO_SCORE = {
-    "A2": 4.0,
-    "A2+": 4.5,
-    "B1": 5.0,
-    "B1+": 5.5,
-    "B2": 6.5,
-    "B2+": 7.0,
-    "C1": 8.0,
-    "C1+": 8.5,
-    "C2": 9.0,
+    "A1": 2.0,  # IELTS 0-2.5
+    "A1+": 2.5,  # IELTS 2.5
+    "A2": 3.0,  # IELTS 3.0-3.5
+    "A2+": 3.5,  # IELTS 3.5-4.0
+    "B1": 4.5,  # IELTS 4.0-5.0
+    "B1+": 5.0,  # IELTS 5.0-5.5
+    "B2": 6.0,  # IELTS 5.5-6.5
+    "B2+": 6.5,  # IELTS 6.5-7.0
+    "C1": 7.5,  # IELTS 7.0-8.0
+    "C1+": 8.0,  # IELTS 8.0
+    "C2": 8.5,  # IELTS 8.5-9.0
 }
+
+# Ordinal class labels (for ordinal regression approach)
+CEFR_CLASSES = ["A1", "A1+", "A2", "A2+", "B1", "B1+", "B2", "B2+", "C1", "C1+", "C2"]
 
 
 def load_corpus_data(corpus_path: str, metadata_path: str) -> pd.DataFrame:
