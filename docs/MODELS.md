@@ -32,7 +32,19 @@ This service supports multiple essay scoring models for comparison and selection
 - **Performance**: Produces similar scores to Engessay (may need calibration)
 - **Best For**: Comparison/testing, lighter model option
 
-### 3. `fallback`
+### 3. `corpus-roberta`
+
+- **Model**: Custom trained RoBERTa-base model
+- **Type**: RoBERTa-based regression
+- **Output**: Single overall score (2-9 band scale)
+- **Training**: Fine-tuned on Write and Improve corpus (2024 v2) with ~5,050 essays
+- **Status**: ⚠️ Requires training (see training scripts)
+- **Performance**: Trained specifically on Write and Improve data with human CEFR labels
+- **Assessor ID**: `T-AES-CORPUS`
+- **Best For**: Comparison with engessay model, potentially better alignment with Write and Improve corpus annotations
+- **Note**: Model must be trained before use. See `scripts/training/` for training instructions.
+
+### 4. `fallback`
 
 - **Type**: Heuristic-based scoring
 - **Output**: Word-count based estimation
@@ -54,6 +66,7 @@ POST /grade
 ```bash
 POST /grade?model_key=engessay
 POST /grade?model_key=distilbert
+POST /grade?model_key=corpus-roberta
 POST /grade?model_key=fallback
 ```
 
@@ -91,6 +104,17 @@ Models were tested across essays of varying quality:
 | Long Good     | 44    | 7.0              | 7.0                |
 | Excellent     | 58    | 7.5              | 7.5                |
 
+## Training Custom Models
+
+The `corpus-roberta` model can be trained using the Write and Improve corpus:
+
+1. **Prepare data**: Run `scripts/training/prepare-corpus.py` to prepare training data
+2. **Train model**: Run `scripts/training/train-overall-score.py` with `--test-run` for quick validation, or `--full` for full training
+3. **Evaluate**: Run `scripts/training/evaluate-model.py` to evaluate on test set
+4. **Deploy**: Trained model is automatically available on Modal volume
+
+See `scripts/training/README.md` (to be created) for detailed training instructions.
+
 ## Notes
 
 - Models are loaded lazily (on first use)
@@ -98,3 +122,4 @@ Models were tested across essays of varying quality:
 - If a model fails to load, the system falls back to heuristic scoring
 - All scores are normalized to 0-9 band scale
 - Engessay model successfully differentiates between essay quality levels
+- Custom trained models (corpus-roberta) are stored on Modal volume and loaded from there

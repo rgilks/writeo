@@ -27,7 +27,7 @@ else:
 
 
 def create_assessor_result(
-    scores: DimensionsDict, model_name: str = "Essay scorer"
+    scores: DimensionsDict, model_name: str = "Essay scorer", assessor_id: str = "T-AES-ESSAY"
 ) -> AssessorResult:
     """Create assessor result from dimension scores."""
     overall = scores.get("Overall", scores.get("overall", 0.0))
@@ -40,7 +40,7 @@ def create_assessor_result(
         "Overall": overall,
     }
     return AssessorResult(
-        id="T-AES-ESSAY",
+        id=assessor_id,
         name=model_name,
         type="grader",
         overall=overall,
@@ -65,7 +65,15 @@ def process_answer(
     )
     model_name = config.get("name", "Essay scorer")
 
-    assessor_result = create_assessor_result(scores, model_name)
+    # Determine assessor ID based on model
+    if model_key == "corpus-roberta":
+        assessor_id = "T-AES-CORPUS"
+    elif model_key == "engessay":
+        assessor_id = "T-AES-ESSAY"
+    else:
+        assessor_id = "T-AES-ESSAY"  # Default
+
+    assessor_result = create_assessor_result(scores, model_name, assessor_id=assessor_id)
     return AnswerResult(id=answer.id, assessor_results=[assessor_result])
 
 

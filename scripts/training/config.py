@@ -1,0 +1,60 @@
+"""Training configuration."""
+
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class TrainingConfig:
+    """Configuration for model training."""
+
+    # Model
+    base_model: str = "roberta-base"  # or "distilbert-base-uncased"
+    output_dir: str = "/vol/models/corpus-trained-roberta"
+
+    # Data
+    data_dir: str = "scripts/training/data"
+    train_file: str = "train.jsonl"
+    dev_file: str = "dev.jsonl"
+    test_file: str = "test.jsonl"
+
+    # Training hyperparameters
+    learning_rate: float = 3e-5  # 5e-5 for DistilBERT
+    batch_size: int = 16
+    num_epochs: int = 10
+    max_seq_length: int = 512
+    warmup_steps: int = 100
+    weight_decay: float = 0.01
+
+    # Early stopping
+    early_stopping_patience: int = 3
+    early_stopping_threshold: float = 0.001
+
+    # Evaluation
+    eval_steps: int = 100  # Evaluate every N steps
+    save_steps: int = 500  # Save checkpoint every N steps
+    logging_steps: int = 50
+
+    # Test run settings (for quick validation)
+    test_run_max_samples: int = 100  # Limit samples for test runs
+    test_run_max_steps: int = 50  # Limit steps for test runs
+
+    # Output
+    target_score_min: float = 2.0
+    target_score_max: float = 9.0
+
+    def get_train_path(self) -> Path:
+        """Get path to training data file."""
+        return Path(self.data_dir) / self.train_file
+
+    def get_dev_path(self) -> Path:
+        """Get path to dev data file."""
+        return Path(self.data_dir) / self.dev_file
+
+    def get_test_path(self) -> Path:
+        """Get path to test data file."""
+        return Path(self.data_dir) / self.test_file
+
+
+# Default config
+DEFAULT_CONFIG = TrainingConfig()
