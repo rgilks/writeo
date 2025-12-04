@@ -64,8 +64,8 @@ export default defineConfig({
   webServer: {
     command:
       "npm run dev --workspace=@writeo/api-worker -- --port 8787 --var API_KEY:test-key-for-mocked-services --var TEST_API_KEY:test-key-for-mocked-services --var USE_MOCK_SERVICES:true & npm run dev --workspace=@writeo/web -- --port 3000",
-    port: 3000,
-    reuseExistingServer: !process.env.CI,
+    url: "http://localhost:3000",
+    reuseExistingServer: true,
     stdout: "ignore",
     stderr: "pipe",
     timeout: 120 * 1000,
