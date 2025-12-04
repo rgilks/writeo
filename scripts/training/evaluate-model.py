@@ -212,23 +212,23 @@ def evaluate_model(
     print("\n" + "=" * 80)
     print("EVALUATION RESULTS")
     print("=" * 80)
-    print(f"\n📊 PRIMARY METRIC (Gold Standard for AES):")
+    print("\n📊 PRIMARY METRIC (Gold Standard for AES):")
     print(f"   Quadratic Weighted Kappa (QWK): {qwk:.4f}")
     if qwk >= 0.75:
-        print(f"   ✅ EXCELLENT - Approaching human-level agreement")
+        print("   ✅ EXCELLENT - Approaching human-level agreement")
     elif qwk >= 0.60:
-        print(f"   ✅ GOOD - Strong agreement")
+        print("   ✅ GOOD - Strong agreement")
     elif qwk >= 0.40:
-        print(f"   ⚠️  MODERATE - Acceptable agreement")
+        print("   ⚠️  MODERATE - Acceptable agreement")
     else:
-        print(f"   ❌ POOR - Needs improvement")
+        print("   ❌ POOR - Needs improvement")
 
-    print(f"\n📈 REGRESSION METRICS:")
+    print("\n📈 REGRESSION METRICS:")
     print(f"   Mean Absolute Error (MAE): {mae:.4f}")
     print(f"   Root Mean Squared Error (RMSE): {rmse:.4f}")
     print(f"   Pearson Correlation: {correlation:.4f}")
 
-    print(f"\n🎯 CLASSIFICATION METRICS:")
+    print("\n🎯 CLASSIFICATION METRICS:")
     print(f"   CEFR Exact Match Accuracy: {cefr_accuracy:.2%}")
     print(f"   Adjacent Accuracy (±1 level): {adjacent_accuracy:.2%}")
 

@@ -8,7 +8,6 @@ Run: modal run scripts/training/evaluate-model-modal.py
 import json
 import os
 import sys
-from pathlib import Path
 from typing import Any
 
 import modal
@@ -229,7 +228,7 @@ def evaluate_model_on_modal():
 def main():
     """Local entrypoint for evaluation."""
     results = evaluate_model_on_modal.remote()
-    print(f"\n✅ Evaluation complete!")
+    print("\n✅ Evaluation complete!")
     print(f"MAE: {results['mae']:.4f}")
     print(f"RMSE: {results['rmse']:.4f}")
     print(f"Correlation: {results['correlation']:.4f}")

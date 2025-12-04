@@ -9,8 +9,9 @@ class TrainingConfig:
     """Configuration for model training."""
 
     # Model
-    base_model: str = "roberta-base"  # or "distilbert-base-uncased"
-    output_dir: str = "/vol/models/corpus-trained-roberta"
+    base_model: str = "microsoft/deberta-v3-base"  # DeBERTa-v3 outperforms RoBERTa
+    # Alternative: "roberta-base", "microsoft/deberta-v3-small" (smaller/faster)
+    output_dir: str = "/vol/models/corpus-trained-deberta"
 
     # Data
     data_dir: str = "scripts/training/data"
