@@ -9,7 +9,6 @@ volume = modal.Volume.from_name("writeo-models", create_if_missing=True)
 
 @app.function(volumes={"/vol/models": volume})
 def check():
-    import os
     from pathlib import Path
 
     path = Path("/vol/models")

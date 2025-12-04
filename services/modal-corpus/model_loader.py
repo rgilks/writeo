@@ -2,7 +2,7 @@
 
 import os
 import time
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any
 
 import torch  # type: ignore[import-untyped]
 from transformers import (  # type: ignore[import-untyped]
@@ -15,11 +15,11 @@ from config import MODEL_NAME, MODEL_PATH
 if TYPE_CHECKING:
     from transformers import PreTrainedModel, PreTrainedTokenizer  # type: ignore[import-untyped]
 
-    ModelType: TypeAlias = PreTrainedModel
-    TokenizerType: TypeAlias = PreTrainedTokenizer
+    type ModelType = PreTrainedModel
+    type TokenizerType = PreTrainedTokenizer
 else:
-    ModelType: TypeAlias = Any
-    TokenizerType: TypeAlias = Any
+    type ModelType = Any
+    type TokenizerType = Any
 
 # Global model storage (loaded once)
 _model: ModelType | None = None
