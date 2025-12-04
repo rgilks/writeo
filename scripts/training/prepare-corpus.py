@@ -88,13 +88,27 @@ def filter_essays(df: pd.DataFrame, min_words: int = 50) -> pd.DataFrame:
 
 def convert_cefr_to_score(cefr: str) -> float:
     """Convert CEFR level to band score."""
-    return CEFR_TO_SCORE.get(cefr, 5.0)  # Default to B1 if unknown
+    return CEFR_TO_SCORE.get(cefr, 4.5)  # Default to B1 if unknown
+
+
+def convert_cefr_to_ordinal_class(cefr: str) -> int:
+    """Convert CEFR level to ordinal class index (0-10)."""
+    try:
+        return CEFR_CLASSES.index(cefr)
+    except ValueError:
+        return 4  # Default to B1 (index 4)
 
 
 def prepare_training_data(
-    df: pd.DataFrame, prompts_df: pd.DataFrame | None = None
+    df: pd.DataFrame, prompts_df: pd.DataFrame | None = None, use_ordinal: bool = False
 ) -> list[dict]:
-    """Prepare training data in format expected by transformers."""
+    """Prepare training data in format expected by transformers.
+
+    Args:
+        df: DataFrame with essay data
+        prompts_df: Optional DataFrame with prompt information
+        use_ordinal: If True, use ordinal class indices instead of scores
+    """
     training_data = []
 
     for _, row in df.iterrows():
@@ -119,13 +133,16 @@ def prepare_training_data(
         # Format input same as current system
         input_text = f"{prompt_text}\n\n{essay_text}"
 
-        # Convert CEFR to target score
-        target_score = convert_cefr_to_score(cefr)
+        # Convert CEFR to target (either score or ordinal class)
+        if use_ordinal:
+            target = convert_cefr_to_ordinal_class(cefr)
+        else:
+            target = convert_cefr_to_score(cefr)
 
         training_data.append(
             {
                 "input": input_text,
-                "target": target_score,
+                "target": target,  # Either float score or int class
                 "cefr": cefr,
                 "essay_id": row["public_essay_id"],
                 "split": row.get("split", "unknown"),

@@ -6,7 +6,6 @@ Implements research-backed loss functions optimized for ordinal classification t
 """
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 
@@ -64,7 +63,7 @@ def soft_label_cross_entropy(
     Returns:
         loss: Scalar loss value
     """
-    batch_size = logits.size(0)
+    logits.size(0)
 
     # Create class indices [0, 1, 2, ..., num_classes - 1]
     classes = torch.arange(num_classes, dtype=torch.float32, device=logits.device)
@@ -143,7 +142,7 @@ def cdw_ce_loss(
     batch_size = logits.size(0)
 
     # Get predicted probabilities
-    probs = F.softmax(logits, dim=1)
+    F.softmax(logits, dim=1)
 
     # Create distance matrix
     classes = torch.arange(num_classes, device=logits.device)
