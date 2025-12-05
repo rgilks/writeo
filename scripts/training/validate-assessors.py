@@ -25,7 +25,6 @@ Examples:
 import argparse
 import json
 import os
-import sys
 import uuid
 from pathlib import Path
 from typing import Any
@@ -250,7 +249,7 @@ def compute_metrics(
     print(f"\n{'=' * 80}")
     print(f"{name} RESULTS")
     print(f"{'=' * 80}")
-    print(f"\n📊 PRIMARY METRIC:")
+    print("\n📊 PRIMARY METRIC:")
     print(f"   QWK: {qwk:.4f}", end="")
     if qwk >= 0.75:
         print(" ✅ EXCELLENT")
@@ -261,12 +260,12 @@ def compute_metrics(
     else:
         print(" ❌ NEEDS IMPROVEMENT")
 
-    print(f"\n📈 REGRESSION METRICS:")
+    print("\n📈 REGRESSION METRICS:")
     print(f"   MAE: {mae:.4f}")
     print(f"   RMSE: {rmse:.4f}")
     print(f"   Correlation: {correlation:.4f}")
 
-    print(f"\n🎯 CLASSIFICATION METRICS:")
+    print("\n🎯 CLASSIFICATION METRICS:")
     print(f"   CEFR Exact Accuracy: {exact_accuracy:.2%}")
     print(f"   Adjacent Accuracy (±1): {adjacent_accuracy:.2%}")
 
@@ -335,7 +334,7 @@ The gold standard metric for automated essay scoring. Measures agreement between
     else:
         report += "✅ **T-AES-ESSAY shows better performance** - Current essay model is performing well.\n"
 
-    report += f"\n## Next Steps\n\n"
+    report += "\n## Next Steps\n\n"
     report += "1. Review per-CEFR level performance to identify weaknesses\n"
     report += "2. Examine confusion matrices to understand error patterns\n"
     report += "3. Consider ensemble approach combining both models\n"
