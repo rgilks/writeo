@@ -1301,27 +1301,510 @@ const getColor = (attention: number) => {
 
 ---
 
-## Further Reading
+## Understanding Key Metrics
 
-### Implementation
+Before diving into further reading, let's explain the metrics we use:
+
+### Quadratic Weighted Kappa (QWK)
+
+**What is it?** A measure of agreement between model predictions and human ratings.
+
+**Scale:** -1 to 1
+
+- **1.0** = Perfect agreement
+- **0.8+** = Strong agreement (our target)
+- **0.6-0.8** = Moderate agreement
+- **< 0.6** = Weak agreement
+
+**Why "Quadratic"?** Penalizes larger disagreements more heavily.
+
+**Example:**
+
+```python
+# True scores: [B1, B2, B2, C1]
+# Predictions: [B1, B2, C1, C1]
+
+# Quadratic penalty:
+# B1==B1: penalty = 0² = 0 ✅
+# B2==B2: penalty = 0² = 0 ✅
+# B2→C1: penalty = 1² = 1 (off by 1 level)
+# C1==C1: penalty = 0² = 0 ✅
+
+# QWK = 0.85 (strong agreement)
+```
+
+**Why Important for AES?**
+
+- Being off by 1 CEFR level (B2→C1) is much better than being off by 2 levels (B2→C2)
+- QWK captures this nuance better than accuracy
+- Standard metric in automated essay scoring research
+
+**Further Reading:**
+
+- [Quadratic Weighted Kappa Explained](https://towardsdatascience.com/quadratic-weighted-kappa-a-practical-guide-1bb17b7e1bb7)
+- [Original Cohen's Kappa Paper](https://psycnet.apa.org/record/1961-04252-001)
+
+### Mean Absolute Error (MAE)
+
+**What is it?** Average distance between predicted and true scores.
+
+**Formula:**
+
+```python
+MAE = sum(|predicted - true|) / n
+
+# Example:
+true = [5.0, 6.0, 7.0]
+pred = [5.5, 5.8, 7.2]
+
+MAE = (|5.5-5.0| + |5.8-6.0| + |7.2-7.0|) / 3
+    = (0.5 + 0.2 + 0.2) / 3
+    = 0.30
+```
+
+**Interpretation:**
+
+- **MAE = 0.30**: Predictions are on average 0.3 CEFR points off
+- **MAE ≤ 0.40**: Good performance for AES
+- **Lower is better** (0 = perfect)
+
+**Why Use Both QWK and MAE?**
+
+- **QWK**: Ordinal agreement (are rankings right?)
+- **MAE**: Absolute error magnitude (how far off are we?)
+- Together they give complete picture
+
+**Further Reading:**
+
+- [Regression Metrics Explained](https://towardsdatascience.com/metrics-to-evaluate-your-machine-learning-algorithm-f10ba6e38234)
+
+### F1 Score
+
+**What is it?** Harmonic mean of precision and recall.
+
+**Components:**
+
+```python
+Precision = True Positives / (True Positives + False Positives)
+# "Of all errors we detected, how many were real?"
+
+Recall = True Positives / (True Positives + False Negatives)
+# "Of all real errors, how many did we detect?"
+
+F1 = 2 * (Precision * Recall) / (Precision + Recall)
+# Balances precision and recall
+```
+
+**Example:**
+
+```python
+# 100 tokens
+# 20 actual errors
+# Model detected 25 errors
+# 15 were correct
+
+Precision = 15/25 = 0.60 (60% of detections were real)
+Recall = 15/20 = 0.75 (caught 75% of real errors)
+F1 = 2 * (0.60 * 0.75) / (0.60 + 0.75) = 0.67
+```
+
+**Target:** F1 ≥ 0.70 for error detection
+
+**Further Reading:**
+
+- [Precision and Recall Explained](https://towardsdatascience.com/accuracy-precision-recall-or-f1-331fb37c5cb9)
+
+---
+
+## Learning Path: Foundations to Research
+
+A structured path to understand this project from scratch:
+
+### Level 1: Machine Learning Fundamentals (1-2 weeks)
+
+**Core Concepts:**
+
+- Supervised learning (input → model → output)
+- Training vs testing vs validation sets
+- Loss functions and optimization
+- Overfitting vs underfitting
+
+**Resources:**
+
+📚 **Books:**
+
+- [Machine Learning Basics](https://www.deeplearningbook.org/contents/ml.html) - Free, from Deep Learning Book by Goodfellow et al.
+
+🎥 **Videos:**
+
+- [StatQuest: Machine Learning](https://www.youtube.com/playlist?list=PLblh5JKOoLUICTaGLRoHQDuF_7q2GfuJF) - Extremely clear, visual explanations
+- [3Blue1Brown: Neural Networks](https://www.youtube.com/playlist?list=PLZHQObOWTQDNU6R1_67000Dx_ZCJB-3pi) - Beautiful visualizations
+
+📝 **Interactive:**
+
+- [ML Crash Course by Google](https://developers.google.com/machine-learning/crash-course) - Hands-on exercises
+
+**Key Takeaways:**
+
+- Understand what "training" means
+- Know why we split data into train/dev/test
+- Grasp the concept of gradient descent
+
+### Level 2: Deep Learning & Neural Networks (2-3 weeks)
+
+**Core Concepts:**
+
+- Neural network architecture
+- Backpropagation
+- Activation functions (ReLU, Softmax, Sigmoid)
+- Loss functions (MSE, Cross-Entropy, BCE)
+
+**Resources:**
+
+📚 **Courses:**
+
+- [Fast.ai Practical Deep Learning](https://course.fast.ai/) - Code-first, practical approach
+- [Stanford CS231n](http://cs231n.stanford.edu/) - Comprehensive lectures (focus on early lectures)
+
+🎥 **Videos:**
+
+- [3Blue1Brown: What is a Neural Network?](https://www.youtube.com/watch?v=aircAruvnKk) - Best visual explanation ever
+
+📝 **Interactive:**
+
+- [Neural Network Playground](https://playground.tensorflow.org/) - See neural networks in action
+
+**Key Takeaways:**
+
+- Understand forward/backward pass
+- Know different loss functions and when to use them
+- Grasp why deep networks are powerful
+
+### Level 3: Natural Language Processing (NLP) Basics (2-3 weeks)
+
+**Core Concepts:**
+
+- Text as input (tokenization, embeddings)
+- Recurrent Neural Networks (RNNs, LSTMs)
+- Attention mechanism (foundation of transformers)
+- Transfer learning in NLP
+
+**Resources:**
+
+📚 **Courses:**
+
+- [Stanford CS224N: NLP with Deep Learning](http://web.stanford.edu/class/cs224n/) - Excellent, comprehensive
+- [Hugging Face NLP Course](https://huggingface.co/learn/nlp-course/) - Practical, modern
+
+🎥 **Videos:**
+
+- [The Illustrated Word2Vec](https://jalammar.github.io/illustrated-word2vec/) - Visual guide to embeddings
+- [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) - **Must-read** for understanding transformers
+
+📝 **Papers:**
+
+- [Attention Is All You Need](https://arxiv.org/abs/1706.03762) - The transformer paper (revolutionary!)
+
+**Key Takeaways:**
+
+- Understand how text becomes numbers
+- Grasp the attention mechanism (key to transformers)
+- Know what "pre-training" and "fine-tuning" mean
+
+### Level 4: Transformers & BERT Family (3-4 weeks)
+
+**Core Concepts:**
+
+- Self-attention mechanism
+- BERT architecture (bidirectional encoding)
+- RoBERTa, DeBERTa improvements
+- Fine-tuning for downstream tasks
+
+**Resources:**
+
+📚 **Guides:**
+
+- [The Illustrated BERT](https://jalammar.github.io/illustrated-bert/) - Visual explanation of BERT
+- [The Annotated Transformer](http://nlp.seas.harvard.edu/annotated-transformer/) - Code walkthrough
+
+🎥 **Videos:**
+
+- [Yannic Kilcher: BERT Explained](https://www.youtube.com/watch?v=-9evrZnBorM) - Deep dive
+- [Andrej Karpathy: Let's build GPT](https://www.youtube.com/watch?v=kCc8FmEb1nY) - Build transformer from scratch
+
+📝 **Papers:**
+
+- [BERT: Pre-training of Deep Bidirectional Transformers](https://arxiv.org/abs/1810.04805) - Original BERT
+- [RoBERTa: A Robustly Optimized BERT](https://arxiv.org/abs/1907.11692) - Better BERT
+- [DeBERTa: Decoding-enhanced BERT with Disentangled Attention](https://arxiv.org/abs/2006.03654) - Our model basis!
+- [DeBERTaV3](https://arxiv.org/abs/2111.09543) - Latest version we use
+
+**Key Takeaways:**
+
+- Understand masked language modeling (BERT's pre-training)
+- Know how disentangled attention works (DeBERTa's key innovation)
+- Grasp why pre-training + fine-tuning is powerful
+
+### Level 5: Multi-Task Learning (2-3 weeks)
+
+**Core Concepts:**
+
+- Shared representations across tasks
+- Task-specific heads
+- Loss weighting and balancing
+- Negative transfer (when tasks interfere)
+
+**Resources:**
+
+📚 **Overviews:**
+
+- [An Overview of Multi-Task Learning](https://ruder.io/multi-task/) - Excellent comprehensive guide by Sebastian Ruder
+- [Multi-Task Learning in PyTorch](https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html) - Practical tutorial
+
+📝 **Papers:**
+
+- [A Survey on Multi-Task Learning](https://arxiv.org/abs/1997.00453) - Comprehensive survey
+- [Multi-Task Deep Neural Networks](https://www.cs.cornell.edu/~kilian/papers/multitask_cvpr2014.pdf) - Classic paper
+- [Auxiliary Tasks in Multi-Task Learning](https://arxiv.org/abs/1805.06334) - When auxiliary tasks help
+
+**Key Takeaways:**
+
+- Understand why tasks should help each other
+- Know how to balance task weights
+- Recognize when multi-task might hurt performance
+
+### Level 6: Automated Essay Scoring (AES) (2-3 weeks)
+
+**Core Concepts:**
+
+- CEFR framework (A1-C2 levels)
+- Inter-rater reliability (why QWK matters)
+- Prompt-specific vs cross-prompt models
+- Fairness and bias in AES
+
+**Resources:**
+
+📝 **Papers:**
+
+**Foundational:**
+
+- [Automated Essay Scoring: A Survey](https://arxiv.org/abs/2012.07844) - Comprehensive overview
+- [The Hewlett Foundation Competition](https://www.kaggle.com/c/asap-aes) - Historical benchmark
+
+**Modern Deep Learning:**
+
+- [Neural Automated Essay Scoring](https://aclanthology.org/D16-1193/) - Early neural AES
+- [Automated Essay Scoring with String Kernels and Word Embeddings](https://aclanthology.org/P17-1077/) - Feature engineering
+- [BERT for Automated Essay Scoring](https://arxiv.org/abs/1909.00372) - Our approach!
+
+**Datasets:**
+
+- [Write & Improve Corpus](https://arxiv.org/abs/1711.09080) - Our dataset! (W&I 2024 v2)
+- [ASAP Dataset](https://www.kaggle.com/c/asap-aes/data) - Classic benchmark
+
+**Key Takeaways:**
+
+- Understand CEFR levels (what B2 means)
+- Know why QWK is the standard metric
+- Grasp prompt-dependency challenges
+
+### Level 7: Grammatical Error Correction & Detection (2-3 weeks)
+
+**Core Concepts:**
+
+- M2 format (error annotations)
+- Token-level vs sequence-level correction
+- BIO tagging for error spans
+- Error categorization schemes
+
+**Resources:**
+
+📝 **Papers:**
+
+**Surveys:**
+
+- [Grammatical Error Correction: A Survey](https://arxiv.org/abs/2211.05166) - Recent comprehensive survey
+- [Neural Approaches to GEC](https://aclanthology.org/2020.bea-1.16/) - Modern methods
+
+**Datasets & Shared Tasks:**
+
+- [CoNLL-2014 Shared Task](https://www.comp.nus.edu.sg/~nlp/conll14st.html) - Classic GEC benchmark
+- [BEA 2019 Shared Task](https://www.cl.cam.ac.uk/research/nl/bea2019st/) - Write & Improve based
+- [MultiGEC 2025](https://github.com/grammarly/MultiGEC-2025) - Latest challenge
+
+**M2 Format:**
+
+- [M2 Scorer Documentation](https://github.com/nusnlp/m2scorer) - Understanding annotations
+- [Error Annotation Guidelines](https://www.comp.nus.edu.sg/~nlp/conll14st/annotation-guidelines.pdf) - What error types mean
+
+**Key Takeaways:**
+
+- Understand M2 format (critical for our project!)
+- Know BIO tagging for sequence labeling
+- Grasp different error categories (grammar, vocabulary, etc.)
+
+### Level 8: Attention Visualization & Interpretability (1-2 weeks)
+
+**Core Concepts:**
+
+- Attention weights as interpretability
+- Layer-wise attention patterns
+- Attention is NOT always explanation
+- BertViz and other tools
+
+**Resources:**
+
+📚 **Guides:**
+
+- [Attention is not Explanation](https://arxiv.org/abs/1902.10186) - Important caveat!
+- [Attention is not not Explanation](https://arxiv.org/abs/1908.04626) - Nuanced view
+- [BertViz Documentation](https://github.com/jessevig/bertviz) - Visualize attention
+
+🎥 **Tools:**
+
+- [Transformer Explainability](https://github.com/hila-chefer/Transformer-Explainability) - Visual explanations
+- [Language Interpretability Tool (LIT)](https://pair-code.github.io/lit/) - Google's tool
+
+**Key Takeaways:**
+
+- Attention weights ≠ importance (correlation, not causation)
+- Multiple layers have different attention patterns
+- Use attention as hints, not definitive explanations
+
+### Level 9: Advanced Topics (Ongoing)
+
+**Latest Research:**
+
+🔬 **Conferences to Follow:**
+
+- **ACL** (Association for Computational Linguistics) - Top NLP venue
+- **EMNLP** (Empirical Methods in NLP) - Applied NLP
+- **NAACL** (North American ACL) - Regional conference
+- **BEA Workshop** (Building Educational Applications) - AES & GEC focused!
+
+🔬 **Recent Trends (2023-2024):**
+
+- **LLMs for AES**: GPT-4, Claude as essay graders
+- **Prompt Engineering**: Few-shot learning for scoring
+- **Explainable AES**: Beyond black-box predictions
+- **Fairness**: Detecting and mitigating bias
+
+📝 **Cutting-Edge Papers:**
+
+- [ChatGPT for Essay Scoring](https://arxiv.org/abs/2303.13688) - LLM-based AES
+- [Prompt-based AES](https://arxiv.org/abs/2306.05357) - Few-shot approaches
+- [Multilingual AES](https://arxiv.org/abs/2309.12345) - Cross-lingual scoring
+
+---
+
+## Practical Resources for This Project
+
+### Tools & Libraries
+
+**Essential:**
+
+- [PyTorch Documentation](https://pytorch.org/docs/stable/index.html) - Our deep learning framework
+- [Hugging Face Transformers](https://huggingface.co/docs/transformers/) - Pre-trained models
+- [scikit-learn Metrics](https://scikit-learn.org/stable/modules/model_evaluation.html) - QWK, F1, etc.
+
+**Helpful:**
+
+- [Weights & Biases](https://docs.wandb.ai/) - Experiment tracking
+- [TensorBoard](https://www.tensorflow.org/tensorboard) - Visualization
+- [Modal Documentation](https://modal.com/docs) - Our GPU platform
+
+### Code Examples
+
+**GitHub Repositories:**
+
+- [BERT Fine-tuning Examples](https://github.com/huggingface/transformers/tree/main/examples/pytorch) - Official Hugging Face
+- [Multi-Task Learning in PyTorch](https://github.com/pytorch/examples/tree/main/mnist_multitask) - Simple example
+- [Automated Essay Scoring Baseline](https://github.com/dkgupta95/BERT-for-Automated-Essay-Scoring) - Similar to our approach
+
+### Communities & Forums
+
+**Ask Questions:**
+
+- [Hugging Face Forums](https://discuss.huggingface.co/) - Transformer-specific help
+- [r/MachineLearning](https://www.reddit.com/r/MachineLearning/) - General ML discussion
+- [Stack Overflow [pytorch]](https://stackoverflow.com/questions/tagged/pytorch) - Code help
+
+**Stay Updated:**
+
+- [Papers with Code](https://paperswithcode.com/) - Latest research + code
+- [arXiv Sanity](http://www.arxiv-sanity.com/) - ML paper recommender
+- [NLP Progress](https://nlpprogress.com/) - State-of-the-art tracking
+
+---
+
+## Project-Specific Reading
+
+### Our Implementation
 
 - **Model architecture**: [`feedback_model.py`](../scripts/training/feedback_model.py)
 - **Data pipeline**: [`parse_m2_annotations.py`](../scripts/training/parse_m2_annotations.py)
 - **Training script**: [`train-feedback-model.py`](../scripts/training/train-feedback-model.py)
 - **Validation**: [`validate-feedback-model.py`](../scripts/training/validate-feedback-model.py)
 
-### Documentation
+### Our Documentation
 
-- **Walkthrough**: [Detailed training results](../brain/walkthrough.md)
-- **Corpus guide**: [CORPUS_MODEL_GUIDE.md](CORPUS_MODEL_GUIDE.md)
+- **Training walkthrough**: [Detailed results & analysis](../brain/walkthrough.md)
+- **CORPUS model**: [CORPUS_MODEL_GUIDE.md](CORPUS_MODEL_GUIDE.md) - Our baseline
+- **Task tracking**: [task.md](../brain/task.md)
 
-### Papers
+### Direct Papers for This Project
 
-- **DeBERTa**: [DeBERTaV3: Improving DeBERTa using ELECTRA-Style Pre-Training](https://arxiv.org/abs/2111.09543)
-- **Multi-task Learning**: [An Overview of Multi-Task Learning in Deep Neural Networks](https://ruder.io/multi-task/)
-- **Error Correction**: [Grammatical Error Correction: A Survey](https://arxiv.org/abs/2211.05166)
-- **Write & Improve Corpus**: [A Dataset for Automatic Scoring of English Essays](https://arxiv.org/abs/1711.09080)
+**Foundation:**
+
+- [DeBERTaV3](https://arxiv.org/abs/2111.09543) - Our base model
+- [Write & Improve Corpus](https://arxiv.org/abs/1711.09080) - Our dataset
+
+**Techniques:**
+
+- [Multi-Task Learning Overview](https://ruder.io/multi-task/) - Our training approach
+- [M2 Scorer](https://github.com/nusnlp/m2scorer) - Our error annotation format
+- [BIO Tagging](<https://en.wikipedia.org/wiki/Inside%E2%80%93outside%E2%80%93beginning_(tagging)>) - Our error detection method
+
+---
+
+## Recommended Learning Sequence
+
+**For Software Engineers New to ML:**
+
+```
+Week 1-2:   ML Fundamentals (StatQuest videos)
+Week 3-4:   Neural Networks (3Blue1Brown + Fast.ai)
+Week 5-7:   NLP Basics (CS224N lectures)
+Week 8-11:  Transformers (Illustrated guides + papers)
+Week 12-13: Multi-Task Learning (Ruder overview)
+Week 14-15: AES & GEC (Papers + Write & Improve corpus)
+Week 16+:   Build & experiment!
+```
+
+**For ML Engineers New to NLP:**
+
+```
+Week 1-2:   NLP Basics (Hugging Face course)
+Week 3-4:   Transformers (Illustrated guides)
+Week 5-6:   AES & GEC (Survey papers)
+Week 7+:    Build & experiment!
+```
+
+**For NLP Engineers:**
+
+```
+Week 1:     Multi-Task Learning (Ruder)
+Week 2:     AES & GEC (Specific papers)
+Week 3:     W&I Corpus + M2 format
+Week 4+:    Build & experiment!
+```
+
+---
 
 ---
 
 **Status:** Training complete. CEFR scoring production-ready (QWK 0.85). Error detection requires fixes to BIO tagging and retraining. See [Solutions & Next Steps](#solutions--next-steps) for recommended path forward.
+
+```
+
+```
