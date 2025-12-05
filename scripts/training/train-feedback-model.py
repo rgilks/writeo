@@ -226,7 +226,7 @@ def train_feedback_model():
                 "loss": best_dev_loss,
                 "config": config,
             }
-            torch.save(checkpoint, "/root/scripts/feedback_model_best.pt")
+            torch.save(checkpoint, "/training/feedback_model_best.pt")
             print(f"✅ Saved checkpoint (dev_loss: {best_dev_loss:.4f})")
         else:
             patience_counter += 1
