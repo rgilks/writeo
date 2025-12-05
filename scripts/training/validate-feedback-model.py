@@ -166,20 +166,29 @@ def validate_feedback_model():
     span_pred = np.array(predictions["span_predictions"])
     span_true = np.array(predictions["span_labels"])
 
-    # Filter out padding (-100)
-    mask = span_true != -100
-    span_pred_filtered = span_pred[mask]
-    span_true_filtered = span_true[mask]
+    # Filter out padding and special tokens (value 0 is valid "O" tag)
+    # Only filter where label is not in valid range [0, 1, 2]
+    valid_mask = (span_true >= 0) & (span_true <= 2)
+    span_pred_filtered = span_pred[valid_mask]
+    span_true_filtered = span_true[valid_mask]
 
-    # Binary: error (1,2) vs no-error (0)
+    # Binary: error (B-ERROR=1 or I-ERROR=2) vs no-error (O=0)
     span_pred_binary = (span_pred_filtered > 0).astype(int)
     span_true_binary = (span_true_filtered > 0).astype(int)
 
-    span_f1 = f1_score(span_true_binary, span_pred_binary, average="binary")
-    span_precision = precision_score(
-        span_true_binary, span_pred_binary, average="binary"
-    )
-    span_recall = recall_score(span_true_binary, span_pred_binary, average="binary")
+    # Only calculate if we have both classes
+    if len(np.unique(span_true_binary)) > 1:
+        span_f1 = f1_score(
+            span_true_binary, span_pred_binary, average="binary", zero_division=0
+        )
+        span_precision = precision_score(
+            span_true_binary, span_pred_binary, average="binary", zero_division=0
+        )
+        span_recall = recall_score(
+            span_true_binary, span_pred_binary, average="binary", zero_division=0
+        )
+    else:
+        span_f1 = span_precision = span_recall = 0.0
 
     print("\nError Span Detection:")
     print(f"  F1: {span_f1:.4f}")
@@ -187,15 +196,22 @@ def validate_feedback_model():
     print(f"  Recall: {span_recall:.4f}")
 
     # Error type classification
-    error_type_pred = np.array(predictions["error_type_predictions"])
-    error_type_true = np.array(predictions["error_type_labels"])
+    error_type_pred = np.array(predictions["error_type_predictions"]).astype(
+        int
+    )  # Convert bool to int
+    error_type_true = np.array(predictions["error_type_labels"]).astype(
+        int
+    )  # Convert to int
 
     error_categories = ["grammar", "vocabulary", "mechanics", "fluency", "other"]
 
     print("\nError Type Classification:")
     for idx, category in enumerate(error_categories):
         cat_f1 = f1_score(
-            error_type_true[:, idx], error_type_pred[:, idx], average="binary"
+            error_type_true[:, idx],
+            error_type_pred[:, idx],
+            average="binary",
+            zero_division=0,
         )
         print(f"  {category}: F1 = {cat_f1:.4f}")
 
@@ -217,7 +233,10 @@ def validate_feedback_model():
         "error_types": {
             cat: float(
                 f1_score(
-                    error_type_true[:, idx], error_type_pred[:, idx], average="binary"
+                    error_type_true[:, idx],
+                    error_type_pred[:, idx],
+                    average="binary",
+                    zero_division=0,
                 )
             )
             for idx, cat in enumerate(error_categories)
