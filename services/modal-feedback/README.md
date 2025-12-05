@@ -72,3 +72,29 @@ modal run services/modal-feedback/app.py
 - Checkpoint: `/checkpoints/feedback_model_best.pt`
 - GPU: T4 (cheaper for inference)
 - Same architecture as training
+
+### Current Limitations (Epoch 3 Checkpoint)
+
+**Error Spans:**
+
+- Model is very conservative (high precision, low recall)
+- `error_spans` will often be empty
+- Model knows errors exist but won't commit to specific positions
+- Needs more training to improve recall
+
+**Error Types:**
+
+- Working well! Shows probability distribution
+- Useful for understanding what kinds of errors exist
+- Example: `grammar: 0.60` means 60% confidence of grammar errors
+
+**CEFR Scoring:**
+
+- Production ready (QWK 0.835)
+- Accurate and reliable
+
+**To Improve:**
+
+- Continue training to 25 epochs
+- Expected Span F1: 0.50-0.70 (vs current 0.125)
+- Would make error span detection more useful

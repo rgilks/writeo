@@ -2,7 +2,6 @@
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import os
 
 from model_loader import get_feedback_model
 
