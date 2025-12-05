@@ -12,8 +12,6 @@ from typing import Any
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
 
-from parse_m2_annotations import map_error_to_category
-
 
 class FeedbackDataset(Dataset):
     """Dataset for multi-task feedback model."""
@@ -147,7 +145,7 @@ if __name__ == "__main__":
     # Get first example
     example = dataset[0]
 
-    print(f"\nExample batch:")
+    print("\nExample batch:")
     print(f"  input_ids shape: {example['input_ids'].shape}")
     print(f"  attention_mask shape: {example['attention_mask'].shape}")
     print(f"  cefr_score: {example['cefr_score'].item():.2f}")

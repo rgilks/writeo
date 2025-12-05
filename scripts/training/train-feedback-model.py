@@ -8,12 +8,17 @@ import modal
 from pathlib import Path
 
 # Modal setup
-image = modal.Image.debian_slim(python_version="3.11").pip_install(
-    "torch==2.1.0",
-    "transformers==4.36.0",
-    "accelerate==0.25.0",
-    "scikit-learn==1.3.2",
-    "numpy==1.26.2",
+image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .pip_install(
+        "torch==2.1.0",
+        "transformers==4.36.0",
+        "accelerate==0.25.0",
+        "scikit-learn==1.3.2",
+        "numpy==1.26.2",
+        "sentencepiece>=0.1.99",  # Required for DeBERTa tokenizer
+    )
+    .add_local_dir(str(Path(__file__).parent), remote_path="/training")
 )
 
 app = modal.App("writeo-feedback-training", image=image)
@@ -28,8 +33,7 @@ scripts_mount = modal.Mount.from_local_dir(
 @app.function(
     gpu="A10G",  # NVIDIA A10G (24GB VRAM)
     timeout=7200,  # 2 hours
-    mounts=[scripts_mount],
-    secrets=[modal.Secret.from_name("hf-token")],
+    # No secrets needed - DeBERTa-v3 is public
 )
 def train_feedback_model():
     """Train multi-task feedback model."""
@@ -38,11 +42,9 @@ def train_feedback_model():
     sys.path.append("/root/scripts")
 
     import torch
-    import torch.nn as nn
     from torch.optim import AdamW
     from transformers import AutoTokenizer, get_linear_schedule_with_warmup
     from pathlib import Path
-    import json
 
     from feedback_model import FeedbackModel, MultiTaskLoss
     from feedback_dataset import create_dataloaders
@@ -86,8 +88,8 @@ def train_feedback_model():
     # Create data loaders
     print("\nCreating data loaders...")
     train_loader, dev_loader = create_dataloaders(
-        train_file=Path("/root/scripts/data-enhanced/train-enhanced.jsonl"),
-        dev_file=Path("/root/scripts/data-enhanced/dev-enhanced.jsonl"),
+        train_file=Path("/training/data-enhanced/train-enhanced.jsonl"),
+        dev_file=Path("/training/data-enhanced/dev-enhanced.jsonl"),
         tokenizer=tokenizer,
         batch_size=config["batch_size"],
         max_length=config["max_length"],
@@ -186,12 +188,12 @@ def train_feedback_model():
 
         # Epoch training summary
         avg_train_losses = {k: sum(v) / len(v) for k, v in train_losses.items()}
-        print(f"\nTraining metrics:")
+        print("\nTraining metrics:")
         for key, value in avg_train_losses.items():
             print(f"  {key}_loss: {value:.4f}")
 
         # Validation
-        print(f"\nValidating...")
+        print("\nValidating...")
         model.eval()
         dev_losses = {"total": [], "cefr": [], "span": [], "error_type": []}
 
@@ -213,7 +215,7 @@ def train_feedback_model():
                     dev_losses[key].append(metrics[key])
 
         avg_dev_losses = {k: sum(v) / len(v) for k, v in dev_losses.items()}
-        print(f"Validation metrics:")
+        print("Validation metrics:")
         for key, value in avg_dev_losses.items():
             print(f"  {key}_loss: {value:.4f}")
 
@@ -237,7 +239,7 @@ def train_feedback_model():
             print(f"⚠️  No improvement ({patience_counter}/{config['patience']})")
 
             if patience_counter >= config["patience"]:
-                print(f"\n❌ Early stopping triggered!")
+                print("\n❌ Early stopping triggered!")
                 break
 
     print("\n" + "=" * 80)
