@@ -109,7 +109,7 @@ def visualize_example(example, tokenizer):
 
     # Statistics
     error_count = sum(1 for tag in bio_tags if tag in ["B-ERROR", "I-ERROR"])
-    print(f"\n📊 STATISTICS:")
+    print("\n📊 STATISTICS:")
     print(f"   Total tokens: {len(tokens)}")
     print(f"   Error tokens: {error_count} ({error_count / len(tokens) * 100:.1f}%)")
     print(f"   M2 annotations: {len(all_annotations)}")
