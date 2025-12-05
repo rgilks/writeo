@@ -42,12 +42,18 @@ Results are saved to `validation_results.json` and `validation_report.md`.
 
 ### 4. Deployed Models
 
-The corpus-trained model is deployed as a Modal service:
+**T-AES-CORPUS** (this model):
 
-- **URL**: https://rob-gilks--writeo-corpus-fastapi-app.modal.run
-- **Endpoints**: `/health`, `/model/info`, `/score`
-- **Model**: RoBERTa-base trained on 4,741 essays
-- **Performance**: Train loss 0.27, Eval loss 0.43
+- **URL**: `https://rob-gilks--writeo-corpus-fastapi-app.modal.run`
+- **Endpoint**: `POST /score`
+- **Performance**: QWK 0.87 (excellent), MAE 0.32, 100% adjacent accuracy
+- **Guide**: See [CORPUS_MODEL_GUIDE.md](../../docs/CORPUS_MODEL_GUIDE.md) for detailed explanation
+
+**T-AES-ESSAY** (engessay model):
+
+- **URL**: `https://rob-gilks--writeo-essay-fastapi-app.modal.run`
+- **Endpoint**: `POST /grade`
+- **Performance**: QWK 0.58 (moderate), MAE 0.55, 90% adjacent accuracy (post-calibration)
 
 ## Architecture
 
