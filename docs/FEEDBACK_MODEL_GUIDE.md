@@ -94,6 +94,270 @@ Output: {
 
 ---
 
+## Key Concepts Explained
+
+Before diving into the technical details, let's define important concepts you'll encounter:
+
+### Tokenization
+
+**What:** Breaking text into pieces (tokens) that the model can process.
+
+**Example:**
+
+```python
+Text: "The student have books."
+
+Word-level tokens:
+["The", "student", "have", "books", "."]
+
+Subword tokens (what DeBERTa uses):
+["The", "student", "have", "books", "."]
+# Simple example - DeBERTa might split "student" into ["stud", "##ent"]
+```
+
+**Why it matters:** Different models split text differently. We need to align error positions with these tokens.
+
+### BIO Tagging
+
+**What:** A way to mark spans of text (like errors) at the token level.
+
+**BIO stands for:**
+
+- **B**eginning (start of error)
+- **I**nside (continuation of error)
+- **O**utside (not an error)
+
+**Example:**
+
+```python
+Sentence: "The student have many books"
+Tokens:   ["The", "student", "have", "many", "books"]
+                            ↑ SVA error (should be "has")
+
+BIO tags: ["O",   "O",      "B-ERROR", "O",    "O"]
+#          not    not       ERROR!     not     not
+#          error  error     begins     error   error
+```
+
+**Multi-word errors:**
+
+```python
+Sentence: "I am very much happy"
+Tokens:   ["I", "am", "very", "much", "happy"]
+                        ↑_____ awkward phrase ____↑
+
+BIO tags: ["O", "O", "B-ERROR", "I-ERROR", "I-ERROR"]
+#                     ↑ begins    ↑ inside   ↑ inside
+```
+
+**Why it matters:** This is how we train the model to detect error locations. Our current problem is we're using random BIO tags instead of real ones from M2 annotations!
+
+### Embeddings
+
+**What:** Converting words/tokens into numbers (vectors) that capture meaning.
+
+**Example:**
+
+```python
+# Conceptual representation (real embeddings are 768 dimensions!)
+"king"   → [0.9, 0.1, 0.8, ...]  # Royal, male, power
+"queen"  → [0.9, 0.9, 0.8, ...]  # Royal, female, power
+"man"    → [0.1, 0.1, 0.2, ...]  # Male, common
+"woman"  → [0.1, 0.9, 0.2, ...]  # Female, common
+
+# Similar words have similar vectors
+```
+
+**Why it matters:** The model doesn't see words - it sees these number vectors.
+
+### Attention Mechanism
+
+**What:** How the model decides which words to "pay attention to" when processing text.
+
+**Example:**
+
+```python
+Sentence: "The student who was late have many books."
+
+When processing "have":
+Attention weights:
+  "The"     → 0.05  (low attention)
+  "student" → 0.85  (HIGH - subject of verb!)
+  "who"     → 0.12
+  "was"     → 0.08
+  "late"    → 0.03
+  "have"    → 0.95  (HIGH - this is the word being processed)
+  "many"    → 0.10
+  "books"   → 0.15
+
+# Model focuses on "student" and "have" to check agreement
+```
+
+**Why it matters:** We can visualize attention to show users where the model thinks errors are.
+
+### Multi-Task Learning
+
+**What:** Training one model to do multiple things at once instead of separate models.
+
+**Example:**
+
+```python
+# Traditional approach (3 models):
+Model 1: Essay → CEFR score
+Model 2: Essay → Error spans
+Model 3: Essay → Error types
+
+# Multi-task approach (1 model):
+Model: Essay → {
+    "cefr_score": 6.2,
+    "error_spans": [...],
+    "error_types": {...}
+}
+```
+
+**Benefit:** Tasks share knowledge. Learning to score essays helps detect errors (both need grammar understanding).
+
+**Trade-off:** Might not be as good at each task as specialized models.
+
+### Loss Function
+
+**What:** A number that says "how wrong" the model's predictions are. Training tries to minimize this.
+
+**Example:**
+
+```python
+# True CEFR: 6.0
+# Predicted: 5.5
+
+# Mean Squared Error (MSE):
+loss = (6.0 - 5.5)² = 0.25
+
+# Model updates its weights to make loss smaller next time
+```
+
+**Multi-task loss:**
+
+```python
+total_loss = (1.0 × CEFR_loss) + (0.5 × span_loss) + (0.3 × type_loss)
+#            ↑ most important    ↑ less important   ↑ least important
+```
+
+### Fine-Tuning
+
+**What:** Taking a pre-trained model and adapting it for your specific task.
+
+**Process:**
+
+```python
+# 1. Pre-training (already done by Microsoft):
+DeBERTa learns English from billions of words
+
+# 2. Fine-tuning (what we do):
+Take DeBERTa → Train on essays → Get essay scorer
+
+# vs. Training from scratch:
+Random model → Train on essays → Would need 100x more data!
+```
+
+**Why it matters:** We get a smart model for "free" - just need to teach it our specific task.
+
+### Transfer Learning
+
+**What:** Using knowledge learned on one task for another task.
+
+**Analogy:**
+
+```
+Learning to ride a bicycle → helps learn to ride motorcycle
+Learning English grammar   → helps learn French grammar
+Pre-trained language model → helps score essays
+```
+
+**In our project:**
+
+- DeBERTa learned language from Wikipedia, books, etc.
+- We fine-tune it to score essays
+- Much faster than learning from scratch!
+
+### Epoch
+
+**What:** One complete pass through the entire training dataset.
+
+**Example:**
+
+```python
+Training data: 3,784 essays
+Batch size: 16
+
+1 epoch = 3,784 ÷ 16 = 237 batches
+# Model sees all 3,784 essays once
+
+Training for 10 epochs = see each essay 10 times
+```
+
+**Why multiple epochs:** Model learns gradually, needs to see data multiple times.
+
+### Early Stopping
+
+**What:** Stop training when the model stops improving (prevents overfitting).
+
+**Example:**
+
+```python
+Epoch 1: dev_loss = 1.5 ✅ improving
+Epoch 2: dev_loss = 0.8 ✅ improving
+Epoch 3: dev_loss = 0.6 ✅ improving
+Epoch 4: dev_loss = 0.7 ⚠️ worse (patience = 1/3)
+Epoch 5: dev_loss = 0.9 ⚠️ worse (patience = 2/3)
+Epoch 6: dev_loss = 1.1 ⚠️ worse (patience = 3/3) → STOP!
+
+# Use model from Epoch 3 (best performance)
+```
+
+### Overfitting
+
+**What:** Model memorizes training data instead of learning patterns. Performs worse on new data.
+
+**Analogy:**
+
+```
+Student memorizes answers to practice exam questions
+✅ Gets 100% on practice exam
+❌ Fails real exam (different questions but same concepts)
+
+Model memorizes training essays
+✅ Perfect on training data
+❌ Poor on new essays
+```
+
+**How to detect:** Training loss keeps decreasing, but validation loss increases.
+
+**Solution:** Early stopping, dropout, regularization.
+
+### M2 Format
+
+**What:** A standardized way to annotate errors in text (used by linguists).
+
+**Example:**
+
+```
+S The student have many books .
+A 2 3|||R:VERB:SVA|||has|||REQUIRED|||-NONE-|||0
+  ^^^^ ^^^^error type^^correction
+
+Breakdown:
+- S = Original sentence
+- A = Annotation
+- 2 3 = Tokens 2 to 3 (span of error)
+- R:VERB:SVA = Error type (Replace: Verb: Subject-Verb Agreement)
+- has = Correct form
+- REQUIRED = This correction is necessary
+```
+
+**Why it matters:** Our dataset has M2 annotations. Converting these to BIO tags is critical for error detection!
+
+---
+
 ## Data Preparation
 
 ### Write & Improve Corpus Annotations
