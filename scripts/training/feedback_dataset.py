@@ -70,22 +70,8 @@ class FeedbackDataset(Dataset):
                 if category in self.category_to_idx:
                     error_types[self.category_to_idx[category]] = value
 
-        # Error span labels (Task 2) - simplified for now
-        # In full version, would parse annotated_sentences and create BIO tags
-        # For now, create dummy labels based on whether essay has errors
-        span_labels = torch.zeros(
-            self.max_length, dtype=torch.long
-        )  # All "O" (outside)
-
-        # If essay has errors, mark a few tokens as errors (simplified)
-        if example.get("has_errors", False) and example.get("error_count", 0) > 0:
-            # This is a placeholder - real implementation would use actual error spans
-            # from annotated_sentences
-            num_errors = min(example.get("error_count", 0), 5)
-            for i in range(num_errors):
-                pos = (i + 1) * (self.max_length // (num_errors + 2))
-                if pos < self.max_length:
-                    span_labels[pos] = 1  # B-ERROR
+        # Error span labels (Task 2) - Use REAL M2 annotations!
+        span_labels = self._create_span_labels(example)
 
         return {
             "input_ids": encoding["input_ids"].squeeze(0),
@@ -94,6 +80,66 @@ class FeedbackDataset(Dataset):
             "span_labels": span_labels,
             "error_type_labels": error_types,
         }
+
+    def _create_span_labels(self, example: dict[str, Any]) -> torch.Tensor:
+        """
+        Create BIO labels from M2 annotated sentences.
+
+        Uses actual error positions from corpus annotations.
+        """
+        from parse_m2_annotations import M2Annotation, align_m2_to_subword_tokens
+
+        # Get annotated sentences (first 5 per essay)
+        annotated_sents = example.get("annotated_sentences", [])
+
+        if not annotated_sents:
+            # No annotations - return all "O" (no errors)
+            return torch.full((self.max_length,), -100, dtype=torch.long)
+
+        # Combine first 5 sentences with their annotations
+        combined_text_parts = []
+        all_annotations = []
+        char_offset = 0
+
+        for sent_data in annotated_sents[:5]:  # Limit to 5 sentences
+            sent_text = sent_data.get("text", "")
+            combined_text_parts.append(sent_text)
+
+            # Convert annotations with adjusted offsets
+            for ann_data in sent_data.get("annotations", []):
+                # Create M2Annotation from dict
+                m2_ann = M2Annotation(
+                    start_token=ann_data["start_token"],
+                    end_token=ann_data["end_token"],
+                    error_type=ann_data.get("error_type", ""),
+                    correction=ann_data.get("correction", ""),
+                    required=ann_data.get("required", True),
+                )
+                all_annotations.append(m2_ann)
+
+        if not combined_text_parts:
+            return torch.full((self.max_length,), -100, dtype=torch.long)
+
+        # Combine sentences with spaces
+        combined_text = " ".join(combined_text_parts)
+
+        # Get BIO tags using alignment function
+        bio_tags_str = align_m2_to_subword_tokens(
+            combined_text, all_annotations, self.tokenizer
+        )
+
+        # Convert to numeric labels
+        label_map = {"O": 0, "B-ERROR": 1, "I-ERROR": 2}
+        bio_labels = [label_map.get(tag, 0) for tag in bio_tags_str]
+
+        # Truncate or pad to max_length
+        if len(bio_labels) > self.max_length:
+            bio_labels = bio_labels[: self.max_length]
+        else:
+            # Pad with -100 (ignored in loss)
+            bio_labels += [-100] * (self.max_length - len(bio_labels))
+
+        return torch.tensor(bio_labels, dtype=torch.long)
 
 
 def create_dataloaders(
@@ -135,7 +181,7 @@ if __name__ == "__main__":
 
     # Test on dev set (smaller)
     dataset = FeedbackDataset(
-        Path("scripts/training/data-enhanced/dev-enhanced.jsonl"),
+        Path("data-enhanced/dev-enhanced.jsonl"),
         tokenizer,
         max_length=512,
     )
