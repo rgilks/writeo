@@ -94,7 +94,19 @@ def align_m2_with_corpus(
                     {
                         "text": sentence.text,
                         "tokens": sentence.tokens,
-                        "bio_tags": create_bio_tags(sentence),
+                        "bio_tags": create_bio_tags(
+                            sentence
+                        ),  # Space-delimited BIO tags
+                        "annotations": [  # Raw M2 annotations for subword alignment
+                            {
+                                "start_token": ann.start_token,
+                                "end_token": ann.end_token,
+                                "error_type": ann.error_type,
+                                "correction": ann.correction,
+                                "required": ann.required,
+                            }
+                            for ann in sentence.annotations
+                        ],
                         "errors": [
                             {
                                 "start": ann.start_token,

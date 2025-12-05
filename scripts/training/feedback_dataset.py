@@ -99,7 +99,6 @@ class FeedbackDataset(Dataset):
         # Combine first 5 sentences with their annotations
         combined_text_parts = []
         all_annotations = []
-        char_offset = 0
 
         for sent_data in annotated_sents[:5]:  # Limit to 5 sentences
             sent_text = sent_data.get("text", "")
