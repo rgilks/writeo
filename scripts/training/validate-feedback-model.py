@@ -142,14 +142,16 @@ def validate_feedback_model():
     cefr_pred = np.array(predictions["cefr_scores"])
     cefr_true = np.array(predictions["true_cefr_scores"])
 
-    # Round to nearest 0.5 for QWK (ordinal)
-    cefr_pred_rounded = np.round(cefr_pred * 2) / 2
-    cefr_true_rounded = np.round(cefr_true * 2) / 2
+    # Round to nearest 0.5 for QWK (ordinal) and convert to integers
+    cefr_pred_rounded = (np.round(cefr_pred * 2) / 2 * 2).astype(
+        int
+    )  # Scale to integers
+    cefr_true_rounded = (np.round(cefr_true * 2) / 2 * 2).astype(int)
 
     qwk = cohen_kappa_score(cefr_true_rounded, cefr_pred_rounded, weights="quadratic")
     mae = mean_absolute_error(cefr_true, cefr_pred)
 
-    print(f"\nCEFR Performance:")
+    print("\nCEFR Performance:")
     print(f"  QWK: {qwk:.4f}")
     print(f"  MAE: {mae:.4f}")
     print(f"  Mean prediction: {cefr_pred.mean():.2f}")
@@ -179,7 +181,7 @@ def validate_feedback_model():
     )
     span_recall = recall_score(span_true_binary, span_pred_binary, average="binary")
 
-    print(f"\nError Span Detection:")
+    print("\nError Span Detection:")
     print(f"  F1: {span_f1:.4f}")
     print(f"  Precision: {span_precision:.4f}")
     print(f"  Recall: {span_recall:.4f}")
@@ -190,7 +192,7 @@ def validate_feedback_model():
 
     error_categories = ["grammar", "vocabulary", "mechanics", "fluency", "other"]
 
-    print(f"\nError Type Classification:")
+    print("\nError Type Classification:")
     for idx, category in enumerate(error_categories):
         cat_f1 = f1_score(
             error_type_true[:, idx], error_type_pred[:, idx], average="binary"
