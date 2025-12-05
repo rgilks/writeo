@@ -451,6 +451,232 @@ bio_tags = ["O", "O", "B-ERROR", "O", "O", "O"]
 - **Error rate**: 66% of sentences have ≥1 error
 - **Category breakdown**: 57% grammar, 17% vocab, 9% mechanics, 9% fluency
 
+### How Error Detection Actually Works
+
+**Key Question:** How can a model detect grammar errors without knowing grammar rules?
+
+**Answer:** Pattern learning from thousands of examples!
+
+#### The Learning Process
+
+**1. The model sees many examples:**
+
+```python
+# Example 1: SVA error
+Text: "The student have books"
+BIO tags: ["O", "O", "B-ERROR", "O"]
+           ↑ model learns "student have" is problematic
+
+# Example 2: Correct
+Text: "The student has books"
+BIO tags: ["O", "O", "O", "O"]
+           ↑ model learns "student has" is fine
+
+# Example 3: SVA error (different subject)
+Text: "The teacher have exams"
+BIO tags: ["O", "O", "B-ERROR", "O"]
+
+# Example 4: Correct (plural)
+Text: "The students have books"
+BIO tags: ["O", "O", "O", "O"]
+
+# After seeing 1000s of examples, model learns:
+# - singular noun + "have" = ERROR
+# - plural noun + "have" = OK
+# - singular noun + "has" = OK
+```
+
+**The model doesn't have a rule saying "singular subjects need singular verbs"**. Instead:
+
+- It sees "student have" marked as error 500 times
+- It sees "student has" marked as correct 500 times
+- It learns the statistical pattern
+
+#### Why This Works
+
+**Transformers (like DeBERTa) are pattern matching machines:**
+
+1. **Context Understanding:**
+
+```python
+"The student who was late have books"
+
+Model's internal process:
+1. Embed each word → vectors
+2. Attention mechanism looks at relationships:
+   - "have" pays attention to "student" (subject)
+   - Ignores "who was late" (relative clause)
+3. Checks pattern: singular "student" + "have"
+4. Matches error pattern → predict B-ERROR
+```
+
+2. **Statistical Associations:**
+
+```python
+# Model builds internal "knowledge" from data:
+
+Patterns seen in training:
+- "I have" → ✅ (seen 1000x as correct)
+- "you have" → ✅ (seen 800x as correct)
+- "he have" → ❌ (seen 300x as error)
+- "she have" → ❌ (seen 250x as error)
+- "it have" → ❌ (seen 200x as error)
+- "they have" → ✅ (seen 900x as correct)
+
+Model learns: {I, you, they} + have = OK
+              {he, she, it} + have = ERROR
+```
+
+3. **Distributed Representations:**
+
+```python
+# Words with similar meanings cluster together in embedding space
+
+"student" embedding ≈ "teacher" ≈ "person" (all singular nouns)
+"students" embedding ≈ "teachers" ≈ "people" (all plural nouns)
+
+If model learns "student have" is wrong,
+it generalizes to "teacher have", "person have" too!
+```
+
+#### What About Complex Grammar?
+
+**Determiner Errors:**
+
+```python
+# Training examples:
+"I have [the] book" → O O O O (correct)
+"I have book" → O O B-ERROR (missing article)
+"I have a books" → O O B-ERROR I-ERROR (wrong determiner + plural)
+
+# Model learns:
+# - countable singular nouns usually need article
+# - "a" + plural noun = error
+# - uncountable nouns (water, advice) don't need article
+```
+
+**Why it works:** Sees 10,000+ examples of article usage patterns.
+
+**Vocabulary Errors:**
+
+```python
+# Training examples:
+"I am very happy" → ✅
+"I am very much happy" → ❌ (awkward collocation)
+"I am extremely happy" → ✅
+
+# Model learns:
+# - "very" + adjective = common pattern
+# - "very much" + adjective = uncommon (likely error)
+# - "extremely" + adjective = common pattern
+```
+
+**Why it works:** Statistical co-occurrence patterns from thousands of essays.
+
+#### The Key Insight
+
+**The model doesn't "understand" grammar like a linguist. It recognizes patterns like:**
+
+```python
+# Human linguist thinks:
+"Subject-verb agreement requires singular subjects to take singular verbs"
+
+# Model "thinks" (simplified):
+Pattern vector [0.1, 0.8, 0.3, ...] + vector [0.2, 0.1, 0.9, ...]
+                ↑ "student"              ↑ "have"
+→ Similarity to error patterns seen in training: 0.87
+→ Predict: B-ERROR
+
+Pattern vector [0.1, 0.8, 0.3, ...] + vector [0.3, 0.2, 0.7, ...]
+                ↑ "student"              ↑ "has"
+→ Similarity to correct patterns: 0.92
+→ Predict: O (no error)
+```
+
+#### Why Deep Learning is Powerful Here
+
+**Traditional approach (rule-based):**
+
+```python
+# Need to code every rule:
+if subject.is_singular() and verb == "have":
+    return ERROR
+if subject.is_plural() and verb == "has":
+    return ERROR
+# ... 1000s more rules for all error types!
+```
+
+**Deep learning approach:**
+
+```python
+# Just show examples:
+# - Student have → ERROR
+# - Student has → OK
+# ... model figures out the pattern!
+```
+
+**Benefits:**
+
+1. Handles complex patterns humans can't easily describe
+2. Learns context-dependent rules automatically
+3. Works for errors where rules are fuzzy (vocabulary, style)
+4. Generalizes to new cases
+
+**Trade-offs:**
+
+1. Needs lots of labeled examples (we have 37,000+ sentences!)
+2. Can't explain WHY (just knows pattern matches)
+3. Makes mistakes on rare patterns
+4. Only as good as training data
+
+#### Why Our Error Detection Failed
+
+**Remember:** This only works if training data has:
+
+1. ✅ Real error positions (BIO tags aligned to actual errors)
+2. ✅ Enough examples of each error type
+3. ✅ Strong enough training signal (loss weights)
+
+**Our problem:**
+
+```python
+# What we gave the model:
+"The student have books"
+BIO tags: ["O", "O", "B-ERROR", "O"]  # ← WRONG! Random position
+
+# Model tried to learn: "student" is an error ❌
+# Should have learned: "have" after "student" is an error ✅
+```
+
+**Fix:** Use actual M2 error positions → model learns correct patterns!
+
+---
+
+**Step 3: Generate enhanced dataset** ([`prepare-enhanced-corpus.py`](../scripts/training/prepare-enhanced-corpus.py))
+
+```python
+# Combines CEFR labels + error annotations
+{
+  "input": "Essay text...",
+  "cefr": "B2",
+  "target": 6.0,
+  "error_count": 11,
+  "error_distribution": {
+    "grammar": 0.72,
+    "vocabulary": 0.09,
+    ...
+  },
+  "annotated_sentences": [...]  // First 5 sentences with M2 annotations
+}
+```
+
+**Statistics:**
+
+- **Train**: 3,784 essays / 37,486 sentences
+- **Dev**: 476 essays / 4,352 sentences
+- **Error rate**: 66% of sentences have ≥1 error
+- **Category breakdown**: 57% grammar, 17% vocab, 9% mechanics, 9% fluency
+
 ---
 
 ## Model Architecture
