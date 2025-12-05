@@ -48,21 +48,22 @@ def train_feedback_model():
     from feedback_dataset import create_dataloaders
 
     print("=" * 80)
-    print("T-AES-FEEDBACK TRAINING")
+    print("T-AES-FEEDBACK TRAINING (IMPROVED HYPERPARAMETERS)")
     print("=" * 80)
 
-    # Configuration
+    # Configuration - IMPROVED VERSION (Phase 2)
     config = {
         "model_name": "microsoft/deberta-v3-base",
         "max_length": 512,
         "batch_size": 16,
         "learning_rate": 2e-5,
-        "num_epochs": 15,
+        "num_epochs": 25,  # Increased for error tasks
         "warmup_steps": 500,
-        "cefr_weight": 1.0,
-        "span_weight": 0.5,
-        "error_type_weight": 0.3,
-        "patience": 3,
+        # ADJUSTED WEIGHTS (prioritize error detection)
+        "cefr_weight": 0.8,  # Down from 1.0 (make room for error tasks)
+        "span_weight": 1.2,  # Up from 0.5 (stronger signal)
+        "error_type_weight": 1.0,  # Up from 0.3 (stronger signal)
+        "patience": 5,  # Up from 3 (allow more exploration)
     }
 
     print("\nConfiguration:")
