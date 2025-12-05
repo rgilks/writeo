@@ -1,6 +1,7 @@
 # Data files (DO NOT COMMIT - corpus terms of use)
 data/*.jsonl
 data/metadata.json
+corpus-raw/
 
 # Python
 __pycache__/
@@ -29,3 +30,4 @@ ENV/
 
 # Logs
 *.log
+corpus-raw/
