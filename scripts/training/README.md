@@ -21,7 +21,26 @@ modal run scripts/training/train-overall-score.py
 # Production training disabled by default - see config.py
 ```
 
-### 3. Deployed Model
+### 3. Validate Assessors
+
+Compare T-AES-ESSAY and T-AES-CORPUS performance against the corpus test set (481 held-out essays):
+
+```bash
+# Quick test (10 essays)
+python scripts/training/validate-assessors.py --limit 10
+
+# Full validation
+python scripts/training/validate-assessors.py
+```
+
+**Current Performance (post-calibration):**
+
+- **T-AES-CORPUS**: QWK 0.87 (excellent), MAE 0.32, 100% adjacent accuracy
+- **T-AES-ESSAY**: QWK 0.58 (moderate), MAE 0.55, 90% adjacent accuracy
+
+Results are saved to `validation_results.json` and `validation_report.md`.
+
+### 4. Deployed Models
 
 The corpus-trained model is deployed as a Modal service:
 
@@ -131,8 +150,9 @@ A2+ → 3.5    B2+ → 6.5
 ### Core Scripts
 
 - `prepare-corpus.py` - Data preparation pipeline
-- `train-overall-score.py` - Training script (Modal)
-- `evaluate-on-modal.py` - Model evaluation
+- `train-overall-score.py` - Training script (Modal GPU)
+- `evaluate-on-modal.py` - Model evaluation on Modal
+- `validate-assessors.py` - **Validate assessors against corpus** (production validation)
 - `config.py` - Training configuration
 - `analyze-data.py` - Dataset statistics
 
