@@ -6,8 +6,6 @@ error detection and attention-based heatmap.
 """
 
 import torch
-import numpy as np
-from pathlib import Path
 from typing import Any
 from transformers import AutoTokenizer
 
@@ -195,12 +193,12 @@ def main():
     print("FEEDBACK RESULTS:")
     print("=" * 80)
 
-    print(f"\nCEFR Assessment:")
+    print("\nCEFR Assessment:")
     print(f"  Score: {result['cefr']['score']:.2f}")
     print(f"  Level: {result['cefr']['level']}")
 
-    print(f"\nError Analysis:")
-    print(f"  Distribution:")
+    print("\nError Analysis:")
+    print("  Distribution:")
     for cat, value in result["errors"]["distribution"].items():
         print(f"    {cat}: {value:.1%}")
 

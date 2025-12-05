@@ -23,10 +23,14 @@ image = (
 
 app = modal.App("writeo-feedback-training", image=image)
 
+# Volume for model checkpoints
+volume = modal.Volume.from_name("writeo-feedback-models", create_if_missing=True)
+
 
 @app.function(
     gpu="A10G",  # NVIDIA A10G (24GB VRAM)
     timeout=7200,  # 2 hours
+    volumes={"/checkpoints": volume},  # Mount volume
     # No secrets needed - DeBERTa-v3 is public
 )
 def train_feedback_model():
@@ -226,7 +230,8 @@ def train_feedback_model():
                 "loss": best_dev_loss,
                 "config": config,
             }
-            torch.save(checkpoint, "/training/feedback_model_best.pt")
+            torch.save(checkpoint, "/checkpoints/feedback_model_best.pt")
+            volume.commit()  # Persist to volume
             print(f"✅ Saved checkpoint (dev_loss: {best_dev_loss:.4f})")
         else:
             patience_counter += 1
