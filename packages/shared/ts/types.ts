@@ -201,6 +201,7 @@ export function isValidUUID(uuid: string): boolean {
 export type AssessorResultId =
   | "T-AES-ESSAY"
   | "T-AES-CORPUS" // Corpus-trained RoBERTa model (dev mode)
+  | "T-AES-FEEDBACK" // Multi-task feedback model (dev mode)
   | "T-GEC-LT"
   | "T-GEC-LLM"
   | "T-TEACHER-FEEDBACK"
@@ -270,12 +271,25 @@ export function getCorpusAssessorResult(results: AssessorResult[]):
     })
   | undefined {
   const result = findAssessorResultById(results, "T-AES-CORPUS");
-  if (result && result.overall !== undefined && result.label) {
-    return result as AssessorResult & {
-      id: "T-AES-CORPUS";
+  if (result && "overall" in result && "label" in result) {
+    return result as AssessorResult & { id: "T-AES-CORPUS"; overall: number; label: string };
+  }
+  return undefined;
+}
+
+/**
+ * Get T-AES-FEEDBACK assessor result (multi-task feedback model)
+ */
+export function getFeedbackAssessorResult(results: AssessorResult[]):
+  | (AssessorResult & {
+      id: "T-AES-FEEDBACK";
       overall: number;
-      label: string;
-    };
+      cefr: string;
+    })
+  | undefined {
+  const result = findAssessorResultById(results, "T-AES-FEEDBACK");
+  if (result && "overall" in result && "cefr" in result) {
+    return result as AssessorResult & { id: "T-AES-FEEDBACK"; overall: number; cefr: string };
   }
   return undefined;
 }

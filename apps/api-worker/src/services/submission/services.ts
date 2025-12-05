@@ -25,6 +25,7 @@ export interface ServiceRequests {
     request: Promise<LanguageToolError[]>;
   }>;
   corpusRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode corpus scoring
+  feedbackRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode T-AES-FEEDBACK
   llmProvider: LLMProvider;
   apiKey: string;
   aiModel: string;
@@ -60,6 +61,8 @@ export function prepareServiceRequests(
 
   // Corpus scoring requests (dev mode / mock services)
   const corpusRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
+  // Feedback scoring requests (dev mode / mock services)
+  const feedbackRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
 
   for (const answer of iterateAnswers(modalParts)) {
     if (ltEnabled) {
@@ -95,6 +98,12 @@ export function prepareServiceRequests(
       answerId: answer.id,
       request: modalService.scoreCorpus(answer.answer_text),
     });
+
+    // Add T-AES-FEEDBACK scoring (always enabled - deployed model)
+    feedbackRequests.push({
+      answerId: answer.id,
+      request: modalService.scoreFeedback(answer.answer_text),
+    });
   }
 
   ltRequests = requests;
@@ -104,6 +113,7 @@ export function prepareServiceRequests(
     relevanceRequests,
     llmAssessmentRequests,
     corpusRequests,
+    feedbackRequests,
     llmProvider: config.llm.provider,
     apiKey: config.llm.apiKey,
     aiModel: config.llm.model,
@@ -122,12 +132,19 @@ export async function executeServiceRequests(
   llmResults: PromiseSettledResult<LanguageToolError[][]>;
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>;
   corpusResults: PromiseSettledResult<Response[]>;
+  feedbackResults: PromiseSettledResult<Response[]>;
 }> {
   const essayStartTime = performance.now();
-  const { ltRequests, llmAssessmentRequests, relevanceRequests, corpusRequests, modalService } =
-    serviceRequests;
+  const {
+    ltRequests,
+    llmAssessmentRequests,
+    relevanceRequests,
+    corpusRequests,
+    feedbackRequests,
+    modalService,
+  } = serviceRequests;
 
-  const [essayResult, ltResults, llmResults, relevanceResults, corpusResults] =
+  const [essayResult, ltResults, llmResults, relevanceResults, corpusResults, feedbackResults] =
     await Promise.allSettled([
       (async () => {
         const start = performance.now();
@@ -159,9 +176,22 @@ export async function executeServiceRequests(
         timings["5e_corpus_fetch"] = performance.now() - start;
         return resolved;
       })(),
+      (async () => {
+        const start = performance.now();
+        const resolved = await Promise.all(feedbackRequests.map((r) => r.request));
+        timings["5f_feedback_fetch"] = performance.now() - start;
+        return resolved;
+      })(),
     ]);
 
   timings["5_parallel_services_total"] = performance.now() - essayStartTime;
 
-  return { essayResult, ltResults, llmResults, relevanceResults, corpusResults };
+  return {
+    essayResult,
+    ltResults,
+    llmResults,
+    relevanceResults,
+    corpusResults,
+    feedbackResults,
+  };
 }

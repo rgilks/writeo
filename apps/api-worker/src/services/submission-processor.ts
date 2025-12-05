@@ -156,6 +156,7 @@ async function processServiceResults(
   llmResults: PromiseSettledResult<LanguageToolError[][]>,
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>,
   corpusResults: PromiseSettledResult<Response[]>,
+  feedbackResults: PromiseSettledResult<Response[]>,
   serviceRequests: ReturnType<typeof prepareServiceRequests>,
   modalRequest: ModalRequest,
   submissionId: string,
@@ -213,6 +214,39 @@ async function processServiceResults(
   }
   timings["9b_process_corpus"] = performance.now() - processCorpusStartTime;
 
+  // Process feedback scoring results
+  const processFeedbackStartTime = performance.now();
+  const feedbackScoresByAnswerId = new Map<
+    string,
+    {
+      cefr_score: number;
+      cefr_level: string;
+      error_spans: Array<{ start: number; tokens: string[] }>;
+      error_types: Record<string, number>;
+    }
+  >();
+  if (feedbackResults.status === "fulfilled") {
+    const responses = feedbackResults.value;
+    for (let i = 0; i < responses.length; i++) {
+      const response = responses[i];
+      const answerId = serviceRequests.feedbackRequests[i]?.answerId;
+      if (answerId && response && response.ok) {
+        try {
+          const data = (await response.json()) as {
+            cefr_score: number;
+            cefr_level: string;
+            error_spans: Array<{ start: number; tokens: string[] }>;
+            error_types: Record<string, number>;
+          };
+          feedbackScoresByAnswerId.set(answerId, data);
+        } catch (e) {
+          // Ignore parsing errors for feedback results
+        }
+      }
+    }
+  }
+  timings["9c_process_feedback"] = performance.now() - processFeedbackStartTime;
+
   return {
     essayAssessment,
     ltErrorsByAnswerId,
@@ -221,6 +255,7 @@ async function processServiceResults(
     essayScoresByAnswerId,
     relevanceByAnswerId,
     corpusScoresByAnswerId,
+    feedbackScoresByAnswerId,
   };
 }
 
@@ -298,7 +333,7 @@ export async function processSubmission(
     const { modalRequest, serviceRequests } = loadResult;
 
     // Phase 3: Execute assessment services in parallel
-    const { essayResult, ltResults, llmResults, relevanceResults, corpusResults } =
+    const { essayResult, ltResults, llmResults, relevanceResults, corpusResults, feedbackResults } =
       await executeServiceRequests(modalRequest, serviceRequests, config, timings);
 
     // Phase 4: Process service results
@@ -308,6 +343,7 @@ export async function processSubmission(
       llmResults,
       relevanceResults,
       corpusResults,
+      feedbackResults,
       serviceRequests,
       modalRequest,
       submissionId,
@@ -350,6 +386,7 @@ export async function processSubmission(
       languageToolEnabled,
       llmAssessmentEnabled,
       processedResults.corpusScoresByAnswerId, // Add corpus scores
+      processedResults.feedbackScoresByAnswerId, // Add feedback scores
     );
     timings["10_merge_results"] = performance.now() - mergeStartTime;
 

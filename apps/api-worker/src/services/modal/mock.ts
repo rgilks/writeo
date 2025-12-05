@@ -361,4 +361,54 @@ export class MockModalClient implements ModalService {
       },
     );
   }
+
+  async scoreFeedback(text: string): Promise<Response> {
+    // Mock T-AES-FEEDBACK scoring
+    if (!text || typeof text !== "string") {
+      return new Response(JSON.stringify({ error: "Invalid text input" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+    // Simple heuristic for CEFR level
+    let cefrScore = 3.5;
+    if (wordCount > 250) cefrScore = 7.2;
+    else if (wordCount > 200) cefrScore = 6.0;
+    else if (wordCount > 150) cefrScore = 5.2;
+    else if (wordCount > 100) cefrScore = 4.5;
+    else if (wordCount > 50) cefrScore = 3.8;
+
+    // Determine CEFR level
+    let cefrLevel = "A2+";
+    if (cefrScore >= 7.5) cefrLevel = "C1";
+    else if (cefrScore >= 6.5) cefrLevel = "B2+";
+    else if (cefrScore >= 5.5) cefrLevel = "B1+";
+    else if (cefrScore >= 4.5) cefrLevel = "B1";
+    else if (cefrScore >= 3.5) cefrLevel = "A2+";
+
+    // Mock error detection
+    const hasGrammarIssues = /\b(I goes|we was|they is|he are)\b/i.test(text);
+
+    return new Response(
+      JSON.stringify({
+        cefr_score: Math.round(cefrScore * 100) / 100,
+        cefr_level: cefrLevel,
+        error_spans: [], // Conservative - empty for now
+        error_types: {
+          grammar: hasGrammarIssues ? 0.65 : 0.15,
+          vocabulary: 0.2,
+          mechanics: 0.1,
+          fluency: 0.1,
+          other: 0.05,
+        },
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
 }

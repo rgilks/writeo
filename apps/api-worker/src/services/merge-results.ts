@@ -17,6 +17,7 @@ const ASSESSOR_IDS = {
   RELEVANCE: "T-RELEVANCE-CHECK",
   TEACHER: "T-TEACHER-FEEDBACK",
   CORPUS: "T-AES-CORPUS", // Dev mode corpus scoring
+  FEEDBACK: "T-AES-FEEDBACK", // Dev mode multi-task feedback
 } as const;
 
 function extractEssayAssessorResults(
@@ -203,6 +204,29 @@ function createCorpusAssessor(corpusData: { score: number; cefr_level: string })
   };
 }
 
+function createFeedbackAssessor(feedbackData: {
+  cefr_score: number;
+  cefr_level: string;
+  error_spans: Array<{ start: number; tokens: string[] }>;
+  error_types: Record<string, number>;
+}): AssessorResult {
+  return {
+    id: ASSESSOR_IDS.FEEDBACK,
+    name: "T-AES-FEEDBACK (Multi-Task)",
+    type: "grader",
+    overall: feedbackData.cefr_score,
+    label: feedbackData.cefr_level,
+    cefr: feedbackData.cefr_level,
+    meta: {
+      model: "deberta-v3-base",
+      checkpoint: "Epoch 3",
+      errorSpans: feedbackData.error_spans,
+      errorTypes: feedbackData.error_types,
+      devMode: true,
+    },
+  };
+}
+
 function buildAssessorResults(
   _answerId: string,
   essayAssessorResults: AssessorResult[],
@@ -212,6 +236,14 @@ function buildAssessorResults(
   relevance: RelevanceCheck | undefined,
   teacher: TeacherFeedback | undefined,
   corpusData: { score: number; cefr_level: string } | undefined,
+  feedbackData:
+    | {
+        cefr_score: number;
+        cefr_level: string;
+        error_spans: Array<{ start: number; tokens: string[] }>;
+        error_types: Record<string, number>;
+      }
+    | undefined,
   language: string,
   llmProvider: string,
   aiModel: string,
@@ -250,6 +282,11 @@ function buildAssessorResults(
     assessorResults.push(createCorpusAssessor(corpusData));
   }
 
+  // Add feedback assessor if available (dev mode)
+  if (feedbackData) {
+    assessorResults.push(createFeedbackAssessor(feedbackData));
+  }
+
   return assessorResults;
 }
 
@@ -280,6 +317,15 @@ export function mergeAssessmentResults(
   languageToolEnabled: boolean = false,
   llmAssessmentEnabled: boolean = false,
   corpusScores: Map<string, { score: number; cefr_level: string }> = new Map(),
+  feedbackScores: Map<
+    string,
+    {
+      cefr_score: number;
+      cefr_level: string;
+      error_spans: Array<{ start: number; tokens: string[] }>;
+      error_types: Record<string, number>;
+    }
+  > = new Map(),
 ): AssessmentResults {
   const parts: AssessmentPart[] = [];
 
@@ -297,6 +343,7 @@ export function mergeAssessmentResults(
         relevanceChecks.get(answer.id),
         teacherFeedback.get(answer.id),
         corpusScores.get(answer.id),
+        feedbackScores.get(answer.id),
         language,
         llmProvider,
         aiModel,

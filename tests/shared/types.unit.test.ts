@@ -10,6 +10,7 @@ import {
   isAssessorResultWithId,
   getEssayAssessorResult,
   getCorpusAssessorResult,
+  getFeedbackAssessorResult,
   getLanguageToolAssessorResult,
   getLLMAssessorResult,
   getTeacherFeedbackAssessorResult,
@@ -192,6 +193,49 @@ describe("getCorpusAssessorResult", () => {
       { id: "T-AES-CORPUS", name: "Corpus", type: "grader", overall: 4.5 },
     ];
     expect(getCorpusAssessorResult(results)).toBeUndefined();
+  });
+});
+
+describe("getFeedbackAssessorResult", () => {
+  it("should return feedback assessor with overall and cefr", () => {
+    const results: AssessorResult[] = [
+      {
+        id: "T-AES-FEEDBACK",
+        name: "T-AES-FEEDBACK (Multi-Task)",
+        type: "grader",
+        overall: 3.87,
+        cefr: "B1",
+        meta: {
+          errorSpans: [],
+          errorTypes: { grammar: 0.6, vocabulary: 0.2 },
+        },
+      },
+    ];
+
+    const result = getFeedbackAssessorResult(results);
+    expect(result).toBeDefined();
+    expect(result?.id).toBe("T-AES-FEEDBACK");
+    expect(result?.overall).toBe(3.87);
+    expect(result?.cefr).toBe("B1");
+  });
+
+  it("should return undefined if not found", () => {
+    const results: AssessorResult[] = [{ id: "T-AES-ESSAY", name: "Essay", type: "grader" }];
+    expect(getFeedbackAssessorResult(results)).toBeUndefined();
+  });
+
+  it("should return undefined if overall is missing", () => {
+    const results: AssessorResult[] = [
+      { id: "T-AES-FEEDBACK", name: "Feedback", type: "grader", cefr: "B1" },
+    ];
+    expect(getFeedbackAssessorResult(results)).toBeUndefined();
+  });
+
+  it("should return undefined if cefr is missing", () => {
+    const results: AssessorResult[] = [
+      { id: "T-AES-FEEDBACK", name: "Feedback", type: "grader", overall: 3.87 },
+    ];
+    expect(getFeedbackAssessorResult(results)).toBeUndefined();
   });
 });
 

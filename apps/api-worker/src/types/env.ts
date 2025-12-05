@@ -11,6 +11,7 @@ export type Env = {
   MODAL_GRADE_URL: string;
   MODAL_LT_URL?: string;
   MODAL_CORPUS_URL?: string; // Corpus-trained model service (dev mode)
+  MODAL_FEEDBACK_URL?: string; // T-AES-FEEDBACK model service (dev mode)
   /** Default: "en-GB" */
   LT_LANGUAGE?: string;
 

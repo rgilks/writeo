@@ -40,4 +40,13 @@ export class ModalClient implements ModalService {
       body: JSON.stringify({ text, max_length: 512 }),
     });
   }
+
+  async scoreFeedback(text: string): Promise<Response> {
+    // T-AES-FEEDBACK scoring for dev mode - no auth required for public service
+    return fetch(`${this.config.modal.feedbackUrl}/score`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+  }
 }

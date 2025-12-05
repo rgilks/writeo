@@ -17,6 +17,7 @@ export interface AppConfig {
     gradeUrl: string;
     ltUrl?: string;
     corpusUrl: string; // Default to deployed service URL
+    feedbackUrl: string; // T-AES-FEEDBACK service URL
   };
   llm: {
     provider: LLMProvider;
@@ -79,6 +80,8 @@ export function buildConfig(env: Env): AppConfig {
       gradeUrl: requireEnv("MODAL_GRADE_URL", env.MODAL_GRADE_URL),
       ltUrl: env.MODAL_LT_URL,
       corpusUrl: env.MODAL_CORPUS_URL || "https://rob-gilks--writeo-corpus-fastapi-app.modal.run",
+      feedbackUrl:
+        env.MODAL_FEEDBACK_URL || "https://rob-gilks--writeo-feedback-fastapi-app.modal.run",
     },
     llm: buildLLMConfig(env),
     storage: {
