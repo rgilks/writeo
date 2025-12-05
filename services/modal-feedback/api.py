@@ -67,8 +67,22 @@ def create_fastapi_app() -> FastAPI:
             span_logits = outputs["span_logits"][0]  # [seq_len, 3]
             error_type_logits = outputs["error_type_logits"][0]  # [5]
 
-            # Convert span predictions to labels
-            span_preds = torch.argmax(span_logits, dim=1).tolist()
+            # Convert span predictions to labels WITH CONFIDENCE THRESHOLD
+            # Only mark as error if the model is confident (probability > 0.7)
+            span_probs = torch.softmax(span_logits, dim=1)  # [seq_len, 3]
+            span_preds_raw = torch.argmax(span_logits, dim=1)
+
+            # Apply confidence threshold: only mark as B-ERROR or I-ERROR if prob > 0.7
+            span_preds = []
+            for i, (pred, probs) in enumerate(zip(span_preds_raw, span_probs)):
+                if pred != 0:  # If predicted as error (B or I)
+                    confidence = probs[pred].item()
+                    if confidence < 0.7:  # Not confident enough
+                        pred = 0  # Mark as O (no error)
+                span_preds.append(
+                    pred.item() if isinstance(pred, torch.Tensor) else pred
+                )
+
             tokens = tokenizer.convert_ids_to_tokens(encoding["input_ids"][0])
 
             # Extract error spans
