@@ -179,6 +179,92 @@ def create_bio_tags(sentence: M2Sentence) -> list[str]:
     return tags
 
 
+def align_m2_to_subword_tokens(
+    sentence_text: str,
+    m2_annotations: list[M2Annotation],
+    tokenizer,
+) -> list[str]:
+    """
+    Convert M2 token-level annotations to subword-level BIO tags.
+
+    This aligns M2 annotations (which use space-delimited tokens) with
+    the actual subword tokens produced by DeBERTa tokenizer.
+
+    Args:
+        sentence_text: Original sentence text
+        m2_annotations: List of M2Annotation objects (token positions)
+        tokenizer: HuggingFace tokenizer (DeBERTa)
+
+    Returns:
+        List of BIO tags ["O", "B-ERROR", "I-ERROR", ...] aligned to subword tokens
+
+    Example:
+        >>> text = "The student have books"
+        >>> # M2: tokens 2-3 ("have") is error
+        >>> ann = [M2Annotation(start_token=2, end_token=3, ...)]
+        >>> tags = align_m2_to_subword_tokens(text, ann, tokenizer)
+        >>> # tags = ["O", "O", "B-ERROR", "O"]
+    """
+    # 1. Tokenize with offset mapping to get character positions
+    encoding = tokenizer(
+        sentence_text,
+        return_offsets_mapping=True,
+        add_special_tokens=False,  # Don't add [CLS], [SEP] yet
+    )
+
+    # 2. Get space-delimited tokens (same as M2 uses)
+    space_tokens = sentence_text.split()
+
+    # 3. Map each space token to its character span
+    token_char_spans = []
+    char_pos = 0
+    for token in space_tokens:
+        start = sentence_text.find(token, char_pos)
+        if start != -1:
+            end = start + len(token)
+            token_char_spans.append((start, end))
+            char_pos = end
+        else:
+            # Token not found (shouldn't happen with proper split)
+            token_char_spans.append((char_pos, char_pos))
+
+    # 4. Mark which space tokens have errors
+    token_has_error = [False] * len(space_tokens)
+    for ann in m2_annotations:
+        for i in range(ann.start_token, ann.end_token):
+            if i < len(token_has_error):
+                token_has_error[i] = True
+
+    # 5. Convert to character-level error spans
+    error_char_spans = []
+    for i, has_error in enumerate(token_has_error):
+        if has_error and i < len(token_char_spans):
+            error_char_spans.append(token_char_spans[i])
+
+    # 6. Initialize BIO tags for subword tokens
+    bio_tags = ["O"] * len(encoding.input_ids)
+
+    # 7. Mark subword tokens that overlap with error character spans
+    for error_start, error_end in error_char_spans:
+        first_token_in_error = True
+
+        for idx, (subword_start, subword_end) in enumerate(encoding.offset_mapping):
+            # Skip special tokens
+            if subword_start == subword_end:
+                continue
+
+            # Check if subword overlaps with error span
+            # Overlap if: subword_start < error_end AND subword_end > error_start
+            if subword_start < error_end and subword_end > error_start:
+                if first_token_in_error:
+                    bio_tags[idx] = "B-ERROR"
+                    first_token_in_error = False
+                else:
+                    bio_tags[idx] = "I-ERROR"
+
+    return bio_tags
+
+
 def extract_error_statistics(sentences: list[M2Sentence]) -> dict[str, Any]:
     """Calculate statistics about errors in the corpus."""
     total_sentences = len(sentences)
