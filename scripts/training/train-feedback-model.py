@@ -23,12 +23,6 @@ image = (
 
 app = modal.App("writeo-feedback-training", image=image)
 
-# Mount local scripts
-scripts_mount = modal.Mount.from_local_dir(
-    Path(__file__).parent,
-    remote_path="/root/scripts",
-)
-
 
 @app.function(
     gpu="A10G",  # NVIDIA A10G (24GB VRAM)
@@ -39,7 +33,7 @@ def train_feedback_model():
     """Train multi-task feedback model."""
     import sys
 
-    sys.path.append("/root/scripts")
+    sys.path.append("/training")
 
     import torch
     from torch.optim import AdamW
