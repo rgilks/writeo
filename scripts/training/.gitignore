@@ -31,3 +31,4 @@ ENV/
 # Logs
 *.log
 corpus-raw/
+data-enhanced/
