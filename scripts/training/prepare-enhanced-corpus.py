@@ -155,12 +155,12 @@ def main():
         print(f"  Loaded {len(m2_sentences)} sentences")
 
         # Load original corpus data
-        print(f"Loading original corpus data...")
+        print("Loading original corpus data...")
         corpus_data = load_original_corpus_data(split)
         print(f"  Loaded {len(corpus_data)} essays")
 
         # Align and merge
-        print(f"Aligning M2 annotations with corpus...")
+        print("Aligning M2 annotations with corpus...")
         enhanced_data = align_m2_with_corpus(m2_sentences, corpus_data, ids_file)
         print(f"  Created {len(enhanced_data)} enhanced essays")
 
@@ -177,10 +177,10 @@ def main():
             example = next(
                 (e for e in enhanced_data if e["has_errors"]), enhanced_data[0]
             )
-            print(f"\nExample essay:")
+            print("\nExample essay:")
             print(f"  CEFR: {example['cefr']}")
             print(f"  Errors: {example['error_count']}")
-            print(f"  Error distribution:")
+            print("  Error distribution:")
             for cat, pct in example["error_distribution"].items():
                 if pct > 0:
                     print(f"    {cat}: {pct:.1%}")

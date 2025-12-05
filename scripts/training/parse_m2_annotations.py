@@ -12,7 +12,6 @@ A 12 12|||M:DET|||the|||REQUIRED|||-NONE-|||0
   start end type
 """
 
-import re
 from pathlib import Path
 from typing import Any
 from dataclasses import dataclass

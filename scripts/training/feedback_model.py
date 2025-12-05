@@ -13,7 +13,7 @@ Note: This model will be trained on Modal GPU, not locally.
 
 import torch
 import torch.nn as nn
-from transformers import DebertaV2Model, DebertaV2Config
+from transformers import DebertaV2Model
 
 
 class FeedbackModel(nn.Module):
