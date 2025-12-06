@@ -221,7 +221,7 @@ function createFeedbackAssessor(feedbackData: {
     meta: {
       model: "deberta-v3-base",
       checkpoint: "Epoch 3",
-      errorSpans: feedbackData.error_spans,
+      // errorSpans: feedbackData.error_spans, // User requested to remove this noise
       errorTypes: feedbackData.error_types,
       devMode: true,
     },
