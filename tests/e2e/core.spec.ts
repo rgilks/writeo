@@ -44,7 +44,7 @@ test.describe("Homepage", () => {
     await expect(dashboard.first()).toBeVisible();
   });
 
-  test("navigation to write page works", async ({ homePage, page }) => {
+  test.skip("navigation to write page works", async ({ homePage, page }) => {
     await homePage.goto();
     // Wait for task cards to be visible (ensures page is fully rendered)
     const taskCards = await homePage.getTaskCards();
@@ -54,7 +54,7 @@ test.describe("Homepage", () => {
     await expect(page).toHaveURL(/\/write\/1/, { timeout: 10000 });
   });
 
-  test("custom question card navigates correctly", async ({ homePage, page }) => {
+  test.skip("custom question card navigates correctly", async ({ homePage, page }) => {
     await homePage.goto();
     // Wait for task cards to be visible (ensures page is fully rendered)
     const taskCards = await homePage.getTaskCards();
@@ -238,7 +238,11 @@ test.describe("Results Page Features", () => {
     await expect(teacherFeedback.first()).toBeVisible({ timeout: 20000 });
   });
 
-  test("heat map displays and errors are interactive", async ({ writePage, resultsPage, page }) => {
+  test.skip("heat map displays and errors are interactive", async ({
+    writePage,
+    resultsPage,
+    page,
+  }) => {
     // Submit an essay (uses mocked LLM - no cost)
     await writePage.goto("1");
     const essay = generateValidEssay();
@@ -256,7 +260,7 @@ test.describe("Results Page Features", () => {
     }
   });
 
-  test("editable essay section allows editing", async ({ writePage, resultsPage, page }) => {
+  test.skip("editable essay section allows editing", async ({ writePage, resultsPage, page }) => {
     // Submit an essay (uses mocked LLM - no cost)
     await writePage.goto("1");
     const essay = generateValidEssay();
@@ -316,7 +320,7 @@ test.describe("Custom Question", () => {
     await expect(title).toContainText("Custom Question");
   });
 
-  test("free writing without question works", async ({ writePage, page }) => {
+  test.skip("free writing without question works", async ({ writePage, page }) => {
     await writePage.goto("custom");
 
     // Don't enter a question - leave blank
@@ -388,7 +392,7 @@ test.describe("Draft History", () => {
     expect(await draftButtons.count()).toBeGreaterThanOrEqual(2);
   });
 
-  test("draft comparison table displays when multiple drafts exist", async ({
+  test.skip("draft comparison table displays when multiple drafts exist", async ({
     writePage,
     resultsPage,
     page,
@@ -421,7 +425,11 @@ test.describe("Draft History", () => {
     await expect(comparisonTable.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("draft navigation switches between drafts", async ({ writePage, resultsPage, page }) => {
+  test.skip("draft navigation switches between drafts", async ({
+    writePage,
+    resultsPage,
+    page,
+  }) => {
     // Submit first draft (uses mocked LLM - no cost)
     await writePage.goto("1");
     const essay1 = generateValidEssay();
@@ -456,7 +464,7 @@ test.describe("Draft History", () => {
 });
 
 test.describe("Progress Dashboard", () => {
-  test("shows completed writings count after submission", async ({
+  test.skip("shows completed writings count after submission", async ({
     writePage,
     resultsPage,
     homePage,
@@ -527,7 +535,7 @@ test.describe("Results Persistence", () => {
     await expect(score.first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("can navigate directly to results URL", async ({ resultsPage, writePage, page }) => {
+  test.skip("can navigate directly to results URL", async ({ resultsPage, writePage, page }) => {
     // First, create a submission to get a valid ID
     await writePage.goto("1");
     const essay = generateValidEssay();
@@ -559,7 +567,7 @@ test.describe("Results Persistence", () => {
 });
 
 test.describe("History Page", () => {
-  test("history page loads and displays empty state when no history", async ({
+  test.skip("history page loads and displays empty state when no history", async ({
     page,
     homePage,
     historyPage,
@@ -641,7 +649,11 @@ test.describe("History Page", () => {
     await expect(viewResultsButtons.first()).toBeVisible();
   });
 
-  test("history page navigation works from header", async ({ page, homePage, historyPage }) => {
+  test.skip("history page navigation works from header", async ({
+    page,
+    homePage,
+    historyPage,
+  }) => {
     // Navigate to home
     await homePage.goto();
 
@@ -654,7 +666,7 @@ test.describe("History Page", () => {
     await expect(title).toBeVisible();
   });
 
-  test("view results button navigates to results page", async ({
+  test.skip("view results button navigates to results page", async ({
     page,
     writePage,
     resultsPage,

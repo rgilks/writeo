@@ -58,6 +58,7 @@ class CorrectionResponse(BaseModel):
 )
 class GECModel:
     def __enter__(self):
+        print("DEBUG: Entering __enter__")
         import torch
         from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
@@ -66,7 +67,14 @@ class GECModel:
         # In production, this should point to the trained checkpoint in /checkpoints
 
         # Check if fine-tuned model exists
-        model_path = "/checkpoints/gec-seq2seq-v1"
+        model_path = "/checkpoints/gec-seq2seq-v1/checkpoint-4398"
+        print(f"DEBUG: Checking {model_path}")
+
+        # Fallback to checking root if specific checkpoint not found (robustness)
+        if not os.path.exists(model_path):
+            print(f"Specific checkpoint {model_path} not found, checking root...")
+            model_path = "/checkpoints/gec-seq2seq-v1"
+
         if not os.path.exists(model_path) or not os.listdir(model_path):
             print("No fine-tuned model found, using google/flan-t5-base")
             model_name = "google/flan-t5-base"
@@ -74,15 +82,24 @@ class GECModel:
             print(f"Loading fine-tuned model from {model_path}")
             model_name = model_path
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(
-            model_name, torch_dtype=torch.float16
-        ).cuda()
-        self.extractor = ErrorExtractor(use_errant=True)
-        print("Model loaded.")
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(
+                model_name, torch_dtype=torch.float16
+            ).cuda()
+            self.extractor = ErrorExtractor(use_errant=True)
+            print("Model loaded successfully.")
+        except Exception as e:
+            print(f"ERROR loading model: {e}")
+            raise e
 
     @modal.method()
     def correct(self, text: str) -> CorrectionResponse:
+        print(f"DEBUG: correct called with: {text}")
+        if not hasattr(self, "tokenizer") or self.tokenizer is None:
+            print("WARNING: Model not initialized. Attempting lazy load...")
+            self.__enter__()
+
         input_text = f"grammar: {text}"
         inputs = self.tokenizer(
             input_text, return_tensors="pt", max_length=512, truncation=True
@@ -124,7 +141,7 @@ def gec_endpoint(request: CorrectionRequest):
 
 if __name__ == "__main__":
     # Local test
-    with app.stub.run():
+    with app.run():
         model = GECModel()
         resp = model.correct.remote("I has three book.")
         print(resp)

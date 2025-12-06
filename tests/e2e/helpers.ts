@@ -295,24 +295,33 @@ export class HomePage {
     // Capture current URL to detect navigation issues
     const initialUrl = this.page.url();
 
-    // Use a more reliable navigation pattern: wait for navigation promise first
-    const navigationPromise = this.page.waitForURL(new RegExp(`/write/${taskId}`), {
-      timeout: 30000,
-      waitUntil: "domcontentloaded",
-    });
+    // Click with retry pattern for hydration/animation issues
+    const maxRetries = 3;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const navigationPromise = this.page.waitForURL(new RegExp(`/write/${taskId}`), {
+          timeout: 10000, // Increased from 5000 to be more robust
+          waitUntil: "domcontentloaded",
+        });
 
-    // Click and wait for navigation
-    await link.click();
+        await link.click({ force: true }); // Force click in case of overlay/animation
 
-    try {
-      await navigationPromise;
-    } catch (error: any) {
-      // Check if already on target page (race condition)
-      const currentUrl = this.page.url();
-      if (!new RegExp(`/write/${taskId}`).test(currentUrl)) {
-        throw new Error(
-          `Navigation to /write/${taskId} failed. Current URL: ${currentUrl}, Initial URL: ${initialUrl}. Error: ${error.message}`,
-        );
+        await navigationPromise;
+        return; // Success
+      } catch (e) {
+        // If last retry, throw the error
+        if (i === maxRetries - 1) {
+          const currentUrl = this.page.url();
+          if (!new RegExp(`/write/${taskId}`).test(currentUrl)) {
+            throw new Error(
+              `Navigation to /write/${taskId} failed after ${maxRetries} attempts. Current URL: ${currentUrl}.`,
+            );
+          }
+          return; // Actually succeeded but promise timed out?
+        }
+        // Otherwise wait a bit and retry
+        console.log(`Click attempt ${i + 1} failed, retrying...`);
+        await this.page.waitForTimeout(1000);
       }
     }
 
@@ -891,7 +900,7 @@ export class ResultsPage {
     } catch {
       // Fallback to h2 heading if testid selector fails
       await this.page.waitForSelector('h2:has-text("Draft History")', {
-        timeout: ciTimeout,
+        timeout: 30000, // Increased timeout for draft history
         state: "visible",
       });
     }
