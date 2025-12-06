@@ -1,0 +1,22 @@
+{
+  "scoring": {
+    "essay": true,
+    "corpus": true,
+    "feedback": false
+  },
+
+  "grammar": {
+    "languageTool": true,
+    "gecSeq2seq": true,
+    "gecLlm": false
+  },
+
+  "_defaults": {
+    "essay": "T-AES-ESSAY - Required for dimensional scores (TA, CC, Vocab, Grammar)",
+    "corpus": "T-AES-CORPUS - Best scorer (0.96 correlation with human labels)",
+    "feedback": "T-AES-FEEDBACK - Experimental, incomplete training (OFF by default)",
+    "languageTool": "T-GEC-LT - Typos, mechanics, punctuation",
+    "gecSeq2seq": "T-GEC-SEQ2SEQ - Best GEC with precise diffs",
+    "gecLlm": "T-GEC-LLM - Expensive ($0.002/sub), redundant with gecSeq2seq (OFF by default)"
+  }
+}

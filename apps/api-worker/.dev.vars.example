@@ -43,3 +43,8 @@ OPENAI_API_KEY=your-openai-api-key-here
 
 # Optional: CORS origins (defaults to allow all in dev)
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+
+# === Assessor Configuration ===
+# Assessors are configured via JSON file, NOT environment variables.
+# Edit: src/config/assessors.json
+# See: docs/ASSESSOR_EVALUATION_REPORT.md for performance data

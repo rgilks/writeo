@@ -26,6 +26,24 @@ Writeo supports multiple LLM providers for AI-powered feedback. This document pr
 
 **Key Cost Driver:** LLM API calls (varies by provider and mode)
 
+**Lean Mode Configuration:**
+
+Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaults optimize for cost:
+
+| Assessor       | Default | Cost Impact | Notes                           |
+| -------------- | ------- | ----------- | ------------------------------- |
+| T-AES-ESSAY    | ✅ ON   | ~$0.0001    | Required for dimensional scores |
+| T-AES-CORPUS   | ✅ ON   | ~$0.0001    | Best scorer (0.96 correlation)  |
+| T-GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs)        |
+| T-GEC-LT       | ✅ ON   | ~$0.0001    | Typos, mechanics                |
+| T-AES-FEEDBACK | ❌ OFF  | ~$0.0001    | Experimental                    |
+| T-GEC-LLM      | ❌ OFF  | ~$0.002     | Expensive, redundant            |
+
+**Lean Mode (default)**: ~$0.0005/submission (Modal only)  
+**Full Mode** (all enabled): ~$0.0025-0.006/submission (with LLM)
+
+See [ASSESSOR_EVALUATION_REPORT.md](ASSESSOR_EVALUATION_REPORT.md) for assessor performance data.
+
 ---
 
 ## Cost Breakdown Per Submission

@@ -18,10 +18,19 @@ This directory contains all documentation for the Writeo project.
 
 ### Architecture & API
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, components, data flow, and performance
-- **[API-ARCHITECTURE.md](API-ARCHITECTURE.md)** - Detailed API Worker architecture (middleware, request flow, services)
-- **[STATE_MANAGEMENT.md](STATE_MANAGEMENT.md)** - Frontend state management (Zustand, Immer, patterns)
-- **[Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs)** - Complete API specification with request/response examples (Swagger UI)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture, components, data flow
+- **[API-ARCHITECTURE.md](API-ARCHITECTURE.md)** - API Worker architecture (middleware, request flow)
+- **[STATE_MANAGEMENT.md](STATE_MANAGEMENT.md)** - Frontend state management (Zustand, Immer)
+- **[Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs)** - Swagger UI
+
+### Models & Assessors
+
+- **[MODELS.md](MODELS.md)** - Essay scoring models overview
+- **[CORPUS_MODEL_GUIDE.md](CORPUS_MODEL_GUIDE.md)** - T-AES-CORPUS training guide
+- **[FEEDBACK_MODEL_GUIDE.md](FEEDBACK_MODEL_GUIDE.md)** - T-AES-FEEDBACK multi-task model
+- **[GEC_SERVICE.md](GEC_SERVICE.md)** - T-GEC-SEQ2SEQ grammar correction
+- **[ASSESSOR_EVALUATION_REPORT.md](ASSESSOR_EVALUATION_REPORT.md)** - Performance evaluation of all assessors
+- **[TRAINING_DATASETS.md](TRAINING_DATASETS.md)** - Available datasets for future training
 
 ### Operations
 

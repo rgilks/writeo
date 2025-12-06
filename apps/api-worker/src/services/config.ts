@@ -7,6 +7,21 @@
 
 import type { Env } from "../types/env";
 import { parseLLMProvider, getDefaultModel, getAPIKey, type LLMProvider } from "./llm";
+import assessorConfig from "../config/assessors.json";
+
+/** Assessor configuration loaded from config/assessors.json */
+export interface AssessorConfig {
+  scoring: {
+    essay: boolean;
+    corpus: boolean;
+    feedback: boolean;
+  };
+  grammar: {
+    languageTool: boolean;
+    gecSeq2seq: boolean;
+    gecLlm: boolean;
+  };
+}
 
 export interface AppConfig {
   api: {
@@ -35,6 +50,8 @@ export interface AppConfig {
       language: string;
     };
     mockServices: boolean;
+    /** Assessor config loaded from config/assessors.json */
+    assessors: AssessorConfig;
   };
   allowedOrigins?: string;
 }
@@ -69,6 +86,7 @@ function buildLLMConfig(env: Env): { provider: LLMProvider; model: string; apiKe
 
 /**
  * Validates and builds configuration from environment variables
+ * Assessor config is loaded from config/assessors.json
  * Throws on missing required values (fail-fast)
  */
 export function buildConfig(env: Env): AppConfig {
@@ -96,6 +114,20 @@ export function buildConfig(env: Env): AppConfig {
         language: env.LT_LANGUAGE || DEFAULT_LT_LANGUAGE,
       },
       mockServices: env.USE_MOCK_SERVICES === "true",
+      // Assessor config loaded from config/assessors.json
+      // Edit that file to enable/disable assessors
+      assessors: {
+        scoring: {
+          essay: assessorConfig.scoring.essay,
+          corpus: assessorConfig.scoring.corpus,
+          feedback: assessorConfig.scoring.feedback,
+        },
+        grammar: {
+          languageTool: assessorConfig.grammar.languageTool,
+          gecSeq2seq: assessorConfig.grammar.gecSeq2seq,
+          gecLlm: assessorConfig.grammar.gecLlm,
+        },
+      },
     },
     allowedOrigins: env.ALLOWED_ORIGINS,
   };

@@ -82,37 +82,46 @@ export function prepareServiceRequests(
       request: checkAnswerRelevance(ai, answer.question_text, answer.answer_text, 0.5),
     });
 
-    llmAssessmentRequests.push({
-      answerId: answer.id,
-      questionText: answer.question_text,
-      answerText: answer.answer_text,
-      request: getLLMAssessment(
-        config.llm.provider,
-        config.llm.apiKey,
-        answer.question_text,
-        answer.answer_text,
-        config.llm.model,
-        config.features.mockServices, // Pass mock flag from config
-      ),
-    });
+    // T-GEC-LLM: Only run if explicitly enabled (expensive, $0.002/submission)
+    if (config.features.assessors.grammar.gecLlm) {
+      llmAssessmentRequests.push({
+        answerId: answer.id,
+        questionText: answer.question_text,
+        answerText: answer.answer_text,
+        request: getLLMAssessment(
+          config.llm.provider,
+          config.llm.apiKey,
+          answer.question_text,
+          answer.answer_text,
+          config.llm.model,
+          config.features.mockServices, // Pass mock flag from config
+        ),
+      });
+    }
 
-    // Add corpus scoring (always enabled - deployed model)
-    corpusRequests.push({
-      answerId: answer.id,
-      request: modalService.scoreCorpus(answer.answer_text),
-    });
+    // T-AES-CORPUS: Add corpus scoring if enabled (default: ON, best scorer)
+    if (config.features.assessors.scoring.corpus) {
+      corpusRequests.push({
+        answerId: answer.id,
+        request: modalService.scoreCorpus(answer.answer_text),
+      });
+    }
 
-    // Add T-AES-FEEDBACK scoring (always enabled - deployed model)
-    feedbackRequests.push({
-      answerId: answer.id,
-      request: modalService.scoreFeedback(answer.answer_text),
-    });
+    // T-AES-FEEDBACK: Add feedback scoring if enabled (default: OFF, experimental)
+    if (config.features.assessors.scoring.feedback) {
+      feedbackRequests.push({
+        answerId: answer.id,
+        request: modalService.scoreFeedback(answer.answer_text),
+      });
+    }
 
-    // Add T-GEC-SEQ2SEQ correction (always enabled - deployed model)
-    gecRequests.push({
-      answerId: answer.id,
-      request: modalService.correctGrammar(answer.answer_text),
-    });
+    // T-GEC-SEQ2SEQ: Add GEC correction if enabled (default: ON, best GEC)
+    if (config.features.assessors.grammar.gecSeq2seq) {
+      gecRequests.push({
+        answerId: answer.id,
+        request: modalService.correctGrammar(answer.answer_text),
+      });
+    }
   }
 
   ltRequests = requests;

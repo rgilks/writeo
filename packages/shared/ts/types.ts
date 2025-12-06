@@ -204,6 +204,7 @@ export type AssessorResultId =
   | "T-AES-FEEDBACK" // Multi-task feedback model (dev mode)
   | "T-GEC-LT"
   | "T-GEC-LLM"
+  | "T-GEC-SEQ2SEQ" // Seq2Seq GEC model (best grammar correction)
   | "T-TEACHER-FEEDBACK"
   | "T-RELEVANCE-CHECK";
 
@@ -392,4 +393,89 @@ export function getRelevanceCheckAssessorResult(results: AssessorResult[]):
     };
   }
   return undefined;
+}
+
+/**
+ * GEC Seq2Seq edit structure from the T-GEC-SEQ2SEQ assessor
+ */
+export interface GECSeq2seqEdit {
+  start: number;
+  end: number;
+  original: string;
+  correction: string;
+  type: "insert" | "replace" | "delete";
+}
+
+/**
+ * Type-safe helper to get GEC Seq2Seq assessor result from an array of assessor results.
+ *
+ * @param results - Array of assessor results to search
+ * @returns GEC Seq2Seq assessor result with edits array, or undefined if not found
+ */
+export function getGECSeq2seqAssessorResult(results: AssessorResult[]):
+  | (AssessorResult & {
+      id: "T-GEC-SEQ2SEQ";
+      meta: {
+        edits: GECSeq2seqEdit[];
+        correctedText: string;
+      };
+    })
+  | undefined {
+  const result = results.find((r) => r.id === "T-GEC-SEQ2SEQ");
+  if (result && result.meta && Array.isArray((result.meta as Record<string, unknown>).edits)) {
+    return result as AssessorResult & {
+      id: "T-GEC-SEQ2SEQ";
+      meta: { edits: GECSeq2seqEdit[]; correctedText: string };
+    };
+  }
+  return undefined;
+}
+
+/**
+ * Convert GEC Seq2Seq edits to LanguageToolError format for display in the heatmap.
+ * This allows the precise diff-based edits from the Seq2Seq model to appear as suggestions.
+ *
+ * @param edits - Array of GEC Seq2Seq edits
+ * @returns Array of LanguageToolError objects compatible with the heatmap
+ */
+export function convertGECEditsToErrors(edits: GECSeq2seqEdit[]): LanguageToolError[] {
+  return edits.map((edit) => {
+    // Determine category based on edit type
+    let category = "GRAMMAR";
+    let message = "";
+    let errorType = "Grammar correction";
+
+    if (edit.type === "insert") {
+      category = "GRAMMAR";
+      message = `Missing text: "${edit.correction}"`;
+      errorType = "Missing word/phrase";
+    } else if (edit.type === "delete") {
+      category = "STYLE";
+      message = `Remove: "${edit.original}"`;
+      errorType = "Unnecessary word/phrase";
+    } else {
+      // replace
+      category = "GRAMMAR";
+      message = `Change "${edit.original}" to "${edit.correction}"`;
+      errorType = "Word/phrase correction";
+    }
+
+    return {
+      start: edit.start,
+      end: edit.end,
+      length: edit.end - edit.start,
+      category,
+      rule_id: `GEC-SEQ2SEQ-${edit.type.toUpperCase()}`,
+      message,
+      suggestions: edit.correction ? [edit.correction] : [],
+      source: "LLM" as const, // Use LLM source to indicate AI-based
+      severity: "warning" as const,
+      confidenceScore: 0.85, // Seq2Seq model has high precision
+      highConfidence: true,
+      mediumConfidence: true,
+      errorType,
+      explanation: `The Seq2Seq grammar model suggests this change for improved clarity.`,
+      example: edit.type === "replace" ? `${edit.original} → ${edit.correction}` : undefined,
+    };
+  });
 }

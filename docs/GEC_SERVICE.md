@@ -111,4 +111,4 @@ The API Worker calls this service in parallel with other assessment services.
 1. **Config:** `MODAL_GEC_URL` in `.dev.vars` / environment.
 2. **Execution:** `modalService.correctGrammar(text)` called in `services.ts`.
 3. **Merging:** Results are merged into the final `AssessmentResults` under the assessor ID `T-GEC-SEQ2SEQ`.
-4. **Visibility:** Flagged with `devMode: true` so they appear in the developer view on the frontend.
+4. **Display:** Edits are converted to `LanguageToolError` format and appear in the heatmap alongside LT/LLM errors.
