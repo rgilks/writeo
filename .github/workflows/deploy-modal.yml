@@ -7,6 +7,7 @@ on:
     paths:
       - 'services/modal-essay/**'
       - 'services/modal-lt/**'
+      - 'services/modal_gec/**'
       - 'packages/shared/py/**'
   workflow_dispatch:
 
@@ -16,6 +17,7 @@ jobs:
     outputs:
       modal-essay: ${{ steps.changes.outputs.modal-essay }}
       modal-lt: ${{ steps.changes.outputs.modal-lt }}
+      modal-gec: ${{ steps.changes.outputs.modal-gec }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,6 +31,7 @@ jobs:
             # Manual trigger - deploy all services
             echo "modal-essay=true" >> $GITHUB_OUTPUT
             echo "modal-lt=true" >> $GITHUB_OUTPUT
+            echo "modal-gec=true" >> $GITHUB_OUTPUT
           else
             # Get the base commit (use merge-base for PRs, or HEAD^1 for pushes)
             BASE_SHA="${{ github.event.before }}"
@@ -48,6 +51,13 @@ jobs:
               echo "modal-lt=true" >> $GITHUB_OUTPUT
             else
               echo "modal-lt=false" >> $GITHUB_OUTPUT
+            fi
+            
+            # Check for changes in modal_gec
+            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal_gec/"; then
+              echo "modal-gec=true" >> $GITHUB_OUTPUT
+            else
+              echo "modal-gec=false" >> $GITHUB_OUTPUT
             fi
           fi
 
@@ -149,3 +159,40 @@ jobs:
           echo "Deploying Modal LanguageTool service..."
           modal deploy app.py
 
+  deploy-modal-gec:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modal-gec == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install Modal CLI
+        run: uv pip install --system modal
+
+      - name: Authenticate with Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          # Modal CLI automatically uses MODAL_TOKEN_ID and MODAL_TOKEN_SECRET env vars
+          modal app list > /dev/null || echo "Authentication check complete"
+
+      - name: Deploy Modal GEC Service
+        working-directory: services/modal_gec
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          echo "Deploying Modal GEC service..."
+          modal deploy main.py
