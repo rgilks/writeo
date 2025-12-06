@@ -71,42 +71,50 @@ def _correct_text(text: str) -> CorrectionResponse:
 
     _load_model()
 
-    # Smart chunking using Spacy (via ErrorExtractor) to handle long texts
-    chunks = []
+    # Smart chunking using Spacy - track positions using span offsets
+    # Each item is (chunk_text, chunk_start_char)
+    chunks_with_positions: list[tuple[str, int]] = []
 
     if hasattr(_extractor, "annotator") and _extractor.annotator:
         try:
             doc = _extractor.annotator.parse(text)
-            sentences = [sent.text_with_ws for sent in doc.sents]
             current_chunk = ""
-            for sent in sentences:
+            chunk_start = 0
+
+            for sent in doc.sents:
+                sent_text = text[sent.start_char : sent.end_char]
                 # Keep chunks relatively small (<400 chars) to prevent hallucination loops
-                if len(current_chunk) + len(sent) < 400:
-                    current_chunk += sent
+                if len(current_chunk) + len(sent_text) < 400:
+                    if not current_chunk:
+                        chunk_start = sent.start_char
+                    current_chunk += sent_text
                 else:
-                    if current_chunk:
-                        chunks.append(current_chunk)
-                    current_chunk = sent
-            if current_chunk:
-                chunks.append(current_chunk)
+                    if current_chunk.strip():
+                        chunks_with_positions.append((current_chunk, chunk_start))
+                    current_chunk = sent_text
+                    chunk_start = sent.start_char
+
+            if current_chunk.strip():
+                chunks_with_positions.append((current_chunk, chunk_start))
+
         except Exception as e:
             print(f"WARNING: Smart chunking failed: {e}. Falling back to simple split.")
-            chunks = text.split("\n")
+            # Fallback: split by newlines and track positions
+            pos = 0
+            for line in text.split("\n"):
+                if line.strip():
+                    chunks_with_positions.append((line, pos))
+                pos += len(line) + 1  # +1 for newline
     else:
-        chunks = text.split("\n")
+        # No spacy: split by newlines and track positions
+        pos = 0
+        for line in text.split("\n"):
+            if line.strip():
+                chunks_with_positions.append((line, pos))
+            pos += len(line) + 1  # +1 for newline
 
-    # Filter and find positions for non-empty chunks
-    valid_chunks = []
-    search_start = 0
-    for chunk in chunks:
-        if not chunk or not chunk.strip():
-            continue
-        chunk_start = text.find(chunk, search_start)
-        if chunk_start == -1:
-            print(f"WARNING: Could not find chunk position, skipping: {chunk[:50]}...")
-            continue
-        valid_chunks.append((chunk, chunk_start))
-        search_start = chunk_start + len(chunk)
+    # Filter valid chunks (already done during chunking)
+    valid_chunks = chunks_with_positions
 
     if not valid_chunks:
         return CorrectionResponse(original=text, corrected=text, edits=[])
@@ -159,14 +167,13 @@ def _correct_text(text: str) -> CorrectionResponse:
                 )
             )
 
-    # Reconstruct corrected text
+    # Reconstruct corrected text - use space join for spacy chunking, newline for fallback
     if (
         hasattr(_extractor, "annotator")
         and _extractor.annotator
-        and len(chunks) > 1
-        and chunks[0] != text.split("\n")[0]
+        and len(valid_chunks) > 1
     ):
-        # We likely used spacy chunking
+        # We used spacy chunking - join with space
         final_corrected_text = " ".join(corrected_chunks)
     else:
         final_corrected_text = "\n".join(corrected_chunks)
