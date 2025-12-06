@@ -42,20 +42,37 @@ class ErrorExtractor:
             return self._extract_with_difflib(source, target)
 
     def _extract_with_errant(self, source: str, target: str) -> List[Dict[str, Any]]:
-        """Use ERRANT to extract and classify edits."""
+        """Use ERRANT to extract and classify edits with character positions."""
         # Parse with spacy (via errant's annotator)
         src = self.annotator.parse(source)
         tgt = self.annotator.parse(target)
 
-        # Annotate
+        # Build token-to-character mapping from source tokens
+        src_tokens = list(src)
 
         results = []
         for edit in self.annotator.annotate(src, tgt):
-            # Convert ERRANT edit to our format
+            # Convert token indices to character positions
+            if edit.o_start < len(src_tokens):
+                char_start = src_tokens[edit.o_start].idx
+            else:
+                # Insertion at end of text
+                char_start = len(source)
+
+            if edit.o_end > 0 and edit.o_end <= len(src_tokens):
+                last_token = src_tokens[edit.o_end - 1]
+                char_end = last_token.idx + len(last_token.text)
+            elif edit.o_start < len(src_tokens):
+                # Point insertion (start == end)
+                char_start = src_tokens[edit.o_start].idx
+                char_end = char_start
+            else:
+                char_end = len(source)
+
             results.append(
                 {
-                    "start": edit.o_start,
-                    "end": edit.o_end,
+                    "start": char_start,
+                    "end": char_end,
                     "original": edit.o_str,
                     "correction": edit.c_str,
                     "type": self._map_errant_type(edit.type),
@@ -66,10 +83,18 @@ class ErrorExtractor:
         return results
 
     def _extract_with_difflib(self, source: str, target: str) -> List[Dict[str, Any]]:
-        """Fallback method using difflib."""
+        """Fallback method using difflib with character positions."""
         source_words = source.split()
         target_words = target.split()
         matcher = difflib.SequenceMatcher(None, source_words, target_words)
+
+        # Build word-to-character position mapping
+        word_positions = []
+        pos = 0
+        for word in source_words:
+            start = source.index(word, pos)
+            word_positions.append((start, start + len(word)))
+            pos = start + len(word)
 
         edits = []
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
@@ -78,6 +103,19 @@ class ErrorExtractor:
 
             original_text = " ".join(source_words[i1:i2])
             correction_text = " ".join(target_words[j1:j2])
+
+            # Calculate character positions
+            if i1 < len(word_positions):
+                char_start = word_positions[i1][0]
+            else:
+                char_start = len(source)
+
+            if i2 > 0 and i2 <= len(word_positions):
+                char_end = word_positions[i2 - 1][1]
+            elif i1 < len(word_positions):
+                char_end = word_positions[i1][0]
+            else:
+                char_end = len(source)
 
             # Basic type inference for fallback
             error_type = "fluency"  # Default
@@ -94,8 +132,8 @@ class ErrorExtractor:
 
             edits.append(
                 {
-                    "start": i1,  # Word index
-                    "end": i2,  # Word index
+                    "start": char_start,
+                    "end": char_end,
                     "original": original_text,
                     "correction": correction_text,
                     "type": error_type,
