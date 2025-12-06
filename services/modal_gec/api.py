@@ -94,19 +94,22 @@ def _correct_text(text: str) -> CorrectionResponse:
 
     corrected_chunks = []
     all_edits = []
-    current_offset = 0
+    search_start = 0  # Start position for searching each chunk in original text
 
     for chunk in chunks:
-        # Skip empty chunks but track offset
+        # Skip empty chunks
         if not chunk:
-            if chunk == "":
-                corrected_chunks.append("")
-                current_offset += 1  # newline
             continue
 
         if not chunk.strip():
             corrected_chunks.append(chunk)
-            current_offset += len(chunk)
+            continue
+
+        # Find actual position of this chunk in original text
+        chunk_start = text.find(chunk, search_start)
+        if chunk_start == -1:
+            # Fallback: chunk not found exactly, skip offset adjustment
+            print(f"WARNING: Could not find chunk position, skipping: {chunk[:50]}...")
             continue
 
         input_text = f"grammar: {chunk}"
@@ -125,12 +128,12 @@ def _correct_text(text: str) -> CorrectionResponse:
         # Extract edits for this chunk
         chunk_edits = _extractor.extract_edits(chunk, corrected_chunk_text)
 
-        # Adjust offsets for global position
+        # Adjust offsets for global position using actual chunk position
         for e in chunk_edits:
             all_edits.append(
                 Edit(
-                    start=e["start"] + current_offset,
-                    end=e["end"] + current_offset,
+                    start=e["start"] + chunk_start,
+                    end=e["end"] + chunk_start,
                     original=e["original"],
                     correction=e["correction"],
                     operation=e["operation"],
@@ -138,8 +141,8 @@ def _correct_text(text: str) -> CorrectionResponse:
                 )
             )
 
-        # Update offset
-        current_offset += len(chunk)
+        # Update search position to after this chunk
+        search_start = chunk_start + len(chunk)
 
     # Reconstruct corrected text
     if (
