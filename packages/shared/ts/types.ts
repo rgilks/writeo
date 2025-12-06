@@ -476,7 +476,6 @@ export function convertGECEditsToErrors(edits: GECSeq2seqEdit[]): LanguageToolEr
       mediumConfidence: true,
       errorType,
       explanation: message, // Use the clear message as explanation
-      example: edit.operation === "replace" ? `${edit.original} → ${edit.correction}` : undefined,
     };
   });
 }
