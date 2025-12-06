@@ -66,11 +66,14 @@ def _load_model():
 
 
 def _correct_text(text: str) -> CorrectionResponse:
-    """Correct grammar in the given text."""
+    """Correct grammar in the given text using batched inference."""
+    import torch
+
     _load_model()
 
     # Smart chunking using Spacy (via ErrorExtractor) to handle long texts
     chunks = []
+
     if hasattr(_extractor, "annotator") and _extractor.annotator:
         try:
             doc = _extractor.annotator.parse(text)
@@ -92,43 +95,58 @@ def _correct_text(text: str) -> CorrectionResponse:
     else:
         chunks = text.split("\n")
 
-    corrected_chunks = []
-    all_edits = []
-    search_start = 0  # Start position for searching each chunk in original text
-
+    # Filter and find positions for non-empty chunks
+    valid_chunks = []
+    search_start = 0
     for chunk in chunks:
-        # Skip empty chunks
-        if not chunk:
+        if not chunk or not chunk.strip():
             continue
-
-        if not chunk.strip():
-            corrected_chunks.append(chunk)
-            continue
-
-        # Find actual position of this chunk in original text
         chunk_start = text.find(chunk, search_start)
         if chunk_start == -1:
-            # Fallback: chunk not found exactly, skip offset adjustment
             print(f"WARNING: Could not find chunk position, skipping: {chunk[:50]}...")
             continue
+        valid_chunks.append((chunk, chunk_start))
+        search_start = chunk_start + len(chunk)
 
-        input_text = f"grammar: {chunk}"
+    if not valid_chunks:
+        return CorrectionResponse(original=text, corrected=text, edits=[])
 
+    # Prepare batched inputs - prefix all chunks with "grammar: "
+    input_texts = [f"grammar: {chunk}" for chunk, _ in valid_chunks]
+
+    # Batch tokenization with padding
+    with torch.inference_mode():
         inputs = _tokenizer(
-            input_text, return_tensors="pt", max_length=512, truncation=True
+            input_texts,
+            return_tensors="pt",
+            max_length=512,
+            truncation=True,
+            padding=True,  # Pad to longest in batch
         ).to(_model.device)
 
+        # Batched generation - process all chunks in one GPU call
         outputs = _model.generate(
-            **inputs, max_length=512, num_beams=4, early_stopping=True
+            **inputs,
+            max_length=512,
+            num_beams=2,  # Reduced from 4 for speed (still good quality)
+            early_stopping=True,
         )
 
-        corrected_chunk_text = _tokenizer.decode(outputs[0], skip_special_tokens=True)
+    # Decode all outputs
+    corrected_texts = _tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
+    # Extract edits for each chunk
+    corrected_chunks = []
+    all_edits = []
+
+    for i, (chunk, chunk_start) in enumerate(valid_chunks):
+        corrected_chunk_text = corrected_texts[i]
         corrected_chunks.append(corrected_chunk_text)
 
         # Extract edits for this chunk
         chunk_edits = _extractor.extract_edits(chunk, corrected_chunk_text)
 
-        # Adjust offsets for global position using actual chunk position
+        # Adjust offsets for global position
         for e in chunk_edits:
             all_edits.append(
                 Edit(
@@ -140,9 +158,6 @@ def _correct_text(text: str) -> CorrectionResponse:
                     category=e["category"],
                 )
             )
-
-        # Update search position to after this chunk
-        search_start = chunk_start + len(chunk)
 
     # Reconstruct corrected text
     if (
