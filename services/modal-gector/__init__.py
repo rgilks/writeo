@@ -1,0 +1,1 @@
+"""GECToR Modal Service."""
