@@ -146,12 +146,16 @@ def _correct_text(text: str) -> CorrectionResponse:
             padding=True,  # Pad to longest in batch
         ).to(_model.device)
 
-        # Batched generation - process all chunks in one GPU call
+        # Smart max_length: input length + 20% buffer (corrections rarely add much)
+        input_len = inputs.input_ids.shape[1]
+        max_output_len = min(512, int(input_len * 1.2) + 10)
+
+        # Batched generation - optimized for speed
         outputs = _model.generate(
             **inputs,
-            max_length=512,
-            num_beams=2,  # Reduced from 4 for speed (still good quality)
-            early_stopping=True,
+            max_length=max_output_len,
+            num_beams=1,  # Greedy decoding - ~2x faster than beam search
+            do_sample=False,  # Deterministic output
         )
 
     # Decode all outputs
