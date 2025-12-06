@@ -15,7 +15,8 @@ class Edit(BaseModel):
     end: int
     original: str
     correction: str
-    type: str  # grammar, vocabulary, mechanics, fluency
+    operation: str  # insert, replace, delete
+    category: str  # grammar, vocabulary, mechanics, fluency
 
 
 class CorrectionResponse(BaseModel):
@@ -132,7 +133,8 @@ def _correct_text(text: str) -> CorrectionResponse:
                     end=e["end"] + current_offset,
                     original=e["original"],
                     correction=e["correction"],
-                    type=e["type"],
+                    operation=e["operation"],
+                    category=e["category"],
                 )
             )
 
