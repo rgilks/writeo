@@ -30,11 +30,6 @@ describe("API LLM Tests", () => {
     expect(ltAssessor).toBeDefined();
     expect(ltAssessor.name).toBe("LanguageTool (OSS)"); // Should be separate, not merged
 
-    // Verify AI assessor exists (separate from LanguageTool)
-    const llmAssessor = assessorResults.find((a: any) => a.id === ASSESSOR_IDS.LLM);
-    expect(llmAssessor).toBeDefined();
-    expect(llmAssessor.name).toBe("AI Assessment");
-
     // Verify LanguageTool errors are in the LanguageTool assessor
     const ltErrors = ltAssessor.errors || [];
     expect(ltErrors.length).toBeGreaterThan(0);
@@ -43,33 +38,34 @@ describe("API LLM Tests", () => {
     const ltErrorsWithSource = ltErrors.filter((e: any) => e.source === "LT");
     expect(ltErrorsWithSource.length).toBeGreaterThan(0);
 
-    // CRITICAL: LLM errors MUST be present in the API response (synchronous assessment)
-    // The text has clear tense errors that LLM should catch
-    const llmErrors = llmAssessor.errors || [];
-    expect(llmErrors.length).toBeGreaterThan(0);
-    expect(llmErrors.length).toBeGreaterThanOrEqual(1); // At least one LLM error
-
-    // Verify LLM errors have correct structure
-    const firstLLMError = llmErrors[0];
-    expect(firstLLMError).toHaveProperty("source", "LLM");
-    expect(firstLLMError).toHaveProperty("confidenceScore");
-    expect(firstLLMError).toHaveProperty("mediumConfidence");
-    expect(firstLLMError.mediumConfidence).toBe(true); // LLM errors are medium-confidence by default
-    expect(firstLLMError.confidenceScore).toBeGreaterThanOrEqual(0);
-    expect(firstLLMError.confidenceScore).toBeLessThanOrEqual(1);
-
-    // Verify assessors are separate (not merged)
     // LanguageTool assessor should only have LT errors
     const ltErrorsInLTAssessor = ltErrors.filter((e: any) => e.source === "LT");
     expect(ltErrorsInLTAssessor.length).toBe(ltErrors.length); // All should be LT
 
-    // LLM assessor should only have LLM errors
-    const llmErrorsInLLMAssessor = llmErrors.filter((e: any) => e.source === "LLM");
-    expect(llmErrorsInLLMAssessor.length).toBe(llmErrors.length); // All should be LLM
+    // T-GEC-LLM assessor is optional (disabled by default in assessors.json: gecLlm: false)
+    // Only validate LLM-specific behavior if the assessor is present
+    const llmAssessor = assessorResults.find((a: any) => a.id === ASSESSOR_IDS.LLM);
+    if (llmAssessor) {
+      expect(llmAssessor.name).toBe("AI Assessment");
 
-    // Verify both assessors have errors
-    expect(ltErrors.length).toBeGreaterThan(0);
-    expect(llmErrors.length).toBeGreaterThan(0);
+      // CRITICAL: LLM errors MUST be present when the assessor is enabled
+      const llmErrors = llmAssessor.errors || [];
+      expect(llmErrors.length).toBeGreaterThan(0);
+      expect(llmErrors.length).toBeGreaterThanOrEqual(1); // At least one LLM error
+
+      // Verify LLM errors have correct structure
+      const firstLLMError = llmErrors[0];
+      expect(firstLLMError).toHaveProperty("source", "LLM");
+      expect(firstLLMError).toHaveProperty("confidenceScore");
+      expect(firstLLMError).toHaveProperty("mediumConfidence");
+      expect(firstLLMError.mediumConfidence).toBe(true); // LLM errors are medium-confidence by default
+      expect(firstLLMError.confidenceScore).toBeGreaterThanOrEqual(0);
+      expect(firstLLMError.confidenceScore).toBeLessThanOrEqual(1);
+
+      // LLM assessor should only have LLM errors
+      const llmErrorsInLLMAssessor = llmErrors.filter((e: any) => e.source === "LLM");
+      expect(llmErrorsInLLMAssessor.length).toBe(llmErrors.length); // All should be LLM
+    }
   });
 
   test.concurrent("llm - position validation and word boundary alignment", async () => {
