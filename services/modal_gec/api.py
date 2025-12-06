@@ -131,12 +131,22 @@ def _correct_text(text: str) -> CorrectionResponse:
     valid_chunks = chunks_with_positions
 
     if not valid_chunks:
+        print("DEBUG: No valid chunks to process")
         return CorrectionResponse(original=text, corrected=text, edits=[])
+
+    # Log chunk info
+    print(f"DEBUG: Processing {len(valid_chunks)} chunks from {len(text)} char input")
+    for i, (chunk, pos) in enumerate(valid_chunks):
+        print(f"  Chunk {i}: pos={pos}, len={len(chunk)}, text='{chunk[:40]}...'")
 
     # Prepare batched inputs - prefix all chunks with "grammar: "
     input_texts = [f"grammar: {chunk}" for chunk, _ in valid_chunks]
 
     # Batch tokenization with padding
+    import time
+
+    gen_start = time.time()
+
     with torch.inference_mode():
         inputs = _tokenizer(
             input_texts,
@@ -149,6 +159,9 @@ def _correct_text(text: str) -> CorrectionResponse:
         # Smart max_length: input length + 20% buffer (corrections rarely add much)
         input_len = inputs.input_ids.shape[1]
         max_output_len = min(512, int(input_len * 1.2) + 10)
+        print(
+            f"DEBUG: Tokenized batch: {inputs.input_ids.shape}, max_output={max_output_len}"
+        )
 
         # Batched generation - optimized for speed
         outputs = _model.generate(
@@ -157,6 +170,9 @@ def _correct_text(text: str) -> CorrectionResponse:
             num_beams=1,  # Greedy decoding - ~2x faster than beam search
             do_sample=False,  # Deterministic output
         )
+
+    gen_time = time.time() - gen_start
+    print(f"DEBUG: Generation took {gen_time:.2f}s for {len(valid_chunks)} chunks")
 
     # Decode all outputs
     corrected_texts = _tokenizer.batch_decode(outputs, skip_special_tokens=True)
@@ -172,6 +188,14 @@ def _correct_text(text: str) -> CorrectionResponse:
         # Extract edits for this chunk
         chunk_edits = _extractor.extract_edits(chunk, corrected_chunk_text)
 
+        # Log chunk corrections
+        if chunk_edits:
+            print(f"DEBUG: Chunk {i} has {len(chunk_edits)} edits")
+            for e in chunk_edits[:3]:  # Show first 3
+                print(
+                    f"    Edit: pos={e['start']}-{e['end']} '{e['original']}' -> '{e['correction']}'"
+                )
+
         # Adjust offsets for global position
         for e in chunk_edits:
             all_edits.append(
@@ -184,6 +208,8 @@ def _correct_text(text: str) -> CorrectionResponse:
                     category=e["category"],
                 )
             )
+
+    print(f"DEBUG: Total {len(all_edits)} edits found")
 
     # Reconstruct corrected text - use space join for spacy chunking, newline for fallback
     if (
