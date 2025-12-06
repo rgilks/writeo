@@ -67,6 +67,8 @@ def _load_model():
 
 def _correct_text(text: str) -> CorrectionResponse:
     """Correct grammar in the given text using batched inference."""
+    import time
+
     import torch
 
     _load_model()
@@ -75,6 +77,7 @@ def _correct_text(text: str) -> CorrectionResponse:
     # Each item is (chunk_text, chunk_start_char)
     chunks_with_positions: list[tuple[str, int]] = []
 
+    chunk_start_time = time.time()
     if hasattr(_extractor, "annotator") and _extractor.annotator:
         try:
             doc = _extractor.annotator.parse(text)
@@ -129,13 +132,16 @@ def _correct_text(text: str) -> CorrectionResponse:
 
     # Filter valid chunks (already done during chunking)
     valid_chunks = chunks_with_positions
+    chunk_time = time.time() - chunk_start_time
 
     if not valid_chunks:
         print("DEBUG: No valid chunks to process")
         return CorrectionResponse(original=text, corrected=text, edits=[])
 
     # Log chunk info
-    print(f"DEBUG: Processing {len(valid_chunks)} chunks from {len(text)} char input")
+    print(
+        f"DEBUG: Chunking took {chunk_time:.2f}s - {len(valid_chunks)} chunks from {len(text)} chars"
+    )
     for i, (chunk, pos) in enumerate(valid_chunks):
         print(f"  Chunk {i}: pos={pos}, len={len(chunk)}, text='{chunk[:40]}...'")
 
@@ -177,7 +183,8 @@ def _correct_text(text: str) -> CorrectionResponse:
     # Decode all outputs
     corrected_texts = _tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-    # Extract edits for each chunk
+    # Extract edits for each chunk (ERRANT uses spacy to parse and compare)
+    extract_start = time.time()
     corrected_chunks = []
     all_edits = []
 
@@ -185,7 +192,7 @@ def _correct_text(text: str) -> CorrectionResponse:
         corrected_chunk_text = corrected_texts[i]
         corrected_chunks.append(corrected_chunk_text)
 
-        # Extract edits for this chunk
+        # Extract edits for this chunk (ERRANT parses both texts with spacy)
         chunk_edits = _extractor.extract_edits(chunk, corrected_chunk_text)
 
         # Log chunk corrections
@@ -209,7 +216,10 @@ def _correct_text(text: str) -> CorrectionResponse:
                 )
             )
 
-    print(f"DEBUG: Total {len(all_edits)} edits found")
+    extract_time = time.time() - extract_start
+    print(
+        f"DEBUG: Extraction took {extract_time:.2f}s - {len(all_edits)} total edits found"
+    )
 
     # Reconstruct corrected text - use space join for spacy chunking, newline for fallback
     if (
