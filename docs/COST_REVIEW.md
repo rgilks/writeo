@@ -39,6 +39,28 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 | T-AES-FEEDBACK | ❌ OFF  | ~$0.0001    | Experimental                    |
 | T-GEC-LLM      | ❌ OFF  | ~$0.002     | Expensive, redundant            |
 
+**Modal Services Cost Breakdown:**
+
+| Service            | GPU  | Keep-Warm | Cost/Invocation | Notes                         |
+| ------------------ | ---- | --------- | --------------- | ----------------------------- |
+| **modal-essay**    | T4   | 30s       | ~$0.00008       | Essay scoring (RoBERTa)       |
+| **modal-corpus**   | T4   | 30s       | ~$0.00008       | Corpus-trained scorer         |
+| **modal-feedback** | T4   | 30s       | ~$0.00008       | Feedback model (experimental) |
+| **modal-lt**       | CPU  | 300s      | ~$0.00002       | LanguageTool grammar check    |
+| **modal_gec**      | A10G | 300s      | ~$0.00015       | Seq2Seq GEC (Flan-T5)         |
+
+**GPU Pricing (Modal, as of Q1 2025):**
+
+- T4: ~$0.59/hour (~$0.00016/second)
+- A10G: ~$1.10/hour (~$0.00031/second)
+- CPU: ~$0.0001/second
+
+**Cold Start vs Warm:**
+
+- Cold start adds ~2-5s for GPU services (billed)
+- Keep-warm reduces cold starts but incurs idle cost
+- Default config: T4 services keep-warm 30s, CPU/A10G keep-warm 300s
+
 **Lean Mode (default)**: ~$0.0005/submission (Modal only)  
 **Full Mode** (all enabled): ~$0.0025-0.006/submission (with LLM)
 
