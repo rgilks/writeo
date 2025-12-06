@@ -101,7 +101,7 @@ export function buildConfig(env: Env): AppConfig {
       corpusUrl: env.MODAL_CORPUS_URL || "https://rob-gilks--writeo-corpus-fastapi-app.modal.run",
       feedbackUrl:
         env.MODAL_FEEDBACK_URL || "https://rob-gilks--writeo-feedback-fastapi-app.modal.run",
-      gecUrl: env.MODAL_GEC_URL || "https://rob-gilks--writeo-gec-service-gec-endpoint.modal.run",
+      gecUrl: env.MODAL_GEC_URL || "https://rob-gilks--writeo-gec-service-fastapi-app.modal.run",
     },
     llm: buildLLMConfig(env),
     storage: {

@@ -51,7 +51,8 @@ export class ModalClient implements ModalService {
   }
 
   async correctGrammar(text: string): Promise<Response> {
-    return fetch(this.config.modal.gecUrl, {
+    // T-GEC-SEQ2SEQ: Seq2Seq grammar correction with edit extraction
+    return fetch(`${this.config.modal.gecUrl}/gec_endpoint`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
