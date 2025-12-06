@@ -90,6 +90,30 @@ modal deploy app.py
 - **Cold Start**: ~2-3s (JAR cached), ~10-15min first time (n-gram download)
 - **Warm Check**: ~100-500ms
 
+## Modal GEC Service
+
+FastAPI service for Grammatical Error Correction using Seq2Seq models.
+
+**Location:** `services/modal_gec/`
+
+### Quick Start
+
+```bash
+cd services/modal_gec
+# pip install -e .
+modal deploy main.py
+```
+
+### Endpoints
+
+- `POST /gec_endpoint` - Correct text and return edits
+- `GET /health` - Health check
+
+### Configuration
+
+- **Model**: `google/flan-t5-base` (Fine-tuned)
+- **Method**: Seq2Seq generation + Diff-based extraction
+
 ## Shared Package
 
 Shared TypeScript types, schemas, and utilities.

@@ -1,6 +1,8 @@
 # T-AES-FEEDBACK: Technical Guide for Software Engineers
 
-A comprehensive guide to the T-AES-FEEDBACK model - an attention-based essay feedback system designed to provide actionable error detection beyond CEFR scores.
+A comprehensive g**Guide to the Multi-Task Feedback Model (T-AES-FEEDBACK)**
+
+> **Note:** This model is primarily used for CEFR scoring and general error type distribution. Specific grammatical error correction (spans and replacements) is now handled by the dedicated **GEC Service** (see [GEC_SERVICE.md](GEC_SERVICE.md)). model - an attention-based essay feedback system designed to provide actionable error detection beyond CEFR scores.
 
 **Current Status:** Training complete with mixed results. CEFR scoring excellent (QWK 0.85), error detection requires improvement.
 

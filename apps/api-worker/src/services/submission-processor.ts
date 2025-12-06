@@ -157,6 +157,7 @@ async function processServiceResults(
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>,
   corpusResults: PromiseSettledResult<Response[]>,
   feedbackResults: PromiseSettledResult<Response[]>,
+  gecResults: PromiseSettledResult<Response[]>,
   serviceRequests: ReturnType<typeof prepareServiceRequests>,
   modalRequest: ModalRequest,
   submissionId: string,
@@ -247,6 +248,50 @@ async function processServiceResults(
   }
   timings["9c_process_feedback"] = performance.now() - processFeedbackStartTime;
 
+  // Process GEC correction results
+  const processGECStartTime = performance.now();
+  const gecScoresByAnswerId = new Map<
+    string,
+    {
+      original: string;
+      corrected: string;
+      edits: Array<{
+        start: number;
+        end: number;
+        original: string;
+        correction: string;
+        type: string;
+      }>;
+    }
+  >();
+  if (gecResults.status === "fulfilled") {
+    const responses = gecResults.value;
+    for (let i = 0; i < responses.length; i++) {
+      const response = responses[i];
+      const answerId = serviceRequests.gecRequests[i]?.answerId;
+      if (answerId && response && response.ok) {
+        try {
+          const data = (await response.json()) as {
+            original: string;
+            corrected: string;
+            edits: Array<{
+              start: number;
+              end: number;
+              original: string;
+              correction: string;
+              type: string;
+            }>;
+          };
+          gecScoresByAnswerId.set(answerId, data);
+        } catch (e) {
+          // Ignore parsing errors for GEC results
+          safeLogError("Failed to parse GEC response", { error: String(e), answerId }, null as any);
+        }
+      }
+    }
+  }
+  timings["9d_process_gec"] = performance.now() - processGECStartTime;
+
   return {
     essayAssessment,
     ltErrorsByAnswerId,
@@ -256,6 +301,7 @@ async function processServiceResults(
     relevanceByAnswerId,
     corpusScoresByAnswerId,
     feedbackScoresByAnswerId,
+    gecScoresByAnswerId,
   };
 }
 
@@ -333,8 +379,15 @@ export async function processSubmission(
     const { modalRequest, serviceRequests } = loadResult;
 
     // Phase 3: Execute assessment services in parallel
-    const { essayResult, ltResults, llmResults, relevanceResults, corpusResults, feedbackResults } =
-      await executeServiceRequests(modalRequest, serviceRequests, config, timings);
+    const {
+      essayResult,
+      ltResults,
+      llmResults,
+      relevanceResults,
+      corpusResults,
+      feedbackResults,
+      gecResults,
+    } = await executeServiceRequests(modalRequest, serviceRequests, config, timings);
 
     // Phase 4: Process service results
     const processedResults = await processServiceResults(
@@ -344,6 +397,7 @@ export async function processSubmission(
       relevanceResults,
       corpusResults,
       feedbackResults,
+      gecResults,
       serviceRequests,
       modalRequest,
       submissionId,
@@ -387,6 +441,7 @@ export async function processSubmission(
       llmAssessmentEnabled,
       processedResults.corpusScoresByAnswerId, // Add corpus scores
       processedResults.feedbackScoresByAnswerId, // Add feedback scores
+      processedResults.gecScoresByAnswerId, // Add GEC scores
     );
     timings["10_merge_results"] = performance.now() - mergeStartTime;
 

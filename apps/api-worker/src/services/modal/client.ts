@@ -49,4 +49,12 @@ export class ModalClient implements ModalService {
       body: JSON.stringify({ text }),
     });
   }
+
+  async correctGrammar(text: string): Promise<Response> {
+    return fetch(this.config.modal.gecUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+  }
 }

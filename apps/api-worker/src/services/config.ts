@@ -18,6 +18,7 @@ export interface AppConfig {
     ltUrl?: string;
     corpusUrl: string; // Default to deployed service URL
     feedbackUrl: string; // T-AES-FEEDBACK service URL
+    gecUrl: string; // T-GEC-SEQ2SEQ service URL
   };
   llm: {
     provider: LLMProvider;
@@ -82,6 +83,7 @@ export function buildConfig(env: Env): AppConfig {
       corpusUrl: env.MODAL_CORPUS_URL || "https://rob-gilks--writeo-corpus-fastapi-app.modal.run",
       feedbackUrl:
         env.MODAL_FEEDBACK_URL || "https://rob-gilks--writeo-feedback-fastapi-app.modal.run",
+      gecUrl: env.MODAL_GEC_URL || "https://rob-gilks--writeo-gec-service-gec-endpoint.modal.run",
     },
     llm: buildLLMConfig(env),
     storage: {

@@ -86,3 +86,6 @@ playwright/.cache/
 # Playwright
 test-results/
 playwright-report/
+
+# Data
+data/

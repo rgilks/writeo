@@ -17,6 +17,7 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 ## 🚀 Key Features
 
 - **🤖 AI Essay Scoring**: Multi-dimensional scoring (Task Achievement, Coherence & Cohesion, Vocabulary, Grammar) using fine-tuned RoBERTa models.
+- **✨ Smart Grammar Correction**: Dedicated Seq2Seq GEC model (`flan-t5`) for precise, context-aware error correction.
 - **📝 Grammar & Style Checking**: Advanced grammar, spelling, and style analysis using LanguageTool.
 - **💬 Detailed Feedback**: Context-aware, actionable feedback powered by **Groq Llama 3.3 70B** (Turbo) or **OpenAI GPT-4o-mini** (Cheap).
 - **📊 CEFR Mapping**: Automatic mapping of scores to Common European Framework of Reference for Languages (A2-C2).
@@ -114,9 +115,11 @@ Deploy the ML backend services to Modal:
 cd services/modal-essay
 modal deploy app.py
 
-# Deploy LanguageTool Service
-cd ../services/modal-lt
 modal deploy app.py
+
+# Deploy GEC Service
+cd ../services/modal_gec
+modal deploy main.py
 ```
 
 ### 4. Run Locally

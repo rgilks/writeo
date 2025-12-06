@@ -229,6 +229,9 @@ POST /v1/text/submissions (create) or PUT /v1/text/submissions/:submission_id (u
 │  ┌──────────────────────────────────────────────┐            │
 │  │ Relevance Check (Modal)                      │            │
 │  └──────────────────────────────────────────────┘            │
+│  ┌──────────────────────────────────────────────┐            │
+│  │ GEC Service (Modal - Seq2Seq)                │            │
+│  └──────────────────────────────────────────────┘            │
 │                                                              │
 │  All services execute in parallel using Promise.allSettled() │
 └──────────────────────────────────────────────────────────────┘

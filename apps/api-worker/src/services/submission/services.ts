@@ -26,6 +26,7 @@ export interface ServiceRequests {
   }>;
   corpusRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode corpus scoring
   feedbackRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode T-AES-FEEDBACK
+  gecRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode T-GEC-SEQ2SEQ
   llmProvider: LLMProvider;
   apiKey: string;
   aiModel: string;
@@ -63,6 +64,8 @@ export function prepareServiceRequests(
   const corpusRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
   // Feedback scoring requests (dev mode / mock services)
   const feedbackRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
+  // GEC requests (dev mode / mock services)
+  const gecRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
 
   for (const answer of iterateAnswers(modalParts)) {
     if (ltEnabled) {
@@ -104,6 +107,12 @@ export function prepareServiceRequests(
       answerId: answer.id,
       request: modalService.scoreFeedback(answer.answer_text),
     });
+
+    // Add T-GEC-SEQ2SEQ correction (always enabled - deployed model)
+    gecRequests.push({
+      answerId: answer.id,
+      request: modalService.correctGrammar(answer.answer_text),
+    });
   }
 
   ltRequests = requests;
@@ -114,6 +123,7 @@ export function prepareServiceRequests(
     llmAssessmentRequests,
     corpusRequests,
     feedbackRequests,
+    gecRequests,
     llmProvider: config.llm.provider,
     apiKey: config.llm.apiKey,
     aiModel: config.llm.model,
@@ -133,6 +143,7 @@ export async function executeServiceRequests(
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>;
   corpusResults: PromiseSettledResult<Response[]>;
   feedbackResults: PromiseSettledResult<Response[]>;
+  gecResults: PromiseSettledResult<Response[]>;
 }> {
   const essayStartTime = performance.now();
   const {
@@ -141,48 +152,62 @@ export async function executeServiceRequests(
     relevanceRequests,
     corpusRequests,
     feedbackRequests,
+    gecRequests,
     modalService,
   } = serviceRequests;
 
-  const [essayResult, ltResults, llmResults, relevanceResults, corpusResults, feedbackResults] =
-    await Promise.allSettled([
-      (async () => {
-        const start = performance.now();
-        const result = await modalService.gradeEssay(modalRequest);
-        timings["5a_essay_fetch"] = performance.now() - start;
-        return result;
-      })(),
-      (async () => {
-        const start = performance.now();
-        const resolved = await Promise.all(ltRequests.map((r) => r.request));
-        timings["5b_languagetool_fetch"] = performance.now() - start;
-        return resolved;
-      })(),
-      (async () => {
-        const start = performance.now();
-        const resolved = await Promise.all(llmAssessmentRequests.map((r) => r.request));
-        timings["5d_ai_assessment_fetch"] = performance.now() - start;
-        return resolved;
-      })(),
-      (async () => {
-        const start = performance.now();
-        const resolved = await Promise.all(relevanceRequests.map((r) => r.request));
-        timings["5c_relevance_fetch"] = performance.now() - start;
-        return resolved;
-      })(),
-      (async () => {
-        const start = performance.now();
-        const resolved = await Promise.all(corpusRequests.map((r) => r.request));
-        timings["5e_corpus_fetch"] = performance.now() - start;
-        return resolved;
-      })(),
-      (async () => {
-        const start = performance.now();
-        const resolved = await Promise.all(feedbackRequests.map((r) => r.request));
-        timings["5f_feedback_fetch"] = performance.now() - start;
-        return resolved;
-      })(),
-    ]);
+  const [
+    essayResult,
+    ltResults,
+    llmResults,
+    relevanceResults,
+    corpusResults,
+    feedbackResults,
+    gecResults,
+  ] = await Promise.allSettled([
+    (async () => {
+      const start = performance.now();
+      const result = await modalService.gradeEssay(modalRequest);
+      timings["5a_essay_fetch"] = performance.now() - start;
+      return result;
+    })(),
+    (async () => {
+      const start = performance.now();
+      const resolved = await Promise.all(ltRequests.map((r) => r.request));
+      timings["5b_languagetool_fetch"] = performance.now() - start;
+      return resolved;
+    })(),
+    (async () => {
+      const start = performance.now();
+      const resolved = await Promise.all(llmAssessmentRequests.map((r) => r.request));
+      timings["5d_ai_assessment_fetch"] = performance.now() - start;
+      return resolved;
+    })(),
+    (async () => {
+      const start = performance.now();
+      const resolved = await Promise.all(relevanceRequests.map((r) => r.request));
+      timings["5c_relevance_fetch"] = performance.now() - start;
+      return resolved;
+    })(),
+    (async () => {
+      const start = performance.now();
+      const resolved = await Promise.all(corpusRequests.map((r) => r.request));
+      timings["5e_corpus_fetch"] = performance.now() - start;
+      return resolved;
+    })(),
+    (async () => {
+      const start = performance.now();
+      const resolved = await Promise.all(feedbackRequests.map((r) => r.request));
+      timings["5f_feedback_fetch"] = performance.now() - start;
+      return resolved;
+    })(),
+    (async () => {
+      const start = performance.now();
+      const resolved = await Promise.all(gecRequests.map((r) => r.request));
+      timings["5g_gec_fetch"] = performance.now() - start;
+      return resolved;
+    })(),
+  ]);
 
   timings["5_parallel_services_total"] = performance.now() - essayStartTime;
 
@@ -193,5 +218,6 @@ export async function executeServiceRequests(
     relevanceResults,
     corpusResults,
     feedbackResults,
+    gecResults,
   };
 }

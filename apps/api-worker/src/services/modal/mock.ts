@@ -411,4 +411,53 @@ export class MockModalClient implements ModalService {
       },
     );
   }
+
+  async correctGrammar(text: string): Promise<Response> {
+    if (!text || typeof text !== "string") {
+      return new Response(JSON.stringify({ error: "Invalid text input" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Mock GEC response
+    const original = text;
+    let corrected = text;
+    const edits = [];
+
+    // Simple mock corrections using regex
+    if (/\bI goes\b/i.test(text)) {
+      corrected = corrected.replace(/\bI goes\b/gi, "I go");
+      edits.push({
+        start: text.toLowerCase().indexOf("i goes"),
+        end: text.toLowerCase().indexOf("i goes") + 6,
+        original: "I goes",
+        correction: "I go",
+        type: "grammar",
+      });
+    }
+
+    if (/\bthree book\b/i.test(text)) {
+      corrected = corrected.replace(/\bthree book\b/gi, "three books");
+      edits.push({
+        start: text.toLowerCase().indexOf("three book"),
+        end: text.toLowerCase().indexOf("three book") + 10,
+        original: "three book",
+        correction: "three books",
+        type: "grammar",
+      });
+    }
+
+    return new Response(
+      JSON.stringify({
+        original,
+        corrected,
+        edits,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
 }

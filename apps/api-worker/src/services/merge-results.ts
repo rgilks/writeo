@@ -18,6 +18,7 @@ const ASSESSOR_IDS = {
   TEACHER: "T-TEACHER-FEEDBACK",
   CORPUS: "T-AES-CORPUS", // Dev mode corpus scoring
   FEEDBACK: "T-AES-FEEDBACK", // Dev mode multi-task feedback
+  GEC: "T-GEC-SEQ2SEQ", // Dev mode GEC
 } as const;
 
 function extractEssayAssessorResults(
@@ -227,6 +228,30 @@ function createFeedbackAssessor(feedbackData: {
   };
 }
 
+function createGECAssessor(gecData: {
+  original: string;
+  corrected: string;
+  edits: Array<{
+    start: number;
+    end: number;
+    original: string;
+    correction: string;
+    type: string;
+  }>;
+}): AssessorResult {
+  return {
+    id: ASSESSOR_IDS.GEC,
+    name: "GEC Seq2Seq",
+    type: "feedback",
+    meta: {
+      model: "flan-t5-base-gec",
+      edits: gecData.edits,
+      correctedText: gecData.corrected,
+      devMode: true,
+    },
+  };
+}
+
 function buildAssessorResults(
   _answerId: string,
   essayAssessorResults: AssessorResult[],
@@ -242,6 +267,19 @@ function buildAssessorResults(
         cefr_level: string;
         error_spans: Array<{ start: number; tokens: string[] }>;
         error_types: Record<string, number>;
+      }
+    | undefined,
+  gecData:
+    | {
+        original: string;
+        corrected: string;
+        edits: Array<{
+          start: number;
+          end: number;
+          original: string;
+          correction: string;
+          type: string;
+        }>;
       }
     | undefined,
   language: string,
@@ -287,6 +325,11 @@ function buildAssessorResults(
     assessorResults.push(createFeedbackAssessor(feedbackData));
   }
 
+  // Add GEC assessor if available (dev mode)
+  if (gecData) {
+    assessorResults.push(createGECAssessor(gecData));
+  }
+
   return assessorResults;
 }
 
@@ -326,6 +369,20 @@ export function mergeAssessmentResults(
       error_types: Record<string, number>;
     }
   > = new Map(),
+  gecScores: Map<
+    string,
+    {
+      original: string;
+      corrected: string;
+      edits: Array<{
+        start: number;
+        end: number;
+        original: string;
+        correction: string;
+        type: string;
+      }>;
+    }
+  > = new Map(),
 ): AssessmentResults {
   const parts: AssessmentPart[] = [];
 
@@ -344,6 +401,7 @@ export function mergeAssessmentResults(
         teacherFeedback.get(answer.id),
         corpusScores.get(answer.id),
         feedbackScores.get(answer.id),
+        gecScores.get(answer.id),
         language,
         llmProvider,
         aiModel,
