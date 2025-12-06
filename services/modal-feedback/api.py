@@ -68,16 +68,16 @@ def create_fastapi_app() -> FastAPI:
             error_type_logits = outputs["error_type_logits"][0]  # [5]
 
             # Convert span predictions to labels WITH CONFIDENCE THRESHOLD
-            # Only mark as error if the model is confident (probability > 0.7)
+            # Only mark as error if the model is confident (probability > 0.5)
             span_probs = torch.softmax(span_logits, dim=1)  # [seq_len, 3]
             span_preds_raw = torch.argmax(span_logits, dim=1)
 
-            # Apply confidence threshold: only mark as B-ERROR or I-ERROR if prob > 0.7
+            # Apply confidence threshold: only mark as B-ERROR or I-ERROR if prob > 0.5
             span_preds = []
             for i, (pred, probs) in enumerate(zip(span_preds_raw, span_probs)):
                 if pred != 0:  # If predicted as error (B or I)
                     confidence = probs[pred].item()
-                    if confidence < 0.7:  # Not confident enough
+                    if confidence < 0.5:  # Not confident enough
                         pred = 0  # Mark as O (no error)
                 span_preds.append(
                     pred.item() if isinstance(pred, torch.Tensor) else pred
