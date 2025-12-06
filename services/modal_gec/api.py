@@ -78,40 +78,54 @@ def _correct_text(text: str) -> CorrectionResponse:
     if hasattr(_extractor, "annotator") and _extractor.annotator:
         try:
             doc = _extractor.annotator.parse(text)
-            current_chunk = ""
-            chunk_start = 0
+            chunk_start = -1
+            chunk_end = 0
 
             for sent in doc.sents:
-                sent_text = text[sent.start_char : sent.end_char]
-                # Keep chunks relatively small (<400 chars) to prevent hallucination loops
-                if len(current_chunk) + len(sent_text) < 400:
-                    if not current_chunk:
-                        chunk_start = sent.start_char
-                    current_chunk += sent_text
-                else:
-                    if current_chunk.strip():
-                        chunks_with_positions.append((current_chunk, chunk_start))
-                    current_chunk = sent_text
-                    chunk_start = sent.start_char
+                sent_len = sent.end_char - sent.start_char
+                current_chunk_len = chunk_end - chunk_start if chunk_start >= 0 else 0
 
-            if current_chunk.strip():
-                chunks_with_positions.append((current_chunk, chunk_start))
+                # Keep chunks relatively small (<400 chars) to prevent hallucination loops
+                if chunk_start < 0:
+                    # Start a new chunk
+                    chunk_start = sent.start_char
+                    chunk_end = sent.end_char
+                elif current_chunk_len + sent_len < 400:
+                    # Extend current chunk to include this sentence
+                    chunk_end = sent.end_char
+                else:
+                    # Save current chunk and start a new one
+                    chunk_text = text[chunk_start:chunk_end]
+                    if chunk_text.strip():
+                        chunks_with_positions.append((chunk_text, chunk_start))
+                    chunk_start = sent.start_char
+                    chunk_end = sent.end_char
+
+            # Don't forget the last chunk
+            if chunk_start >= 0:
+                chunk_text = text[chunk_start:chunk_end]
+                if chunk_text.strip():
+                    chunks_with_positions.append((chunk_text, chunk_start))
 
         except Exception as e:
             print(f"WARNING: Smart chunking failed: {e}. Falling back to simple split.")
-            # Fallback: split by newlines and track positions
-            pos = 0
+            # Fallback: split by newlines and track positions using text.find()
+            search_start = 0
             for line in text.split("\n"):
                 if line.strip():
-                    chunks_with_positions.append((line, pos))
-                pos += len(line) + 1  # +1 for newline
+                    pos = text.find(line, search_start)
+                    if pos >= 0:
+                        chunks_with_positions.append((line, pos))
+                        search_start = pos + len(line)
     else:
-        # No spacy: split by newlines and track positions
-        pos = 0
+        # No spacy: split by newlines and track positions using text.find()
+        search_start = 0
         for line in text.split("\n"):
             if line.strip():
-                chunks_with_positions.append((line, pos))
-            pos += len(line) + 1  # +1 for newline
+                pos = text.find(line, search_start)
+                if pos >= 0:
+                    chunks_with_positions.append((line, pos))
+                    search_start = pos + len(line)
 
     # Filter valid chunks (already done during chunking)
     valid_chunks = chunks_with_positions
