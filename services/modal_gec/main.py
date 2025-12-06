@@ -17,7 +17,9 @@ VOLUME_MOUNT = "/checkpoints"
 # Function configuration
 TIMEOUT_SECONDS = 600
 GPU_TYPE = "A10G"
-SCALEDOWN_WINDOW_SECONDS = 300  # 5 min keep-warm for GPU
+SCALEDOWN_WINDOW_SECONDS = (
+    60  # 1 min keep-warm for GPU (saves cost, slight cold start delay)
+)
 
 # Path for app files
 REMOTE_APP_PATH = "/app"
