@@ -403,7 +403,8 @@ export interface GECSeq2seqEdit {
   end: number;
   original: string;
   correction: string;
-  type: "insert" | "replace" | "delete";
+  operation: "insert" | "replace" | "delete";
+  category?: string; // grammar, fluency, mechanics, vocabulary
 }
 
 /**
@@ -440,23 +441,23 @@ export function getGECSeq2seqAssessorResult(results: AssessorResult[]):
  */
 export function convertGECEditsToErrors(edits: GECSeq2seqEdit[]): LanguageToolError[] {
   return edits.map((edit) => {
-    // Determine category based on edit type
-    let category = "GRAMMAR";
+    // Determine error type and message based on operation
+    let errorCategory = "GRAMMAR";
     let message = "";
     let errorType = "Grammar correction";
 
-    if (edit.type === "insert") {
-      category = "GRAMMAR";
-      message = `Missing text: "${edit.correction}"`;
+    if (edit.operation === "insert") {
+      errorCategory = "GRAMMAR";
+      message = `Add "${edit.correction}"`;
       errorType = "Missing word/phrase";
-    } else if (edit.type === "delete") {
-      category = "STYLE";
-      message = `Remove: "${edit.original}"`;
+    } else if (edit.operation === "delete") {
+      errorCategory = "STYLE";
+      message = `Remove "${edit.original}"`;
       errorType = "Unnecessary word/phrase";
     } else {
       // replace
-      category = "GRAMMAR";
-      message = `Change "${edit.original}" to "${edit.correction}"`;
+      errorCategory = "GRAMMAR";
+      message = `"${edit.original}" → "${edit.correction}"`;
       errorType = "Word/phrase correction";
     }
 
@@ -464,8 +465,8 @@ export function convertGECEditsToErrors(edits: GECSeq2seqEdit[]): LanguageToolEr
       start: edit.start,
       end: edit.end,
       length: edit.end - edit.start,
-      category,
-      rule_id: `GEC-SEQ2SEQ-${edit.type.toUpperCase()}`,
+      category: errorCategory,
+      rule_id: `GEC-SEQ2SEQ-${edit.operation.toUpperCase()}`,
       message,
       suggestions: edit.correction ? [edit.correction] : [],
       source: "LLM" as const, // Use LLM source to indicate AI-based
@@ -474,8 +475,8 @@ export function convertGECEditsToErrors(edits: GECSeq2seqEdit[]): LanguageToolEr
       highConfidence: true,
       mediumConfidence: true,
       errorType,
-      explanation: `The Seq2Seq grammar model suggests this change for improved clarity.`,
-      example: edit.type === "replace" ? `${edit.original} → ${edit.correction}` : undefined,
+      explanation: message, // Use the clear message as explanation
+      example: edit.operation === "replace" ? `${edit.original} → ${edit.correction}` : undefined,
     };
   });
 }

@@ -69,13 +69,22 @@ class ErrorExtractor:
             else:
                 char_end = len(source)
 
+            # Determine operation type based on original/correction
+            if edit.o_str == "":
+                operation = "insert"
+            elif edit.c_str == "":
+                operation = "delete"
+            else:
+                operation = "replace"
+
             results.append(
                 {
                     "start": char_start,
                     "end": char_end,
                     "original": edit.o_str,
                     "correction": edit.c_str,
-                    "type": self._map_errant_type(edit.type),
+                    "operation": operation,  # insert/replace/delete for frontend
+                    "category": self._map_errant_type(edit.type),  # grammar/fluency/etc
                     "errant_type": edit.type,
                 }
             )
@@ -117,18 +126,23 @@ class ErrorExtractor:
             else:
                 char_end = len(source)
 
-            # Basic type inference for fallback
-            error_type = "fluency"  # Default
+            # Map difflib tag to operation type
+            operation = tag  # delete, insert, replace map directly
+
+            # Basic category inference for fallback
+            category = "fluency"  # Default
             if tag == "delete":
-                error_type = "grammar"  # Unnecessary word usually
+                category = "grammar"  # Unnecessary word usually
             elif tag == "insert":
-                error_type = "grammar"  # Missing word usually
+                category = "grammar"  # Missing word usually
             elif tag == "replace":
                 # Heuristics
                 if len(original_text) > 0 and len(correction_text) > 0:
                     # Check for simple capitalization or punctuation
                     if original_text.lower() == correction_text.lower():
-                        error_type = "mechanics"
+                        category = "mechanics"
+                    else:
+                        category = "grammar"
 
             edits.append(
                 {
@@ -136,8 +150,8 @@ class ErrorExtractor:
                     "end": char_end,
                     "original": original_text,
                     "correction": correction_text,
-                    "type": error_type,
-                    "tag": tag,
+                    "operation": operation,  # insert/replace/delete for frontend
+                    "category": category,  # grammar/fluency/mechanics for display
                 }
             )
 
