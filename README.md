@@ -118,7 +118,7 @@ modal deploy app.py
 modal deploy app.py
 
 # Deploy GEC Service
-cd ../services/modal_gec
+cd ../modal_gec
 modal deploy main.py
 ```
 
