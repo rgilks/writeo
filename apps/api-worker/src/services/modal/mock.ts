@@ -1,6 +1,11 @@
-import type { ModalRequest, LanguageToolResponse } from "@writeo/shared";
+import type {
+  ModalRequest,
+  LanguageToolResponse,
+  AssessmentResults,
+  AssessorResult,
+} from "@writeo/shared";
 import type { ModalService } from "./types";
-import type { EssayResult } from "../clients/essay-client";
+import { mapScoreToCEFR } from "@writeo/shared";
 
 // Mock error scenarios for testing error handling
 export const MOCK_MODAL_ERROR_SCENARIOS = {
@@ -67,50 +72,72 @@ export class MockModalClient implements ModalService {
     const baseScore = hasErrors ? 3.5 : 4.0;
     const variance = 0.3;
 
-    const mockResult: EssayResult = {
-      submission_id: request.submission_id,
-      parts: request.parts.map((part) => ({
-        part: part.part,
-        answers: part.answers.map((answer) => {
-          // Vary scores slightly per answer for realism
-          const taScore = Math.max(
-            1.0,
-            Math.min(5.0, baseScore + (Math.random() - 0.5) * variance),
-          );
-          const ccScore = Math.max(
-            1.0,
-            Math.min(5.0, baseScore + (Math.random() - 0.5) * variance),
-          );
-          const vocabScore = Math.max(
-            1.0,
-            Math.min(5.0, baseScore + (Math.random() - 0.5) * variance),
-          );
-          const grammarScore = hasErrors
-            ? Math.max(1.0, Math.min(5.0, baseScore - 0.5 + (Math.random() - 0.5) * variance))
-            : Math.max(1.0, Math.min(5.0, baseScore + (Math.random() - 0.5) * variance));
-          const overallScore = (taScore + ccScore + vocabScore + grammarScore) / 4;
+    // Convert scores from 0-5 scale to 0-9 scale (IELTS band scores)
+    const scaleToIELTS = (score: number): number => {
+      // Map 0-5 to 0-9: 0->0, 5->9, linear mapping
+      return (score / 5) * 9;
+    };
 
-          // Determine CEFR level based on overall score
-          let label: string;
-          if (overallScore >= 4.5) label = "C1";
-          else if (overallScore >= 4.0) label = "B2";
-          else if (overallScore >= 3.5) label = "B1";
-          else if (overallScore >= 3.0) label = "A2";
-          else label = "A1";
+    const mockResult: AssessmentResults = {
+      status: "success",
+      results: {
+        parts: request.parts.map((part) => ({
+          part: part.part,
+          status: "success" as const,
+          answers: part.answers.map((answer) => {
+            // Vary scores slightly per answer for realism
+            const taScore = Math.max(
+              1.0,
+              Math.min(5.0, baseScore + (Math.random() - 0.5) * variance),
+            );
+            const ccScore = Math.max(
+              1.0,
+              Math.min(5.0, baseScore + (Math.random() - 0.5) * variance),
+            );
+            const vocabScore = Math.max(
+              1.0,
+              Math.min(5.0, baseScore + (Math.random() - 0.5) * variance),
+            );
+            const grammarScore = hasErrors
+              ? Math.max(1.0, Math.min(5.0, baseScore - 0.5 + (Math.random() - 0.5) * variance))
+              : Math.max(1.0, Math.min(5.0, baseScore + (Math.random() - 0.5) * variance));
+            const overallScoreRaw = (taScore + ccScore + vocabScore + grammarScore) / 4;
 
-          return {
-            answer_id: answer.id,
-            scores: {
-              TA: Math.round(taScore * 10) / 10,
-              CC: Math.round(ccScore * 10) / 10,
-              Vocab: Math.round(vocabScore * 10) / 10,
-              Grammar: Math.round(grammarScore * 10) / 10,
-              Overall: Math.round(overallScore * 10) / 10,
-            },
-            label,
-          };
-        }),
-      })),
+            // Convert to IELTS band scores (0-9)
+            const taIELTS = scaleToIELTS(taScore);
+            const ccIELTS = scaleToIELTS(ccScore);
+            const vocabIELTS = scaleToIELTS(vocabScore);
+            const grammarIELTS = scaleToIELTS(grammarScore);
+            const overallIELTS = scaleToIELTS(overallScoreRaw);
+
+            // Determine CEFR level based on IELTS overall score
+            const label = mapScoreToCEFR(overallIELTS);
+
+            // Create assessor result in the format expected by AssessmentResults
+            const assessorResult: AssessorResult = {
+              id: "T-AES-ESSAY",
+              name: "Essay scorer",
+              type: "grader",
+              overall: Math.round(overallIELTS * 10) / 10,
+              label,
+              dimensions: {
+                TA: Math.round(taIELTS * 10) / 10,
+                CC: Math.round(ccIELTS * 10) / 10,
+                Vocab: Math.round(vocabIELTS * 10) / 10,
+                Grammar: Math.round(grammarIELTS * 10) / 10,
+                Overall: Math.round(overallIELTS * 10) / 10,
+              },
+            };
+
+            return {
+              id: answer.id,
+              assessorResults: [assessorResult],
+            };
+          }),
+        })),
+      },
+      requestedAssessors: [],
+      activeAssessors: ["T-AES-ESSAY"],
     };
 
     return new Response(JSON.stringify(mockResult), {
