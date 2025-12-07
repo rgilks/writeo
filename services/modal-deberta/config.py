@@ -26,11 +26,17 @@ CEFR_THRESHOLDS = {
 }
 
 # Model storage path
-VOLUME_PATH = "/vol"
-if os.path.exists(VOLUME_PATH) and os.access(VOLUME_PATH, os.W_OK):
-    MODEL_PATH = f"{VOLUME_PATH}/models/deberta-v3-aes"
+# Model storage path
+# Check for baked-in model first (fastest)
+if os.path.exists("/model/deberta-v3-aes/pytorch_model.bin"):
+    MODEL_PATH = "/model/deberta-v3-aes"
+elif os.path.exists("/model/pytorch_model.bin"):
+    MODEL_PATH = "/model"
+elif os.path.exists("/vol") and os.access("/vol", os.W_OK):
+    # Fallback to volume (slow, network read)
+    MODEL_PATH = "/vol/models/deberta-v3-aes"
 else:
-    # Local development: use user's home directory cache
+    # Local development
     MODEL_PATH = str(pathlib.Path.home() / ".cache" / "writeo" / "deberta-aes")
 
 

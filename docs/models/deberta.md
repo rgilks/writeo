@@ -123,6 +123,15 @@ The model is deployed as a Modal service and accessed via the API Worker.
 }
 ```
 
+### Deployment & Latency
+
+The model uses a **baked-in architecture** where weights are included directly in the Docker image, rather than loaded from a networked volume at runtime.
+
+- **Startup**: Model loads into memory immediately upon container start (Lifecycle hook).
+- **Inference Latency**:
+  - **Cold Start**: ~10s (Container boot + model load)
+  - **Warm Inference**: **~400ms** (P50) running in FP16 on A10G.
+
 ### Configuration
 
 Enabled in `apps/api-worker/src/config/assessors.json`:

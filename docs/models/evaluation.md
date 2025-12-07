@@ -69,7 +69,9 @@ The pipeline produces qualitative feedback from multiple sources. We analyzed th
 ## 4. Latency & Reliability
 
 - **Reliability**: The API demonstrated robust handling of requests, though initial validation strictness (requiring `submission.0.answers.0.text`) caused some client-side friction.
-- **Latency**: The parallel execution architecture works well. However, the heavy reliance on LLMs (Llama-3-70b) for multiple assessors (`GEC-LLM`, `AI-FEEDBACK`, `TEACHER-FEEDBACK`) likely contributes significantly to cost and latency.
+- **Latency**:
+  - **AES-DEBERTA**: Significant optimization achieved by baking model weights into the image and using FP16. Latency reduced from ~14s to **~0.4s** per request.
+  - **Legacy LLM Assessors**: The heavy reliance on LLMs (Llama-3-70b) for multiple assessors (`GEC-LLM`, `AI-FEEDBACK`, `TEACHER-FEEDBACK`) remains the primary bottleneck for total request duration.
 
 ---
 

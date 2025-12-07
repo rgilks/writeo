@@ -45,13 +45,13 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 
 | Service            | GPU  | Keep-Warm | Cost/Invocation | Notes                         |
 | ------------------ | ---- | --------- | --------------- | ----------------------------- |
-| **modal-deberta**  | A10G | 60s       | ~$0.00030       | DeBERTa-v3 Multi-Head         |
+| **modal-deberta**  | A10G | 30s       | ~$0.00030       | DeBERTa-v3 Multi-Head         |
 | **modal-essay**    | T4   | 30s       | ~$0.00008       | Legacy Essay Scoring          |
 | **modal-corpus**   | T4   | 30s       | ~$0.00008       | Corpus-trained scorer         |
 | **modal-feedback** | T4   | 30s       | ~$0.00008       | Feedback model (experimental) |
-| **modal-lt**       | CPU  | 300s      | ~$0.00002       | LanguageTool grammar check    |
-| **modal-gec**      | A10G | 60s       | ~$0.00015       | Seq2Seq GEC (Flan-T5, slow)   |
-| **modal-gector**   | T4   | 60s       | ~$0.00008       | GECToR fast (~10x faster)     |
+| **modal-lt**       | CPU  | 30s       | ~$0.00002       | LanguageTool grammar check    |
+| **modal-gec**      | A10G | 30s       | ~$0.00015       | Seq2Seq GEC (Flan-T5, slow)   |
+| **modal-gector**   | T4   | 30s       | ~$0.00008       | GECToR fast (~10x faster)     |
 
 **GPU Pricing (Modal, as of Q4 2025):**
 

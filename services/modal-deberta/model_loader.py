@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 import torch  # type: ignore[import-untyped]
 from transformers import AutoTokenizer  # type: ignore[import-untyped]
 
-from config import MODEL_NAME, MODEL_PATH
+from config import MODEL_PATH
 
 if TYPE_CHECKING:
     from transformers import PreTrainedTokenizer  # type: ignore[import-untyped]
@@ -25,73 +25,81 @@ _model: ModelType | None = None
 _tokenizer: TokenizerType | None = None
 
 
-def load_model() -> tuple[ModelType, TokenizerType]:
-    """Load DeBERTa-v3-large AES model from Modal volume."""
-    load_start = time.time()
+def load_model_from_path(path: str) -> tuple[ModelType, TokenizerType]:
+    """Load model from a specific path with optimization."""
+    print(f"📦 Loading DeBERTa-v3 AES model from {path}")
 
-    print(f"📦 Loading DeBERTa-v3 AES model from {MODEL_PATH}")
-
-    if not os.path.exists(MODEL_PATH):
-        raise RuntimeError(
-            f"Model not found at {MODEL_PATH}. "
-            "Model may not be trained yet. Run training script first."
-        )
+    if not os.path.exists(path):
+        raise RuntimeError(f"Model not found at {path}")
 
     # Load tokenizer
     print("📥 Loading tokenizer...")
-    tokenizer_start = time.time()
-    tokenizer: TokenizerType = AutoTokenizer.from_pretrained(MODEL_NAME)
-    tokenizer_time = time.time() - tokenizer_start
-    print(f"✅ Tokenizer loaded in {tokenizer_time:.2f}s")
+    start = time.time()
+    tokenizer: TokenizerType = AutoTokenizer.from_pretrained(path)
+    print(f"✅ Tokenizer loaded in {time.time() - start:.2f}s")
 
     # Load model
-    print(f"📥 Loading model from {MODEL_PATH}...")
+    print("📥 Loading model...")
     model_start = time.time()
 
     # Import here to avoid circular imports
     from model import DeBERTaAESModel
 
-    # Load the full model state
-    model = DeBERTaAESModel(model_name=MODEL_NAME)
-    model_state = torch.load(os.path.join(MODEL_PATH, "pytorch_model.bin"), map_location="cpu")
-    model.load_state_dict(model_state)
+    # Load model efficiently
+    # Detect device and precision
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = torch.float16 if device == "cuda" else torch.float32
+
+    print(f"⚙️  Using device: {device}, dtype: {dtype}")
+
+    # Initialize model structure
+    model = DeBERTaAESModel(model_name=path)  # Use local config from path
+
+    # Load state dict
+    state_dict_path = os.path.join(path, "pytorch_model.bin")
+    state_dict = torch.load(state_dict_path, map_location="cpu")  # Load to RAM first
+    model.load_state_dict(state_dict)
+
     model.eval()
 
-    model_time = time.time() - model_start
-    print(f"✅ Model loaded in {model_time:.2f}s")
-
-    # Move to GPU if available
-    gpu_start = time.time()
-    if torch.cuda.is_available():
-        model = model.cuda()
-        gpu_move_time = time.time() - gpu_start
-        print(f"🚀 Model moved to GPU in {gpu_move_time:.2f}s")
+    # Move to GPU and cast to half precision if CUDA
+    if device == "cuda":
+        model = model.cuda().to(dtype)
 
         # Warmup
         try:
-            warmup_start = time.time()
-            dummy_input_ids = torch.randint(0, 1000, (1, 128), device="cuda")
-            dummy_attention_mask = torch.ones(1, 128, device="cuda")
+            print("Toasting GPU (Warmup)...")
+            dummy_input = torch.randint(0, 1000, (1, 128), device="cuda")
+            dummy_mask = torch.ones(1, 128, device="cuda")
             with torch.no_grad():
-                _ = model(input_ids=dummy_input_ids, attention_mask=dummy_attention_mask)
-            torch.cuda.empty_cache()
-            warmup_time = time.time() - warmup_start
-            print(f"🔥 GPU warmed up in {warmup_time:.2f}s")
+                _ = model(input_ids=dummy_input, attention_mask=dummy_mask)
+            print("🔥 GPU warmed up")
         except Exception as e:
-            print(f"⚠️  GPU warmup warning: {e}")
+            print(f"⚠️ Warmup failed: {e}")
 
-    total_time = time.time() - load_start
-    device = "GPU" if torch.cuda.is_available() else "CPU"
-    print(f"✅ DeBERTa-v3 AES fully loaded on {device} in {total_time:.2f}s")
-
+    print(f"✅ Model loaded in {time.time() - model_start:.2f}s")
     return model, tokenizer
 
 
+def set_global_model(model: ModelType, tokenizer: TokenizerType) -> None:
+    """Set the global model instance (called from Modal class)."""
+    global _model, _tokenizer
+    _model = model
+    _tokenizer = tokenizer
+
+
 def get_model() -> tuple[ModelType, TokenizerType]:
-    """Get or load model (lazy loading with caching)."""
+    """Get or load model (lazy loading fallback)."""
     global _model, _tokenizer
 
     if _model is None or _tokenizer is None:
+        print("⚠️  Global model not found. Performing lazy load (slow path)...")
         _model, _tokenizer = load_model()
 
     return _model, _tokenizer
+
+
+def load_model() -> tuple[ModelType, TokenizerType]:
+    """Legacy load function (wrapper)."""
+
+    return load_model_from_path(MODEL_PATH)
