@@ -43,7 +43,7 @@ app, image = ModalServiceFactory.create_app(
     name=APP_NAME,
     system_packages=SYSTEM_PACKAGES,
     pip_packages=PIP_PACKAGES,
-    include_shared_package=False,
+    include_shared_package=True,
     app_dir=os.path.dirname(__file__),
 )
 
