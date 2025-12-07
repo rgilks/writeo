@@ -342,6 +342,25 @@ export class MockModalClient implements ModalService {
       matches,
     };
 
+    // Debug logging in CI to diagnose test failures
+    if (process.env.CI === "true" && matches.length > 0) {
+      console.log("[MockModalClient.checkGrammar] Returning mock response", {
+        textLength: text.length,
+        matchCount: matches.length,
+        firstMatch: matches[0]
+          ? {
+              offset: matches[0].offset,
+              length: matches[0].length,
+              ruleId: matches[0].rule?.id,
+              ruleType: matches[0].rule?.type,
+              hasContext: !!matches[0].context,
+              contextOffset: matches[0].context?.offset,
+              contextLength: matches[0].context?.length,
+            }
+          : null,
+      });
+    }
+
     return new Response(JSON.stringify(mockResult), {
       status: 200,
       headers: { "Content-Type": "application/json" },

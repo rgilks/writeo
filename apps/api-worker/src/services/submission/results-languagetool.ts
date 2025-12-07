@@ -55,10 +55,46 @@ export async function processLanguageToolResults(
               continue;
             }
             answerTextsByAnswerId.set(answerId, answer.answer_text);
-            const errors = transformLanguageToolResponse(
-              (result as PromiseFulfilledResult<LanguageToolResponse>).value,
-              answer.answer_text,
-            );
+            const ltResponse = (result as PromiseFulfilledResult<LanguageToolResponse>).value;
+
+            // Debug logging in CI to diagnose test failures
+            if (process.env.CI === "true") {
+              console.log("[processLanguageToolResults] Processing LT response", {
+                answerId,
+                textLength: answer.answer_text.length,
+                matchCount: ltResponse.matches?.length || 0,
+                firstMatch: ltResponse.matches?.[0]
+                  ? {
+                      offset: ltResponse.matches[0].offset,
+                      length: ltResponse.matches[0].length,
+                      ruleId: ltResponse.matches[0].rule?.id,
+                      ruleType: ltResponse.matches[0].rule?.type,
+                      hasContext: !!ltResponse.matches[0].context,
+                    }
+                  : null,
+              });
+            }
+
+            const errors = transformLanguageToolResponse(ltResponse, answer.answer_text);
+
+            // Debug logging in CI
+            if (process.env.CI === "true" && errors.length > 0) {
+              const firstError = errors[0];
+              if (firstError) {
+                console.log("[processLanguageToolResults] Transformed errors", {
+                  answerId,
+                  errorCount: errors.length,
+                  firstError: {
+                    start: firstError.start,
+                    end: firstError.end,
+                    hasConfidenceScore: "confidenceScore" in firstError,
+                    confidenceScore: firstError.confidenceScore,
+                    source: firstError.source,
+                  },
+                });
+              }
+            }
+
             ltErrorsByAnswerId.set(answerId, errors);
           }
         } else if (result.status === "rejected") {
