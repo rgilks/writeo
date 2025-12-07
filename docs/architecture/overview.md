@@ -28,7 +28,8 @@ Writeo provides comprehensive essay assessment:
 - **Essay Scoring** - Multi-dimensional analysis (TA, CC, Vocab, Grammar, Overall) using ML models
 - **AI Feedback** - Context-aware feedback using OpenAI (GPT-4o-mini) or Groq (Llama 3.3 70B) - switchable providers
 - **Grammar Checking** - LanguageTool integration with inline error annotations
-- **Assessors**: List of assessors to run (e.g., `["T-AES-ESSAY", "T-GEC-LT"]`)ed answer relevance checking
+- **Assessors** - Specify which assessors to run (e.g., `["T-AES-ESSAY", "T-GEC-LT"]`). If omitted, all enabled assessors run by default
+- **Relevance Checking** - Automated answer relevance checking
 - **CEFR Mapping** - Automatic conversion to A2-C2 proficiency levels
 - **Scale-to-Zero** - Cost-effective serverless architecture
 

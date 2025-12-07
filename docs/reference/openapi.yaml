@@ -324,6 +324,8 @@ paths:
                                     Grammar: 6.0
                                     Overall: 6.5
 
+                    requestedAssessors: ["T-AES-ESSAY", "T-GEC-LT"]
+                    activeAssessors: ["T-AES-ESSAY", "T-GEC-LT"]
                     meta:
                       wordCount: 150
                       errorCount: 3
@@ -561,6 +563,8 @@ paths:
                                     Grammar: 6.0
                                     Overall: 6.5
 
+                    requestedAssessors: ["T-AES-ESSAY", "T-GEC-LT"]
+                    activeAssessors: ["T-AES-ESSAY", "T-GEC-LT"]
                     meta:
                       wordCount: 150
                       errorCount: 3
@@ -1260,13 +1264,19 @@ components:
 
     ModalRequest:
       type: object
-      required: [submission_id, parts]
+      required: [submission_id, assessors, parts]
       properties:
         submission_id:
           type: string
           format: uuid
           description: Unique identifier for the submission
           example: "770e8400-e29b-41d4-a716-446655440000"
+        assessors:
+          type: array
+          items:
+            type: string
+          description: List of assessor IDs to run
+          example: ["T-AES-ESSAY", "T-GEC-LT"]
         parts:
           type: array
           description: List of submission parts
@@ -1385,6 +1395,18 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/AssessmentPart"
+        requestedAssessors:
+          type: array
+          items:
+            type: string
+          description: List of assessors requested by the client (or defaults if not specified)
+          example: ["T-AES-ESSAY", "T-GEC-LT"]
+        activeAssessors:
+          type: array
+          items:
+            type: string
+          description: List of assessors actually run
+          example: ["T-AES-ESSAY", "T-GEC-LT"]
         error_message:
           type: string
           description: Error message if status is 'error'
