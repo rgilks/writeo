@@ -10,8 +10,9 @@
  * and AssessorResult creation - all in one place.
  */
 
-import type { AssessorResult } from "@writeo/shared";
+import type { AssessorResult, LanguageToolResponse } from "@writeo/shared";
 import type { ModalService } from "../modal/types";
+import { transformLanguageToolResponse } from "../../utils/text-processing";
 
 // ============================================================================
 // Result Types - Typed response structures from Modal services
@@ -92,7 +93,7 @@ export interface AssessorDefinition<T = unknown> {
   parseResponse: (json: unknown) => T;
 
   /** Creates the AssessorResult from parsed data - uses unknown for array compatibility */
-  createAssessor: (data: unknown) => AssessorResult;
+  createAssessor: (data: unknown, text?: string) => AssessorResult;
 }
 
 // ============================================================================
@@ -260,23 +261,18 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
       const language = config?.features?.languageTool?.language || "en-GB";
       return modal.checkGrammar(text, language, answerId);
     },
-    parseResponse: (json) => json as any,
-    createAssessor: (data) => {
-      const matches = (data as any).matches || [];
+    parseResponse: (json) => json as LanguageToolResponse,
+    createAssessor: (data, text) => {
+      const ltResponse = data as LanguageToolResponse;
+      const errors = transformLanguageToolResponse(ltResponse, text);
       return {
         id: ASSESSOR_IDS.LT,
         name: "LanguageTool (OSS)",
         type: "feedback",
-        errors: matches.map((m: any) => ({
-          message: m.message,
-          start: m.offset,
-          end: m.offset + m.length,
-          replacements: m.replacements?.map((r: any) => r.value) || [],
-          severity: m.rule?.issueType === "misspelling" ? "error" : "warning",
-        })),
+        errors,
         meta: {
           engine: "LT-OSS",
-          errorCount: matches.length,
+          errorCount: errors.length,
         },
       };
     },

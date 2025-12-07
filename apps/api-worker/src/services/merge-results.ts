@@ -190,6 +190,7 @@ function createTeacherFeedbackAssessor(
 
 function buildAssessorResults(
   answerId: string,
+  answerText: string,
   essayAssessorResults: AssessorResult[],
   ltErrors: LanguageToolError[],
   llmErrors: LanguageToolError[],
@@ -237,7 +238,7 @@ function buildAssessorResults(
       const resultData = serviceResults.get(answerId);
       if (resultData) {
         try {
-          assessorResults.push(service.createAssessor(resultData));
+          assessorResults.push(service.createAssessor(resultData, answerText));
         } catch (e) {
           console.error(`Failed to create assessor for service ${service.id}:`, e);
         }
@@ -285,6 +286,7 @@ export function mergeAssessmentResults(
     for (const answer of part.answers) {
       const assessorResults = buildAssessorResults(
         answer.id,
+        answer.answer_text,
         essayAssessorResults,
         ltErrors.get(answer.id) ?? [],
         llmErrors.get(answer.id) ?? [],
