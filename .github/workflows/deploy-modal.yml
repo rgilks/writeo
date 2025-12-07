@@ -18,6 +18,9 @@ jobs:
       modal-essay: ${{ steps.changes.outputs.modal-essay }}
       modal-lt: ${{ steps.changes.outputs.modal-lt }}
       modal-gec: ${{ steps.changes.outputs.modal-gec }}
+      modal-corpus: ${{ steps.changes.outputs.modal-corpus }}
+      modal-feedback: ${{ steps.changes.outputs.modal-feedback }}
+      modal-gector: ${{ steps.changes.outputs.modal-gector }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,6 +35,9 @@ jobs:
             echo "modal-essay=true" >> $GITHUB_OUTPUT
             echo "modal-lt=true" >> $GITHUB_OUTPUT
             echo "modal-gec=true" >> $GITHUB_OUTPUT
+            echo "modal-corpus=true" >> $GITHUB_OUTPUT
+            echo "modal-feedback=true" >> $GITHUB_OUTPUT
+            echo "modal-gector=true" >> $GITHUB_OUTPUT
           else
             # Get the base commit (use merge-base for PRs, or HEAD^1 for pushes)
             BASE_SHA="${{ github.event.before }}"
@@ -58,6 +64,27 @@ jobs:
               echo "modal-gec=true" >> $GITHUB_OUTPUT
             else
               echo "modal-gec=false" >> $GITHUB_OUTPUT
+            fi
+
+            # Check for changes in modal-corpus
+            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-corpus/|^packages/shared/py/"; then
+              echo "modal-corpus=true" >> $GITHUB_OUTPUT
+            else
+              echo "modal-corpus=false" >> $GITHUB_OUTPUT
+            fi
+
+            # Check for changes in modal-feedback
+            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-feedback/|^packages/shared/py/"; then
+              echo "modal-feedback=true" >> $GITHUB_OUTPUT
+            else
+              echo "modal-feedback=false" >> $GITHUB_OUTPUT
+            fi
+
+            # Check for changes in modal-gector
+            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-gector/"; then
+              echo "modal-gector=true" >> $GITHUB_OUTPUT
+            else
+              echo "modal-gector=false" >> $GITHUB_OUTPUT
             fi
           fi
 
@@ -195,4 +222,115 @@ jobs:
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           echo "Deploying Modal GEC service..."
+          modal deploy main.py
+
+  deploy-modal-corpus:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modal-corpus == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install Modal CLI
+        run: uv pip install --system modal
+
+      - name: Authenticate with Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          modal app list > /dev/null || echo "Authentication check complete"
+
+      - name: Deploy Modal Corpus Service
+        working-directory: services/modal-corpus
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          echo "Deploying Modal Corpus service..."
+          modal deploy app.py
+
+  deploy-modal-feedback:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modal-feedback == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install Modal CLI
+        run: uv pip install --system modal
+
+      - name: Authenticate with Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          modal app list > /dev/null || echo "Authentication check complete"
+
+      - name: Deploy Modal Feedback Service
+        working-directory: services/modal-feedback
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          echo "Deploying Modal Feedback service..."
+          modal deploy app.py
+
+  deploy-modal-gector:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.modal-gector == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install Modal CLI
+        run: uv pip install --system modal
+
+      - name: Authenticate with Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          modal app list > /dev/null || echo "Authentication check complete"
+
+      - name: Deploy Modal GECToR Service
+        working-directory: services/modal-gector
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          echo "Deploying Modal GECToR service..."
           modal deploy main.py
