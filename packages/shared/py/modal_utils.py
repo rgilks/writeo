@@ -40,7 +40,11 @@ class ModalServiceFactory:
         if pip_packages:
             image = image.pip_install(pip_packages)
 
-        # Mount local shared package if requested
+        # Mount local app directory if provided (Build Step - must come before mounts)
+        if app_dir:
+            image = image.add_local_dir(app_dir, remote_path="/app", copy=True)
+
+        # Mount local shared package if requested (Mounts - must come last)
         if include_shared_package:
             # Resolve path to packages/shared/py relative to this file
             try:
@@ -60,10 +64,6 @@ class ModalServiceFactory:
             except Exception:
                 # Fallback or ignore if path resolution fails
                 pass
-
-        # Mount local app directory if provided
-        if app_dir:
-            image = image.add_local_dir(app_dir, remote_path="/app", copy=True)
 
         # Set environment variables if needed
         # image = image.env({"ENV_VAR": "VALUE"})
