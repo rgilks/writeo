@@ -66,7 +66,7 @@ custom_volumes = {
         timeout=300,
         memory=2048,
         cpu=2.0,
-        scaledown_window=60,
+        scaledown_window=30,
         secrets=[modal.Secret.from_name("MODAL_API_KEY")],
     )
 )

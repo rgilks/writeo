@@ -57,7 +57,7 @@ app, image = ModalServiceFactory.create_app(
         volume_mount=VOLUME_MOUNT,
         gpu="T4",
         timeout=300,
-        scaledown_window=60,
+        scaledown_window=30,
         # Default memory is 4096MB
     )
 )

@@ -58,7 +58,7 @@ app, image = ModalServiceFactory.create_app(
         gpu="A10G",
         timeout=600,
         memory=8192,  # Explicitly setting higher memory for A10G/LLM
-        scaledown_window=60,
+        scaledown_window=30,
         secrets=[modal.Secret.from_name("MODAL_API_KEY")],
     )
 )
