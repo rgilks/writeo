@@ -6,6 +6,17 @@ import type { ModalService } from "./types";
 export class ModalClient implements ModalService {
   constructor(private config: AppConfig) {}
 
+  /**
+   * Helper for simple POST JSON requests without auth (public Modal services)
+   */
+  private postJson(url: string, body: object): Promise<Response> {
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
   async gradeEssay(request: ModalRequest): Promise<Response> {
     // Modal services have ~11-13s cold start times, so we need a longer timeout
     return postJsonWithAuth(
@@ -23,48 +34,24 @@ export class ModalClient implements ModalService {
     return postJsonWithAuth(
       `${this.config.modal.ltUrl}/check`,
       this.config.api.key,
-      {
-        language,
-        text,
-        answer_id: answerId,
-      },
+      { language, text, answer_id: answerId },
       30000,
     );
   }
 
   async scoreCorpus(text: string): Promise<Response> {
-    // Corpus scoring for dev mode - no auth required for public service
-    return fetch(`${this.config.modal.corpusUrl}/score`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, max_length: 512 }),
-    });
+    return this.postJson(`${this.config.modal.corpusUrl}/score`, { text, max_length: 512 });
   }
 
   async scoreFeedback(text: string): Promise<Response> {
-    // T-AES-FEEDBACK scoring for dev mode - no auth required for public service
-    return fetch(`${this.config.modal.feedbackUrl}/score`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
+    return this.postJson(`${this.config.modal.feedbackUrl}/score`, { text });
   }
 
   async correctGrammar(text: string): Promise<Response> {
-    // T-GEC-SEQ2SEQ: Seq2Seq grammar correction with edit extraction
-    return fetch(`${this.config.modal.gecUrl}/gec_endpoint`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
+    return this.postJson(`${this.config.modal.gecUrl}/gec_endpoint`, { text });
   }
 
   async correctGrammarGector(text: string): Promise<Response> {
-    // T-GEC-GECTOR: Fast GECToR token-tagging model (~10x faster than Seq2Seq)
-    return fetch(`${this.config.modal.gectorUrl}/gector_endpoint`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
+    return this.postJson(`${this.config.modal.gectorUrl}/gector_endpoint`, { text });
   }
 }
