@@ -1,6 +1,6 @@
 {
   "scoring": {
-    "essay": true,
+    "essay": false,
     "corpus": true,
     "feedback": false,
     "deberta": true

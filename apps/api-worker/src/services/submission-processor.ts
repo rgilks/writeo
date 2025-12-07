@@ -12,7 +12,6 @@ import { storeSubmissionEntities } from "./submission/storage";
 import { buildModalRequest } from "./submission/data-loader";
 import { prepareServiceRequests, executeServiceRequests } from "./submission/services";
 import { iterateAnswers } from "./submission/utils";
-import { processEssayResult } from "./submission/results-essay";
 import { processLanguageToolResults } from "./submission/results-languagetool";
 import { processLLMResults } from "./submission/results-llm";
 import { extractEssayScores } from "./submission/results-scores";
@@ -152,19 +151,15 @@ async function loadSubmissionData(
  * Processes all service results into structured data.
  */
 async function processServiceResults(
-  essayResult: PromiseSettledResult<Response>,
+  genericResults: Map<string, Map<string, unknown>>,
   ltResults: PromiseSettledResult<Response[]>,
   llmResults: PromiseSettledResult<LanguageToolError[][]>,
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>,
-  genericResults: Map<string, Map<string, unknown>>,
   serviceRequests: ReturnType<typeof prepareServiceRequests>,
   modalRequest: ModalRequest,
-  submissionId: string,
   timings: Record<string, number>,
 ) {
-  const processEssayStartTime = performance.now();
-  const essayAssessment = await processEssayResult(essayResult, submissionId);
-  timings["6_process_essay"] = performance.now() - processEssayStartTime;
+  const essayAssessment = null;
 
   const processLTStartTime = performance.now();
   const { ltErrorsByAnswerId, answerTextsByAnswerId } = await processLanguageToolResults(
@@ -184,7 +179,11 @@ async function processServiceResults(
   );
   timings["7b_process_ai_assessment"] = performance.now() - processLLMStartTime;
 
-  const essayScoresByAnswerId = extractEssayScores(essayAssessment, modalRequest.parts);
+  const essayScoresByAnswerId = extractEssayScores(
+    essayAssessment,
+    modalRequest.parts,
+    genericResults,
+  );
 
   const processRelevanceStartTime = performance.now();
   const relevanceByAnswerId = processRelevanceResults(
@@ -279,7 +278,6 @@ export async function processSubmission(
 
     // Phase 3: Execute assessment services in parallel
     const {
-      essayResult,
       ltResults,
       llmResults,
       relevanceResults,
@@ -288,14 +286,12 @@ export async function processSubmission(
 
     // Phase 4: Process service results
     const processedResults = await processServiceResults(
-      essayResult,
+      genericResults,
       ltResults,
       llmResults,
       relevanceResults,
-      genericResults,
       serviceRequests,
       modalRequest,
-      submissionId,
       timings,
     );
 

@@ -2,9 +2,8 @@
  * Essay scores extraction
  */
 
-import type { AssessmentResults, AssessorResult } from "@writeo/shared";
+import type { AssessmentResults } from "@writeo/shared";
 import type { ModalRequest } from "@writeo/shared";
-import { buildPartLookup } from "./utils";
 
 type EssayScoreSummary = {
   overall?: number;
@@ -21,35 +20,44 @@ type EssayScoreSummary = {
 export function extractEssayScores(
   essayAssessment: AssessmentResults | null,
   modalParts: ModalRequest["parts"],
+  genericResults?: Map<string, Map<string, unknown>>,
 ): Map<string, EssayScoreSummary> {
   const essayScoresByAnswerId = new Map<string, EssayScoreSummary>();
-  const modalPartsById = buildPartLookup(modalParts);
 
-  if (!essayAssessment?.results?.parts) {
-    return essayScoresByAnswerId;
-  }
+  for (const part of modalParts) {
+    for (const answer of part.answers) {
+      let scoreFound = false;
 
-  for (const essayPart of essayAssessment.results.parts) {
-    const matchingPart = modalPartsById.get(essayPart.part);
-    if (!matchingPart?.answers?.length) {
-      continue;
-    }
+      // 1. Check DeBERTa (new model)
+      if (genericResults) {
+        const debertaService = genericResults.get("deberta");
+        if (debertaService) {
+          const result = debertaService.get(answer.id) as any; // Cast as any or import DebertaResult if available
+          if (result && typeof result.overall === "number") {
+            essayScoresByAnswerId.set(answer.id, {
+              overall: result.overall,
+              dimensions: result.dimensions,
+              label: result.label,
+            });
+            scoreFound = true;
+          }
+        }
+      }
 
-    const partAnswers = essayPart.answers ?? [];
-    const essayAssessor = partAnswers
-      .flatMap((answer) => (answer?.assessorResults as AssessorResult[] | undefined) ?? [])
-      .find((a) => a.id === "AES-ESSAY");
+      // 2. Fallback to Legacy Essay Model
+      if (!scoreFound && essayAssessment?.results?.parts) {
+        const essayPart = essayAssessment.results.parts.find((p) => p.part === part.part);
+        const essayAnswer = essayPart?.answers?.find((a) => a.id === answer.id);
+        const essayAssessor = essayAnswer?.assessorResults?.find((a) => a.id === "AES-ESSAY");
 
-    if (!essayAssessor) {
-      continue;
-    }
-
-    for (const answer of matchingPart.answers) {
-      essayScoresByAnswerId.set(answer.id, {
-        overall: essayAssessor.overall,
-        dimensions: essayAssessor.dimensions,
-        label: essayAssessor.label,
-      });
+        if (essayAssessor && essayAssessor.overall !== undefined) {
+          essayScoresByAnswerId.set(answer.id, {
+            overall: essayAssessor.overall,
+            dimensions: essayAssessor.dimensions,
+            label: essayAssessor.label,
+          });
+        }
+      }
     }
   }
 

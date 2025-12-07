@@ -111,28 +111,20 @@ export function prepareServiceRequests(
 }
 
 export async function executeServiceRequests(
-  modalRequest: ModalRequest,
+  _modalRequest: ModalRequest,
   serviceRequests: ServiceRequests,
   _config: AppConfig,
   timings: Record<string, number>,
 ): Promise<{
-  essayResult: PromiseSettledResult<Response>;
   ltResults: PromiseSettledResult<Response[]>;
   llmResults: PromiseSettledResult<LanguageToolError[][]>;
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>;
   genericResults: Map<string, Map<string, unknown>>;
 }> {
   const essayStartTime = performance.now();
-  const { ltRequests, llmAssessmentRequests, relevanceRequests, genericRequests, modalService } =
-    serviceRequests;
+  const { ltRequests, llmAssessmentRequests, relevanceRequests, genericRequests } = serviceRequests;
 
   // Start parallel execution
-  const essayPromise = (async () => {
-    const start = performance.now();
-    const result = await modalService.gradeEssay(modalRequest);
-    timings["5a_essay_fetch"] = performance.now() - start;
-    return result;
-  })();
 
   const ltPromise = (async () => {
     const start = performance.now();
@@ -157,14 +149,12 @@ export async function executeServiceRequests(
 
   const genericPromise = executeServiceRequestsGeneric(genericRequests, timings);
 
-  const [essayResult, ltResults, llmResults, relevanceResults, genericResults] =
-    await Promise.allSettled([
-      essayPromise,
-      ltPromise,
-      llmPromise,
-      relevancePromise,
-      genericPromise,
-    ]);
+  const [ltResults, llmResults, relevanceResults, genericResults] = await Promise.allSettled([
+    ltPromise,
+    llmPromise,
+    relevancePromise,
+    genericPromise,
+  ]);
 
   timings["5_parallel_services_total"] = performance.now() - essayStartTime;
 
@@ -179,7 +169,6 @@ export async function executeServiceRequests(
   }
 
   return {
-    essayResult,
     ltResults,
     llmResults,
     relevanceResults,

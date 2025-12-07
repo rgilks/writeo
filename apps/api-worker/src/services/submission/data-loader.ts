@@ -102,7 +102,7 @@ export async function buildModalRequest(
 
   return {
     submission_id: submissionId,
-    assessors: body.assessors ?? [], // Will be resolved to defaults later if empty
+    assessors: body.assessors ?? ["AES-DEBERTA", "GEC-LT", "GEC-SEQ2SEQ"], // Will be resolved to defaults later if empty
     parts: modalParts,
   };
 }
