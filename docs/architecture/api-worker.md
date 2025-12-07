@@ -497,7 +497,7 @@ Parallel Service Execution
     ├─→ Essay Service
     │     │
     │     └─→ POST MODAL_GRADE_URL
-    │           Body: { submission_id, template, parts }
+    │           Body: { submission_id, parts }
     │           Response: AssessmentResults
     │
     ├─→ LanguageTool Service

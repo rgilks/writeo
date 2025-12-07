@@ -23,11 +23,6 @@ export interface ValidationResult {
 
 const MAX_QUESTION_TEXT_LENGTH = 10000;
 
-const templateSchema = z.object({
-  name: z.string().min(1, "Template name is required"),
-  version: z.number({ invalid_type_error: "Template version must be a number" }),
-});
-
 // Assessor IDs validation - accepts any strings, invalid ones are filtered later
 const assessorsSchema = z.array(z.string()).optional();
 
@@ -87,7 +82,6 @@ const submissionSchema = z
       .array(submissionPartSchema, { required_error: "Submission array is required" })
       .min(1, "Submission must include at least one part"),
     assessors: assessorsSchema,
-    template: templateSchema.optional(), // Deprecated, kept for backward compat
     storeResults: z.boolean().optional(),
   })
   .passthrough()

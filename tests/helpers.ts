@@ -75,7 +75,6 @@ export async function createSubmission(
   text: string,
   questionText: string = "Describe your weekend. What did you do?",
   storeResults: boolean = false,
-  templateName: string = "generic",
 ) {
   const { questionId, answerId, submissionId } = generateIds();
   const { status, json } = await apiRequest("POST", `/v1/text/submissions`, {
@@ -93,7 +92,7 @@ export async function createSubmission(
         ],
       },
     ],
-    template: { name: templateName, version: 1 },
+
     storeResults,
   });
 

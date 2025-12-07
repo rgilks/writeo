@@ -38,7 +38,6 @@ async def handle_grade(
 
         error_response = AssessmentResults(
             status="error",
-            template=request.template,
             error_message=f"{type(e).__name__}: {str(e)}",
         )
         return JSONResponse(

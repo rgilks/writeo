@@ -44,7 +44,7 @@ export const submissionsPath = {
           "application/json": {
             schema: {
               type: "object" as const,
-              required: ["submissionId", "submission", "template"],
+              required: ["submissionId", "submission"],
               properties: {
                 submissionId: {
                   type: "string" as const,
@@ -112,19 +112,11 @@ export const submissionsPath = {
                     },
                   },
                 },
-                template: {
-                  type: "object" as const,
-                  required: ["name", "version"],
-                  properties: {
-                    name: { type: "string" as const, example: "essay-task-2" },
-                    version: { type: "integer" as const, example: 1 },
-                  },
-                },
                 assessors: {
                   type: "array" as const,
                   items: { type: "string" as const },
                   description:
-                    "Optional list of specific assessors to run. If omitted, all assessors enabled for the template will run. Example: ['T-AES-ESSAY', 'T-GEC-LT']",
+                    "Optional list of specific assessors to run. If omitted, all assessors enabled for the default configuration will run. Example: ['T-AES-ESSAY', 'T-GEC-LT']",
                   example: ["T-AES-ESSAY", "T-GEC-LT"],
                 },
                 storeResults: {
@@ -152,7 +144,7 @@ export const submissionsPath = {
                       ],
                     },
                   ],
-                  template: { name: "essay-task-2", version: 1 },
+
                   storeResults: false,
                 },
               },
@@ -172,7 +164,6 @@ export const submissionsPath = {
                       ],
                     },
                   ],
-                  template: { name: "essay-task-2", version: 1 },
                 },
               },
               freeWriting: {
@@ -192,7 +183,7 @@ export const submissionsPath = {
                       ],
                     },
                   ],
-                  template: { name: "generic", version: 1 },
+
                   storeResults: true,
                 },
               },
@@ -301,7 +292,6 @@ export const submissionsPath = {
                                 status: {
                                   type: "string",
                                   enum: ["success", "error"],
-                                  example: "success",
                                 },
                                 answers: {
                                   type: "array",
@@ -384,15 +374,7 @@ export const submissionsPath = {
                             },
                           },
                         },
-                        template: {
-                          type: "object" as const,
-                          required: ["name", "version"],
-                          properties: {
-                            name: { type: "string" as const, example: "generic" },
-                            version: { type: "integer" as const, example: 1 },
-                          },
-                          example: { name: "generic", version: 1 },
-                        },
+
                         error_message: {
                           type: "string" as const,
                           description: "Error message if status is 'error'",
@@ -491,7 +473,7 @@ export const submissionsPath = {
                         },
                       ],
                     },
-                    template: { name: "generic", version: 1 },
+
                     meta: {
                       wordCount: 150,
                       errorCount: 3,

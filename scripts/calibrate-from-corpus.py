@@ -44,7 +44,6 @@ def score_essay(question: str, answer: str) -> Dict:
 
     request_data = {
         "submission_id": submission_id,
-        "template": {"name": "essay-task-2", "version": 1},
         "parts": [
             {
                 "part": "1",

@@ -166,7 +166,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [submissionId, submission, template]
+              required: [submissionId, submission]
               properties:
                 submissionId:
                   type: string
@@ -219,17 +219,7 @@ paths:
                               maxLength: 50000
                               description: Answer text (required - answers must always be sent inline). Maximum length: 50,000 characters.
                               example: "I went to the park yesterday and played football with my friends."
-                template:
-                  type: object
-                  required: [name, version]
-                  properties:
-                    name:
-                      type: string
-                      example: "essay-task-2"
-                    version:
-                      type: integer
-                      description: Template version
-                      example: 1
+
                 storeResults:
                   type: boolean
                   description: Whether to store results on the server (default: false)
@@ -246,9 +236,7 @@ paths:
                           questionId: "550e8400-e29b-41d4-a716-446655440000"
                           questionText: "Describe your weekend. What did you do?"
                           text: "I went to the park yesterday and played football with my friends."
-                  template:
-                    name: "essay-task-2"
-                    version: 1
+
                   storeResults: false
               referencedQuestion:
                 summary: Submission with referenced question
@@ -260,9 +248,7 @@ paths:
                         - id: "660e8400-e29b-41d4-a716-446655440000"
                           questionId: "550e8400-e29b-41d4-a716-446655440000"
                           text: "I went to the park yesterday and played football with my friends."
-                  template:
-                    name: "essay-task-2"
-                    version: 1
+
               freeWriting:
                 summary: Free writing (no question)
                 value:
@@ -274,9 +260,7 @@ paths:
                           questionId: "550e8400-e29b-41d4-a716-446655440000"
                           questionText: null
                           text: "I went to the park yesterday and played football with my friends."
-                  template:
-                    name: "generic"
-                    version: 1
+
                   storeResults: true
       responses:
         "201":
@@ -339,9 +323,7 @@ paths:
                                     Vocab: 6.5
                                     Grammar: 6.0
                                     Overall: 6.5
-                    template:
-                      name: "essay-task-2"
-                      version: 1
+
                     meta:
                       wordCount: 150
                       errorCount: 3
@@ -406,7 +388,6 @@ paths:
               "text": "I went to the park..."
             }]
           }],
-          "template": {"name": "essay-task-2", "version": 1}
         }
         ```
 
@@ -421,7 +402,6 @@ paths:
               "text": "I went to the park..."
             }]
           }],
-          "template": {"name": "essay-task-2", "version": 1}
         }
         ```
 
@@ -437,7 +417,6 @@ paths:
               "text": "I went to the park..."
             }]
           }],
-          "template": {"name": "essay-task-2", "version": 1}
         }
         ```
       operationId: createSubmission
@@ -458,7 +437,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [submission, template]
+              required: [submission]
               properties:
                 submission:
                   type: array
@@ -506,16 +485,7 @@ paths:
                               maxLength: 50000
                               description: Answer text (required - answers must always be sent inline). Maximum length: 50,000 characters.
                               example: "I went to the park yesterday and played football with my friends."
-                template:
-                  type: object
-                  required: [name, version]
-                  properties:
-                    name:
-                      type: string
-                      example: "essay-task-2"
-                    version:
-                      type: integer
-                      example: 1
+
                 storeResults:
                   type: boolean
                   description: |
@@ -536,9 +506,7 @@ paths:
                           questionId: "550e8400-e29b-41d4-a716-446655440000"
                           questionText: "Describe your weekend. What did you do?"
                           text: "I went to the park yesterday and played football with my friends."
-                  template:
-                    name: "essay-task-2"
-                    version: 1
+
                   storeResults: false
               referencedQuestion:
                 summary: Submission with referenced question
@@ -549,9 +517,7 @@ paths:
                         - id: "660e8400-e29b-41d4-a716-446655440000"
                           questionId: "550e8400-e29b-41d4-a716-446655440000"
                           text: "I went to the park yesterday and played football with my friends."
-                  template:
-                    name: "essay-task-2"
-                    version: 1
+
               freeWriting:
                 summary: Free writing (no question)
                 value:
@@ -562,9 +528,7 @@ paths:
                           questionId: "550e8400-e29b-41d4-a716-446655440000"
                           questionText: null
                           text: "I went to the park yesterday and played football with my friends."
-                  template:
-                    name: "generic"
-                    version: 1
+
                   storeResults: true
       responses:
         "200":
@@ -596,9 +560,7 @@ paths:
                                     Vocab: 6.5
                                     Grammar: 6.0
                                     Overall: 6.5
-                    template:
-                      name: "essay-task-2"
-                      version: 1
+
                     meta:
                       wordCount: 150
                       errorCount: 3
@@ -1070,9 +1032,6 @@ paths:
                             Vocab: 8.0
                             Grammar: 7.5
                             Overall: 7.5
-                template:
-                  name: "essay-task-2"
-                  version: 1
         "400":
           description: Bad request
           content:
@@ -1091,9 +1050,6 @@ paths:
                 $ref: "#/components/schemas/AssessmentResults"
               example:
                 status: "error"
-                template:
-                  name: "essay-task-2"
-                  version: 1
                 error_message: "RuntimeError: Failed to load model engessay"
 
   /grade/compare:
@@ -1304,23 +1260,13 @@ components:
 
     ModalRequest:
       type: object
-      required: [submission_id, template, parts]
+      required: [submission_id, parts]
       properties:
         submission_id:
           type: string
           format: uuid
           description: Unique identifier for the submission
           example: "770e8400-e29b-41d4-a716-446655440000"
-        template:
-          type: object
-          description: Template metadata
-          properties:
-            name:
-              type: string
-              example: "essay-task-2"
-            version:
-              type: integer
-              example: 1
         parts:
           type: array
           description: List of submission parts
@@ -1425,7 +1371,7 @@ components:
 
     AssessmentResults:
       type: object
-      required: [status, template]
+      required: [status]
       properties:
         status:
           type: string
@@ -1439,17 +1385,6 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/AssessmentPart"
-        template:
-          type: object
-          description: Template metadata (echoed from request)
-          required: [name, version]
-          properties:
-            name:
-              type: string
-              example: "essay-task-2"
-            version:
-              type: integer
-              example: 1
         error_message:
           type: string
           description: Error message if status is 'error'

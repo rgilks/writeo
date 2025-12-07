@@ -2,7 +2,7 @@
 
 import os
 import sys
-from typing import Any, Literal, TypedDict
+from typing import Literal, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -52,7 +52,6 @@ if not _imported:
 
     class ModalRequest(BaseModel):  # type: ignore[no-redef]
         submission_id: str
-        template: dict[str, Any]
         parts: list[ModalPart]
 
     class AssessorResult(BaseModel):  # type: ignore[no-redef]
@@ -79,7 +78,6 @@ if not _imported:
     class AssessmentResults(BaseModel):  # type: ignore[no-redef]
         status: Literal["success", "error", "pending", "bypassed"]
         results: dict[str, list[AssessmentPart]] | None = None
-        template: dict[str, Any]
         error_message: str | None = None
 
     def map_score_to_cefr(overall: float) -> str:  # type: ignore[no-redef]

@@ -101,4 +101,4 @@ def process_submission(request: ModalRequest, model_key: str) -> AssessmentResul
         )
         parts.append(assessment_part)
 
-    return AssessmentResults(status="success", results={"parts": parts}, template=request.template)
+    return AssessmentResults(status="success", results={"parts": parts})

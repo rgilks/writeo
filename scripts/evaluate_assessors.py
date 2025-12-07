@@ -68,7 +68,6 @@ def submit_essay(question, answer):
 
     payload = {
         "submissionId": submission_id,
-        "template": {"name": "essay-task-2", "version": 1},
         "submission": [
             {
                 "part": 1,

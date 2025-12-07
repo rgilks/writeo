@@ -108,7 +108,7 @@ describe("API Feedback Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage - using assessment data from response
     });
     expect(status).toBe(201);
@@ -215,7 +215,7 @@ describe("API Feedback Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage - using assessment data from response
     });
 

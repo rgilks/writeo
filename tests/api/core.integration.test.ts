@@ -97,7 +97,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage for tests
     });
     // API accepts it (frontend validation prevents submission)
@@ -128,7 +128,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage for tests
     });
     // API accepts it (frontend validation prevents submission)
@@ -151,7 +151,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage for tests
     });
     // Missing text field should return 400 (bad request)
@@ -177,7 +177,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage for tests
     });
     expect(status).toBe(201);
@@ -206,7 +206,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage for tests
     });
     expect(status).toBe(201);
@@ -232,7 +232,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       user: {
         id: "user-123",
         l1: "en",
@@ -270,7 +270,7 @@ describe("API Core Tests", () => {
             ],
           },
         ],
-        template: { name: "generic", version: 1 },
+
         storeResults: false, // No server storage for tests
       },
     );
@@ -301,7 +301,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage for tests
     });
     const duration = Date.now() - start;
@@ -335,7 +335,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage for tests
     });
     expect(status).toBe(201);
@@ -384,7 +384,7 @@ describe("API Core Tests", () => {
           ],
         },
       ],
-      template: { name: "generic", version: 1 },
+
       storeResults: false, // No server storage for tests
     });
 

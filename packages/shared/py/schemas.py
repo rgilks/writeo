@@ -5,13 +5,6 @@ from typing import Any, Literal, TypedDict
 from pydantic import BaseModel, Field
 
 
-class TemplateDict(TypedDict):
-    """Template metadata structure."""
-
-    name: str
-    version: int
-
-
 class DimensionsDict(TypedDict, total=False):
     """Essay scoring dimensions."""
 
@@ -79,27 +72,14 @@ class ModalRequest(BaseModel):
         description="Unique identifier for the submission (UUID)",
         examples=["770e8400-e29b-41d4-a716-446655440000"],
     )
-    template: dict[str, Any] = Field(
-        ...,
-        description="Template metadata with name and version",
-        examples=[{"name": "essay-task-2", "version": 1}],
-    )
     parts: list[ModalPart] = Field(
         ..., description="List of submission parts to be scored", min_length=1
     )
-
-    def get_template_dict(self) -> TemplateDict:
-        """Get template as TypedDict for type safety."""
-        return TemplateDict(
-            name=str(self.template.get("name", "unknown")),
-            version=int(self.template.get("version", 1)),
-        )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "submission_id": "770e8400-e29b-41d4-a716-446655440000",
-                "template": {"name": "essay-task-2", "version": 1},
                 "parts": [
                     {
                         "part": "1",
@@ -208,11 +188,6 @@ class AssessmentResults(BaseModel):
         None,
         description="Assessment results organized by parts. Contains a 'parts' key with list of AssessmentPart objects.",
     )
-    template: dict[str, Any] = Field(
-        ...,
-        description="Template metadata (echoed from request)",
-        examples=[{"name": "essay-task-2", "version": 1}],
-    )
     error_message: str | None = Field(
         None,
         description="Error message if status is 'error'",
@@ -221,13 +196,6 @@ class AssessmentResults(BaseModel):
     meta: dict[str, Any] | None = Field(
         None, description="Metadata (e.g., answer texts for frontend)"
     )
-
-    def get_template_dict(self) -> TemplateDict:
-        """Get template as TypedDict for type safety."""
-        return TemplateDict(
-            name=str(self.template.get("name", "unknown")),
-            version=int(self.template.get("version", 1)),
-        )
 
 
 def map_score_to_cefr(overall: float) -> str:

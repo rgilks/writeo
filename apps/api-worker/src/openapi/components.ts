@@ -191,7 +191,7 @@ export const sharedComponents = {
     },
     AssessmentResults: {
       type: "object",
-      required: ["status", "template"],
+      required: ["status"],
       properties: {
         status: {
           type: "string",
@@ -226,21 +226,6 @@ export const sharedComponents = {
           },
           description: "List of assessors actually run",
           example: ["T-AES-ESSAY", "T-GEC-LT"],
-        },
-        template: {
-          type: "object",
-          description: "Template metadata (echoed from request)",
-          required: ["name", "version"],
-          properties: {
-            name: {
-              type: "string",
-              example: "essay-task-2",
-            },
-            version: {
-              type: "integer",
-              example: 1,
-            },
-          },
         },
         error_message: {
           type: "string",

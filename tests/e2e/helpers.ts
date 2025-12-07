@@ -202,7 +202,7 @@ export async function createTestSubmission(
             ],
           },
         ],
-        template: { name: "generic", version: 1 },
+
         storeResults: true, // Store results on server for test retrieval
       }),
     });

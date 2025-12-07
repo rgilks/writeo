@@ -216,7 +216,6 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
     model: "roberta-base", // approximating main model
     createRequest: async (text, modal, answerId) => {
       // Construct a single-answer ModalRequest for this specific text
-      // Note: Cast to any to include 'template' which is required by Python service but missing in shared types
       return modal.gradeEssay({
         submission_id: "temp-sub-id",
         parts: [
@@ -233,7 +232,6 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
           },
         ],
         assessors: [],
-        template: {},
       } as any);
     },
     parseResponse: (json) => {

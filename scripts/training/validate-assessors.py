@@ -121,7 +121,6 @@ def score_via_modal_essay(
     # Match the ModalRequest schema exactly
     payload = {
         "submission_id": submission_id,
-        "template": {"name": "ielts-task2", "version": 1},
         "parts": [
             {
                 "part": 1,

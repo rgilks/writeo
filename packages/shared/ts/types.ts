@@ -27,8 +27,7 @@ export interface SubmissionPart {
 export interface CreateSubmissionRequest {
   submission: SubmissionPart[];
   assessors?: string[]; // Optional list of assessor IDs to run (defaults to all enabled)
-  // Deprecated: template is accepted but ignored for backward compatibility
-  template?: { name: string; version: number };
+
   // Note: parentSubmissionId and draftNumber are accepted but ignored for API compatibility
   // Draft tracking is handled in Server Actions, not the API
   // Opt-in server storage: if false or omitted, results are returned but not stored on server

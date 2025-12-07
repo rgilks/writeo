@@ -232,12 +232,12 @@ export API_KEY="your-api-key"
 QUESTION_ID=$(uuidgen) && ANSWER_ID=$(uuidgen) && SUBMISSION_ID=$(uuidgen)
 # Answers must be sent inline with submissions
 # Questions can be sent inline or referenced by ID
-curl -X POST "$API_BASE/v1/text/submissions" -H "Authorization: Token $API_KEY" -H "Content-Type: application/json" -d "{\"submissionId\":\"$SUBMISSION_ID\",\"submission\":[{\"part\":1,\"answers\":[{\"id\":\"$ANSWER_ID\",\"questionId\":\"$QUESTION_ID\",\"questionText\":\"Describe your weekend.\",\"text\":\"I went to the park.\"}]}],\"template\":{\"name\":\"generic\",\"version\":1}}"
+curl -X POST "$API_BASE/v1/text/submissions" -H "Authorization: Token $API_KEY" -H "Content-Type: application/json" -d "{\"submissionId\":\"$SUBMISSION_ID\",\"submission\":[{\"part\":1,\"answers\":[{\"id\":\"$ANSWER_ID\",\"questionId\":\"$QUESTION_ID\",\"questionText\":\"Describe your weekend.\",\"text\":\"I went to the park.\"}]}]}"
 
 # Or reference an existing question (create question first):
 curl -X PUT "$API_BASE/v1/text/questions/$QUESTION_ID" -H "Authorization: Token $API_KEY" -H "Content-Type: application/json" -d '{"text":"Describe your weekend."}'
 # Then submit with question reference:
-curl -X POST "$API_BASE/v1/text/submissions" -H "Authorization: Token $API_KEY" -H "Content-Type: application/json" -d "{\"submissionId\":\"$SUBMISSION_ID\",\"submission\":[{\"part\":1,\"answers\":[{\"id\":\"$ANSWER_ID\",\"questionId\":\"$QUESTION_ID\",\"text\":\"I went to the park.\"}]}],\"template\":{\"name\":\"generic\",\"version\":1}}"
+curl -X POST "$API_BASE/v1/text/submissions" -H "Authorization: Token $API_KEY" -H "Content-Type: application/json" -d "{\"submissionId\":\"$SUBMISSION_ID\",\"submission\":[{\"part\":1,\"answers\":[{\"id\":\"$ANSWER_ID\",\"questionId\":\"$QUESTION_ID\",\"text\":\"I went to the park.\"}]}]}"
 curl -H "Authorization: Token $API_KEY" "$API_BASE/v1/text/submissions/$SUBMISSION_ID"
 ```
 

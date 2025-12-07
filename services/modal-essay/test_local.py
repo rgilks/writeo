@@ -47,7 +47,6 @@ def create_test_request() -> ModalRequest:
 
     return ModalRequest(
         submission_id=str(uuid4()),
-        template={"name": "essay-task-2", "version": 1},
         parts=[
             ModalPart(
                 part=1,

@@ -30,7 +30,8 @@ describe.sequential("submission utilities", () => {
       global.window = undefined;
       const results: AssessmentResults = {
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: [],
+        activeAssessors: [],
       };
       const merged = mergeQuestionTextIntoResults(results, "What is your opinion?");
       expect(merged).toEqual(results);
@@ -39,7 +40,9 @@ describe.sequential("submission utilities", () => {
     it("should return results unchanged when questionText is empty", () => {
       const results: AssessmentResults = {
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: [],
+        activeAssessors: [],
+
         meta: {
           answerTexts: { "answer-1": "My answer" },
         },
@@ -51,7 +54,9 @@ describe.sequential("submission utilities", () => {
     it("should return results unchanged when no answerTexts in meta", () => {
       const results: AssessmentResults = {
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: [],
+        activeAssessors: [],
+
         meta: {},
       };
       const merged = mergeQuestionTextIntoResults(results, "What is your opinion?");
@@ -61,7 +66,9 @@ describe.sequential("submission utilities", () => {
     it("should create questionTexts when it doesn't exist", () => {
       const results: AssessmentResults = {
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: [],
+        activeAssessors: [],
+
         meta: {
           answerTexts: { "answer-1": "My answer" },
         },
@@ -76,7 +83,9 @@ describe.sequential("submission utilities", () => {
     it("should add questionText to existing questionTexts", () => {
       const results: AssessmentResults = {
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: [],
+        activeAssessors: [],
+
         meta: {
           answerTexts: { "answer-1": "My answer" },
           questionTexts: { "answer-2": "Another question" },
@@ -92,7 +101,9 @@ describe.sequential("submission utilities", () => {
     it("should not overwrite existing questionText for same answerId", () => {
       const results: AssessmentResults = {
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: [],
+        activeAssessors: [],
+
         meta: {
           answerTexts: { "answer-1": "My answer" },
           questionTexts: { "answer-1": "Existing question" },
@@ -107,7 +118,9 @@ describe.sequential("submission utilities", () => {
     it("should handle multiple answerIds and only add questionText for first one", () => {
       const results: AssessmentResults = {
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: [],
+        activeAssessors: [],
+
         meta: {
           answerTexts: {
             "answer-1": "First answer",
@@ -124,7 +137,9 @@ describe.sequential("submission utilities", () => {
     it("should preserve all other meta properties", () => {
       const results: AssessmentResults = {
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: [],
+        activeAssessors: [],
+
         meta: {
           answerTexts: { "answer-1": "My answer" },
           wordCount: 250,
