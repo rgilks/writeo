@@ -94,12 +94,12 @@ modal deploy app.py
 
 FastAPI service for Grammatical Error Correction using Seq2Seq models.
 
-**Location:** `services/modal_gec/`
+**Location:** `services/modal-gec/`
 
 ### Quick Start
 
 ```bash
-cd services/modal_gec
+cd services/modal-gec
 modal deploy main.py
 ```
 

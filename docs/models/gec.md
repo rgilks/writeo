@@ -17,7 +17,7 @@ Both services are enabled by default in `assessors.json` and their results appea
 
 ---
 
-## Seq2Seq GEC (`modal_gec`)
+## Seq2Seq GEC (`modal-gec`)
 
 **Approach:** Sequence-to-Sequence (Rewrite entire sentences)
 
@@ -40,7 +40,7 @@ Edits: "has" → "have", "book" → "books"
 - **Model:** `google/flan-t5-base` (220M params, fine-tuned on GEC data)
 - **GPU:** A10G
 - **Keep-Warm:** 60s
-- **Location:** `services/modal_gec/`
+- **Location:** `services/modal-gec/`
 
 ### Pros/Cons
 
@@ -143,7 +143,7 @@ Both services use the same request/response format:
 
 ```bash
 # Deploy Seq2Seq
-cd services/modal_gec && modal deploy main.py
+cd services/modal-gec && modal deploy main.py
 
 # Deploy GECToR
 cd services/modal-gector && modal deploy main.py

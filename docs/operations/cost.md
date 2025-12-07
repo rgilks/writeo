@@ -48,7 +48,7 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 | **modal-corpus**   | T4   | 30s       | ~$0.00008       | Corpus-trained scorer         |
 | **modal-feedback** | T4   | 30s       | ~$0.00008       | Feedback model (experimental) |
 | **modal-lt**       | CPU  | 300s      | ~$0.00002       | LanguageTool grammar check    |
-| **modal_gec**      | A10G | 60s       | ~$0.00015       | Seq2Seq GEC (Flan-T5, slow)   |
+| **modal-gec**      | A10G | 60s       | ~$0.00015       | Seq2Seq GEC (Flan-T5, slow)   |
 | **modal-gector**   | T4   | 60s       | ~$0.00008       | GECToR fast (~10x faster)     |
 
 **GPU Pricing (Modal, as of Q4 2025):**

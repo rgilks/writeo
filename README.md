@@ -110,7 +110,7 @@ cd services/modal-essay
 modal deploy app.py
 
 # Deploy GEC Services
-cd services/modal_gec
+cd services/modal-gec
 modal deploy main.py
 
 cd services/modal-gector
