@@ -58,7 +58,11 @@ export async function processLanguageToolResults(
             const ltResponse = (result as PromiseFulfilledResult<LanguageToolResponse>).value;
 
             // Debug logging in CI to diagnose test failures
-            if (process.env.CI === "true") {
+            // Check both process.env (Node.js) and globalThis (Cloudflare Workers)
+            const isCI =
+              (typeof process !== "undefined" && process.env?.CI === "true") ||
+              (typeof globalThis !== "undefined" && (globalThis as any).CI === "true");
+            if (isCI) {
               console.log("[processLanguageToolResults] Processing LT response", {
                 answerId,
                 textLength: answer.answer_text.length,
@@ -78,7 +82,7 @@ export async function processLanguageToolResults(
             const errors = transformLanguageToolResponse(ltResponse, answer.answer_text);
 
             // Debug logging in CI
-            if (process.env.CI === "true" && errors.length > 0) {
+            if (isCI && errors.length > 0) {
               const firstError = errors[0];
               if (firstError) {
                 console.log("[processLanguageToolResults] Transformed errors", {

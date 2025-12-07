@@ -343,7 +343,11 @@ export class MockModalClient implements ModalService {
     };
 
     // Debug logging in CI to diagnose test failures
-    if (process.env.CI === "true" && matches.length > 0) {
+    // Check both process.env (Node.js) and globalThis (Cloudflare Workers)
+    const isCI =
+      (typeof process !== "undefined" && process.env?.CI === "true") ||
+      (typeof globalThis !== "undefined" && (globalThis as any).CI === "true");
+    if (isCI && matches.length > 0) {
       console.log("[MockModalClient.checkGrammar] Returning mock response", {
         textLength: text.length,
         matchCount: matches.length,
