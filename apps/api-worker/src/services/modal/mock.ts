@@ -321,9 +321,15 @@ export class MockModalClient implements ModalService {
               id: errorPattern.ruleId,
               description: errorPattern.message,
               category: errorPattern.category,
+              type: "grammar", // Required for confidence calculation
             },
             replacements: [{ value: errorPattern.replacement }],
             issueType: errorPattern.issueType as "error" | "warning",
+            context: {
+              text: text,
+              offset: matchOffset,
+              length: matchLength,
+            },
           });
         }
 
