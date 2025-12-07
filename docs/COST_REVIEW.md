@@ -1,7 +1,7 @@
 # Cost Review & Optimization Guide
 
 **Review Frequency:** Quarterly  
-**Last Reviewed:** 2025-01-18
+**Last Reviewed:** 2025-12-07
 
 ---
 
@@ -34,7 +34,8 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 | -------------- | ------- | ----------- | ------------------------------- |
 | T-AES-ESSAY    | ✅ ON   | ~$0.0001    | Required for dimensional scores |
 | T-AES-CORPUS   | ✅ ON   | ~$0.0001    | Best scorer (0.96 correlation)  |
-| T-GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs)        |
+| T-GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs, slow)  |
+| T-GEC-GECTOR   | ✅ ON   | ~$0.00008   | Fast GEC (~10x faster)          |
 | T-GEC-LT       | ✅ ON   | ~$0.0001    | Typos, mechanics                |
 | T-AES-FEEDBACK | ❌ OFF  | ~$0.0001    | Experimental                    |
 | T-GEC-LLM      | ❌ OFF  | ~$0.002     | Expensive, redundant            |
@@ -47,9 +48,10 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 | **modal-corpus**   | T4   | 30s       | ~$0.00008       | Corpus-trained scorer         |
 | **modal-feedback** | T4   | 30s       | ~$0.00008       | Feedback model (experimental) |
 | **modal-lt**       | CPU  | 300s      | ~$0.00002       | LanguageTool grammar check    |
-| **modal_gec**      | A10G | 300s      | ~$0.00015       | Seq2Seq GEC (Flan-T5)         |
+| **modal_gec**      | A10G | 60s       | ~$0.00015       | Seq2Seq GEC (Flan-T5, slow)   |
+| **modal-gector**   | T4   | 60s       | ~$0.00008       | GECToR fast (~10x faster)     |
 
-**GPU Pricing (Modal, as of Q1 2025):**
+**GPU Pricing (Modal, as of Q4 2025):**
 
 - T4: ~$0.59/hour (~$0.00016/second)
 - A10G: ~$1.10/hour (~$0.00031/second)
@@ -59,7 +61,7 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 
 - Cold start adds ~2-5s for GPU services (billed)
 - Keep-warm reduces cold starts but incurs idle cost
-- Default config: T4 services keep-warm 30s, CPU/A10G keep-warm 300s
+- Default config: T4 services keep-warm 30-60s, CPU keep-warm 300s
 
 **Lean Mode (default)**: ~$0.0005/submission (Modal only)  
 **Full Mode** (all enabled): ~$0.0025-0.006/submission (with LLM)

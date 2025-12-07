@@ -25,14 +25,14 @@ This directory contains all documentation for the Writeo project.
 
 ### Models & Assessors
 
-- **[MODELS.md](MODELS.md)** - Essay scoring models overview
+- **[MODELS.md](MODELS.md)** - Essay scoring models overview and comparison
 - **[CORPUS_MODEL_GUIDE.md](CORPUS_MODEL_GUIDE.md)** - T-AES-CORPUS training guide
 - **[FEEDBACK_MODEL_GUIDE.md](FEEDBACK_MODEL_GUIDE.md)** - T-AES-FEEDBACK multi-task model
-- **[GEC_SERVICE.md](GEC_SERVICE.md)** - T-GEC-SEQ2SEQ grammar correction
+- **[GEC_SERVICE.md](GEC_SERVICE.md)** - Grammar correction services (Seq2Seq + GECToR)
 - **[ASSESSOR_EVALUATION_REPORT.md](ASSESSOR_EVALUATION_REPORT.md)** - Performance evaluation of all assessors
 - **[TRAINING_DATASETS.md](TRAINING_DATASETS.md)** - Available datasets for future training
 
-### Operations
+### Operations & Deployment
 
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Step-by-step deployment guide and troubleshooting
 - **[OPERATIONS.md](OPERATIONS.md)** - Environment variables, logging, monitoring, performance tuning
@@ -40,10 +40,14 @@ This directory contains all documentation for the Writeo project.
 - **[COST_REVIEW.md](COST_REVIEW.md)** - Comprehensive cost analysis and current cost controls
 - **[SCRIPTS.md](SCRIPTS.md)** - Scripts reference and usage guide
 - **[SERVICES.md](SERVICES.md)** - Individual services documentation (Modal, Shared package)
-- **[MODELS.md](MODELS.md)** - Essay scoring models documentation and comparison
 - **[PWA_SETUP.md](PWA_SETUP.md)** - Progressive Web App setup and configuration guide
-- **[TESTING.md](TESTING.md)** - Complete testing guide with test structure, examples, and best practices
+- **[TESTING.md](TESTING.md)** - Testing guide with test structure and best practices
 - **[openapi.yaml](openapi.yaml)** - OpenAPI 3.0 specification
+
+### Planning & Status
+
+- **[STATUS.md](STATUS.md)** - Current production status and roadmap
+- **[TODO.md](TODO.md)** - Future improvements and considerations
 
 ### Legal & Compliance
 
@@ -53,12 +57,14 @@ This directory contains all documentation for the Writeo project.
 
 ## 🔗 Quick Links
 
-**API:** [Interactive Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) | [OpenAPI Spec](openapi.yaml)  
-**Status & Roadmap:** [STATUS.md](STATUS.md)  
-**Cost Analysis:** [COST_REVIEW.md](COST_REVIEW.md)  
-**Testing:** [TESTING.md](TESTING.md)  
-**Deployment:** [DEPLOYMENT.md](DEPLOYMENT.md)  
-**Architecture:** [ARCHITECTURE.md](ARCHITECTURE.md)
+| Topic             | Link                                                                     |
+| ----------------- | ------------------------------------------------------------------------ |
+| **API**           | [Interactive Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) |
+| **Cost Analysis** | [COST_REVIEW.md](COST_REVIEW.md)                                         |
+| **Deployment**    | [DEPLOYMENT.md](DEPLOYMENT.md)                                           |
+| **Architecture**  | [ARCHITECTURE.md](ARCHITECTURE.md)                                       |
+| **Testing**       | [TESTING.md](TESTING.md)                                                 |
+| **Status**        | [STATUS.md](STATUS.md)                                                   |
 
 ---
 

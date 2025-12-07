@@ -9,7 +9,9 @@
 ### Completed Features
 
 - ✅ **Core Assessment** - Essay scoring, grammar checking, AI feedback
-- ✅ **GEC (Grammatical Error Correction)** - Dedicated Seq2Seq model for high-precision corrections
+- ✅ **GEC (Grammatical Error Correction)** - Dual services running in parallel:
+  - Seq2Seq (Flan-T5) for high-quality corrections
+  - GECToR (RoBERTa) for fast corrections (~10x faster)
 - ✅ **Draft Tracking** - Multiple drafts, revision history, navigation
 - ✅ **History Page** - View and access drafts and submissions with date grouping
 - ✅ **Precision-Focused Feedback** - High-confidence error filtering with toggles

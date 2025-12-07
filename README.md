@@ -17,7 +17,9 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 ## 🚀 Key Features
 
 - **🤖 AI Essay Scoring**: Multi-dimensional scoring (Task Achievement, Coherence & Cohesion, Vocabulary, Grammar) using fine-tuned RoBERTa models.
-- **✨ Smart Grammar Correction**: Dedicated Seq2Seq GEC model (`flan-t5`) for precise, context-aware error correction.
+- **✨ Smart Grammar Correction**: Dual GEC services running in parallel:
+  - **Seq2Seq (T-GEC-SEQ2SEQ)**: High-quality corrections using Flan-T5 (~12-16s)
+  - **GECToR (T-GEC-GECTOR)**: Fast token-tagging approach (~1-2s, 10x faster)
 - **📝 Grammar & Style Checking**: Advanced grammar, spelling, and style analysis using LanguageTool.
 - **💬 Detailed Feedback**: Context-aware, actionable feedback powered by **Groq Llama 3.3 70B** (Turbo) or **OpenAI GPT-4o-mini** (Cheap).
 - **📊 CEFR Mapping**: Automatic mapping of scores to Common European Framework of Reference for Languages (A2-C2).
@@ -115,10 +117,11 @@ Deploy the ML backend services to Modal:
 cd services/modal-essay
 modal deploy app.py
 
-modal deploy app.py
-
-# Deploy GEC Service
+# Deploy GEC Services
 cd ../modal_gec
+modal deploy main.py
+
+cd ../modal-gector
 modal deploy main.py
 ```
 
@@ -166,7 +169,7 @@ Switch modes easily:
 
 See **[MODES.md](docs/MODES.md)** and **[COST_REVIEW.md](docs/COST_REVIEW.md)** for details.
 
-### Testing
+## 🧪 Testing
 
 Run the test suite:
 
@@ -180,18 +183,9 @@ npm run test:unit
 # Run E2E tests (automatically starts test server)
 npm run test:e2e
 
-# Run E2E tests with UI
-npm run test:e2e:ui
-
-# Manually start test environment (API Worker + Web App)
-npm run start:test-server
-```
-
-For more details, see [TESTING.md](./docs/TESTING.md).
-
 # Run specific test file
-
 npx vitest tests/api.test.ts
+```
 
 See **[TESTING.md](docs/TESTING.md)** for more info.
 

@@ -90,7 +90,7 @@ modal deploy app.py
 - **Cold Start**: ~2-3s (JAR cached), ~10-15min first time (n-gram download)
 - **Warm Check**: ~100-500ms
 
-## Modal GEC Service
+## Modal GEC Service (Seq2Seq)
 
 FastAPI service for Grammatical Error Correction using Seq2Seq models.
 
@@ -100,7 +100,6 @@ FastAPI service for Grammatical Error Correction using Seq2Seq models.
 
 ```bash
 cd services/modal_gec
-# pip install -e .
 modal deploy main.py
 ```
 
@@ -113,6 +112,44 @@ modal deploy main.py
 
 - **Model**: `google/flan-t5-base` (Fine-tuned)
 - **Method**: Seq2Seq generation + Diff-based extraction
+- **GPU**: A10G
+- **Keep-Warm**: 60s
+- **Speed**: ~12-16s per request (high quality, slow)
+
+## Modal GECToR Service (Fast)
+
+FastAPI service for fast Grammatical Error Correction using GECToR (Tag, Not Rewrite).
+
+**Location:** `services/modal-gector/`
+
+### Quick Start
+
+```bash
+cd services/modal-gector
+modal deploy main.py
+```
+
+### Endpoints
+
+- `POST /gector_endpoint` - Correct text and return edits
+- `GET /health` - Health check
+
+### Configuration
+
+- **Model**: `gotutiyan/gector-roberta-base-5k`
+- **Method**: Token-level tagging (encoder-only, all tokens in parallel)
+- **GPU**: T4 (cheaper than A10G)
+- **Keep-Warm**: 60s
+- **Speed**: ~1-2s per request (~10x faster than Seq2Seq)
+
+### Performance Comparison
+
+| Service    | Speed  | Quality | Cost   |
+| ---------- | ------ | ------- | ------ |
+| Seq2Seq    | 12-16s | High    | Higher |
+| **GECToR** | 1-2s   | Good    | Lower  |
+
+Both services run in parallel and results appear as separate assessors (`T-GEC-SEQ2SEQ` and `T-GEC-GECTOR`).
 
 ## Shared Package
 

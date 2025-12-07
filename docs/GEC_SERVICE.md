@@ -1,25 +1,27 @@
 # GEC Service Documentation
 
-**Service for Grammatical Error Correction using Seq2Seq Models**
+**Grammatical Error Correction Services**
 
 ---
 
 ## Overview
 
-The GEC Service provides high-quality grammatical error correction for essays. Unlike the previous token-classification approach, this service uses a Sequence-to-Sequence (Seq2Seq) architecture to rewrite sentences with corrections.
+Writeo provides two GEC services that run in parallel:
 
-**Key Features:**
+| Service     | Model        | Speed  | Quality | Assessor ID     |
+| ----------- | ------------ | ------ | ------- | --------------- |
+| **Seq2Seq** | Flan-T5      | 12-16s | High    | `T-GEC-SEQ2SEQ` |
+| **GECToR**  | RoBERTa-base | 1-2s   | Good    | `T-GEC-GECTOR`  |
 
-- **Model:** `google/flan-t5-base` (220M params) fine-tuned on GEC data.
-- **Approach:** Generates corrected text, then computes diffs to extract precise error spans.
-- **Performance:** Higher precision and recall compared to token-tagging models.
-- **Isolation:** Runs as a standalone separate Microservice on Modal.
+Both services are enabled by default in `assessors.json` and their results appear as separate assessors in the response.
 
 ---
 
-## Architecture
+## Seq2Seq GEC (`modal_gec`)
 
-### Model Flow
+**Approach:** Sequence-to-Sequence (Rewrite entire sentences)
+
+### Architecture
 
 ```
 Input: "I has three book"
@@ -30,50 +32,72 @@ Output: "I have three books"
    ↓
 [Diff Algorithm (ERRANT/difflib)]
    ↓
-Edits:
-- "has" -> "have" (Subject-Verb Agreement)
-- "book" -> "books" (Noun Number)
+Edits: "has" → "have", "book" → "books"
 ```
 
-### Infrastructure
+### Configuration
 
-- **Platform:** Modal
-- **GPU:** A10G (for training), CPU/GPU (for inference)
-- **Endpoint:** FastAPI (`/gec_endpoint`)
+- **Model:** `google/flan-t5-base` (220M params, fine-tuned on GEC data)
+- **GPU:** A10G
+- **Keep-Warm:** 60s
+- **Location:** `services/modal_gec/`
+
+### Pros/Cons
+
+✅ High precision and recall  
+✅ Can make complex structural changes  
+❌ Slow (~12-16s per request)  
+❌ More expensive (A10G GPU)
 
 ---
 
-## Implementation Details
+## GECToR (`modal-gector`)
 
-### 1. Data Preparation
+**Approach:** Token-level tagging (Tag, Not Rewrite)
 
-- **Script:** `scripts/training/prepare-gec-seq2seq.py`
-- **Source:** M2 formatted annotation files.
-- **Output:** JSONL files (`train.jsonl`, `dev.jsonl`) containing `source` (incorrect) and `target` (correct) pairs.
+### Architecture
 
-### 2. Training
+```
+Input: "I has three book"
+   ↓
+[GECToR Model (RoBERTa encoder)]
+   ↓
+Tags: [KEEP, REPLACE:have, KEEP, REPLACE:books]
+   ↓
+[Apply Tags]
+   ↓
+Output: "I have three books"
+```
 
-- **Script:** `scripts/training/train-gec-seq2seq.py`
-- **Framework:** HuggingFace Transformers (`Seq2SeqTrainer`).
-- **Location:** Runs on Modal, checkpoints saved to `writeo-gec-models` Volume.
+### Configuration
 
-### 3. Service Logic
+- **Model:** `gotutiyan/gector-roberta-base-5k`
+- **GPU:** T4 (cheaper)
+- **Keep-Warm:** 60s
+- **Location:** `services/modal-gector/`
 
-- **Location:** `services/modal_gec/`
-- **Correction Logic:** `correction.py` uses `difflib` (fallback) or `ERRANT` (if available) to align original and corrected sentences and extract spans.
-- **API:** Returns a list of edits, each with `start`, `end`, `original`, `correction`, and `type`.
+### Pros/Cons
+
+✅ Very fast (~1-2s per request, ~10x faster)  
+✅ Cheaper (T4 GPU)  
+✅ Good for simple errors  
+❌ May struggle with complex structural errors  
+❌ Edit extraction can cascade on insertions
 
 ---
 
 ## API Reference
 
-**Endpoint:** `POST /gec_endpoint`
+Both services use the same request/response format:
+
+**Seq2Seq:** `POST /gec_endpoint`  
+**GECToR:** `POST /gector_endpoint`
 
 **Request:**
 
 ```json
 {
-  "text": "I has a error."
+  "text": "I has three book."
 }
 ```
 
@@ -81,22 +105,24 @@ Edits:
 
 ```json
 {
-  "original": "I has a error.",
-  "corrected": "I have an error.",
+  "original": "I has three book.",
+  "corrected": "I have three books.",
   "edits": [
     {
       "start": 2,
       "end": 5,
       "original": "has",
       "correction": "have",
-      "type": "grammar"
+      "operation": "replace",
+      "category": "grammar"
     },
     {
-      "start": 6,
-      "end": 7,
-      "original": "a",
-      "correction": "an",
-      "type": "grammar"
+      "start": 12,
+      "end": 16,
+      "original": "book",
+      "correction": "books",
+      "operation": "replace",
+      "category": "grammar"
     }
   ]
 }
@@ -106,9 +132,19 @@ Edits:
 
 ## Backend Integration
 
-The API Worker calls this service in parallel with other assessment services.
+1. **Config:** Set via `assessors.json` (`gecSeq2seq`, `gecGector`)
+2. **Execution:** Both called in parallel via `services.ts`
+3. **Merging:** Results merged into `AssessmentResults` under their assessor IDs
+4. **Display:** Edits converted to `LanguageToolError` format for heatmap display
 
-1. **Config:** `MODAL_GEC_URL` in `.dev.vars` / environment.
-2. **Execution:** `modalService.correctGrammar(text)` called in `services.ts`.
-3. **Merging:** Results are merged into the final `AssessmentResults` under the assessor ID `T-GEC-SEQ2SEQ`.
-4. **Display:** Edits are converted to `LanguageToolError` format and appear in the heatmap alongside LT/LLM errors.
+---
+
+## Deployment
+
+```bash
+# Deploy Seq2Seq
+cd services/modal_gec && modal deploy main.py
+
+# Deploy GECToR
+cd services/modal-gector && modal deploy main.py
+```
