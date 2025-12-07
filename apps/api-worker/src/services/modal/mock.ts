@@ -326,9 +326,9 @@ export class MockModalClient implements ModalService {
             replacements: [{ value: errorPattern.replacement }],
             issueType: errorPattern.issueType as "error" | "warning",
             context: {
-              text: text,
-              offset: matchOffset,
-              length: matchLength,
+              text: text, // Full text for context extraction
+              offset: matchOffset, // Absolute offset in full text
+              length: matchLength, // Length of match
             },
           });
         }
