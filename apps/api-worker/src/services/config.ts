@@ -19,6 +19,7 @@ export interface AssessorConfig {
   grammar: {
     languageTool: boolean;
     gecSeq2seq: boolean;
+    gecGector: boolean;
     gecLlm: boolean;
   };
 }
@@ -34,6 +35,7 @@ export interface AppConfig {
     corpusUrl: string; // Default to deployed service URL
     feedbackUrl: string; // T-AES-FEEDBACK service URL
     gecUrl: string; // T-GEC-SEQ2SEQ service URL
+    gectorUrl: string; // T-GEC-GECTOR service URL (fast)
   };
   llm: {
     provider: LLMProvider;
@@ -102,6 +104,8 @@ export function buildConfig(env: Env): AppConfig {
       feedbackUrl:
         env.MODAL_FEEDBACK_URL || "https://rob-gilks--writeo-feedback-fastapi-app.modal.run",
       gecUrl: env.MODAL_GEC_URL || "https://rob-gilks--writeo-gec-service-fastapi-app.modal.run",
+      gectorUrl:
+        env.MODAL_GECTOR_URL || "https://rob-gilks--writeo-gector-service-fastapi-app.modal.run",
     },
     llm: buildLLMConfig(env),
     storage: {
@@ -125,6 +129,7 @@ export function buildConfig(env: Env): AppConfig {
         grammar: {
           languageTool: assessorConfig.grammar.languageTool,
           gecSeq2seq: assessorConfig.grammar.gecSeq2seq,
+          gecGector: assessorConfig.grammar.gecGector,
           gecLlm: assessorConfig.grammar.gecLlm,
         },
       },

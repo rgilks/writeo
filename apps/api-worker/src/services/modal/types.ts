@@ -5,5 +5,6 @@ export interface ModalService {
   checkGrammar(text: string, language: string, answerId: string): Promise<Response>;
   scoreCorpus(text: string): Promise<Response>; // Corpus CEFR scoring (dev mode)
   scoreFeedback(text: string): Promise<Response>; // T-AES-FEEDBACK scoring (dev mode)
-  correctGrammar(text: string): Promise<Response>; // GEC correction
+  correctGrammar(text: string): Promise<Response>; // T-GEC-SEQ2SEQ correction
+  correctGrammarGector(text: string): Promise<Response>; // T-GEC-GECTOR fast correction
 }

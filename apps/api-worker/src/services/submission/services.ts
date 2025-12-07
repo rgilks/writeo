@@ -26,7 +26,8 @@ export interface ServiceRequests {
   }>;
   corpusRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode corpus scoring
   feedbackRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode T-AES-FEEDBACK
-  gecRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode T-GEC-SEQ2SEQ
+  gecRequests: Array<{ answerId: string; request: Promise<Response> }>; // T-GEC-SEQ2SEQ (slow but precise)
+  gectorRequests: Array<{ answerId: string; request: Promise<Response> }>; // T-GEC-GECTOR (fast)
   llmProvider: LLMProvider;
   apiKey: string;
   aiModel: string;
@@ -64,8 +65,10 @@ export function prepareServiceRequests(
   const corpusRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
   // Feedback scoring requests (dev mode / mock services)
   const feedbackRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
-  // GEC requests (dev mode / mock services)
+  // GEC Seq2Seq requests (T-GEC-SEQ2SEQ)
   const gecRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
+  // GECToR requests (T-GEC-GECTOR - fast)
+  const gectorRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
 
   for (const answer of iterateAnswers(modalParts)) {
     if (ltEnabled) {
@@ -122,6 +125,14 @@ export function prepareServiceRequests(
         request: modalService.correctGrammar(answer.answer_text),
       });
     }
+
+    // T-GEC-GECTOR: Add fast GECToR correction if enabled (default: ON, ~10x faster)
+    if (config.features.assessors.grammar.gecGector) {
+      gectorRequests.push({
+        answerId: answer.id,
+        request: modalService.correctGrammarGector(answer.answer_text),
+      });
+    }
   }
 
   ltRequests = requests;
@@ -133,6 +144,7 @@ export function prepareServiceRequests(
     corpusRequests,
     feedbackRequests,
     gecRequests,
+    gectorRequests,
     llmProvider: config.llm.provider,
     apiKey: config.llm.apiKey,
     aiModel: config.llm.model,
@@ -153,6 +165,7 @@ export async function executeServiceRequests(
   corpusResults: PromiseSettledResult<Response[]>;
   feedbackResults: PromiseSettledResult<Response[]>;
   gecResults: PromiseSettledResult<Response[]>;
+  gectorResults: PromiseSettledResult<Response[]>;
 }> {
   const essayStartTime = performance.now();
   const {
@@ -162,6 +175,7 @@ export async function executeServiceRequests(
     corpusRequests,
     feedbackRequests,
     gecRequests,
+    gectorRequests,
     modalService,
   } = serviceRequests;
 
@@ -173,6 +187,7 @@ export async function executeServiceRequests(
     corpusResults,
     feedbackResults,
     gecResults,
+    gectorResults,
   ] = await Promise.allSettled([
     (async () => {
       const start = performance.now();
@@ -216,6 +231,12 @@ export async function executeServiceRequests(
       timings["5g_gec_fetch"] = performance.now() - start;
       return resolved;
     })(),
+    (async () => {
+      const start = performance.now();
+      const resolved = await Promise.all(gectorRequests.map((r) => r.request));
+      timings["5h_gector_fetch"] = performance.now() - start;
+      return resolved;
+    })(),
   ]);
 
   timings["5_parallel_services_total"] = performance.now() - essayStartTime;
@@ -228,5 +249,6 @@ export async function executeServiceRequests(
     corpusResults,
     feedbackResults,
     gecResults,
+    gectorResults,
   };
 }

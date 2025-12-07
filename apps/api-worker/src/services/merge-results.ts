@@ -18,7 +18,8 @@ const ASSESSOR_IDS = {
   TEACHER: "T-TEACHER-FEEDBACK",
   CORPUS: "T-AES-CORPUS", // Dev mode corpus scoring
   FEEDBACK: "T-AES-FEEDBACK", // Dev mode multi-task feedback
-  GEC: "T-GEC-SEQ2SEQ", // Dev mode GEC
+  GEC: "T-GEC-SEQ2SEQ", // Seq2Seq GEC (slow but precise)
+  GECTOR: "T-GEC-GECTOR", // GECToR fast GEC
 } as const;
 
 function extractEssayAssessorResults(
@@ -252,6 +253,30 @@ function createGECAssessor(gecData: {
   };
 }
 
+function createGECToRAssessor(gectorData: {
+  original: string;
+  corrected: string;
+  edits: Array<{
+    start: number;
+    end: number;
+    original: string;
+    correction: string;
+    type: string;
+  }>;
+}): AssessorResult {
+  return {
+    id: ASSESSOR_IDS.GECTOR,
+    name: "GECToR Fast",
+    type: "feedback",
+    meta: {
+      model: "gector-roberta-base-5k",
+      edits: gectorData.edits,
+      correctedText: gectorData.corrected,
+      devMode: true,
+    },
+  };
+}
+
 function buildAssessorResults(
   _answerId: string,
   essayAssessorResults: AssessorResult[],
@@ -270,6 +295,19 @@ function buildAssessorResults(
       }
     | undefined,
   gecData:
+    | {
+        original: string;
+        corrected: string;
+        edits: Array<{
+          start: number;
+          end: number;
+          original: string;
+          correction: string;
+          type: string;
+        }>;
+      }
+    | undefined,
+  gectorData:
     | {
         original: string;
         corrected: string;
@@ -325,9 +363,14 @@ function buildAssessorResults(
     assessorResults.push(createFeedbackAssessor(feedbackData));
   }
 
-  // Add GEC assessor if available (dev mode)
+  // Add GEC Seq2Seq assessor if available
   if (gecData) {
     assessorResults.push(createGECAssessor(gecData));
+  }
+
+  // Add GECToR fast assessor if available
+  if (gectorData) {
+    assessorResults.push(createGECToRAssessor(gectorData));
   }
 
   return assessorResults;
@@ -383,6 +426,20 @@ export function mergeAssessmentResults(
       }>;
     }
   > = new Map(),
+  gectorScores: Map<
+    string,
+    {
+      original: string;
+      corrected: string;
+      edits: Array<{
+        start: number;
+        end: number;
+        original: string;
+        correction: string;
+        type: string;
+      }>;
+    }
+  > = new Map(),
 ): AssessmentResults {
   const parts: AssessmentPart[] = [];
 
@@ -402,6 +459,7 @@ export function mergeAssessmentResults(
         corpusScores.get(answer.id),
         feedbackScores.get(answer.id),
         gecScores.get(answer.id),
+        gectorScores.get(answer.id),
         language,
         llmProvider,
         aiModel,

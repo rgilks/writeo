@@ -58,4 +58,13 @@ export class ModalClient implements ModalService {
       body: JSON.stringify({ text }),
     });
   }
+
+  async correctGrammarGector(text: string): Promise<Response> {
+    // T-GEC-GECTOR: Fast GECToR token-tagging model (~10x faster than Seq2Seq)
+    return fetch(`${this.config.modal.gectorUrl}/gector_endpoint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+  }
 }

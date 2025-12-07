@@ -13,6 +13,7 @@ export type Env = {
   MODAL_CORPUS_URL?: string; // Corpus-trained model service (dev mode)
   MODAL_FEEDBACK_URL?: string; // T-AES-FEEDBACK model service (dev mode)
   MODAL_GEC_URL?: string; // T-GEC-SEQ2SEQ model service (dev mode)
+  MODAL_GECTOR_URL?: string; // T-GEC-GECTOR model service (fast GECToR)
   /** Default: "en-GB" */
   LT_LANGUAGE?: string;
 

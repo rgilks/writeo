@@ -460,4 +460,9 @@ export class MockModalClient implements ModalService {
       },
     );
   }
+
+  async correctGrammarGector(text: string): Promise<Response> {
+    // GECToR mock - same as correctGrammar for now
+    return this.correctGrammar(text);
+  }
 }
