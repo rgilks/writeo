@@ -65,7 +65,8 @@ export async function createSubmission(
         answers: [answerPayload],
       },
     ],
-    // assessors not specified = use all server defaults
+    // Explicitly request standard assessors
+    assessors: ["T-AES-ESSAY", "T-GEC-LT", "T-AI-FEEDBACK", "T-TEACHER-FEEDBACK"],
     storeResults,
   };
 
