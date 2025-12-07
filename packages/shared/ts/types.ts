@@ -436,24 +436,60 @@ export function getGECSeq2seqAssessorResult(results: AssessorResult[]):
 }
 
 /**
- * Convert GEC Seq2Seq edits to LanguageToolError format for display in the heatmap.
- * This allows the precise diff-based edits from the Seq2Seq model to appear as suggestions.
+ * Type-safe helper to get GEC GECToR assessor result from an array of assessor results.
  *
- * @param edits - Array of GEC Seq2Seq edits
+ * @param results - Array of assessor results to search
+ * @returns GEC GECToR assessor result with edits array, or undefined if not found
+ */
+export function getGECGectorAssessorResult(results: AssessorResult[]):
+  | (AssessorResult & {
+      id: "GEC-GECTOR";
+      meta: {
+        edits: GECSeq2seqEdit[];
+        correctedText: string;
+      };
+    })
+  | undefined {
+  const result = results.find((r) => r.id === "GEC-GECTOR");
+  if (result && result.meta && Array.isArray((result.meta as Record<string, unknown>).edits)) {
+    return result as AssessorResult & {
+      id: "GEC-GECTOR";
+      meta: { edits: GECSeq2seqEdit[]; correctedText: string };
+    };
+  }
+  return undefined;
+}
+
+/**
+ * Convert GEC edits to LanguageToolError format for display in the heatmap.
+ * This allows the precise diff-based edits from GEC models (Seq2Seq or GECToR) to appear as suggestions.
+ *
+ * @param edits - Array of GEC edits (from Seq2Seq or GECToR)
+ * @param sourceId - Source identifier for rule_id (e.g., "GEC-SEQ2SEQ" or "GEC-GECTOR")
  * @returns Array of LanguageToolError objects compatible with the heatmap
  */
-export function convertGECEditsToErrors(edits: GECSeq2seqEdit[]): LanguageToolError[] {
+export function convertGECEditsToErrors(
+  edits: GECSeq2seqEdit[],
+  sourceId: "GEC-SEQ2SEQ" | "GEC-GECTOR" = "GEC-SEQ2SEQ",
+): LanguageToolError[] {
   return edits.map((edit) => {
+    // Handle both 'operation' and 'type' fields for compatibility
+    const operation = edit.operation || (edit as unknown as { type?: string }).type || "replace";
+    const normalizedOperation =
+      typeof operation === "string"
+        ? (operation.toLowerCase() as "insert" | "replace" | "delete")
+        : "replace";
+
     // Determine error type and message based on operation
     let errorCategory = "GRAMMAR";
     let message = "";
     let errorType = "Grammar correction";
 
-    if (edit.operation === "insert") {
+    if (normalizedOperation === "insert") {
       errorCategory = "GRAMMAR";
       message = `Add "${edit.correction}"`;
       errorType = "Missing word/phrase";
-    } else if (edit.operation === "delete") {
+    } else if (normalizedOperation === "delete") {
       errorCategory = "STYLE";
       message = `Remove "${edit.original}"`;
       errorType = "Unnecessary word/phrase";
@@ -469,12 +505,12 @@ export function convertGECEditsToErrors(edits: GECSeq2seqEdit[]): LanguageToolEr
       end: edit.end,
       length: edit.end - edit.start,
       category: errorCategory,
-      rule_id: `GEC-SEQ2SEQ-${edit.operation.toUpperCase()}`,
+      rule_id: `${sourceId}-${normalizedOperation.toUpperCase()}`,
       message,
       suggestions: edit.correction ? [edit.correction] : [],
       source: "LLM" as const, // Use LLM source to indicate AI-based
       severity: "warning" as const,
-      confidenceScore: 0.85, // Seq2Seq model has high precision
+      confidenceScore: sourceId === "GEC-GECTOR" ? 0.8 : 0.85, // GECToR slightly lower confidence
       highConfidence: true,
       mediumConfidence: true,
       errorType,

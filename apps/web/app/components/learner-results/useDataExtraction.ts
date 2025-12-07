@@ -10,6 +10,7 @@ import {
   getTeacherFeedbackAssessorResult,
   getRelevanceCheckAssessorResult,
   getGECSeq2seqAssessorResult,
+  getGECGectorAssessorResult,
   convertGECEditsToErrors,
 } from "@writeo/shared";
 
@@ -51,11 +52,22 @@ export function useDataExtraction(data: AssessmentResults, submissionId?: string
   // Convert GEC Seq2Seq edits to LanguageToolError format for heatmap display
   const gecSeq2seqAssessor = getGECSeq2seqAssessorResult(assessorResults);
   const gecSeq2seqErrors: LanguageToolError[] = gecSeq2seqAssessor
-    ? convertGECEditsToErrors(gecSeq2seqAssessor.meta.edits)
+    ? convertGECEditsToErrors(gecSeq2seqAssessor.meta.edits, "GEC-SEQ2SEQ")
     : [];
 
-  // Combine all grammar errors: LT + LLM + GEC Seq2Seq
-  const grammarErrors: LanguageToolError[] = [...ltErrors, ...llmErrors, ...gecSeq2seqErrors];
+  // Convert GEC GECToR edits to LanguageToolError format for heatmap display
+  const gecGectorAssessor = getGECGectorAssessorResult(assessorResults);
+  const gecGectorErrors: LanguageToolError[] = gecGectorAssessor
+    ? convertGECEditsToErrors(gecGectorAssessor.meta.edits, "GEC-GECTOR")
+    : [];
+
+  // Combine all grammar errors: LT + LLM + GEC Seq2Seq + GEC GECToR
+  const grammarErrors: LanguageToolError[] = [
+    ...ltErrors,
+    ...llmErrors,
+    ...gecSeq2seqErrors,
+    ...gecGectorErrors,
+  ];
 
   const teacherAssessor = getTeacherFeedbackAssessorResult(assessorResults);
   const teacherFeedback = teacherAssessor?.meta
