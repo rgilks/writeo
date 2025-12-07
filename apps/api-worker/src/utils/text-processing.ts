@@ -754,7 +754,23 @@ export function transformLanguageToolResponse(
       validatedEnd = validated.end;
     }
 
-    const confidenceScore = calculateErrorConfidence(match, fullText);
+    let confidenceScore = calculateErrorConfidence(match, fullText);
+
+    // Ensure confidenceScore is always a valid number (defensive check)
+    if (
+      typeof confidenceScore !== "number" ||
+      isNaN(confidenceScore) ||
+      !isFinite(confidenceScore)
+    ) {
+      console.warn("[transformLanguageToolResponse] Invalid confidenceScore, using fallback", {
+        confidenceScore,
+        matchOffset: match.offset,
+        matchLength: match.length,
+        ruleId: match.rule?.id,
+        ruleType: match.rule?.type,
+      });
+      confidenceScore = BASE_CONFIDENCE; // Fallback to base confidence
+    }
 
     const isTenseError = fullText ? isTenseConsistencyError(match, fullText) : false;
     const effectiveHighThreshold = isTenseError ? TENSE_ERROR_THRESHOLD : HIGH_CONFIDENCE_THRESHOLD;
@@ -783,13 +799,27 @@ export function transformLanguageToolResponse(
         match.replacements?.slice(0, 5).map((r: LanguageToolReplacement) => r.value) || [],
       source: "LT" as const,
       severity: (match.issueType === "error" ? "error" : "warning") as "error" | "warning",
-      confidenceScore,
+      // Ensure confidenceScore is always set and valid
+      confidenceScore:
+        typeof confidenceScore === "number" && !isNaN(confidenceScore)
+          ? confidenceScore
+          : BASE_CONFIDENCE,
       highConfidence,
       mediumConfidence,
       errorType: structuredFeedback.errorType,
       explanation: structuredFeedback.explanation,
       example: structuredFeedback.example,
     };
+
+    // Defensive check: ensure all required properties are present
+    if (!error.confidenceScore || typeof error.confidenceScore !== "number") {
+      console.error("[transformLanguageToolResponse] Error missing confidenceScore", {
+        error: Object.keys(error),
+        match: { offset: match.offset, ruleId: match.rule?.id, ruleType: match.rule?.type },
+      });
+      error.confidenceScore = BASE_CONFIDENCE;
+    }
+
     errors.push(error);
   }
   return errors;
