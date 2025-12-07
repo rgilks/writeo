@@ -149,7 +149,7 @@ def predict_with_feedback(
             "heatmap": heatmap,
         },
         "metadata": {
-            "model": "t-aes-feedback-v1",
+            "model": "aes-feedback-v1",
             "essay_length": len(essay_text),
             "tokens_used": len(input_ids[0]),
         },

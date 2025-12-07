@@ -4,7 +4,7 @@ A practical guide to understanding how the AES-CORPUS assessor was trained and w
 
 ## Table of Contents
 
-- [What is AES-CORPUS?](#what-is-t-aes-corpus)
+- [What is AES-CORPUS?](#what-is-aes-corpus)
 - [Training Data](#training-data)
 - [Model Architecture](#model-architecture)
 - [Training Process](#training-process)

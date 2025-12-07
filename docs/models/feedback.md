@@ -1584,7 +1584,7 @@ def create_attention_heatmap(attention, inputs, essay_text):
     "level": "B2"
   },
   "metadata": {
-    "model": "t-aes-feedback-v1",
+    "model": "aes-feedback-v1",
     "inference_time_ms": 245
   }
 }
@@ -1625,7 +1625,7 @@ def create_attention_heatmap(attention, inputs, essay_text):
     ]
   },
   "metadata": {
-    "model": "t-aes-feedback-v1",
+    "model": "aes-feedback-v1",
     "inference_time_ms": 245
   }
 }
