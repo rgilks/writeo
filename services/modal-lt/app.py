@@ -59,7 +59,7 @@ custom_volumes = {
 }
 
 
-@app.function(
+@app.function(  # type: ignore
     **ModalServiceFactory.get_default_function_kwargs(
         image=image,
         volumes=custom_volumes,
@@ -67,9 +67,10 @@ custom_volumes = {
         memory=2048,
         cpu=2.0,
         scaledown_window=60,
+        secrets=[modal.Secret.from_name("MODAL_API_KEY")],
     )
 )
-@modal.asgi_app()  # type: ignore
+@modal.asgi_app()
 def fastapi_app() -> Any:
     """FastAPI app for LanguageTool grammar checking endpoint."""
     import sys

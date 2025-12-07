@@ -54,6 +54,7 @@ app, image = ModalServiceFactory.create_app(
         timeout=60,
         memory=4096,
         scaledown_window=30,
+        secrets=[modal.Secret.from_name("MODAL_API_KEY")],
     )
 )
 @modal.asgi_app()
