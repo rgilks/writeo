@@ -7,6 +7,9 @@ const WARNING_INTENSITY = 0.5;
 const IN_ERROR_MULTIPLIER = 0.4;
 const CONTEXT_MULTIPLIER = 0.3;
 
+// Maximum possible intensity (GRAMMAR error with 1.5 multiplier * 0.4 in-error multiplier)
+const MAX_INTENSITY = 1.5 * ERROR_INTENSITY * IN_ERROR_MULTIPLIER;
+
 const CATEGORY_MULTIPLIERS: Record<string, number> = {
   GRAMMAR: 1.5,
   SPELLING: 1.5,
@@ -35,20 +38,35 @@ function calculateLocalIntensity(
 }
 
 export function calculateIntensityMap(text: string, errors: LanguageToolError[]): number[] {
-  const intensityMap = new Array(text.length).fill(0);
+  const textLength = text.length;
+  if (textLength === 0 || errors.length === 0) {
+    return new Array(textLength).fill(0);
+  }
 
-  for (const error of errors) {
-    if (!validateError(error, text.length)) {
+  const intensityMap = new Array(textLength).fill(0);
+
+  // Pre-sort errors by start position for better cache locality
+  const sortedErrors = [...errors].sort((a, b) => a.start - b.start);
+
+  for (const error of sortedErrors) {
+    if (!validateError(error, textLength)) {
       continue;
     }
 
     const intensity = calculateBaseIntensity(error);
     const contextStart = Math.max(0, error.start - CONTEXT_SIZE);
-    const contextEnd = Math.min(text.length, error.end + CONTEXT_SIZE);
+    const contextEnd = Math.min(textLength, error.end + CONTEXT_SIZE);
 
     for (let i = contextStart; i < contextEnd; i++) {
+      // Early exit: if already at max intensity, skip calculation
+      if (intensityMap[i] >= MAX_INTENSITY) {
+        continue;
+      }
+
       const localIntensity = calculateLocalIntensity(i, error.start, error.end, intensity);
-      intensityMap[i] = Math.max(intensityMap[i], localIntensity);
+      if (localIntensity > intensityMap[i]) {
+        intensityMap[i] = localIntensity;
+      }
     }
   }
 
@@ -56,14 +74,28 @@ export function calculateIntensityMap(text: string, errors: LanguageToolError[])
 }
 
 export function normalizeIntensity(intensityMap: number[]): number[] {
-  if (intensityMap.length === 0) {
+  const length = intensityMap.length;
+  if (length === 0) {
     return [];
   }
 
-  const maxIntensity = Math.max(...intensityMap);
+  // Find max using loop for better performance on large arrays
+  let maxIntensity = 0;
+  for (let i = 0; i < length; i++) {
+    if (intensityMap[i] > maxIntensity) {
+      maxIntensity = intensityMap[i];
+    }
+  }
+
   if (maxIntensity === 0) {
     return intensityMap;
   }
 
-  return intensityMap.map((i) => i / maxIntensity);
+  // Normalize in place for better memory efficiency
+  const result = new Array(length);
+  for (let i = 0; i < length; i++) {
+    result[i] = intensityMap[i] / maxIntensity;
+  }
+
+  return result;
 }

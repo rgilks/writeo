@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useDeferredValue } from "react";
 import type { HeatMapTextProps } from "./types";
 import { AnnotatedTextRevealed } from "./AnnotatedTextRevealed";
 import { NoErrorsMessage } from "./NoErrorsMessage";
@@ -45,12 +45,15 @@ export function HeatMapText({
     ],
   );
 
-  const { normalizedIntensity } = useMemo(() => {
+  // Calculate intensity map (expensive operation)
+  const normalizedIntensity = useMemo(() => {
     const map = calculateIntensityMap(text, filteredErrors);
-    return {
-      normalizedIntensity: normalizeIntensity(map),
-    };
+    return normalizeIntensity(map);
   }, [text, filteredErrors]);
+
+  // Use deferred value to prevent blocking the main thread
+  // This allows buttons and other UI to remain interactive while the heatmap renders
+  const deferredIntensity = useDeferredValue(normalizedIntensity);
 
   const handleReveal = useCallback(() => {
     setRevealed(true);
@@ -141,11 +144,7 @@ export function HeatMapText({
       )}
 
       {!revealed && (
-        <HeatMapRenderer
-          text={text}
-          normalizedIntensity={normalizedIntensity}
-          revealed={revealed}
-        />
+        <HeatMapRenderer text={text} normalizedIntensity={deferredIntensity} revealed={revealed} />
       )}
     </div>
   );
