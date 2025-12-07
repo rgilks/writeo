@@ -66,7 +66,7 @@ export async function createSubmission(
       },
     ],
     // Explicitly request standard assessors
-    assessors: ["AES-ESSAY", "GEC-LT", "AI-FEEDBACK", "TEACHER-FEEDBACK"],
+    assessors: ["AES-ESSAY", "GEC-LT", "AI-FEEDBACK", "TEACHER-FEEDBACK", "GEC-GECTOR"],
     storeResults,
   };
 

@@ -207,6 +207,7 @@ export type AssessorResultId =
   | "GEC-LT"
   | "GEC-LLM"
   | "GEC-SEQ2SEQ" // Seq2Seq GEC model (best grammar correction)
+  | "GEC-GECTOR" // Fast GEC using token tagging
   | "TEACHER-FEEDBACK"
   | "RELEVANCE-CHECK";
 
