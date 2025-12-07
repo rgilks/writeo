@@ -115,7 +115,7 @@ export class MockModalClient implements ModalService {
 
             // Create assessor result in the format expected by AssessmentResults
             const assessorResult: AssessorResult = {
-              id: "T-AES-ESSAY",
+              id: "AES-ESSAY",
               name: "Essay scorer",
               type: "grader",
               overall: Math.round(overallIELTS * 10) / 10,
@@ -137,7 +137,7 @@ export class MockModalClient implements ModalService {
         })),
       },
       requestedAssessors: [],
-      activeAssessors: ["T-AES-ESSAY"],
+      activeAssessors: ["AES-ESSAY"],
     };
 
     return new Response(JSON.stringify(mockResult), {
@@ -390,7 +390,7 @@ export class MockModalClient implements ModalService {
   }
 
   async scoreFeedback(text: string): Promise<Response> {
-    // Mock T-AES-FEEDBACK scoring
+    // Mock AES-FEEDBACK scoring
     if (!text || typeof text !== "string") {
       return new Response(JSON.stringify({ error: "Invalid text input" }), {
         status: 400,

@@ -13,12 +13,12 @@
   },
 
   "_defaults": {
-    "essay": "T-AES-ESSAY - Required for dimensional scores (TA, CC, Vocab, Grammar)",
-    "corpus": "T-AES-CORPUS - Best scorer (0.96 correlation with human labels)",
-    "feedback": "T-AES-FEEDBACK - Experimental, incomplete training (OFF by default)",
-    "languageTool": "T-GEC-LT - Typos, mechanics, punctuation",
-    "gecSeq2seq": "T-GEC-SEQ2SEQ - Best GEC with precise diffs (slow: 12-16s)",
-    "gecGector": "T-GEC-GECTOR - Fast GEC using token tagging (fast: 1-2s)",
-    "gecLlm": "T-GEC-LLM - Expensive ($0.002/sub), redundant with gecSeq2seq (OFF by default)"
+    "essay": "AES-ESSAY - Required for dimensional scores (TA, CC, Vocab, Grammar)",
+    "corpus": "AES-CORPUS - Best scorer (0.96 correlation with human labels)",
+    "feedback": "AES-FEEDBACK - Experimental, incomplete training (OFF by default)",
+    "languageTool": "GEC-LT - Typos, mechanics, punctuation",
+    "gecSeq2seq": "GEC-SEQ2SEQ - Best GEC with precise diffs (slow: 12-16s)",
+    "gecGector": "GEC-GECTOR - Fast GEC using token tagging (fast: 1-2s)",
+    "gecLlm": "GEC-LLM - Expensive ($0.002/sub), redundant with gecSeq2seq (OFF by default)"
   }
 }

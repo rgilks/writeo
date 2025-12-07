@@ -344,7 +344,7 @@ describe("API Core Tests", () => {
     const assessorResults = getAssessorResults(json.results.parts[0]);
 
     // Relevance check may not always be present (depends on AI service availability)
-    const relevanceAssessor = assessorResults.find((a: any) => a.id === "T-RELEVANCE-CHECK");
+    const relevanceAssessor = assessorResults.find((a: any) => a.id === "RELEVANCE-CHECK");
 
     if (relevanceAssessor) {
       // If present, verify structure
@@ -393,7 +393,7 @@ describe("API Core Tests", () => {
     if (status === 200 && json.status === "success") {
       // Verify AI feedback is still generated (truncation should happen internally)
       const assessorResults = getAssessorResults(json.results.parts[0]);
-      const aiFeedbackAssessor = assessorResults.find((a: any) => a.id === "T-AI-FEEDBACK");
+      const aiFeedbackAssessor = assessorResults.find((a: any) => a.id === "AI-FEEDBACK");
 
       // AI feedback should still be present even with long essay (truncation handled internally)
       // This test verifies that truncation doesn't break the flow

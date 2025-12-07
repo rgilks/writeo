@@ -1,5 +1,5 @@
 """
-Train T-AES-FEEDBACK model on Modal GPU.
+Train AES-FEEDBACK model on Modal GPU.
 
 Multi-task training for CEFR scoring + error detection.
 """
@@ -48,7 +48,7 @@ def train_feedback_model():
     from feedback_dataset import create_dataloaders
 
     print("=" * 80)
-    print("T-AES-FEEDBACK QUICK TEST (2 EPOCHS)")
+    print("AES-FEEDBACK QUICK TEST (2 EPOCHS)")
     print("=" * 80)
 
     # Configuration - QUICK TEST VERSION

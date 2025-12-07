@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Prepare enhanced corpus data with error annotations for T-AES-FEEDBACK training.
+Prepare enhanced corpus data with error annotations for AES-FEEDBACK training.
 
 Combines:
 1. Original corpus (CEFR labels)

@@ -312,7 +312,7 @@ paths:
                           answers:
                             - id: "550e8400-e29b-41d4-a716-446655440000"
                               assessorResults:
-                                - id: "T-AES-ESSAY"
+                                - id: "AES-ESSAY"
                                   name: "Essay scorer"
                                   type: "grader"
                                   overall: 6.5
@@ -324,8 +324,8 @@ paths:
                                     Grammar: 6.0
                                     Overall: 6.5
 
-                    requestedAssessors: ["T-AES-ESSAY", "T-GEC-LT"]
-                    activeAssessors: ["T-AES-ESSAY", "T-GEC-LT"]
+                    requestedAssessors: ["AES-ESSAY", "GEC-LT"]
+                    activeAssessors: ["AES-ESSAY", "GEC-LT"]
                     meta:
                       wordCount: 150
                       errorCount: 3
@@ -551,7 +551,7 @@ paths:
                           answers:
                             - id: "550e8400-e29b-41d4-a716-446655440000"
                               assessorResults:
-                                - id: "T-AES-ESSAY"
+                                - id: "AES-ESSAY"
                                   name: "Essay scorer"
                                   type: "grader"
                                   overall: 6.5
@@ -563,8 +563,8 @@ paths:
                                     Grammar: 6.0
                                     Overall: 6.5
 
-                    requestedAssessors: ["T-AES-ESSAY", "T-GEC-LT"]
-                    activeAssessors: ["T-AES-ESSAY", "T-GEC-LT"]
+                    requestedAssessors: ["AES-ESSAY", "GEC-LT"]
+                    activeAssessors: ["AES-ESSAY", "GEC-LT"]
                     meta:
                       wordCount: 150
                       errorCount: 3
@@ -1025,7 +1025,7 @@ paths:
                     - part: "1"
                       status: "success"
                       assessorResults:
-                        - id: "T-AES-ESSAY"
+                        - id: "AES-ESSAY"
                           name: "Essay scorer"
                           type: "grader"
                           overall: 7.5
@@ -1276,7 +1276,7 @@ components:
           items:
             type: string
           description: List of assessor IDs to run
-          example: ["T-AES-ESSAY", "T-GEC-LT"]
+          example: ["AES-ESSAY", "GEC-LT"]
         parts:
           type: array
           description: List of submission parts
@@ -1291,7 +1291,7 @@ components:
         id:
           type: string
           description: Assessor identifier
-          example: "T-AES-ESSAY"
+          example: "AES-ESSAY"
         name:
           type: string
           description: Human-readable assessor name
@@ -1400,13 +1400,13 @@ components:
           items:
             type: string
           description: List of assessors requested by the client (or defaults if not specified)
-          example: ["T-AES-ESSAY", "T-GEC-LT"]
+          example: ["AES-ESSAY", "GEC-LT"]
         activeAssessors:
           type: array
           items:
             type: string
           description: List of assessors actually run
-          example: ["T-AES-ESSAY", "T-GEC-LT"]
+          example: ["AES-ESSAY", "GEC-LT"]
         error_message:
           type: string
           description: Error message if status is 'error'

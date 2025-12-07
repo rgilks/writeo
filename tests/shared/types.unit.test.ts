@@ -77,43 +77,43 @@ describe("isValidUUID", () => {
 
 describe("findAssessorResultById", () => {
   const results: AssessorResult[] = [
-    { id: "T-AES-ESSAY", name: "Essay", type: "grader", overall: 7.5 },
-    { id: "T-GEC-LT", name: "LanguageTool", type: "feedback", errors: [] },
-    { id: "T-GEC-LLM", name: "LLM", type: "feedback", errors: [] },
+    { id: "AES-ESSAY", name: "Essay", type: "grader", overall: 7.5 },
+    { id: "GEC-LT", name: "LanguageTool", type: "feedback", errors: [] },
+    { id: "GEC-LLM", name: "LLM", type: "feedback", errors: [] },
   ];
 
   it("should find assessor result by ID", () => {
-    const result = findAssessorResultById(results, "T-AES-ESSAY");
+    const result = findAssessorResultById(results, "AES-ESSAY");
     expect(result).toBeDefined();
-    expect(result?.id).toBe("T-AES-ESSAY");
+    expect(result?.id).toBe("AES-ESSAY");
   });
 
   it("should return undefined if not found", () => {
-    const result = findAssessorResultById(results, "T-NOT-FOUND" as any);
+    const result = findAssessorResultById(results, "NOT-FOUND" as any);
     expect(result).toBeUndefined();
   });
 
   it("should return undefined for empty array", () => {
-    const result = findAssessorResultById([], "T-AES-ESSAY");
+    const result = findAssessorResultById([], "AES-ESSAY");
     expect(result).toBeUndefined();
   });
 });
 
 describe("isAssessorResultWithId", () => {
-  const result: AssessorResult = { id: "T-AES-ESSAY", name: "Essay", type: "grader" };
+  const result: AssessorResult = { id: "AES-ESSAY", name: "Essay", type: "grader" };
 
   it("should return true for matching ID", () => {
-    expect(isAssessorResultWithId(result, "T-AES-ESSAY")).toBe(true);
+    expect(isAssessorResultWithId(result, "AES-ESSAY")).toBe(true);
   });
 
   it("should return false for non-matching ID", () => {
-    expect(isAssessorResultWithId(result, "T-GEC-LT")).toBe(false);
+    expect(isAssessorResultWithId(result, "GEC-LT")).toBe(false);
   });
 
   it("should act as type guard", () => {
-    if (isAssessorResultWithId(result, "T-AES-ESSAY")) {
-      // TypeScript should know result.id is "T-AES-ESSAY" here
-      expect(result.id).toBe("T-AES-ESSAY");
+    if (isAssessorResultWithId(result, "AES-ESSAY")) {
+      // TypeScript should know result.id is "AES-ESSAY" here
+      expect(result.id).toBe("AES-ESSAY");
     }
   });
 });
@@ -122,7 +122,7 @@ describe("getEssayAssessorResult", () => {
   it("should return essay assessor with required fields", () => {
     const results: AssessorResult[] = [
       {
-        id: "T-AES-ESSAY",
+        id: "AES-ESSAY",
         name: "Essay",
         type: "grader",
         overall: 7.5,
@@ -132,26 +132,26 @@ describe("getEssayAssessorResult", () => {
 
     const result = getEssayAssessorResult(results);
     expect(result).toBeDefined();
-    expect(result?.id).toBe("T-AES-ESSAY");
+    expect(result?.id).toBe("AES-ESSAY");
     expect(result?.overall).toBe(7.5);
     expect(result?.dimensions).toBeDefined();
   });
 
   it("should return undefined if not found", () => {
-    const results: AssessorResult[] = [{ id: "T-GEC-LT", name: "LanguageTool", type: "feedback" }];
+    const results: AssessorResult[] = [{ id: "GEC-LT", name: "LanguageTool", type: "feedback" }];
     expect(getEssayAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if overall is missing", () => {
     const results: AssessorResult[] = [
-      { id: "T-AES-ESSAY", name: "Essay", type: "grader", dimensions: {} },
+      { id: "AES-ESSAY", name: "Essay", type: "grader", dimensions: {} },
     ];
     expect(getEssayAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if dimensions is missing", () => {
     const results: AssessorResult[] = [
-      { id: "T-AES-ESSAY", name: "Essay", type: "grader", overall: 7.5 },
+      { id: "AES-ESSAY", name: "Essay", type: "grader", overall: 7.5 },
     ];
     expect(getEssayAssessorResult(results)).toBeUndefined();
   });
@@ -161,7 +161,7 @@ describe("getCorpusAssessorResult", () => {
   it("should return corpus assessor with overall and label", () => {
     const results: AssessorResult[] = [
       {
-        id: "T-AES-CORPUS",
+        id: "AES-CORPUS",
         name: "Corpus-Trained RoBERTa",
         type: "grader",
         overall: 3.74,
@@ -171,26 +171,26 @@ describe("getCorpusAssessorResult", () => {
 
     const result = getCorpusAssessorResult(results);
     expect(result).toBeDefined();
-    expect(result?.id).toBe("T-AES-CORPUS");
+    expect(result?.id).toBe("AES-CORPUS");
     expect(result?.overall).toBe(3.74);
     expect(result?.label).toBe("A2+");
   });
 
   it("should return undefined if not found", () => {
-    const results: AssessorResult[] = [{ id: "T-AES-ESSAY", name: "Essay", type: "grader" }];
+    const results: AssessorResult[] = [{ id: "AES-ESSAY", name: "Essay", type: "grader" }];
     expect(getCorpusAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if overall is missing", () => {
     const results: AssessorResult[] = [
-      { id: "T-AES-CORPUS", name: "Corpus", type: "grader", label: "B1" },
+      { id: "AES-CORPUS", name: "Corpus", type: "grader", label: "B1" },
     ];
     expect(getCorpusAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if label is missing", () => {
     const results: AssessorResult[] = [
-      { id: "T-AES-CORPUS", name: "Corpus", type: "grader", overall: 4.5 },
+      { id: "AES-CORPUS", name: "Corpus", type: "grader", overall: 4.5 },
     ];
     expect(getCorpusAssessorResult(results)).toBeUndefined();
   });
@@ -200,8 +200,8 @@ describe("getFeedbackAssessorResult", () => {
   it("should return feedback assessor with overall and cefr", () => {
     const results: AssessorResult[] = [
       {
-        id: "T-AES-FEEDBACK",
-        name: "T-AES-FEEDBACK (Multi-Task)",
+        id: "AES-FEEDBACK",
+        name: "AES-FEEDBACK (Multi-Task)",
         type: "grader",
         overall: 3.87,
         cefr: "B1",
@@ -214,26 +214,26 @@ describe("getFeedbackAssessorResult", () => {
 
     const result = getFeedbackAssessorResult(results);
     expect(result).toBeDefined();
-    expect(result?.id).toBe("T-AES-FEEDBACK");
+    expect(result?.id).toBe("AES-FEEDBACK");
     expect(result?.overall).toBe(3.87);
     expect(result?.cefr).toBe("B1");
   });
 
   it("should return undefined if not found", () => {
-    const results: AssessorResult[] = [{ id: "T-AES-ESSAY", name: "Essay", type: "grader" }];
+    const results: AssessorResult[] = [{ id: "AES-ESSAY", name: "Essay", type: "grader" }];
     expect(getFeedbackAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if overall is missing", () => {
     const results: AssessorResult[] = [
-      { id: "T-AES-FEEDBACK", name: "Feedback", type: "grader", cefr: "B1" },
+      { id: "AES-FEEDBACK", name: "Feedback", type: "grader", cefr: "B1" },
     ];
     expect(getFeedbackAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if cefr is missing", () => {
     const results: AssessorResult[] = [
-      { id: "T-AES-FEEDBACK", name: "Feedback", type: "grader", overall: 3.87 },
+      { id: "AES-FEEDBACK", name: "Feedback", type: "grader", overall: 3.87 },
     ];
     expect(getFeedbackAssessorResult(results)).toBeUndefined();
   });
@@ -255,22 +255,22 @@ describe("getLanguageToolAssessorResult", () => {
     ];
 
     const results: AssessorResult[] = [
-      { id: "T-GEC-LT", name: "LanguageTool", type: "feedback", errors },
+      { id: "GEC-LT", name: "LanguageTool", type: "feedback", errors },
     ];
 
     const result = getLanguageToolAssessorResult(results);
     expect(result).toBeDefined();
-    expect(result?.id).toBe("T-GEC-LT");
+    expect(result?.id).toBe("GEC-LT");
     expect(result?.errors).toEqual(errors);
   });
 
   it("should return undefined if not found", () => {
-    const results: AssessorResult[] = [{ id: "T-AES-ESSAY", name: "Essay", type: "grader" }];
+    const results: AssessorResult[] = [{ id: "AES-ESSAY", name: "Essay", type: "grader" }];
     expect(getLanguageToolAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if errors is missing", () => {
-    const results: AssessorResult[] = [{ id: "T-GEC-LT", name: "LanguageTool", type: "feedback" }];
+    const results: AssessorResult[] = [{ id: "GEC-LT", name: "LanguageTool", type: "feedback" }];
     expect(getLanguageToolAssessorResult(results)).toBeUndefined();
   });
 });
@@ -290,16 +290,16 @@ describe("getLLMAssessorResult", () => {
       },
     ];
 
-    const results: AssessorResult[] = [{ id: "T-GEC-LLM", name: "LLM", type: "feedback", errors }];
+    const results: AssessorResult[] = [{ id: "GEC-LLM", name: "LLM", type: "feedback", errors }];
 
     const result = getLLMAssessorResult(results);
     expect(result).toBeDefined();
-    expect(result?.id).toBe("T-GEC-LLM");
+    expect(result?.id).toBe("GEC-LLM");
     expect(result?.errors).toEqual(errors);
   });
 
   it("should return undefined if not found", () => {
-    const results: AssessorResult[] = [{ id: "T-AES-ESSAY", name: "Essay", type: "grader" }];
+    const results: AssessorResult[] = [{ id: "AES-ESSAY", name: "Essay", type: "grader" }];
     expect(getLLMAssessorResult(results)).toBeUndefined();
   });
 });
@@ -308,7 +308,7 @@ describe("getTeacherFeedbackAssessorResult", () => {
   it("should return teacher feedback assessor with meta", () => {
     const results: AssessorResult[] = [
       {
-        id: "T-TEACHER-FEEDBACK",
+        id: "TEACHER-FEEDBACK",
         name: "Teacher Feedback",
         type: "feedback",
         meta: {
@@ -322,19 +322,19 @@ describe("getTeacherFeedbackAssessorResult", () => {
 
     const result = getTeacherFeedbackAssessorResult(results);
     expect(result).toBeDefined();
-    expect(result?.id).toBe("T-TEACHER-FEEDBACK");
+    expect(result?.id).toBe("TEACHER-FEEDBACK");
     expect(result?.meta.message).toBe("Great work!");
   });
 
   it("should return undefined if not found", () => {
-    const results: AssessorResult[] = [{ id: "T-AES-ESSAY", name: "Essay", type: "grader" }];
+    const results: AssessorResult[] = [{ id: "AES-ESSAY", name: "Essay", type: "grader" }];
     expect(getTeacherFeedbackAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if meta.message is missing", () => {
     const results: AssessorResult[] = [
       {
-        id: "T-TEACHER-FEEDBACK",
+        id: "TEACHER-FEEDBACK",
         name: "Teacher Feedback",
         type: "feedback",
         meta: {},
@@ -348,7 +348,7 @@ describe("getRelevanceCheckAssessorResult", () => {
   it("should return relevance check assessor with meta", () => {
     const results: AssessorResult[] = [
       {
-        id: "T-RELEVANCE-CHECK",
+        id: "RELEVANCE-CHECK",
         name: "Relevance Check",
         type: "ard",
         meta: {
@@ -361,20 +361,20 @@ describe("getRelevanceCheckAssessorResult", () => {
 
     const result = getRelevanceCheckAssessorResult(results);
     expect(result).toBeDefined();
-    expect(result?.id).toBe("T-RELEVANCE-CHECK");
+    expect(result?.id).toBe("RELEVANCE-CHECK");
     expect(result?.meta.addressesQuestion).toBe(true);
     expect(result?.meta.similarityScore).toBe(0.85);
   });
 
   it("should return undefined if not found", () => {
-    const results: AssessorResult[] = [{ id: "T-AES-ESSAY", name: "Essay", type: "grader" }];
+    const results: AssessorResult[] = [{ id: "AES-ESSAY", name: "Essay", type: "grader" }];
     expect(getRelevanceCheckAssessorResult(results)).toBeUndefined();
   });
 
   it("should return undefined if meta fields are missing", () => {
     const results: AssessorResult[] = [
       {
-        id: "T-RELEVANCE-CHECK",
+        id: "RELEVANCE-CHECK",
         name: "Relevance Check",
         type: "ard",
         meta: {},

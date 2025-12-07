@@ -58,7 +58,7 @@ export const sharedComponents = {
         id: {
           type: "string",
           description: "Assessor identifier",
-          example: "T-AES-ESSAY",
+          example: "AES-ESSAY",
         },
         name: {
           type: "string",
@@ -129,7 +129,7 @@ export const sharedComponents = {
           type: "array",
           items: {
             type: "object",
-            description: "Grammar and language errors (for T-GEC-LT and T-GEC-LLM assessors)",
+            description: "Grammar and language errors (for GEC-LT and GEC-LLM assessors)",
             additionalProperties: true,
           },
           description: "Array of grammar/language errors",
@@ -217,7 +217,7 @@ export const sharedComponents = {
             type: "string",
           },
           description: "List of assessors requested by the client",
-          example: ["T-AES-ESSAY", "T-GEC-LT"],
+          example: ["AES-ESSAY", "GEC-LT"],
         },
         activeAssessors: {
           type: "array",
@@ -225,7 +225,7 @@ export const sharedComponents = {
             type: "string",
           },
           description: "List of assessors actually run",
-          example: ["T-AES-ESSAY", "T-GEC-LT"],
+          example: ["AES-ESSAY", "GEC-LT"],
         },
         error_message: {
           type: "string",

@@ -1,10 +1,10 @@
-# T-AES-CORPUS: Training Guide for Software Engineers
+# AES-CORPUS: Training Guide for Software Engineers
 
-A practical guide to understanding how the T-AES-CORPUS assessor was trained and works.
+A practical guide to understanding how the AES-CORPUS assessor was trained and works.
 
 ## Table of Contents
 
-- [What is T-AES-CORPUS?](#what-is-t-aes-corpus)
+- [What is AES-CORPUS?](#what-is-t-aes-corpus)
 - [Training Data](#training-data)
 - [Model Architecture](#model-architecture)
 - [Training Process](#training-process)
@@ -14,9 +14,9 @@ A practical guide to understanding how the T-AES-CORPUS assessor was trained and
 
 ---
 
-## What is T-AES-CORPUS?
+## What is AES-CORPUS?
 
-**T-AES-CORPUS** is an AI model that automatically scores English essays and assigns CEFR levels (A2, B1, B2, C1, C2). It was trained specifically on the **Write & Improve corpus** - a dataset of real student essays with expert CEFR labels.
+**AES-CORPUS** is an AI model that automatically scores English essays and assigns CEFR levels (A2, B1, B2, C1, C2). It was trained specifically on the **Write & Improve corpus** - a dataset of real student essays with expert CEFR labels.
 
 **Key Facts:**
 
@@ -59,7 +59,7 @@ python scripts/training/prepare-corpus.py
 
 ### Base Model: RoBERTa
 
-T-AES-CORPUS is built on **RoBERTa** (Robustly Optimized BERT), a transformer-based language model:
+AES-CORPUS is built on **RoBERTa** (Robustly Optimized BERT), a transformer-based language model:
 
 - **Pre-trained** on billions of words of English text
 - **Understands** grammar, vocabulary, coherence, and writing style
@@ -306,7 +306,7 @@ async scoreCorpus(text: string): Promise<Response> {
 }
 ```
 
-**Dev Mode Integration**: When dev mode is enabled, the corpus score appears alongside T-AES-ESSAY for comparison.
+**Dev Mode Integration**: When dev mode is enabled, the corpus score appears alongside AES-ESSAY for comparison.
 
 ---
 

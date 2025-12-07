@@ -36,8 +36,8 @@ How-to guides and service documentation.
 ML models and AI/LLM integration details.
 
 - **[Overview](models/overview.md)** - Essay scoring models comparison
-- **[Corpus Model](models/corpus.md)** - T-AES-CORPUS training details
-- **[Feedback Model](models/feedback.md)** - T-AES-FEEDBACK multi-task model
+- **[Corpus Model](models/corpus.md)** - AES-CORPUS training details
+- **[Feedback Model](models/feedback.md)** - AES-FEEDBACK multi-task model
 - **[GEC Models](models/gec.md)** - Grammar correction services (Seq2Seq + GECToR)
 - **[Datasets](models/datasets.md)** - Available datasets for training
 - **[Evaluations](models/evaluation.md)** - Performance evaluation report

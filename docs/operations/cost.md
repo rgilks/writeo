@@ -30,15 +30,15 @@ Writeo supports multiple LLM providers for AI-powered feedback. This document pr
 
 Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaults optimize for cost:
 
-| Assessor       | Default | Cost Impact | Notes                           |
-| -------------- | ------- | ----------- | ------------------------------- |
-| T-AES-ESSAY    | ✅ ON   | ~$0.0001    | Required for dimensional scores |
-| T-AES-CORPUS   | ✅ ON   | ~$0.0001    | Best scorer (0.96 correlation)  |
-| T-GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs, slow)  |
-| T-GEC-GECTOR   | ✅ ON   | ~$0.00008   | Fast GEC (~10x faster)          |
-| T-GEC-LT       | ✅ ON   | ~$0.0001    | Typos, mechanics                |
-| T-AES-FEEDBACK | ❌ OFF  | ~$0.0001    | Experimental                    |
-| T-GEC-LLM      | ❌ OFF  | ~$0.002     | Expensive, redundant            |
+| Assessor     | Default | Cost Impact | Notes                           |
+| ------------ | ------- | ----------- | ------------------------------- |
+| AES-ESSAY    | ✅ ON   | ~$0.0001    | Required for dimensional scores |
+| AES-CORPUS   | ✅ ON   | ~$0.0001    | Best scorer (0.96 correlation)  |
+| GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs, slow)  |
+| GEC-GECTOR   | ✅ ON   | ~$0.00008   | Fast GEC (~10x faster)          |
+| GEC-LT       | ✅ ON   | ~$0.0001    | Typos, mechanics                |
+| AES-FEEDBACK | ❌ OFF  | ~$0.0001    | Experimental                    |
+| GEC-LLM      | ❌ OFF  | ~$0.002     | Expensive, redundant            |
 
 **Modal Services Cost Breakdown:**
 

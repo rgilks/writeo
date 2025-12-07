@@ -1,4 +1,4 @@
-"""Modal FastAPI service for T-AES-FEEDBACK model."""
+"""Modal FastAPI service for AES-FEEDBACK model."""
 
 import os
 from typing import Any
@@ -53,7 +53,7 @@ image = base_image.add_local_dir(
 )
 @modal.asgi_app()
 def fastapi_app() -> Any:
-    """FastAPI app for T-AES-FEEDBACK scoring."""
+    """FastAPI app for AES-FEEDBACK scoring."""
     import sys
 
     sys.path.insert(0, REMOTE_APP_PATH)

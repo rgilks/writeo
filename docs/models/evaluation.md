@@ -6,10 +6,10 @@ This report evaluates the performance, consistency, and utility of the various a
 
 **Key Findings:**
 
-- **Scoring Accuracy:** `T-AES-CORPUS` (RoBERTa) is the highest-performing scoring model, achieving a correlation of **0.96** with human labels and the lowest Mean Absolute Error (0.41).
-- **Consensus:** There is a strong alignment between `T-AES-CORPUS` and `T-AES-FEEDBACK` (DeBERTa), whereas `T-AES-ESSAY` consistently underestimates proficiency.
+- **Scoring Accuracy:** `AES-CORPUS` (RoBERTa) is the highest-performing scoring model, achieving a correlation of **0.96** with human labels and the lowest Mean Absolute Error (0.41).
+- **Consensus:** There is a strong alignment between `AES-CORPUS` and `AES-FEEDBACK` (DeBERTa), whereas `AES-ESSAY` consistently underestimates proficiency.
 - **Feedback Redundancy:** The pipeline currently runs three separate Grammar Error Correction (GEC) engines (`LT`, `LLM`, `Seq2Seq`), leading to overlapping and potentially overwhelming feedback for the user.
-- **Recommendations:** Consolidate scoring to use `T-AES-CORPUS` as the primary source, and unify GEC feedback by prioritizing `T-GEC-SEQ2SEQ` for inline edits while using `T-GEC-LLM` for deeper explanations.
+- **Recommendations:** Consolidate scoring to use `AES-CORPUS` as the primary source, and unify GEC feedback by prioritizing `GEC-SEQ2SEQ` for inline edits while using `GEC-LLM` for deeper explanations.
 
 ---
 
@@ -19,17 +19,17 @@ We evaluated three primary grading assessors against human-labeled CEFR scores c
 
 ### Performance Metrics
 
-| Assessor           | Model Type           | MAE (Error) | Bias      | Correlation (r) | Status                 |
-| ------------------ | -------------------- | ----------- | --------- | --------------- | ---------------------- |
-| **T-AES-CORPUS**   | RoBERTa (Regression) | **0.41**    | +0.18     | **0.96**        | 🟢 **Recommended**     |
-| **T-AES-FEEDBACK** | DeBERTa (Multi-task) | 0.58        | +0.31     | 0.89            | 🟡 Secondary Signal    |
-| **T-AES-ESSAY**    | Standard ML          | 0.75        | **-0.55** | 0.86            | 🔴 Deprecate/Calibrate |
+| Assessor         | Model Type           | MAE (Error) | Bias      | Correlation (r) | Status                 |
+| ---------------- | -------------------- | ----------- | --------- | --------------- | ---------------------- |
+| **AES-CORPUS**   | RoBERTa (Regression) | **0.41**    | +0.18     | **0.96**        | 🟢 **Recommended**     |
+| **AES-FEEDBACK** | DeBERTa (Multi-task) | 0.58        | +0.31     | 0.89            | 🟡 Secondary Signal    |
+| **AES-ESSAY**    | Standard ML          | 0.75        | **-0.55** | 0.86            | 🔴 Deprecate/Calibrate |
 
 ### Analysis
 
-- **T-AES-CORPUS**: Demonstrates high reliability. The slight positive bias (+0.18) is negligible and often preferred in learning contexts to encourage users. It tracks human scores linearly across the difficulty spectrum.
-- **T-AES-FEEDBACK**: Slightly overestimates performance (+0.31). It is useful as a corroborating signal but less precise than the corpus-trained specific model.
-- **T-AES-ESSAY**: Consistently harsh grading (negative bias of -0.55). It frequently scores B2 essays as B1/A2+. Unless recalibrated, it serves as a poor primary signal.
+- **AES-CORPUS**: Demonstrates high reliability. The slight positive bias (+0.18) is negligible and often preferred in learning contexts to encourage users. It tracks human scores linearly across the difficulty spectrum.
+- **AES-FEEDBACK**: Slightly overestimates performance (+0.31). It is useful as a corroborating signal but less precise than the corpus-trained specific model.
+- **AES-ESSAY**: Consistently harsh grading (negative bias of -0.55). It frequently scores B2 essays as B1/A2+. Unless recalibrated, it serves as a poor primary signal.
 
 ---
 
@@ -39,26 +39,26 @@ The pipeline produces qualitative feedback from multiple sources. We analyzed th
 
 ### Grammar & Error Correction (GEC)
 
-| Assessor          | Type                      | Strengths                                                                                         | Weaknesses                                                              |
-| ----------------- | ------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **T-GEC-SEQ2SEQ** | Seq2Seq (Flan-T5)         | Provides precise, diff-based edits (insert/replace/delete). Best for "Accept Change" UI features. | Can sometimes miss subtle context-dependent errors.                     |
-| **T-GEC-LLM**     | LLM (Llama-3)             | Good at explaining _why_ something is wrong ("Verb tense error"). Catches stylistic issues.       | Output is verbose and computationally expensive. Overlaps with Seq2Seq. |
-| **T-GEC-LT**      | Rule-based (LanguageTool) | Excellent for mechanics (typos, spacing, punctuation). Deterministic and fast.                    | False positives on creative/informal writing. Rigid.                    |
+| Assessor        | Type                      | Strengths                                                                                         | Weaknesses                                                              |
+| --------------- | ------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **GEC-SEQ2SEQ** | Seq2Seq (Flan-T5)         | Provides precise, diff-based edits (insert/replace/delete). Best for "Accept Change" UI features. | Can sometimes miss subtle context-dependent errors.                     |
+| **GEC-LLM**     | LLM (Llama-3)             | Good at explaining _why_ something is wrong ("Verb tense error"). Catches stylistic issues.       | Output is verbose and computationally expensive. Overlaps with Seq2Seq. |
+| **GEC-LT**      | Rule-based (LanguageTool) | Excellent for mechanics (typos, spacing, punctuation). Deterministic and fast.                    | False positives on creative/informal writing. Rigid.                    |
 
 **Observation:** Running all three results in duplicate notifications for the same error (e.g., a missing comma might be flagged by all three).
 
 ### Thematic & Structural Feedback
 
-- **T-AI-FEEDBACK**: Uses an LLM to provide holistic "Strengths" and "Improvements".
+- **AI-FEEDBACK**: Uses an LLM to provide holistic "Strengths" and "Improvements".
   - _Quality_: High. Provides actionable, high-level advice (e.g., "Develop your ideas with specific examples").
   - _Utility_: Critical for showing the user _how_ to improve, not just _what_ they got wrong.
-- **T-TEACHER-FEEDBACK**: Simulates a teacher's voice.
-  - _Analysis_: Often redundant with `T-AI-FEEDBACK`. It provides a shorter, more personal summary but content-wise is very similar.
-  - _Recommendation_: Merge with `T-AI-FEEDBACK` into a single "Coach" persona response to reduce token usage and UI clutter.
+- **TEACHER-FEEDBACK**: Simulates a teacher's voice.
+  - _Analysis_: Often redundant with `AI-FEEDBACK`. It provides a shorter, more personal summary but content-wise is very similar.
+  - _Recommendation_: Merge with `AI-FEEDBACK` into a single "Coach" persona response to reduce token usage and UI clutter.
 
 ### Relevance Checking
 
-- **T-RELEVANCE-CHECK**: Embedding-based cosine similarity.
+- **RELEVANCE-CHECK**: Embedding-based cosine similarity.
   - _Performance_: Correctly identifies off-topic essays (scores < 0.6) vs relevant ones (scores > 0.8).
   - _Utility_: Essential safety check to prevent high scores on irrelevant input.
 
@@ -75,20 +75,20 @@ The pipeline produces qualitative feedback from multiple sources. We analyzed th
 
 ### 1. Unified Score Strategy
 
-- **Primary Score**: Use `T-AES-CORPUS`.
-- **Confidence Interval**: Use `T-AES-FEEDBACK` to define a confidence range. If the two models diverge by > 1.0 points, flag the essay for human review or show a wider estimated band to the user.
+- **Primary Score**: Use `AES-CORPUS`.
+- **Confidence Interval**: Use `AES-FEEDBACK` to define a confidence range. If the two models diverge by > 1.0 points, flag the essay for human review or show a wider estimated band to the user.
 
 ### 2. De-duplicate GEC
 
 - **Pipeline Change**:
-  1. Run `T-GEC-SEQ2SEQ` to generate the "suggested edits" layer.
-  2. Run `T-GEC-LT` for "mechanics" layer (spellcheck).
-  3. **Disable** `T-GEC-LLM` for standard checking, OR run it only if the other two find nothing. Alternatively, use it only to _explain_ complex errors found by Seq2Seq.
+  1. Run `GEC-SEQ2SEQ` to generate the "suggested edits" layer.
+  2. Run `GEC-LT` for "mechanics" layer (spellcheck).
+  3. **Disable** `GEC-LLM` for standard checking, OR run it only if the other two find nothing. Alternatively, use it only to _explain_ complex errors found by Seq2Seq.
 
 ### 3. Consolidate Qualitative Feedback
 
-- Remove `T-TEACHER-FEEDBACK` as a separate entity.
-- Enhance `T-AI-FEEDBACK` to include a "Teacher's Note" section if the "personal touch" is desired. This saves one distinct LLM call/parsing step.
+- Remove `TEACHER-FEEDBACK` as a separate entity.
+- Enhance `AI-FEEDBACK` to include a "Teacher's Note" section if the "personal touch" is desired. This saves one distinct LLM call/parsing step.
 
 ### 4. Optimize Response Payload
 

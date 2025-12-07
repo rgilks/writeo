@@ -38,7 +38,7 @@ export function extractEssayScores(
     const partAnswers = essayPart.answers ?? [];
     const essayAssessor = partAnswers
       .flatMap((answer) => (answer?.assessorResults as AssessorResult[] | undefined) ?? [])
-      .find((a) => a.id === "T-AES-ESSAY");
+      .find((a) => a.id === "AES-ESSAY");
 
     if (!essayAssessor) {
       continue;

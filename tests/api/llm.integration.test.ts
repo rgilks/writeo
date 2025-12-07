@@ -42,7 +42,7 @@ describe("API LLM Tests", () => {
     const ltErrorsInLTAssessor = ltErrors.filter((e: any) => e.source === "LT");
     expect(ltErrorsInLTAssessor.length).toBe(ltErrors.length); // All should be LT
 
-    // T-GEC-LLM assessor is optional (disabled by default in assessors.json: gecLlm: false)
+    // GEC-LLM assessor is optional (disabled by default in assessors.json: gecLlm: false)
     // Only validate LLM-specific behavior if the assessor is present
     const llmAssessor = assessorResults.find((a: any) => a.id === ASSESSOR_IDS.LLM);
     if (llmAssessor) {

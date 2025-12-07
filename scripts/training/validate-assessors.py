@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Validate T-AES-ESSAY and T-AES-CORPUS assessors against Write & Improve corpus test set.
+Validate AES-ESSAY and AES-CORPUS assessors against Write & Improve corpus test set.
 
 Computes standard automated essay scoring (AES) metrics:
 - QWK (Quadratic Weighted Kappa) - primary metric for AES
@@ -183,7 +183,7 @@ def score_via_modal_corpus(
 
         # Convert to assessor result format
         return {
-            "id": "T-AES-CORPUS",
+            "id": "AES-CORPUS",
             "name": "Corpus RoBERTa",
             "type": "grader",
             "overall": result.get("score"),
@@ -288,11 +288,11 @@ def generate_markdown_report(
     """Generate markdown comparison report."""
     report = f"""# Assessor Validation Report
 
-Comparison of T-AES-ESSAY and T-AES-CORPUS assessors against corpus test set.
+Comparison of AES-ESSAY and AES-CORPUS assessors against corpus test set.
 
 ## Summary
 
-| Metric | T-AES-ESSAY | T-AES-CORPUS | Winner |
+| Metric | AES-ESSAY | AES-CORPUS | Winner |
 |--------|-------------|--------------|---------|
 | **QWK** (primary) | {results_essay["qwk"]:.4f} | {results_corpus["qwk"]:.4f} | {"🏆 ESSAY" if results_essay["qwk"] > results_corpus["qwk"] else "🏆 CORPUS"} |
 | **MAE** | {results_essay["mae"]:.4f} | {results_corpus["mae"]:.4f} | {"🏆 ESSAY" if results_essay["mae"] < results_corpus["mae"] else "🏆 CORPUS"} |
@@ -313,14 +313,14 @@ The gold standard metric for automated essay scoring. Measures agreement between
 
 ### Per-CEFR Level Analysis
 
-#### T-AES-ESSAY
+#### AES-ESSAY
 """
 
     for cefr in sorted(results_essay["cefr_stats"].keys()):
         stats = results_essay["cefr_stats"][cefr]
         report += f"\n- **{cefr}**: {stats['count']} samples, MAE: {stats['mae']:.4f}"
 
-    report += "\n\n#### T-AES-CORPUS\n"
+    report += "\n\n#### AES-CORPUS\n"
 
     for cefr in sorted(results_corpus["cefr_stats"].keys()):
         stats = results_corpus["cefr_stats"][cefr]
@@ -329,9 +329,9 @@ The gold standard metric for automated essay scoring. Measures agreement between
     report += "\n\n## Recommendations\n\n"
 
     if results_corpus["qwk"] > results_essay["qwk"]:
-        report += "✅ **T-AES-CORPUS shows better performance** - Consider using corpus model as primary assessor.\n"
+        report += "✅ **AES-CORPUS shows better performance** - Consider using corpus model as primary assessor.\n"
     else:
-        report += "✅ **T-AES-ESSAY shows better performance** - Current essay model is performing well.\n"
+        report += "✅ **AES-ESSAY shows better performance** - Current essay model is performing well.\n"
 
     report += "\n## Next Steps\n\n"
     report += "1. Review per-CEFR level performance to identify weaknesses\n"
@@ -370,12 +370,12 @@ def main():
     parser.add_argument(
         "--skip-essay",
         action="store_true",
-        help="Skip T-AES-ESSAY validation",
+        help="Skip AES-ESSAY validation",
     )
     parser.add_argument(
         "--skip-corpus",
         action="store_true",
-        help="Skip T-AES-CORPUS validation",
+        help="Skip AES-CORPUS validation",
     )
     parser.add_argument(
         "--api-key",
@@ -402,11 +402,11 @@ def main():
     true_scores = np.array([item["target"] for item in test_data])
     true_cefrs = [item["cefr"] for item in test_data]
 
-    # Score via T-AES-ESSAY
+    # Score via AES-ESSAY
     essay_predictions = []
     if not args.skip_essay:
         print(f"\n{'=' * 80}")
-        print("Scoring via T-AES-ESSAY (engessay model)...")
+        print("Scoring via AES-ESSAY (engessay model)...")
         print(f"{'=' * 80}")
 
         for i, item in enumerate(test_data):
@@ -430,11 +430,11 @@ def main():
         print()  # New line after progress
         essay_predictions = np.array(essay_predictions)
 
-    # Score via T-AES-CORPUS
+    # Score via AES-CORPUS
     corpus_predictions = []
     if not args.skip_corpus:
         print(f"\n{'=' * 80}")
-        print("Scoring via T-AES-CORPUS (corpus-roberta model)...")
+        print("Scoring via AES-CORPUS (corpus-roberta model)...")
         print(f"{'=' * 80}")
 
         for i, item in enumerate(test_data):
@@ -460,12 +460,12 @@ def main():
 
     if not args.skip_essay:
         results["essay"] = compute_metrics(
-            essay_predictions, true_scores, true_cefrs, "T-AES-ESSAY"
+            essay_predictions, true_scores, true_cefrs, "AES-ESSAY"
         )
 
     if not args.skip_corpus:
         results["corpus"] = compute_metrics(
-            corpus_predictions, true_scores, true_cefrs, "T-AES-CORPUS"
+            corpus_predictions, true_scores, true_cefrs, "AES-CORPUS"
         )
 
     # Save results

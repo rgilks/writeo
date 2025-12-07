@@ -64,7 +64,7 @@ function getTeacherAssessor(results: AssessmentResults | null): AssessorResult |
   }
   return findAssessorResultById(
     results.results.parts[0].answers[0].assessorResults,
-    "T-TEACHER-FEEDBACK",
+    "TEACHER-FEEDBACK",
   );
 }
 
@@ -248,11 +248,11 @@ async function saveTeacherFeedbackToStorage(
     firstAnswer.assessorResults = [];
   }
 
-  let teacherAssessor = findAssessorResultById(firstAnswer.assessorResults, "T-TEACHER-FEEDBACK");
+  let teacherAssessor = findAssessorResultById(firstAnswer.assessorResults, "TEACHER-FEEDBACK");
 
   if (!teacherAssessor) {
     teacherAssessor = {
-      id: "T-TEACHER-FEEDBACK",
+      id: "TEACHER-FEEDBACK",
       name: "Teacher's Feedback",
       type: "feedback",
       meta: {},

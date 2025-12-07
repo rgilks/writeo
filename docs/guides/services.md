@@ -149,7 +149,7 @@ modal deploy main.py
 | Seq2Seq    | 12-16s | High    | Higher |
 | **GECToR** | 1-2s   | Good    | Lower  |
 
-Both services run in parallel and results appear as separate assessors (`T-GEC-SEQ2SEQ` and `T-GEC-GECTOR`).
+Both services run in parallel and results appear as separate assessors (`GEC-SEQ2SEQ` and `GEC-GECTOR`).
 
 ## Shared Package
 

@@ -23,7 +23,7 @@ modal run scripts/training/train-overall-score.py
 
 ### 3. Validate Assessors
 
-Compare T-AES-ESSAY and T-AES-CORPUS performance against the corpus test set (481 held-out essays):
+Compare AES-ESSAY and AES-CORPUS performance against the corpus test set (481 held-out essays):
 
 ```bash
 # Quick test (10 essays)
@@ -35,21 +35,21 @@ python scripts/training/validate-assessors.py
 
 **Current Performance (post-calibration):**
 
-- **T-AES-CORPUS**: QWK 0.87 (excellent), MAE 0.32, 100% adjacent accuracy
-- **T-AES-ESSAY**: QWK 0.58 (moderate), MAE 0.55, 90% adjacent accuracy
+- **AES-CORPUS**: QWK 0.87 (excellent), MAE 0.32, 100% adjacent accuracy
+- **AES-ESSAY**: QWK 0.58 (moderate), MAE 0.55, 90% adjacent accuracy
 
 Results are saved to `validation_results.json` and `validation_report.md`.
 
 ### 4. Deployed Models
 
-**T-AES-CORPUS** (this model):
+**AES-CORPUS** (this model):
 
 - **URL**: `https://rob-gilks--writeo-corpus-fastapi-app.modal.run`
 - **Endpoint**: `POST /score`
 - **Performance**: QWK 0.87 (excellent), MAE 0.32, 100% adjacent accuracy
 - **Guide**: See [Corpus Model Guide](../../docs/models/corpus.md) for details.
 
-**T-AES-ESSAY** (engessay model):
+**AES-ESSAY** (engessay model):
 
 - **URL**: `https://rob-gilks--writeo-essay-fastapi-app.modal.run`
 - **Endpoint**: `POST /grade`

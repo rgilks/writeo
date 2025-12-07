@@ -304,8 +304,8 @@ export async function processSubmission(
     let teacherFeedbackByAnswerId = new Map<string, TeacherFeedback>();
 
     const requested = modalRequest.assessors || [];
-    const runAi = requested.includes("T-AI-FEEDBACK");
-    const runTeacher = requested.includes("T-TEACHER-FEEDBACK");
+    const runAi = requested.includes("AI-FEEDBACK");
+    const runTeacher = requested.includes("TEACHER-FEEDBACK");
 
     if (runAi || runTeacher) {
       const aiFeedbackStartTime = performance.now();

@@ -149,7 +149,7 @@ export function getCachedTeacherFeedback(
   const firstPart = results.results?.parts?.[0];
   const teacherAssessor = findAssessorResultById(
     firstPart?.answers?.[0]?.assessorResults || [],
-    "T-TEACHER-FEEDBACK",
+    "TEACHER-FEEDBACK",
   );
   if (!teacherAssessor) return undefined;
   const meta = (teacherAssessor.meta || {}) as Record<string, any>;

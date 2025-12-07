@@ -1,4 +1,4 @@
-"""Model loader for T-AES-FEEDBACK."""
+"""Model loader for AES-FEEDBACK."""
 
 import torch
 from pathlib import Path
@@ -7,12 +7,12 @@ from transformers import AutoTokenizer
 
 def get_feedback_model():
     """
-    Load T-AES-FEEDBACK model from checkpoint.
+    Load AES-FEEDBACK model from checkpoint.
 
     Returns:
         tuple: (model, tokenizer)
     """
-    print("Loading T-AES-FEEDBACK model...")
+    print("Loading AES-FEEDBACK model...")
 
     # Import model class
     from feedback_model import FeedbackModel

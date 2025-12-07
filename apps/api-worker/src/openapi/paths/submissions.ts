@@ -116,8 +116,8 @@ export const submissionsPath = {
                   type: "array" as const,
                   items: { type: "string" as const },
                   description:
-                    "Optional list of specific assessors to run. If omitted, all assessors enabled for the default configuration will run. Example: ['T-AES-ESSAY', 'T-GEC-LT']",
-                  example: ["T-AES-ESSAY", "T-GEC-LT"],
+                    "Optional list of specific assessors to run. If omitted, all assessors enabled for the default configuration will run. Example: ['AES-ESSAY', 'GEC-LT']",
+                  example: ["AES-ESSAY", "GEC-LT"],
                 },
                 storeResults: {
                   type: "boolean" as const,
@@ -310,7 +310,7 @@ export const submissionsPath = {
                                           properties: {
                                             id: {
                                               type: "string",
-                                              example: "T-AES-ESSAY",
+                                              example: "AES-ESSAY",
                                             },
                                             name: {
                                               type: "string",
@@ -454,7 +454,7 @@ export const submissionsPath = {
                               id: "550e8400-e29b-41d4-a716-446655440000",
                               assessorResults: [
                                 {
-                                  id: "T-AES-ESSAY",
+                                  id: "AES-ESSAY",
                                   name: "Essay scorer",
                                   type: "grader",
                                   overall: 6.5,

@@ -8,10 +8,10 @@
 
 Writeo provides two GEC services that run in parallel:
 
-| Service     | Model        | Speed  | Quality | Assessor ID     |
-| ----------- | ------------ | ------ | ------- | --------------- |
-| **Seq2Seq** | Flan-T5      | 12-16s | High    | `T-GEC-SEQ2SEQ` |
-| **GECToR**  | RoBERTa-base | 1-2s   | Good    | `T-GEC-GECTOR`  |
+| Service     | Model        | Speed  | Quality | Assessor ID   |
+| ----------- | ------------ | ------ | ------- | ------------- |
+| **Seq2Seq** | Flan-T5      | 12-16s | High    | `GEC-SEQ2SEQ` |
+| **GECToR**  | RoBERTa-base | 1-2s   | Good    | `GEC-GECTOR`  |
 
 Both services are enabled by default in `assessors.json` and their results appear as separate assessors in the response.
 

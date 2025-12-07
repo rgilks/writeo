@@ -118,8 +118,8 @@ describe("API Feedback Tests", () => {
     const firstPart = json.results.parts[0];
     const firstAnswer = firstPart.answers[0];
     const assessorResults = firstAnswer.assessorResults || [];
-    const essayAssessor = assessorResults.find((a: any) => a.id === "T-AES-ESSAY");
-    const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
+    const essayAssessor = assessorResults.find((a: any) => a.id === "AES-ESSAY");
+    const ltAssessor = assessorResults.find((a: any) => a.id === "GEC-LT");
 
     const requestBody: any = {
       answerId,
@@ -231,10 +231,10 @@ describe("API Feedback Tests", () => {
     const firstPart = json.results.parts[0];
     const firstAnswer = firstPart.answers[0];
     const assessorResults = firstAnswer.assessorResults || [];
-    const essayAssessor = assessorResults.find((a: any) => a.id === "T-AES-ESSAY");
-    const ltAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LT");
-    const llmAssessor = assessorResults.find((a: any) => a.id === "T-GEC-LLM");
-    const relevanceAssessor = assessorResults.find((a: any) => a.id === "T-RELEVANCE-CHECK");
+    const essayAssessor = assessorResults.find((a: any) => a.id === "AES-ESSAY");
+    const ltAssessor = assessorResults.find((a: any) => a.id === "GEC-LT");
+    const llmAssessor = assessorResults.find((a: any) => a.id === "GEC-LLM");
+    const relevanceAssessor = assessorResults.find((a: any) => a.id === "RELEVANCE-CHECK");
 
     const requestBody: any = {
       answerId,

@@ -1,4 +1,4 @@
-"""FastAPI application for T-AES-FEEDBACK model."""
+"""FastAPI application for AES-FEEDBACK model."""
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -31,7 +31,7 @@ class FeedbackResponse(BaseModel):
 def create_fastapi_app() -> FastAPI:
     """Create and configure FastAPI app."""
     app = FastAPI(
-        title="T-AES-FEEDBACK API",
+        title="AES-FEEDBACK API",
         description="Multi-task CEFR scoring and error detection",
         version="1.0.0",
     )
@@ -41,7 +41,7 @@ def create_fastapi_app() -> FastAPI:
 
     @app.post("/score", response_model=FeedbackResponse)
     async def score_essay(request: FeedbackRequest) -> FeedbackResponse:
-        """Score essay with T-AES-FEEDBACK model."""
+        """Score essay with AES-FEEDBACK model."""
         import torch
 
         try:
@@ -144,7 +144,7 @@ def create_fastapi_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         """Health check endpoint."""
-        return {"status": "healthy", "model": "T-AES-FEEDBACK", "epoch": 3}
+        return {"status": "healthy", "model": "AES-FEEDBACK", "epoch": 3}
 
     return app
 

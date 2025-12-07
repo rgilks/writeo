@@ -18,8 +18,8 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 
 - **🤖 AI Essay Scoring**: Multi-dimensional scoring (Task Achievement, Coherence & Cohesion, Vocabulary, Grammar) using fine-tuned RoBERTa models.
 - **✨ Smart Grammar Correction**: Dual GEC services running in parallel:
-  - **Seq2Seq (T-GEC-SEQ2SEQ)**: High-quality corrections using Flan-T5 (~12-16s)
-  - **GECToR (T-GEC-GECTOR)**: Fast token-tagging approach (~1-2s, 10x faster)
+  - **Seq2Seq (GEC-SEQ2SEQ)**: High-quality corrections using Flan-T5 (~12-16s)
+  - **GECToR (GEC-GECTOR)**: Fast token-tagging approach (~1-2s, 10x faster)
 - **📝 Grammar & Style Checking**: Advanced grammar, spelling, and style analysis using LanguageTool.
 - **💬 Detailed Feedback**: Context-aware, actionable feedback powered by **Groq Llama 3.3 70B** (Turbo) or **OpenAI GPT-4o-mini** (Cheap).
 - **📊 CEFR Mapping**: Automatic mapping of scores to Common European Framework of Reference for Languages (A2-C2).

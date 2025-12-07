@@ -33,9 +33,9 @@ export interface AppConfig {
     gradeUrl: string;
     ltUrl?: string;
     corpusUrl: string; // Default to deployed service URL
-    feedbackUrl: string; // T-AES-FEEDBACK service URL
-    gecUrl: string; // T-GEC-SEQ2SEQ service URL
-    gectorUrl: string; // T-GEC-GECTOR service URL (fast)
+    feedbackUrl: string; // AES-FEEDBACK service URL
+    gecUrl: string; // GEC-SEQ2SEQ service URL
+    gectorUrl: string; // GEC-GECTOR service URL (fast)
   };
   llm: {
     provider: LLMProvider;

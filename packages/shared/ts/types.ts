@@ -201,14 +201,14 @@ export function isValidUUID(uuid: string): boolean {
 
 // Utility types for AssessorResult lookups
 export type AssessorResultId =
-  | "T-AES-ESSAY"
-  | "T-AES-CORPUS" // Corpus-trained RoBERTa model (dev mode)
-  | "T-AES-FEEDBACK" // Multi-task feedback model (dev mode)
-  | "T-GEC-LT"
-  | "T-GEC-LLM"
-  | "T-GEC-SEQ2SEQ" // Seq2Seq GEC model (best grammar correction)
-  | "T-TEACHER-FEEDBACK"
-  | "T-RELEVANCE-CHECK";
+  | "AES-ESSAY"
+  | "AES-CORPUS" // Corpus-trained RoBERTa model (dev mode)
+  | "AES-FEEDBACK" // Multi-task feedback model (dev mode)
+  | "GEC-LT"
+  | "GEC-LLM"
+  | "GEC-SEQ2SEQ" // Seq2Seq GEC model (best grammar correction)
+  | "TEACHER-FEEDBACK"
+  | "RELEVANCE-CHECK";
 
 /**
  * Type guard to check if an AssessorResult has a specific ID
@@ -244,15 +244,15 @@ export function findAssessorResultById(
  */
 export function getEssayAssessorResult(results: AssessorResult[]):
   | (AssessorResult & {
-      id: "T-AES-ESSAY";
+      id: "AES-ESSAY";
       overall: number;
       dimensions: NonNullable<AssessorResult["dimensions"]>;
     })
   | undefined {
-  const result = findAssessorResultById(results, "T-AES-ESSAY");
+  const result = findAssessorResultById(results, "AES-ESSAY");
   if (result && result.overall !== undefined && result.dimensions) {
     return result as AssessorResult & {
-      id: "T-AES-ESSAY";
+      id: "AES-ESSAY";
       overall: number;
       dimensions: NonNullable<AssessorResult["dimensions"]>;
     };
@@ -268,31 +268,31 @@ export function getEssayAssessorResult(results: AssessorResult[]):
  */
 export function getCorpusAssessorResult(results: AssessorResult[]):
   | (AssessorResult & {
-      id: "T-AES-CORPUS";
+      id: "AES-CORPUS";
       overall: number;
       label: string;
     })
   | undefined {
-  const result = findAssessorResultById(results, "T-AES-CORPUS");
+  const result = findAssessorResultById(results, "AES-CORPUS");
   if (result && "overall" in result && "label" in result) {
-    return result as AssessorResult & { id: "T-AES-CORPUS"; overall: number; label: string };
+    return result as AssessorResult & { id: "AES-CORPUS"; overall: number; label: string };
   }
   return undefined;
 }
 
 /**
- * Get T-AES-FEEDBACK assessor result (multi-task feedback model)
+ * Get AES-FEEDBACK assessor result (multi-task feedback model)
  */
 export function getFeedbackAssessorResult(results: AssessorResult[]):
   | (AssessorResult & {
-      id: "T-AES-FEEDBACK";
+      id: "AES-FEEDBACK";
       overall: number;
       cefr: string;
     })
   | undefined {
-  const result = findAssessorResultById(results, "T-AES-FEEDBACK");
+  const result = findAssessorResultById(results, "AES-FEEDBACK");
   if (result && "overall" in result && "cefr" in result) {
-    return result as AssessorResult & { id: "T-AES-FEEDBACK"; overall: number; cefr: string };
+    return result as AssessorResult & { id: "AES-FEEDBACK"; overall: number; cefr: string };
   }
   return undefined;
 }
@@ -305,10 +305,10 @@ export function getFeedbackAssessorResult(results: AssessorResult[]):
  */
 export function getLanguageToolAssessorResult(
   results: AssessorResult[],
-): (AssessorResult & { id: "T-GEC-LT"; errors: LanguageToolError[] }) | undefined {
-  const result = findAssessorResultById(results, "T-GEC-LT");
+): (AssessorResult & { id: "GEC-LT"; errors: LanguageToolError[] }) | undefined {
+  const result = findAssessorResultById(results, "GEC-LT");
   if (result && Array.isArray(result.errors)) {
-    return result as AssessorResult & { id: "T-GEC-LT"; errors: LanguageToolError[] };
+    return result as AssessorResult & { id: "GEC-LT"; errors: LanguageToolError[] };
   }
   return undefined;
 }
@@ -321,10 +321,10 @@ export function getLanguageToolAssessorResult(
  */
 export function getLLMAssessorResult(
   results: AssessorResult[],
-): (AssessorResult & { id: "T-GEC-LLM"; errors: LanguageToolError[] }) | undefined {
-  const result = findAssessorResultById(results, "T-GEC-LLM");
+): (AssessorResult & { id: "GEC-LLM"; errors: LanguageToolError[] }) | undefined {
+  const result = findAssessorResultById(results, "GEC-LLM");
   if (result && Array.isArray(result.errors)) {
-    return result as AssessorResult & { id: "T-GEC-LLM"; errors: LanguageToolError[] };
+    return result as AssessorResult & { id: "GEC-LLM"; errors: LanguageToolError[] };
   }
   return undefined;
 }
@@ -337,7 +337,7 @@ export function getLLMAssessorResult(
  */
 export function getTeacherFeedbackAssessorResult(results: AssessorResult[]):
   | (AssessorResult & {
-      id: "T-TEACHER-FEEDBACK";
+      id: "TEACHER-FEEDBACK";
       meta: {
         message: string;
         focusArea?: string;
@@ -346,10 +346,10 @@ export function getTeacherFeedbackAssessorResult(results: AssessorResult[]):
       };
     })
   | undefined {
-  const result = findAssessorResultById(results, "T-TEACHER-FEEDBACK");
+  const result = findAssessorResultById(results, "TEACHER-FEEDBACK");
   if (result && result.meta && typeof result.meta === "object" && "message" in result.meta) {
     return result as AssessorResult & {
-      id: "T-TEACHER-FEEDBACK";
+      id: "TEACHER-FEEDBACK";
       meta: {
         message: string;
         focusArea?: string;
@@ -369,7 +369,7 @@ export function getTeacherFeedbackAssessorResult(results: AssessorResult[]):
  */
 export function getRelevanceCheckAssessorResult(results: AssessorResult[]):
   | (AssessorResult & {
-      id: "T-RELEVANCE-CHECK";
+      id: "RELEVANCE-CHECK";
       meta: {
         addressesQuestion: boolean;
         similarityScore: number;
@@ -377,7 +377,7 @@ export function getRelevanceCheckAssessorResult(results: AssessorResult[]):
       };
     })
   | undefined {
-  const result = findAssessorResultById(results, "T-RELEVANCE-CHECK");
+  const result = findAssessorResultById(results, "RELEVANCE-CHECK");
   if (
     result &&
     result.meta &&
@@ -386,7 +386,7 @@ export function getRelevanceCheckAssessorResult(results: AssessorResult[]):
     "similarityScore" in result.meta
   ) {
     return result as AssessorResult & {
-      id: "T-RELEVANCE-CHECK";
+      id: "RELEVANCE-CHECK";
       meta: {
         addressesQuestion: boolean;
         similarityScore: number;
@@ -398,7 +398,7 @@ export function getRelevanceCheckAssessorResult(results: AssessorResult[]):
 }
 
 /**
- * GEC Seq2Seq edit structure from the T-GEC-SEQ2SEQ assessor
+ * GEC Seq2Seq edit structure from the GEC-SEQ2SEQ assessor
  */
 export interface GECSeq2seqEdit {
   start: number;
@@ -417,17 +417,17 @@ export interface GECSeq2seqEdit {
  */
 export function getGECSeq2seqAssessorResult(results: AssessorResult[]):
   | (AssessorResult & {
-      id: "T-GEC-SEQ2SEQ";
+      id: "GEC-SEQ2SEQ";
       meta: {
         edits: GECSeq2seqEdit[];
         correctedText: string;
       };
     })
   | undefined {
-  const result = results.find((r) => r.id === "T-GEC-SEQ2SEQ");
+  const result = results.find((r) => r.id === "GEC-SEQ2SEQ");
   if (result && result.meta && Array.isArray((result.meta as Record<string, unknown>).edits)) {
     return result as AssessorResult & {
-      id: "T-GEC-SEQ2SEQ";
+      id: "GEC-SEQ2SEQ";
       meta: { edits: GECSeq2seqEdit[]; correctedText: string };
     };
   }

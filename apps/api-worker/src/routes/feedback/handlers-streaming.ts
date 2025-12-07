@@ -34,10 +34,10 @@ function extractAssessmentData(results: AssessmentResults): {
   for (const part of results.results?.parts || []) {
     for (const answer of part.answers || []) {
       for (const assessor of answer.assessorResults || []) {
-        if (!essayScores && assessor.id === "T-AES-ESSAY") {
+        if (!essayScores && assessor.id === "AES-ESSAY") {
           essayScores = { overall: assessor.overall, dimensions: assessor.dimensions };
         }
-        if (!ltErrors && assessor.id === "T-GEC-LT") {
+        if (!ltErrors && assessor.id === "GEC-LT") {
           ltErrors = assessor.errors as LanguageToolError[] | undefined;
         }
         // Early exit if both found

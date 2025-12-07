@@ -46,12 +46,12 @@ export interface FeedbackResult {
 // ============================================================================
 
 export const ASSESSOR_IDS = {
-  CORPUS: "T-AES-CORPUS",
-  FEEDBACK: "T-AES-FEEDBACK",
-  GEC: "T-GEC-SEQ2SEQ",
-  GECTOR: "T-GEC-GECTOR",
-  ESSAY: "T-AES-ESSAY",
-  LT: "T-GEC-LT",
+  CORPUS: "AES-CORPUS",
+  FEEDBACK: "AES-FEEDBACK",
+  GEC: "GEC-SEQ2SEQ",
+  GECTOR: "GEC-GECTOR",
+  ESSAY: "AES-ESSAY",
+  LT: "GEC-LT",
 } as const;
 
 // ============================================================================
@@ -59,7 +59,7 @@ export const ASSESSOR_IDS = {
 // ============================================================================
 
 export interface AssessorDefinition<T = unknown> {
-  /** Assessor ID (e.g., "T-GEC-GECTOR") - matches ASSESSOR_IDS */
+  /** Assessor ID (e.g., "GEC-GECTOR") - matches ASSESSOR_IDS */
   assessorId: string;
 
   /** Short ID for internal use (e.g., "gector") */
@@ -128,7 +128,7 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
   {
     assessorId: ASSESSOR_IDS.FEEDBACK,
     id: "feedback",
-    displayName: "T-AES-FEEDBACK (Multi-Task)",
+    displayName: "AES-FEEDBACK (Multi-Task)",
     type: "grader",
     configPath: "features.assessors.scoring.feedback",
     timingKey: "5f_feedback_fetch",
@@ -139,7 +139,7 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
       const d = data as FeedbackResult;
       return {
         id: ASSESSOR_IDS.FEEDBACK,
-        name: "T-AES-FEEDBACK (Multi-Task)",
+        name: "AES-FEEDBACK (Multi-Task)",
         type: "grader",
         overall: d.cefr_score,
         label: d.cefr_level,
@@ -240,7 +240,7 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
       const res = json as any;
       const part = res.results?.parts?.[0];
       const answer = part?.answers?.[0];
-      const essayResult = answer?.assessorResults?.find((ar: any) => ar.id === "T-AES-ESSAY");
+      const essayResult = answer?.assessorResults?.find((ar: any) => ar.id === "AES-ESSAY");
       return essayResult || null;
     },
     createAssessor: (data) => {

@@ -57,9 +57,9 @@ async function parseEssayAssessmentResponse(
         if (part.answers?.length) {
           for (const answer of part.answers) {
             const assessorResults = answer.assessorResults as AssessorResult[] | undefined;
-            const essayAssessor = assessorResults?.find((ar) => ar.id === "T-AES-ESSAY");
+            const essayAssessor = assessorResults?.find((ar) => ar.id === "AES-ESSAY");
             if (!essayAssessor) {
-              safeLogError("Essay assessment missing T-AES-ESSAY assessor result", {
+              safeLogError("Essay assessment missing AES-ESSAY assessor result", {
                 submissionId,
                 part: part.part,
                 answerId: answer.id,

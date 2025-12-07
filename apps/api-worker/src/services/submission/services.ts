@@ -60,8 +60,8 @@ export function prepareServiceRequests(
     // Legacy Services
     // Note: LanguageTool is now handled via ASSESSOR_REGISTRY below
 
-    // Check for Relevance Check (T-RELEVANCE-CHECK)
-    if (requestedAssessors.includes("T-RELEVANCE-CHECK")) {
+    // Check for Relevance Check (RELEVANCE-CHECK)
+    if (requestedAssessors.includes("RELEVANCE-CHECK")) {
       relevanceRequests.push({
         answerId: answer.id,
         questionText: answer.question_text,
@@ -70,8 +70,8 @@ export function prepareServiceRequests(
       });
     }
 
-    // Check for LLM GEC (T-GEC-LLM)
-    if (requestedAssessors.includes("T-GEC-LLM") && config.features.assessors.grammar.gecLlm) {
+    // Check for LLM GEC (GEC-LLM)
+    if (requestedAssessors.includes("GEC-LLM") && config.features.assessors.grammar.gecLlm) {
       llmAssessmentRequests.push({
         answerId: answer.id,
         questionText: answer.question_text,

@@ -1,5 +1,5 @@
 """
-Inference script for T-AES-FEEDBACK model.
+Inference script for AES-FEEDBACK model.
 
 Shows how to use the trained model for predictions with
 error detection and attention-based heatmap.
@@ -159,7 +159,7 @@ def predict_with_feedback(
 def main():
     """Test inference pipeline."""
     print("=" * 80)
-    print("T-AES-FEEDBACK INFERENCE TEST")
+    print("AES-FEEDBACK INFERENCE TEST")
     print("=" * 80)
 
     # Example essay

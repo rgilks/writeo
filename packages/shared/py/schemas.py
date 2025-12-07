@@ -127,7 +127,7 @@ class LanguageToolError(BaseModel):
 class AssessorResult(BaseModel):
     """Result from an assessor (scoring model)."""
 
-    id: str = Field(..., description="Assessor identifier", examples=["T-AES-ESSAY"])
+    id: str = Field(..., description="Assessor identifier", examples=["AES-ESSAY"])
     name: str = Field(..., description="Human-readable assessor name", examples=["Essay scorer"])
     type: Literal["grader", "conf", "ard", "feedback"] = Field(
         ...,

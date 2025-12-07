@@ -1,6 +1,6 @@
-# T-AES-FEEDBACK: Technical Guide for Software Engineers
+# AES-FEEDBACK: Technical Guide for Software Engineers
 
-A comprehensive guide to the Multi-Task Feedback Model (T-AES-FEEDBACK).
+A comprehensive guide to the Multi-Task Feedback Model (AES-FEEDBACK).
 
 > **Note:** This model is primarily used for CEFR scoring. Specific grammatical error correction is now handled by the dedicated **GEC Service** (see [GEC Service documentation](gec.md)).
 
@@ -25,7 +25,7 @@ A comprehensive guide to the Multi-Task Feedback Model (T-AES-FEEDBACK).
 
 ## Overview
 
-**T-AES-FEEDBACK** is a multi-task AI model that aims to provide comprehensive essay feedback:
+**AES-FEEDBACK** is a multi-task AI model that aims to provide comprehensive essay feedback:
 
 **Intended Outputs:**
 
@@ -34,7 +34,7 @@ A comprehensive guide to the Multi-Task Feedback Model (T-AES-FEEDBACK).
 3. **Error type distribution** (% grammar, vocabulary, etc.) ❌ **Not working**
 4. **Attention heatmap** (shows model focus areas) ⏸️ **Not tested**
 
-**Why it exists:** Current models (T-AES-CORPUS, T-AES-ESSAY) only give scores. Learners need to know **where** and **what** to improve.
+**Why it exists:** Current models (AES-CORPUS, AES-ESSAY) only give scores. Learners need to know **where** and **what** to improve.
 
 **Model:** DeBERTa-v3-base fine-tuned with multi-task learning
 
@@ -46,14 +46,14 @@ A comprehensive guide to the Multi-Task Feedback Model (T-AES-FEEDBACK).
 
 ### Current System Limitations
 
-**T-AES-CORPUS** (existing):
+**AES-CORPUS** (existing):
 
 ```
 Input: Essay text
 Output: "Your essay is B2 level" (QWK 0.87)
 ```
 
-**T-AES-ESSAY** (existing):
+**AES-ESSAY** (existing):
 
 ```
 Input: Essay text
@@ -62,7 +62,7 @@ Output: Multiple scores (task achievement, coherence, etc.)
 
 **Problem:** Neither tells the learner **where errors are** or **what types of errors**.
 
-### T-AES-FEEDBACK Intended Solution
+### AES-FEEDBACK Intended Solution
 
 ```
 Input: Essay text
@@ -946,10 +946,10 @@ Total loss: 0.56
 
 ### Comparison to Baseline
 
-| Model          | QWK      | MAE      | Notes              |
-| -------------- | -------- | -------- | ------------------ |
-| T-AES-CORPUS   | 0.87     | 0.32     | Current production |
-| T-AES-FEEDBACK | **0.85** | **0.50** | Only 2% QWK drop!  |
+| Model        | QWK      | MAE      | Notes              |
+| ------------ | -------- | -------- | ------------------ |
+| AES-CORPUS   | 0.87     | 0.32     | Current production |
+| AES-FEEDBACK | **0.85** | **0.50** | Only 2% QWK drop!  |
 
 **Verdict:** CEFR task is production-ready. Error detection tasks need work.
 
@@ -1226,7 +1226,7 @@ If multi-task learning continues to struggle, consider these alternatives:
 
 ### Approach 1: Two-Stage Pipeline
 
-**Stage 1:** CEFR Scoring (current T-AES-CORPUS or FEEDBACK)
+**Stage 1:** CEFR Scoring (current AES-CORPUS or FEEDBACK)
 
 ```python
 cefr_model = load_model("feedback_cefr_only")
@@ -1417,7 +1417,7 @@ config = {
 
 **If results good (F1 > 0.65):**
 
-- Deploy as T-AES-FEEDBACK v1
+- Deploy as AES-FEEDBACK v1
 - Monitor in production
 - Gather user feedback
 
@@ -1637,7 +1637,7 @@ def create_attention_heatmap(attention, inputs, essay_text):
 
 ### Current State: CEFR Scoring
 
-Can be deployed as drop-in replacement for T-AES-CORPUS:
+Can be deployed as drop-in replacement for AES-CORPUS:
 
 ```python
 # Modal deployment
@@ -1652,7 +1652,7 @@ def score_essay(request):
     return result
 ```
 
-**Frontend:** No changes needed - same response format as T-AES-CORPUS
+**Frontend:** No changes needed - same response format as AES-CORPUS
 
 ### Future State: Full Feedback
 
@@ -1706,35 +1706,35 @@ const getColor = (attention: number) => {
 
 ### Feature Matrix
 
-| Feature                      | T-AES-CORPUS  | T-AES-ESSAY     | T-AES-FEEDBACK (Current) | T-AES-FEEDBACK (Goal) |
-| ---------------------------- | ------------- | --------------- | ------------------------ | --------------------- |
-| **CEFR Score**               | ✅ (QWK 0.87) | ✅              | ✅ (QWK 0.85)            | ✅ (QWK 0.82+)        |
-| **Multi-dimensional scores** | ❌            | ✅              | ❌                       | ✅                    |
-| **Error detection**          | ❌            | ❌              | ❌ (not working)         | ✅                    |
-| **Error types**              | ❌            | ❌              | ❌ (not working)         | ✅                    |
-| **Attention heatmap**        | ❌            | ❌              | ⏸️ (not tested)          | ✅                    |
-| **Speed**                    | Fast (~200ms) | Slow (~2s)      | Medium (~300ms)          | Medium (~300ms)       |
-| **Model size**               | 125M params   | Multiple models | 184M params              | 184M params           |
+| Feature                      | AES-CORPUS    | AES-ESSAY       | AES-FEEDBACK (Current) | AES-FEEDBACK (Goal) |
+| ---------------------------- | ------------- | --------------- | ---------------------- | ------------------- |
+| **CEFR Score**               | ✅ (QWK 0.87) | ✅              | ✅ (QWK 0.85)          | ✅ (QWK 0.82+)      |
+| **Multi-dimensional scores** | ❌            | ✅              | ❌                     | ✅                  |
+| **Error detection**          | ❌            | ❌              | ❌ (not working)       | ✅                  |
+| **Error types**              | ❌            | ❌              | ❌ (not working)       | ✅                  |
+| **Attention heatmap**        | ❌            | ❌              | ⏸️ (not tested)        | ✅                  |
+| **Speed**                    | Fast (~200ms) | Slow (~2s)      | Medium (~300ms)        | Medium (~300ms)     |
+| **Model size**               | 125M params   | Multiple models | 184M params            | 184M params         |
 
 ### Use Cases
 
-**T-AES-CORPUS**: Quick overall assessment
+**AES-CORPUS**: Quick overall assessment
 
 - ✅ Fast, accurate CEFR scoring
 - ❌ No actionable feedback
 
-**T-AES-ESSAY**: Detailed rubric scoring
+**AES-ESSAY**: Detailed rubric scoring
 
 - ✅ Multiple dimensions (coherence, task achievement, etc.)
 - ❌ No error-level feedback
 
-**T-AES-FEEDBACK (Current)**: Improved CEFR scoring
+**AES-FEEDBACK (Current)**: Improved CEFR scoring
 
-- ✅ CEFR score comparable to T-AES-CORPUS (0.85 vs 0.87)
+- ✅ CEFR score comparable to AES-CORPUS (0.85 vs 0.87)
 - ✅ Trained on larger dataset (3,784 essays vs 1,750)
 - ❌ Error features not working yet
 
-**T-AES-FEEDBACK (Goal)**: Comprehensive feedback
+**AES-FEEDBACK (Goal)**: Comprehensive feedback
 
 - ✅ CEFR score + error detection + heatmap
 - ✅ Actionable insights for learners

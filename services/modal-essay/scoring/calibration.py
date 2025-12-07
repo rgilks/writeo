@@ -1,12 +1,12 @@
 """
-Score calibration utilities for T-AES-ESSAY assessor.
+Score calibration utilities for AES-ESSAY assessor.
 
 Applies two-stage calibration:
 1. Word-count based adjustments (existing heuristics)
 2. Corpus-aligned offset (-0.8) based on Write & Improve validation
 
 The offset was computed from validation against 481 held-out test essays
-to align T-AES-ESSAY scores with ground truth CEFR levels.
+to align AES-ESSAY scores with ground truth CEFR levels.
 """
 
 
@@ -100,7 +100,7 @@ def calibrate_from_corpus(model_score: float, word_count: int, vocab_diversity: 
 
     # Apply corpus-aligned offset
     # Based on validation against Write & Improve corpus (481 held-out essays):
-    # - T-AES-ESSAY showed +0.8 bias (over-prediction)
+    # - AES-ESSAY showed +0.8 bias (over-prediction)
     # - Applying -0.8 offset improved QWK from 0.27 to 0.58
     # - Adjacent accuracy improved from 40% to 90%
     CORPUS_OFFSET = -0.8

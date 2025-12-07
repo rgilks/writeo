@@ -45,7 +45,7 @@ def test_training():
     from feedback_dataset import create_dataloaders
 
     print("=" * 80)
-    print("T-AES-FEEDBACK TEST RUN")
+    print("AES-FEEDBACK TEST RUN")
     print("=" * 80)
 
     # Test configuration (minimal)

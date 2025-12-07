@@ -4,7 +4,7 @@ This document catalogs publicly available datasets that could be used to train e
 
 ## Current Limitation
 
-Our **T-AES-CORPUS** model (RoBERTa) was trained on the Write & Improve corpus which only has **holistic CEFR labels** (no dimensional breakdown). This is why we can't show consistent dimensional scores alongside the corpus score.
+Our **AES-CORPUS** model (RoBERTa) was trained on the Write & Improve corpus which only has **holistic CEFR labels** (no dimensional breakdown). This is why we can't show consistent dimensional scores alongside the corpus score.
 
 ---
 
@@ -144,7 +144,7 @@ Our **T-AES-CORPUS** model (RoBERTa) was trained on the Write & Improve corpus w
 
 1. Download ELLIPSE dataset from Kaggle
 2. Use 6 trait scores as targets
-3. Train multi-task model similar to T-AES-FEEDBACK
+3. Train multi-task model similar to AES-FEEDBACK
 
 ### Option C: Combine Multiple Datasets
 
@@ -171,7 +171,7 @@ Our **T-AES-CORPUS** model (RoBERTa) was trained on the Write & Improve corpus w
 1. **Evaluate ASAP++ or ELLIPSE** as training data
 2. **Train multi-output model** with dimension-specific heads
 3. **Validate** against Write & Improve corpus (CEFR alignment)
-4. **Replace T-AES-ESSAY** with new dimensional model
+4. **Replace AES-ESSAY** with new dimensional model
 
 ## References
 

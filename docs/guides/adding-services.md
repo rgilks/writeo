@@ -23,7 +23,7 @@ Add an entry to `ASSESSOR_REGISTRY`:
 
 ```typescript
 {
-  assessorId: "T-NEW-SERVICE",           // Unique ID shown to frontend
+  assessorId: "NEW-SERVICE",           // Unique ID shown to frontend
   id: "newservice",                       // Short ID for internal use
   displayName: "My New Service",          // Human-readable name
   type: "grader" | "feedback",            // grader = scoring, feedback = errors
@@ -35,7 +35,7 @@ Add an entry to `ASSESSOR_REGISTRY`:
   createAssessor: (data) => {
     const d = data as NewServiceResult;
     return {
-      id: "T-NEW-SERVICE",
+      id: "NEW-SERVICE",
       name: "My New Service",
       type: "grader",
       overall: d.score,          // For graders
@@ -64,7 +64,7 @@ Also add to `modal/types.ts` interface and `modal/mock.ts`.
 ```json
 {
   "_defaults": {
-    "newService": "T-NEW-SERVICE - Description"
+    "newService": "NEW-SERVICE - Description"
   },
   "newService": true
 }
@@ -85,14 +85,14 @@ Return a score (e.g., CEFR level):
 ```typescript
 type: "grader",
 createAssessor: (data) => ({
-  id: "T-AES-XXX",
+  id: "AES-XXX",
   type: "grader",
   overall: data.score,    // Numeric score
   label: data.cefr_level, // Display label
 })
 ```
 
-**Examples:** T-AES-CORPUS, T-AES-FEEDBACK
+**Examples:** AES-CORPUS, AES-FEEDBACK
 
 ### Feedback Services
 
@@ -101,7 +101,7 @@ Return errors/edits to highlight:
 ```typescript
 type: "feedback",
 createAssessor: (data) => ({
-  id: "T-GEC-XXX",
+  id: "GEC-XXX",
   type: "feedback",
   meta: {
     edits: data.edits,           // Array of edits
@@ -110,7 +110,7 @@ createAssessor: (data) => ({
 })
 ```
 
-**Examples:** T-GEC-SEQ2SEQ, T-GEC-GECTOR
+**Examples:** GEC-SEQ2SEQ, GEC-GECTOR
 
 ---
 

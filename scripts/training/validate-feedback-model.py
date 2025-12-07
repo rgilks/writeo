@@ -1,5 +1,5 @@
 """
-Validate T-AES-FEEDBACK model on Modal.
+Validate AES-FEEDBACK model on Modal.
 
 Loads trained checkpoint and evaluates on test set with full metrics.
 """
@@ -54,7 +54,7 @@ def validate_feedback_model():
     from feedback_dataset import FeedbackDataset
 
     print("=" * 80)
-    print("T-AES-FEEDBACK VALIDATION")
+    print("AES-FEEDBACK VALIDATION")
     print("=" * 80)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

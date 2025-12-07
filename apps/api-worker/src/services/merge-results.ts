@@ -12,11 +12,11 @@ import { ASSESSOR_REGISTRY } from "./submission/service-registry";
 
 const MAX_LLM_ERRORS = 10;
 const ASSESSOR_IDS = {
-  LANGUAGE_TOOL: "T-GEC-LT",
-  LLM: "T-GEC-LLM",
-  AI_FEEDBACK: "T-AI-FEEDBACK",
-  RELEVANCE: "T-RELEVANCE-CHECK",
-  TEACHER: "T-TEACHER-FEEDBACK",
+  LANGUAGE_TOOL: "GEC-LT",
+  LLM: "GEC-LLM",
+  AI_FEEDBACK: "AI-FEEDBACK",
+  RELEVANCE: "RELEVANCE-CHECK",
+  TEACHER: "TEACHER-FEEDBACK",
 } as const;
 
 function extractEssayAssessorResults(
@@ -60,11 +60,11 @@ function extractEssayAssessorResults(
     return [];
   }
 
-  // Check if we have the essay assessor (T-AES-ESSAY)
-  const essayAssessor = assessorResults.find((ar) => ar.id === "T-AES-ESSAY");
+  // Check if we have the essay assessor (AES-ESSAY)
+  const essayAssessor = assessorResults.find((ar) => ar.id === "AES-ESSAY");
   if (!essayAssessor) {
     console.warn(
-      `[merge-results] Essay answer ${firstAnswer?.id} missing T-AES-ESSAY assessor - essay scores will be missing`,
+      `[merge-results] Essay answer ${firstAnswer?.id} missing AES-ESSAY assessor - essay scores will be missing`,
       {
         answerId: firstAnswer?.id,
         availableAssessorIds: assessorResults.map((ar) => ar.id),
