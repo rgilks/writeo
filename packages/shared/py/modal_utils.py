@@ -74,7 +74,7 @@ class ModalServiceFactory:
         image: modal.Image,
         volume_mount: str = DEFAULT_VOLUME_MOUNT,
         volume_name: str = DEFAULT_VOLUME_NAME,
-        gpu: str | modal.gpu.GPU = DEFAULT_GPU_TYPE,
+        gpu: str | Any = DEFAULT_GPU_TYPE,
         timeout: int = DEFAULT_TIMEOUT_SECONDS,
         memory: int = DEFAULT_MEMORY_MB,
         scaledown_window: int = DEFAULT_SCALEDOWN_WINDOW_SECONDS,
