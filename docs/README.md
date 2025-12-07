@@ -26,6 +26,7 @@ This directory contains all documentation for the Writeo project.
 ### Models & Assessors
 
 - **[MODELS.md](MODELS.md)** - Essay scoring models overview and comparison
+- **[ADDING_SERVICES.md](ADDING_SERVICES.md)** - Guide for adding new Modal assessor services
 - **[CORPUS_MODEL_GUIDE.md](CORPUS_MODEL_GUIDE.md)** - T-AES-CORPUS training guide
 - **[FEEDBACK_MODEL_GUIDE.md](FEEDBACK_MODEL_GUIDE.md)** - T-AES-FEEDBACK multi-task model
 - **[GEC_SERVICE.md](GEC_SERVICE.md)** - Grammar correction services (Seq2Seq + GECToR)

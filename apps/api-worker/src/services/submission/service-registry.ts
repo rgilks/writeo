@@ -1,15 +1,22 @@
 /**
- * Service Registry - Declarative configuration for Modal-based assessor services.
+ * Assessor Registry - Single source of truth for Modal-based assessor services.
  *
- * This pattern allows adding new services by registering them in a single place,
- * rather than modifying 6+ files.
+ * To add a new Modal service:
+ * 1. Add an entry to ASSESSOR_REGISTRY below
+ * 2. Add config flag to assessors.json
+ * 3. Add ModalClient method (or use existing patterns)
+ *
+ * The registry handles: config checking, request creation, response parsing,
+ * and AssessorResult creation - all in one place.
  */
 
+import type { AssessorResult } from "@writeo/shared";
 import type { ModalService } from "../modal/types";
 
-/**
- * Service result data types for each service category
- */
+// ============================================================================
+// Result Types - Typed response structures from Modal services
+// ============================================================================
+
 export interface GECResult {
   original: string;
   corrected: string;
@@ -34,68 +41,149 @@ export interface FeedbackResult {
   error_types: Record<string, number>;
 }
 
-/**
- * Configuration for a Modal-based service.
- */
-export interface ServiceDefinition<T = unknown> {
-  /** Unique service identifier (e.g., "gec", "gector", "corpus") */
+// ============================================================================
+// Assessor IDs - Canonical identifiers used throughout the system
+// ============================================================================
+
+export const ASSESSOR_IDS = {
+  CORPUS: "T-AES-CORPUS",
+  FEEDBACK: "T-AES-FEEDBACK",
+  GEC: "T-GEC-SEQ2SEQ",
+  GECTOR: "T-GEC-GECTOR",
+} as const;
+
+// ============================================================================
+// Assessor Definition - Complete definition for a Modal-based assessor
+// ============================================================================
+
+export interface AssessorDefinition<T = unknown> {
+  /** Assessor ID (e.g., "T-GEC-GECTOR") - matches ASSESSOR_IDS */
+  assessorId: string;
+
+  /** Short ID for internal use (e.g., "gector") */
   id: string;
 
-  /** Human-readable name for logging */
-  name: string;
+  /** Human-readable display name */
+  displayName: string;
 
-  /** Config path to check if enabled (e.g., "assessors.grammar.gecGector") */
+  /** Assessor type for frontend display */
+  type: "grader" | "feedback";
+
+  /** Config path to check if enabled */
   configPath: string;
 
   /** Timing key for performance tracking */
   timingKey: string;
+
+  /** Model name for meta info */
+  model: string;
 
   /** Creates the request for this service */
   createRequest: (text: string, modalService: ModalService) => Promise<Response>;
 
   /** Parses the JSON response into typed data */
   parseResponse: (json: unknown) => T;
+
+  /** Creates the AssessorResult from parsed data - uses unknown for array compatibility */
+  createAssessor: (data: unknown) => AssessorResult;
 }
 
-/**
- * Registry of all Modal-based services.
- * Add new services here instead of modifying multiple files.
- */
-export const SERVICE_REGISTRY: ServiceDefinition[] = [
-  // Scoring Services
+// ============================================================================
+// Assessor Registry - Add new services here!
+// ============================================================================
+
+export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
+  // -------------------------------------------------------------------------
+  // Scoring Services (type: "grader")
+  // -------------------------------------------------------------------------
   {
+    assessorId: ASSESSOR_IDS.CORPUS,
     id: "corpus",
-    name: "T-AES-CORPUS",
+    displayName: "Corpus-Trained RoBERTa",
+    type: "grader",
     configPath: "features.assessors.scoring.corpus",
     timingKey: "5e_corpus_fetch",
+    model: "roberta-base",
     createRequest: (text, modal) => modal.scoreCorpus(text),
     parseResponse: (json) => json as CorpusResult,
+    createAssessor: (data) => {
+      const d = data as CorpusResult;
+      return {
+        id: ASSESSOR_IDS.CORPUS,
+        name: "Corpus-Trained RoBERTa",
+        type: "grader",
+        overall: d.score,
+        label: d.cefr_level,
+        meta: { model: "roberta-base", source: "Write & Improve corpus" },
+      };
+    },
   },
   {
+    assessorId: ASSESSOR_IDS.FEEDBACK,
     id: "feedback",
-    name: "T-AES-FEEDBACK",
+    displayName: "T-AES-FEEDBACK (Multi-Task)",
+    type: "grader",
     configPath: "features.assessors.scoring.feedback",
     timingKey: "5f_feedback_fetch",
+    model: "deberta-v3-base",
     createRequest: (text, modal) => modal.scoreFeedback(text),
     parseResponse: (json) => json as FeedbackResult,
+    createAssessor: (data) => {
+      const d = data as FeedbackResult;
+      return {
+        id: ASSESSOR_IDS.FEEDBACK,
+        name: "T-AES-FEEDBACK (Multi-Task)",
+        type: "grader",
+        overall: d.cefr_score,
+        label: d.cefr_level,
+        cefr: d.cefr_level,
+        meta: { model: "deberta-v3-base", errorTypes: d.error_types },
+      };
+    },
   },
 
-  // GEC Services
+  // -------------------------------------------------------------------------
+  // GEC Services (type: "feedback")
+  // -------------------------------------------------------------------------
   {
+    assessorId: ASSESSOR_IDS.GEC,
     id: "gec",
-    name: "T-GEC-SEQ2SEQ",
+    displayName: "GEC Seq2Seq",
+    type: "feedback",
     configPath: "features.assessors.grammar.gecSeq2seq",
     timingKey: "5g_gec_fetch",
+    model: "flan-t5-base-gec",
     createRequest: (text, modal) => modal.correctGrammar(text),
     parseResponse: (json) => json as GECResult,
+    createAssessor: (data) => {
+      const d = data as GECResult;
+      return {
+        id: ASSESSOR_IDS.GEC,
+        name: "GEC Seq2Seq",
+        type: "feedback",
+        meta: { model: "flan-t5-base-gec", edits: d.edits, correctedText: d.corrected },
+      };
+    },
   },
   {
+    assessorId: ASSESSOR_IDS.GECTOR,
     id: "gector",
-    name: "T-GEC-GECTOR",
+    displayName: "GECToR Fast",
+    type: "feedback",
     configPath: "features.assessors.grammar.gecGector",
     timingKey: "5h_gector_fetch",
+    model: "gector-roberta-base-5k",
     createRequest: (text, modal) => modal.correctGrammarGector(text),
     parseResponse: (json) => json as GECResult,
+    createAssessor: (data) => {
+      const d = data as GECResult;
+      return {
+        id: ASSESSOR_IDS.GECTOR,
+        name: "GECToR Fast",
+        type: "feedback",
+        meta: { model: "gector-roberta-base-5k", edits: d.edits, correctedText: d.corrected },
+      };
+    },
   },
 ];
 
@@ -132,7 +220,7 @@ export function createServiceRequests(
   modalService: ModalService,
   config: unknown,
 ): ServiceRequest[] {
-  return SERVICE_REGISTRY.filter((service) => getConfigValue(config, service.configPath)).map(
+  return ASSESSOR_REGISTRY.filter((service) => getConfigValue(config, service.configPath)).map(
     (service) => ({
       serviceId: service.id,
       answerId,
@@ -163,7 +251,7 @@ export async function executeServiceRequestsGeneric(
 
   await Promise.all(
     Array.from(byService.entries()).map(async ([serviceId, serviceRequests]) => {
-      const service = SERVICE_REGISTRY.find((s) => s.id === serviceId);
+      const service = ASSESSOR_REGISTRY.find((s) => s.id === serviceId);
       if (!service) return;
 
       const serviceStart = performance.now();
@@ -178,7 +266,7 @@ export async function executeServiceRequestsGeneric(
               return { answerId: req.answerId, data: service.parseResponse(json) };
             }
           } catch (e) {
-            console.warn(`[${service.name}] Request failed for ${req.answerId}:`, e);
+            console.warn(`[${service.displayName}] Request failed for ${req.answerId}:`, e);
           }
           return null;
         }),
