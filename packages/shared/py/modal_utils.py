@@ -49,8 +49,11 @@ class ModalServiceFactory:
 
                 # Check if we are in the right place (validating by presence of this file)
                 if os.path.exists(os.path.join(shared_pkg_path, "modal_utils.py")):
-                    # Mount the directory so its contents are importable
-                    image = image.add_local_python_source(shared_pkg_path)
+                    # Mount the directory explicitly to avoid module resolution issues
+                    # and ensure it is in the PYTHONPATH
+                    remote_path = "/root/shared-pkg"
+                    image = image.add_local_dir(shared_pkg_path, remote_path=remote_path)
+                    image = image.env({"PYTHONPATH": remote_path})
             except Exception:
                 # Fallback or ignore if path resolution fails
                 pass
