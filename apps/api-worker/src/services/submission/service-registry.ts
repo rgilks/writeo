@@ -81,7 +81,12 @@ export interface AssessorDefinition<T = unknown> {
   model: string;
 
   /** Creates the request for this service */
-  createRequest: (text: string, modalService: ModalService) => Promise<Response>;
+  createRequest: (
+    text: string,
+    modalService: ModalService,
+    answerId: string,
+    config: any,
+  ) => Promise<Response>;
 
   /** Parses the JSON response into typed data */
   parseResponse: (json: unknown) => T;
@@ -209,7 +214,7 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
     configPath: "features.assessors.scoring.essay",
     timingKey: "5a_essay_fetch",
     model: "roberta-base", // approximating main model
-    createRequest: async (text, modal) => {
+    createRequest: async (text, modal, answerId) => {
       // Construct a single-answer ModalRequest for this specific text
       // Note: Cast to any to include 'template' which is required by Python service but missing in shared types
       return modal.gradeEssay({
@@ -218,7 +223,12 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
           {
             part: 1,
             answers: [
-              { id: "temp-ans-id", question_id: "q1", question_text: "", answer_text: text },
+              {
+                id: answerId,
+                question_id: "q1",
+                question_text: "",
+                answer_text: text,
+              },
             ],
           },
         ],
@@ -248,10 +258,9 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
     configPath: "features.assessors.grammar.languageTool",
     timingKey: "5b_languagetool_fetch",
     model: "languagetool",
-    createRequest: (text, modal) => {
-      // We need answerId for caching, but createRequest only provides text.
-      // Pass "registry-request" as placeholder answerId.
-      return modal.checkGrammar(text, "en-GB", "registry-request");
+    createRequest: (text, modal, answerId, config) => {
+      const language = config?.features?.languageTool?.language || "en-GB";
+      return modal.checkGrammar(text, language, answerId);
     },
     parseResponse: (json) => json as any,
     createAssessor: (data) => {
@@ -303,19 +312,22 @@ export interface ServiceRequest {
 /**
  * Creates requests for all enabled services for a given answer.
  */
+
 export function createServiceRequests(
   answerId: string,
   text: string,
   modalService: ModalService,
   config: unknown,
+  requestedAssessors: string[],
 ): ServiceRequest[] {
-  return ASSESSOR_REGISTRY.filter((service) => getConfigValue(config, service.configPath)).map(
-    (service) => ({
-      serviceId: service.id,
-      answerId,
-      request: service.createRequest(text, modalService),
-    }),
-  );
+  return ASSESSOR_REGISTRY.filter(
+    (service) =>
+      getConfigValue(config, service.configPath) && requestedAssessors.includes(service.assessorId),
+  ).map((service) => ({
+    serviceId: service.id,
+    answerId,
+    request: service.createRequest(text, modalService, answerId, config),
+  }));
 }
 
 /**

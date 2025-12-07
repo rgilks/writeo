@@ -37,10 +37,8 @@ export function prepareServiceRequests(
   config: AppConfig,
   ai: Ai,
   modalService: ModalService,
+  requestedAssessors: string[] = [],
 ): ServiceRequests {
-  const language = config.features.languageTool.language;
-
-  let ltRequests: Array<{ answerId: string; request: Promise<Response> }>;
   const relevanceRequests: Array<{
     answerId: string;
     questionText: string;
@@ -54,29 +52,26 @@ export function prepareServiceRequests(
     request: Promise<LanguageToolError[]>;
   }> = [];
 
-  // Enable LT if configured OR if using mock services (to test the flow)
-  const ltEnabled =
-    (config.features.languageTool.enabled && config.modal.ltUrl) || config.features.mockServices;
-  const requests: Array<{ answerId: string; request: Promise<Response> }> = [];
+  const ltRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
   const genericRequests: ServiceRequest[] = [];
 
   for (const answer of iterateAnswers(modalParts)) {
     // Legacy Services
-    if (ltEnabled) {
-      requests.push({
+    // Legacy Services
+    // Note: LanguageTool is now handled via ASSESSOR_REGISTRY below
+
+    // Check for Relevance Check (T-RELEVANCE-CHECK)
+    if (requestedAssessors.includes("T-RELEVANCE-CHECK")) {
+      relevanceRequests.push({
         answerId: answer.id,
-        request: modalService.checkGrammar(answer.answer_text, language, answer.id),
+        questionText: answer.question_text,
+        answerText: answer.answer_text,
+        request: checkAnswerRelevance(ai, answer.question_text, answer.answer_text, 0.5),
       });
     }
 
-    relevanceRequests.push({
-      answerId: answer.id,
-      questionText: answer.question_text,
-      answerText: answer.answer_text,
-      request: checkAnswerRelevance(ai, answer.question_text, answer.answer_text, 0.5),
-    });
-
-    if (config.features.assessors.grammar.gecLlm) {
+    // Check for LLM GEC (T-GEC-LLM)
+    if (requestedAssessors.includes("T-GEC-LLM") && config.features.assessors.grammar.gecLlm) {
       llmAssessmentRequests.push({
         answerId: answer.id,
         questionText: answer.question_text,
@@ -98,11 +93,10 @@ export function prepareServiceRequests(
       answer.answer_text,
       modalService,
       config,
+      requestedAssessors,
     );
     genericRequests.push(...registryRequests);
   }
-
-  ltRequests = requests;
 
   return {
     ltRequests,

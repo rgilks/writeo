@@ -142,6 +142,7 @@ async function loadSubmissionData(
     config,
     c.env.AI,
     modalService,
+    modalRequest.assessors,
   );
 
   return { modalRequest, serviceRequests };
@@ -159,7 +160,6 @@ async function processServiceResults(
   serviceRequests: ReturnType<typeof prepareServiceRequests>,
   modalRequest: ModalRequest,
   submissionId: string,
-  config: ReturnType<typeof getServices>["config"],
   timings: Record<string, number>,
 ) {
   const processEssayStartTime = performance.now();
@@ -171,7 +171,7 @@ async function processServiceResults(
     ltResults,
     serviceRequests.ltRequests,
     modalRequest.parts,
-    config.features.languageTool.enabled,
+    serviceRequests.ltRequests.length > 0, // Only process legacy results if legacy requests were made
   );
   timings["7_process_languagetool"] = performance.now() - processLTStartTime;
 
@@ -296,23 +296,38 @@ export async function processSubmission(
       serviceRequests,
       modalRequest,
       submissionId,
-      config,
       timings,
     );
 
     // Phase 5: Generate AI feedback
-    const aiFeedbackStartTime = performance.now();
-    const { llmFeedbackByAnswerId, teacherFeedbackByAnswerId } = await generateCombinedFeedback(
-      modalRequest.parts,
-      processedResults.essayScoresByAnswerId,
-      processedResults.ltErrorsByAnswerId,
-      processedResults.llmErrorsByAnswerId,
-      processedResults.relevanceByAnswerId,
-      serviceRequests,
-      config,
-      c,
-    );
-    timings["8_ai_feedback"] = performance.now() - aiFeedbackStartTime;
+    let llmFeedbackByAnswerId = new Map<string, AIFeedback>();
+    let teacherFeedbackByAnswerId = new Map<string, TeacherFeedback>();
+
+    const requested = modalRequest.assessors || [];
+    const runAi = requested.includes("T-AI-FEEDBACK");
+    const runTeacher = requested.includes("T-TEACHER-FEEDBACK");
+
+    if (runAi || runTeacher) {
+      const aiFeedbackStartTime = performance.now();
+      const feedbackResults = await generateCombinedFeedback(
+        modalRequest.parts,
+        processedResults.essayScoresByAnswerId,
+        processedResults.ltErrorsByAnswerId,
+        processedResults.llmErrorsByAnswerId,
+        processedResults.relevanceByAnswerId,
+        serviceRequests,
+        config,
+        c,
+      );
+
+      if (runAi) {
+        llmFeedbackByAnswerId = feedbackResults.llmFeedbackByAnswerId;
+      }
+      if (runTeacher) {
+        teacherFeedbackByAnswerId = feedbackResults.teacherFeedbackByAnswerId;
+      }
+      timings["8_ai_feedback"] = performance.now() - aiFeedbackStartTime;
+    }
 
     // Phase 6: Merge results and apply metadata
     const mergeStartTime = performance.now();

@@ -322,7 +322,9 @@ export function mergeAssessmentResults(
     status: parts.some((p) => p.status === "success") ? "success" : "error",
     results: { parts },
     requestedAssessors: request.assessors,
-    activeAssessors: request.assessors, // For now, all requested are active
+    activeAssessors: Array.from(
+      new Set(parts.flatMap((p) => p.answers.flatMap((a) => a.assessorResults.map((ar) => ar.id)))),
+    ),
     meta,
   };
 }
