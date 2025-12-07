@@ -109,7 +109,8 @@ export function buildConfig(env: Env): AppConfig {
       gectorUrl:
         env.MODAL_GECTOR_URL || "https://rob-gilks--writeo-gector-service-fastapi-app.modal.run",
       debertaUrl:
-        env.MODAL_DEBERTA_URL || "https://rob-gilks--writeo-deberta-fastapi-app.modal.run",
+        env.MODAL_DEBERTA_URL ||
+        "https://rob-gilks--writeo-deberta-debertaservice-fastapi-app.modal.run",
     },
     llm: buildLLMConfig(env),
     storage: {
