@@ -42,20 +42,15 @@ class ModalServiceFactory:
 
         # Mount local shared package if requested
         if include_shared_package:
-            # We assume this code is running from repo root context mostly
-            # Try to resolve path to packages/shared/py
-            # Note: This logic assumes a standard repo structure
+            # Resolve path to packages/shared/py relative to this file
             try:
-                root_dir = os.path.dirname(
-                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                )
-                shared_pkg_path = os.path.join(root_dir, "writeo")
+                # This file is in packages/shared/py
+                shared_pkg_path = os.path.dirname(os.path.abspath(__file__))
 
-                # Check if we are in the right place
-                if os.path.exists(shared_pkg_path):
-                    image = image.run_commands(
-                        "mkdir -p /root/packages/shared/py"
-                    ).add_local_python_source("writeo")
+                # Check if we are in the right place (validating by presence of this file)
+                if os.path.exists(os.path.join(shared_pkg_path, "modal_utils.py")):
+                    # Mount the directory so its contents are importable
+                    image = image.add_local_python_source(shared_pkg_path)
             except Exception:
                 # Fallback or ignore if path resolution fails
                 pass
