@@ -813,11 +813,33 @@ export function transformLanguageToolResponse(
 
     // Defensive check: ensure all required properties are present
     if (!error.confidenceScore || typeof error.confidenceScore !== "number") {
+      // Always log this error (not just in CI) since it's critical
       console.error("[transformLanguageToolResponse] Error missing confidenceScore", {
-        error: Object.keys(error),
-        match: { offset: match.offset, ruleId: match.rule?.id, ruleType: match.rule?.type },
+        errorKeys: Object.keys(error),
+        errorValues: {
+          start: error.start,
+          end: error.end,
+          source: error.source,
+          confidenceScore: error.confidenceScore,
+        },
+        match: {
+          offset: match.offset,
+          length: match.length,
+          ruleId: match.rule?.id,
+          ruleType: match.rule?.type,
+          hasContext: !!match.context,
+        },
+        calculatedConfidence: confidenceScore,
       });
       error.confidenceScore = BASE_CONFIDENCE;
+    }
+
+    // Always ensure source is set
+    if (!error.source) {
+      console.error("[transformLanguageToolResponse] Error missing source", {
+        errorKeys: Object.keys(error),
+      });
+      error.source = "LT" as const;
     }
 
     errors.push(error);
