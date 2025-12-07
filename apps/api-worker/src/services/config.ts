@@ -15,6 +15,7 @@ export interface AssessorConfig {
     essay: boolean;
     corpus: boolean;
     feedback: boolean;
+    deberta: boolean;
   };
   grammar: {
     languageTool: boolean;
@@ -36,6 +37,7 @@ export interface AppConfig {
     feedbackUrl: string; // AES-FEEDBACK service URL
     gecUrl: string; // GEC-SEQ2SEQ service URL
     gectorUrl: string; // GEC-GECTOR service URL (fast)
+    debertaUrl: string; // AES-DEBERTA service URL
   };
   llm: {
     provider: LLMProvider;
@@ -106,6 +108,8 @@ export function buildConfig(env: Env): AppConfig {
       gecUrl: env.MODAL_GEC_URL || "https://rob-gilks--writeo-gec-service-fastapi-app.modal.run",
       gectorUrl:
         env.MODAL_GECTOR_URL || "https://rob-gilks--writeo-gector-service-fastapi-app.modal.run",
+      debertaUrl:
+        env.MODAL_DEBERTA_URL || "https://rob-gilks--writeo-deberta-fastapi-app.modal.run",
     },
     llm: buildLLMConfig(env),
     storage: {
@@ -125,6 +129,7 @@ export function buildConfig(env: Env): AppConfig {
           essay: assessorConfig.scoring.essay,
           corpus: assessorConfig.scoring.corpus,
           feedback: assessorConfig.scoring.feedback,
+          deberta: (assessorConfig.scoring as any).deberta ?? false,
         },
         grammar: {
           languageTool: assessorConfig.grammar.languageTool,

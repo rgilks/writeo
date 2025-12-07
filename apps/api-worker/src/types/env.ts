@@ -14,6 +14,7 @@ export type Env = {
   MODAL_FEEDBACK_URL?: string; // AES-FEEDBACK model service (dev mode)
   MODAL_GEC_URL?: string; // GEC-SEQ2SEQ model service (dev mode)
   MODAL_GECTOR_URL?: string; // GEC-GECTOR model service (fast GECToR)
+  MODAL_DEBERTA_URL?: string; // AES-DEBERTA model service (dimensional scoring)
   /** Default: "en-GB" */
   LT_LANGUAGE?: string;
 

@@ -47,6 +47,10 @@ export class ModalClient implements ModalService {
     return this.postJson(`${this.config.modal.feedbackUrl}/score`, { text });
   }
 
+  async scoreDeberta(text: string): Promise<Response> {
+    return this.postJson(`${this.config.modal.debertaUrl}/score`, { text, max_length: 512 });
+  }
+
   async correctGrammar(text: string): Promise<Response> {
     return this.postJson(`${this.config.modal.gecUrl}/gec_endpoint`, { text });
   }

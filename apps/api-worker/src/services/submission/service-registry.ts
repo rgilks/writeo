@@ -42,6 +42,23 @@ export interface FeedbackResult {
   error_types: Record<string, number>;
 }
 
+export interface DebertaResult {
+  type: "grader";
+  overall: number;
+  label: string;
+  dimensions: {
+    TA: number;
+    CC: number;
+    Vocab: number;
+    Grammar: number;
+    Overall: number;
+  };
+  metadata: {
+    model: string;
+    inference_time_ms: number;
+  };
+}
+
 // ============================================================================
 // Assessor IDs - Canonical identifiers used throughout the system
 // ============================================================================
@@ -53,6 +70,7 @@ export const ASSESSOR_IDS = {
   GECTOR: "GEC-GECTOR",
   ESSAY: "AES-ESSAY",
   LT: "GEC-LT",
+  DEBERTA: "AES-DEBERTA",
 } as const;
 
 // ============================================================================
@@ -146,6 +164,33 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
         label: d.cefr_level,
         cefr: d.cefr_level,
         meta: { model: "deberta-v3-base", errorTypes: d.error_types, devMode: true },
+      };
+    },
+  },
+  {
+    assessorId: ASSESSOR_IDS.DEBERTA,
+    id: "deberta",
+    displayName: "AES-DEBERTA (Dimensional)",
+    type: "grader",
+    configPath: "features.assessors.scoring.deberta",
+    timingKey: "5i_deberta_fetch",
+    model: "deberta-v3-large",
+    createRequest: (text, modal) => modal.scoreDeberta(text),
+    parseResponse: (json) => json as DebertaResult,
+    createAssessor: (data) => {
+      const d = data as DebertaResult;
+      return {
+        id: ASSESSOR_IDS.DEBERTA,
+        name: "AES-DEBERTA (Dimensional)",
+        type: "grader",
+        overall: d.overall,
+        label: d.label,
+        dimensions: d.dimensions, // Pass through dimensions!
+        meta: {
+          model: d.metadata?.model || "deberta-v3-large",
+          inference_time: d.metadata?.inference_time_ms,
+          devMode: true,
+        },
       };
     },
   },

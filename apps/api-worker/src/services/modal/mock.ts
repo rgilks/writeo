@@ -468,6 +468,37 @@ export class MockModalClient implements ModalService {
     );
   }
 
+  async scoreDeberta(text: string): Promise<Response> {
+    if (!text || typeof text !== "string") {
+      return new Response(JSON.stringify({ error: "Invalid text input" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+    const overall = wordCount > 150 ? 5.5 : 3.5;
+
+    return new Response(
+      JSON.stringify({
+        type: "grader",
+        overall: overall,
+        label: overall > 5.0 ? "B2" : "A2",
+        dimensions: {
+          TA: overall,
+          CC: overall,
+          Vocab: overall,
+          Grammar: overall,
+          Overall: overall,
+        },
+        metadata: {
+          model: "mock-deberta",
+          inference_time_ms: 10,
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   async correctGrammar(text: string): Promise<Response> {
     if (!text || typeof text !== "string") {
       return new Response(JSON.stringify({ error: "Invalid text input" }), {

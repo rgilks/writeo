@@ -2,7 +2,8 @@
   "scoring": {
     "essay": true,
     "corpus": true,
-    "feedback": false
+    "feedback": false,
+    "deberta": true
   },
 
   "grammar": {
@@ -16,6 +17,7 @@
     "essay": "AES-ESSAY - Required for dimensional scores (TA, CC, Vocab, Grammar)",
     "corpus": "AES-CORPUS - Best scorer (0.96 correlation with human labels)",
     "feedback": "AES-FEEDBACK - Experimental, incomplete training (OFF by default)",
+    "deberta": "AES-DEBERTA - DeBERTa-v3-large with dimensional scoring (New)",
     "languageTool": "GEC-LT - Typos, mechanics, punctuation",
     "gecSeq2seq": "GEC-SEQ2SEQ - Best GEC with precise diffs (slow: 12-16s)",
     "gecGector": "GEC-GECTOR - Fast GEC using token tagging (fast: 1-2s)",
