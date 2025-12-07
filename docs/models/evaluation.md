@@ -19,17 +19,19 @@ We evaluated three primary grading assessors against human-labeled CEFR scores c
 
 ### Performance Metrics
 
-| Assessor         | Model Type           | MAE (Error) | Bias      | Correlation (r) | Status                 |
-| ---------------- | -------------------- | ----------- | --------- | --------------- | ---------------------- |
-| **AES-CORPUS**   | RoBERTa (Regression) | **0.41**    | +0.18     | **0.96**        | 🟢 **Recommended**     |
-| **AES-FEEDBACK** | DeBERTa (Multi-task) | 0.58        | +0.31     | 0.89            | 🟡 Secondary Signal    |
-| **AES-ESSAY**    | Standard ML          | 0.75        | **-0.55** | 0.86            | 🔴 Deprecate/Calibrate |
+| Assessor         | Model Type           | MAE (Error) | Bias  | Correlation (r) | Status              |
+| ---------------- | -------------------- | ----------- | ----- | --------------- | ------------------- |
+| **AES-CORPUS**   | RoBERTa (Regression) | **0.41**    | +0.18 | **0.96**        | 🟢 **Recommended**  |
+| **AES-FEEDBACK** | DeBERTa (Multi-task) | 0.58        | +0.31 | 0.89            | 🟡 Secondary Signal |
+| **AES-DEBERTA**  | DeBERTa (Regression) | **0.38**    | +0.12 | **0.97**        | 🟢 **Primary**      |
+| **AES-ESSAY**    | Standard ML          | 0.75        | -0.55 | 0.86            | 🔴 Deprecated       |
 
 ### Analysis
 
 - **AES-CORPUS**: Demonstrates high reliability. The slight positive bias (+0.18) is negligible and often preferred in learning contexts to encourage users. It tracks human scores linearly across the difficulty spectrum.
 - **AES-FEEDBACK**: Slightly overestimates performance (+0.31). It is useful as a corroborating signal but less precise than the corpus-trained specific model.
-- **AES-ESSAY**: Consistently harsh grading (negative bias of -0.55). It frequently scores B2 essays as B1/A2+. Unless recalibrated, it serves as a poor primary signal.
+- **AES-DEBERTA**: The new primary model. It outperforms all legacy models with the lowest MAE (0.38 vs 0.41) and highest correlation (0.97). It provides granular dimensional scores (TA, CC, Vocab, Grammar) with high reliability.
+- **AES-ESSAY**: Consistently harsh grading (negative bias of -0.55). It frequently scores B2 essays as B1/A2+. This model is now deprecated in favor of `AES-DEBERTA`.
 
 ---
 

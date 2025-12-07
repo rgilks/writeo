@@ -30,21 +30,23 @@ Writeo supports multiple LLM providers for AI-powered feedback. This document pr
 
 Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaults optimize for cost:
 
-| Assessor     | Default | Cost Impact | Notes                           |
-| ------------ | ------- | ----------- | ------------------------------- |
-| AES-ESSAY    | ✅ ON   | ~$0.0001    | Required for dimensional scores |
-| AES-CORPUS   | ✅ ON   | ~$0.0001    | Best scorer (0.96 correlation)  |
-| GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs, slow)  |
-| GEC-GECTOR   | ✅ ON   | ~$0.00008   | Fast GEC (~10x faster)          |
-| GEC-LT       | ✅ ON   | ~$0.0001    | Typos, mechanics                |
-| AES-FEEDBACK | ❌ OFF  | ~$0.0001    | Experimental                    |
-| GEC-LLM      | ❌ OFF  | ~$0.002     | Expensive, redundant            |
+| Assessor     | Default | Cost Impact | Notes                          |
+| ------------ | ------- | ----------- | ------------------------------ |
+| AES-DEBERTA  | ✅ ON   | ~$0.0003    | Default high-accuracy scorer   |
+| AES-ESSAY    | ❌ OFF  | ~$0.0001    | Legacy (deprecated)            |
+| AES-CORPUS   | ✅ ON   | ~$0.0001    | Best scorer (0.96 correlation) |
+| GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs, slow) |
+| GEC-GECTOR   | ✅ ON   | ~$0.00008   | Fast GEC (~10x faster)         |
+| GEC-LT       | ✅ ON   | ~$0.0001    | Typos, mechanics               |
+| AES-FEEDBACK | ❌ OFF  | ~$0.0001    | Experimental                   |
+| GEC-LLM      | ❌ OFF  | ~$0.002     | Expensive, redundant           |
 
 **Modal Services Cost Breakdown:**
 
 | Service            | GPU  | Keep-Warm | Cost/Invocation | Notes                         |
 | ------------------ | ---- | --------- | --------------- | ----------------------------- |
-| **modal-essay**    | T4   | 30s       | ~$0.00008       | Essay scoring (RoBERTa)       |
+| **modal-deberta**  | A10G | 60s       | ~$0.00030       | DeBERTa-v3 Multi-Head         |
+| **modal-essay**    | T4   | 30s       | ~$0.00008       | Legacy Essay Scoring          |
 | **modal-corpus**   | T4   | 30s       | ~$0.00008       | Corpus-trained scorer         |
 | **modal-feedback** | T4   | 30s       | ~$0.00008       | Feedback model (experimental) |
 | **modal-lt**       | CPU  | 300s      | ~$0.00002       | LanguageTool grammar check    |
