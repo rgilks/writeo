@@ -50,6 +50,8 @@ export const ASSESSOR_IDS = {
   FEEDBACK: "T-AES-FEEDBACK",
   GEC: "T-GEC-SEQ2SEQ",
   GECTOR: "T-GEC-GECTOR",
+  ESSAY: "T-AES-ESSAY",
+  LT: "T-GEC-LT",
 } as const;
 
 // ============================================================================
@@ -191,6 +193,83 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
           edits: d.edits,
           correctedText: d.corrected,
           devMode: true,
+        },
+      };
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // Essay & Legacy Services
+  // -------------------------------------------------------------------------
+  {
+    assessorId: ASSESSOR_IDS.ESSAY,
+    id: "essay",
+    displayName: "Standard Essay Scorer",
+    type: "grader",
+    configPath: "features.assessors.scoring.essay",
+    timingKey: "5a_essay_fetch",
+    model: "roberta-base", // approximating main model
+    createRequest: async (text, modal) => {
+      // Construct a single-answer ModalRequest for this specific text
+      // Note: Cast to any to include 'template' which is required by Python service but missing in shared types
+      return modal.gradeEssay({
+        submission_id: "temp-sub-id",
+        parts: [
+          {
+            part: 1,
+            answers: [
+              { id: "temp-ans-id", question_id: "q1", question_text: "", answer_text: text },
+            ],
+          },
+        ],
+        assessors: [],
+        template: {},
+      } as any);
+    },
+    parseResponse: (json) => {
+      // Extract the first answer's result from the batch response
+      // json is AssessmentResults { results: { parts: [...] } }
+      const res = json as any;
+      const part = res.results?.parts?.[0];
+      const answer = part?.answers?.[0];
+      const essayResult = answer?.assessorResults?.find((ar: any) => ar.id === "T-AES-ESSAY");
+      return essayResult || null;
+    },
+    createAssessor: (data) => {
+      // data is already the AssessorResult extracted above
+      return data as AssessorResult;
+    },
+  },
+  {
+    assessorId: ASSESSOR_IDS.LT,
+    id: "lt",
+    displayName: "LanguageTool",
+    type: "feedback",
+    configPath: "features.assessors.grammar.languageTool",
+    timingKey: "5b_languagetool_fetch",
+    model: "languagetool",
+    createRequest: (text, modal) => {
+      // We need answerId for caching, but createRequest only provides text.
+      // Pass "registry-request" as placeholder answerId.
+      return modal.checkGrammar(text, "en-GB", "registry-request");
+    },
+    parseResponse: (json) => json as any,
+    createAssessor: (data) => {
+      const matches = (data as any).matches || [];
+      return {
+        id: ASSESSOR_IDS.LT,
+        name: "LanguageTool (OSS)",
+        type: "feedback",
+        errors: matches.map((m: any) => ({
+          message: m.message,
+          start: m.offset,
+          end: m.offset + m.length,
+          replacements: m.replacements?.map((r: any) => r.value) || [],
+          severity: m.rule?.issueType === "misspelling" ? "error" : "warning",
+        })),
+        meta: {
+          engine: "LT-OSS",
+          errorCount: matches.length,
         },
       };
     },

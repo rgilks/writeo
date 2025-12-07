@@ -14,7 +14,7 @@ except ImportError:
     sys.path.append(
         os.path.abspath(os.path.join(os.path.dirname(__file__), "../../packages/shared/py"))
     )
-    from modal_utils import ModalServiceFactory
+    from modal_utils import ModalServiceFactory  # type: ignore
 
 # Configuration
 APP_NAME = "writeo-lt"
@@ -69,7 +69,7 @@ custom_volumes = {
         scaledown_window=60,
     )
 )
-@modal.asgi_app()
+@modal.asgi_app()  # type: ignore
 def fastapi_app() -> Any:
     """FastAPI app for LanguageTool grammar checking endpoint."""
     import sys
