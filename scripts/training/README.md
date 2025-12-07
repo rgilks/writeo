@@ -47,7 +47,7 @@ Results are saved to `validation_results.json` and `validation_report.md`.
 - **URL**: `https://rob-gilks--writeo-corpus-fastapi-app.modal.run`
 - **Endpoint**: `POST /score`
 - **Performance**: QWK 0.87 (excellent), MAE 0.32, 100% adjacent accuracy
-- **Guide**: See [CORPUS_MODEL_GUIDE.md](../../docs/CORPUS_MODEL_GUIDE.md) for detailed explanation
+- **Guide**: See [Corpus Model Guide](../../docs/models/corpus.md) for details.
 
 **T-AES-ESSAY** (engessay model):
 

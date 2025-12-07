@@ -66,7 +66,7 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 **Lean Mode (default)**: ~$0.0005/submission (Modal only)  
 **Full Mode** (all enabled): ~$0.0025-0.006/submission (with LLM)
 
-See [ASSESSOR_EVALUATION_REPORT.md](ASSESSOR_EVALUATION_REPORT.md) for assessor performance data.
+See [Evaluation Report](../models/evaluation.md) for assessor performance data.
 
 ---
 
@@ -545,7 +545,7 @@ if (process.env.DISABLE_AI_FEEDBACK === "true") {
 - [OpenAI API Documentation](https://platform.openai.com/docs)
 - [OpenAI API Pricing](https://openai.com/pricing) - Check for current pricing
 - [Token Usage Guide](https://platform.openai.com/docs/guides/tokens)
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and cost estimates
-- [OPERATIONS.md](OPERATIONS.md) - Operations guide with cost information
+- [System Architecture](../architecture/overview.md) - System architecture and cost estimates
+- [Operations Guide](monitoring.md) - Operations guide with cost information
 
 ---

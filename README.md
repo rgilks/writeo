@@ -25,29 +25,21 @@ Writeo is a comprehensive, open-source automated essay scoring and feedback syst
 - **📊 CEFR Mapping**: Automatic mapping of scores to Common European Framework of Reference for Languages (A2-C2).
 - **🔒 Privacy First**: "Opt-in" server storage model. By default, data never leaves the user's browser storage.
 - **⚡ High Performance**: Serverless architecture with Cloudflare Workers and Modal, supporting parallel processing and scale-to-zero.
-- **💰 Cost Effective**: Operational modes to balance cost and performance (from ~$8/month to ~$25/month for moderate usage). See [COST_REVIEW.md](docs/COST_REVIEW.md) for details.
-- **📱 Progressive Web App**: Installable PWA with offline support, fast loading, and app-like experience.
+- **💰 Cost Effective**: Operational modes to balance cost and performance. See [Cost Analysis](docs/operations/cost.md).
+- **📱 Progressive Web App**: Installable PWA with offline support.
 
 ## 📚 Documentation
 
-**📖 [Full Documentation Index](docs/README.md)** - Complete documentation index with all guides and references.
+**📖 [Full Documentation Index](docs/README.md)** - Complete guide to Architecture, Operations, and Models.
 
-| Topic                                                                            | Description                                                             |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**                                      | System design, components, data flow, and technology stack.             |
-| **[API-ARCHITECTURE.md](docs/API-ARCHITECTURE.md)**                              | Detailed API Worker architecture (middleware, request flow, services).  |
-| **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**                                          | Step-by-step guide for deploying to production.                         |
-| **[COST_REVIEW.md](docs/COST_REVIEW.md)**                                        | Detailed cost analysis, guardrails, and pricing for OpenAI vs Groq.     |
-| **[MODES.md](docs/MODES.md)**                                                    | Quick guide for switching between Cheap Mode and Turbo Mode.            |
-| **[SERVICES.md](docs/SERVICES.md)**                                              | Documentation for Modal services (Essay Scoring, LanguageTool).         |
-| **[MODELS.md](docs/MODELS.md)**                                                  | Essay scoring models documentation and comparison.                      |
-| **[Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs)** | Complete API specification with request/response examples (Swagger UI). |
-| **[TESTING.md](docs/TESTING.md)**                                                | Testing guide and strategies.                                           |
-| **[OPERATIONS.md](docs/OPERATIONS.md)**                                          | Operational guide for logging, monitoring, and maintenance.             |
-| **[STATE_MANAGEMENT.md](docs/STATE_MANAGEMENT.md)**                              | Frontend state management (Zustand, Immer, patterns).                   |
-| **[PWA_SETUP.md](docs/PWA_SETUP.md)**                                            | Progressive Web App setup and configuration guide.                      |
-| **[SCRIPTS.md](docs/SCRIPTS.md)**                                                | Scripts reference and usage guide.                                      |
-| **[STATUS.md](docs/STATUS.md)**                                                  | Current status, roadmap, and production readiness.                      |
+### Key Resources
+
+| Topic            | Description                   | Link                                                              |
+| ---------------- | ----------------------------- | ----------------------------------------------------------------- |
+| **Architecture** | System design and API details | [docs/architecture/overview.md](docs/architecture/overview.md)    |
+| **Deployment**   | Production deployment guide   | [docs/operations/deployment.md](docs/operations/deployment.md)    |
+| **Operations**   | Monitoring, Logging, Cost     | [docs/operations/monitoring.md](docs/operations/monitoring.md)    |
+| **API Docs**     | Interactive Swagger UI        | [Live Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) |
 
 ## 🛠️ Architecture Overview
 
@@ -118,10 +110,10 @@ cd services/modal-essay
 modal deploy app.py
 
 # Deploy GEC Services
-cd ../modal_gec
+cd services/modal_gec
 modal deploy main.py
 
-cd ../modal-gector
+cd services/modal-gector
 modal deploy main.py
 ```
 
@@ -167,7 +159,7 @@ Switch modes easily:
 ./scripts/set-mode.sh cheap
 ```
 
-See **[MODES.md](docs/MODES.md)** and **[COST_REVIEW.md](docs/COST_REVIEW.md)** for details.
+See **[Operational Modes](docs/operations/modes.md)** and **[Cost Analysis](docs/operations/cost.md)** for details.
 
 ## 🧪 Testing
 
@@ -187,11 +179,11 @@ npm run test:e2e
 npx vitest tests/api.test.ts
 ```
 
-See **[TESTING.md](docs/TESTING.md)** for more info.
+See **[Testing Guide](docs/operations/testing.md)** for more info.
 
 ## 🗺️ Roadmap & Status
 
-See **[STATUS.md](docs/STATUS.md)** for current production status, completed features, known limitations, and roadmap.
+See **[Status](docs/reference/status.md)** for current production status, completed features, known limitations, and roadmap.
 
 ## 💬 Support
 

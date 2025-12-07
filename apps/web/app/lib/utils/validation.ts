@@ -56,11 +56,11 @@ export function validateAssessmentResults(results: unknown): {
     typeof results !== "object" ||
     results === null ||
     !("status" in results) ||
-    !("template" in results)
+    !("requestedAssessors" in results)
   ) {
     return {
       isValid: false,
-      error: "Invalid results format: missing required fields (status, template)",
+      error: "Invalid results format: missing required fields (status, requestedAssessors)",
     };
   }
 

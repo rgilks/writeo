@@ -50,7 +50,7 @@ export function useResubmit() {
           typeof results === "object" &&
           results !== null &&
           "status" in results &&
-          "template" in results
+          "requestedAssessors" in results
         ) {
           setResult(newSubmissionId, results as AssessmentResults);
         } else {

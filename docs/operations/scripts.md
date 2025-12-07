@@ -84,5 +84,9 @@ python scripts/calibrate-from-corpus.py
 ## References
 
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
-- [OPERATIONS.md](OPERATIONS.md) - Operations guide
+- [Operations Guide](monitoring.md) - Operations guide
 - [MODES.md](MODES.md) - Mode switching guide
+
+```
+
+```

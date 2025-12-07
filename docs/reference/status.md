@@ -48,7 +48,31 @@ All critical features have been verified through comprehensive browser testing:
 
 ## 🗺️ Roadmap
 
+**User-Facing Features:**
 Currently focused on stability and performance optimization. Future enhancements will be added based on user feedback.
+
+### Technical Implementation Roadmap
+
+#### Testing Improvements
+
+_Philosophy: Keep tests lean and focused._
+
+- **Low Priority**:
+  - Add text processing utility tests if logic complexity increases.
+  - Add service layer unit tests only if integration tests become insufficient.
+  - **Avoid**: Component tests (rely on E2E), simple wrapper tests.
+
+#### Hooks & State Management
+
+- **Future Considerations**:
+  - Consider Zustand for shared state (e.g., persistent feedback mode, global streaming state) if strict separation is needed.
+  - Monitor hook performance for unnecessary re-renders.
+
+#### Styling & CSS
+
+- **Future Considerations**:
+  - Migrate to CSS Modules only if global class conflicts arise.
+  - Document design system tokens if team size grows.
 
 ---
 
@@ -58,7 +82,7 @@ Currently focused on stability and performance optimization. Future enhancements
 - ✅ **Browser Verification** - Critical features verified
 - ✅ **Manual Testing** - Comprehensive test plan available
 
-See [TESTING.md](TESTING.md) for complete testing documentation.
+See- [Testing Guide](../operations/testing.md) for complete testing documentation.
 
 ---
 
@@ -68,4 +92,5 @@ See [TESTING.md](TESTING.md) for complete testing documentation.
 - All critical features working and verified
 - Comprehensive test coverage (automated + browser verification)
 - Privacy and security measures in place
-- See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for compliance details
+- [Testing Guide](../operations/testing.md)
+- [Legal Compliance](legal.md) for compliance details

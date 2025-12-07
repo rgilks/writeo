@@ -425,7 +425,11 @@ await page.evaluate(() => {
 
 ## References
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and frontend stack
-- [TESTING.md](TESTING.md) - Testing guide and strategies
+- [System Architecture](overview.md)
+- [Testing Guide](../operations/testing.md)
 - [Zustand Documentation](https://zustand-demo.pmnd.rs/) - Official Zustand documentation
 - [Immer Documentation](https://immerjs.github.io/immer/) - Official Immer documentation
+
+```
+
+```

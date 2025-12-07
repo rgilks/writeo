@@ -26,7 +26,9 @@ export interface SubmissionPart {
 
 export interface CreateSubmissionRequest {
   submission: SubmissionPart[];
-  template: { name: string; version: number };
+  assessors?: string[]; // Optional list of assessor IDs to run (defaults to all enabled)
+  // Deprecated: template is accepted but ignored for backward compatibility
+  template?: { name: string; version: number };
   // Note: parentSubmissionId and draftNumber are accepted but ignored for API compatibility
   // Draft tracking is handled in Server Actions, not the API
   // Opt-in server storage: if false or omitted, results are returned but not stored on server
@@ -44,7 +46,7 @@ export interface ModalAnswer {
 
 export interface ModalRequest {
   submission_id: string;
-  template: { name: string; version: number };
+  assessors: string[]; // List of assessor IDs to run
   parts: Array<{
     part: number;
     answers: ModalAnswer[];
@@ -176,7 +178,8 @@ export interface AssessmentResults {
   results?: {
     parts: AssessmentPart[];
   };
-  template: { name: string; version: number };
+  requestedAssessors: string[]; // What client asked for (or defaults if not specified)
+  activeAssessors: string[]; // What actually ran
   error_message?: string;
   meta?: Record<string, unknown>; // Metadata (e.g., answer texts, wordCount, errorCount, overallScore, timestamp, draft tracking info)
 }

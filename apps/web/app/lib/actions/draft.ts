@@ -74,7 +74,7 @@ export async function getDraftInfo(
           typeof fetched === "object" &&
           fetched !== null &&
           "status" in fetched &&
-          "template" in fetched
+          "requestedAssessors" in fetched
         ) {
           parentResultsData = fetched as AssessmentResults;
         }
@@ -154,7 +154,7 @@ export async function getSubmissionResultsWithDraftTracking(
     typeof fetched !== "object" ||
     fetched === null ||
     !("status" in fetched) ||
-    !("template" in fetched)
+    !("requestedAssessors" in fetched)
   ) {
     throw new Error("Invalid submission results format");
   }

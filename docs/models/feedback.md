@@ -2,7 +2,7 @@
 
 A comprehensive guide to the Multi-Task Feedback Model (T-AES-FEEDBACK).
 
-> **Note:** This model is primarily used for CEFR scoring. Specific grammatical error correction is now handled by the dedicated **GEC Service** (see [GEC_SERVICE.md](GEC_SERVICE.md)).
+> **Note:** This model is primarily used for CEFR scoring. Specific grammatical error correction is now handled by the dedicated **GEC Service** (see [GEC Service documentation](gec.md)).
 
 **Current Status:** Training complete with mixed results. CEFR scoring excellent (QWK 0.85), error detection requires improvement.
 
@@ -397,7 +397,7 @@ We map specific errors to 5 categories:
 
 ### Data Pipeline
 
-**Step 1: Parse M2 files** ([`parse_m2_annotations.py`](../scripts/training/parse_m2_annotations.py))
+**Step 1: Parse M2 files** ([`parse_m2_annotations.py`](../../scripts/training/parse_m2_annotations.py))
 
 ```python
 # Input: M2 file
@@ -428,7 +428,7 @@ bio_tags = ["O", "O", "B-ERROR", "O", "O", "O"]
 
 **⚠️ Issue:** Current implementation uses simplified BIO tagging that doesn't properly align with actual M2 error positions (see [Problems](#problems-encountered)).
 
-**Step 3: Generate enhanced dataset** ([`prepare-enhanced-corpus.py`](../scripts/training/prepare-enhanced-corpus.py))
+**Step 3: Generate enhanced dataset** ([`prepare-enhanced-corpus.py`](../../scripts/training/prepare-enhanced-corpus.py))
 
 ```python
 # Combines CEFR labels + error annotations
@@ -654,7 +654,7 @@ BIO tags: ["O", "O", "B-ERROR", "O"]  # ← WRONG! Random position
 
 ---
 
-**Step 3: Generate enhanced dataset** ([`prepare-enhanced-corpus.py`](../scripts/training/prepare-enhanced-corpus.py))
+**Step 3: Generate enhanced dataset** ([`prepare-enhanced-corpus.py`](../../scripts/training/prepare-enhanced-corpus.py))
 
 ```python
 # Combines CEFR labels + error annotations
@@ -2233,16 +2233,22 @@ A structured path to understand this project from scratch:
 
 ### Our Implementation
 
-- **Model architecture**: [`feedback_model.py`](../scripts/training/feedback_model.py)
-- **Data pipeline**: [`parse_m2_annotations.py`](../scripts/training/parse_m2_annotations.py)
-- **Training script**: [`train-feedback-model.py`](../scripts/training/train-feedback-model.py)
-- **Validation**: [`validate-feedback-model.py`](../scripts/training/validate-feedback-model.py)
+- **Model architecture**:
+- [`parse_m2_annotations.py`](../../scripts/training/parse_m2_annotations.py): Parse M2 files
+- [`prepare-enhanced-corpus.py`](../../scripts/training/prepare-enhanced-corpus.py): Merge datasets
+- [`feedback_model.py`](../../scripts/training/feedback_model.py): Model definition
+- [`train-feedback-model.py`](../../scripts/training/train-feedback-model.py): Training script
+- [`validate-feedback-model.py`](../../scripts/training/validate-feedback-model.py): Validation script
 
 ### Our Documentation
 
-- **Training walkthrough**: [Detailed results & analysis](../brain/walkthrough.md)
-- **CORPUS model**: [CORPUS_MODEL_GUIDE.md](CORPUS_MODEL_GUIDE.md) - Our baseline
-- **Task tracking**: [task.md](../brain/task.md)
+- **Training- **GECToR (Fast)\*\*: [GEC Service documentation](gec.md)
+- **LanguageTool**: Standard grammar check
+- **Corpus Scorer**: [Corpus Model Guide](corpus.md)
+
+### Reference
+
+- [Evaluation Report](evaluation.md)
 
 ### Direct Papers for This Project
 

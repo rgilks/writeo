@@ -1,7 +1,3 @@
-/**
- * Parallel service calls for submission processing
- */
-
 import type { ModalRequest, LanguageToolError, RelevanceCheck } from "@writeo/shared";
 import { getLLMAssessment } from "../ai-assessment";
 import { checkAnswerRelevance } from "../relevance";
@@ -9,6 +5,11 @@ import type { AppConfig } from "../config";
 import type { LLMProvider } from "../llm";
 import { iterateAnswers } from "./utils";
 import type { ModalService } from "../modal/types";
+import {
+  createServiceRequests,
+  executeServiceRequestsGeneric,
+  type ServiceRequest,
+} from "./service-registry";
 
 export interface ServiceRequests {
   ltRequests: Array<{ answerId: string; request: Promise<Response> }>;
@@ -24,10 +25,7 @@ export interface ServiceRequests {
     answerText: string;
     request: Promise<LanguageToolError[]>;
   }>;
-  corpusRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode corpus scoring
-  feedbackRequests: Array<{ answerId: string; request: Promise<Response> }>; // Dev mode T-AES-FEEDBACK
-  gecRequests: Array<{ answerId: string; request: Promise<Response> }>; // T-GEC-SEQ2SEQ (slow but precise)
-  gectorRequests: Array<{ answerId: string; request: Promise<Response> }>; // T-GEC-GECTOR (fast)
+  genericRequests: ServiceRequest[];
   llmProvider: LLMProvider;
   apiKey: string;
   aiModel: string;
@@ -60,17 +58,10 @@ export function prepareServiceRequests(
   const ltEnabled =
     (config.features.languageTool.enabled && config.modal.ltUrl) || config.features.mockServices;
   const requests: Array<{ answerId: string; request: Promise<Response> }> = [];
-
-  // Corpus scoring requests (dev mode / mock services)
-  const corpusRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
-  // Feedback scoring requests (dev mode / mock services)
-  const feedbackRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
-  // GEC Seq2Seq requests (T-GEC-SEQ2SEQ)
-  const gecRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
-  // GECToR requests (T-GEC-GECTOR - fast)
-  const gectorRequests: Array<{ answerId: string; request: Promise<Response> }> = [];
+  const genericRequests: ServiceRequest[] = [];
 
   for (const answer of iterateAnswers(modalParts)) {
+    // Legacy Services
     if (ltEnabled) {
       requests.push({
         answerId: answer.id,
@@ -85,7 +76,6 @@ export function prepareServiceRequests(
       request: checkAnswerRelevance(ai, answer.question_text, answer.answer_text, 0.5),
     });
 
-    // T-GEC-LLM: Only run if explicitly enabled (expensive, $0.002/submission)
     if (config.features.assessors.grammar.gecLlm) {
       llmAssessmentRequests.push({
         answerId: answer.id,
@@ -97,42 +87,19 @@ export function prepareServiceRequests(
           answer.question_text,
           answer.answer_text,
           config.llm.model,
-          config.features.mockServices, // Pass mock flag from config
+          config.features.mockServices,
         ),
       });
     }
 
-    // T-AES-CORPUS: Add corpus scoring if enabled (default: ON, best scorer)
-    if (config.features.assessors.scoring.corpus) {
-      corpusRequests.push({
-        answerId: answer.id,
-        request: modalService.scoreCorpus(answer.answer_text),
-      });
-    }
-
-    // T-AES-FEEDBACK: Add feedback scoring if enabled (default: OFF, experimental)
-    if (config.features.assessors.scoring.feedback) {
-      feedbackRequests.push({
-        answerId: answer.id,
-        request: modalService.scoreFeedback(answer.answer_text),
-      });
-    }
-
-    // T-GEC-SEQ2SEQ: Add GEC correction if enabled (default: ON, best GEC)
-    if (config.features.assessors.grammar.gecSeq2seq) {
-      gecRequests.push({
-        answerId: answer.id,
-        request: modalService.correctGrammar(answer.answer_text),
-      });
-    }
-
-    // T-GEC-GECTOR: Add fast GECToR correction if enabled (default: ON, ~10x faster)
-    if (config.features.assessors.grammar.gecGector) {
-      gectorRequests.push({
-        answerId: answer.id,
-        request: modalService.correctGrammarGector(answer.answer_text),
-      });
-    }
+    // Generic Registry Services (Corpus, Feedback, GEC, GECToR, etc.)
+    const registryRequests = createServiceRequests(
+      answer.id,
+      answer.answer_text,
+      modalService,
+      config,
+    );
+    genericRequests.push(...registryRequests);
   }
 
   ltRequests = requests;
@@ -141,10 +108,7 @@ export function prepareServiceRequests(
     ltRequests,
     relevanceRequests,
     llmAssessmentRequests,
-    corpusRequests,
-    feedbackRequests,
-    gecRequests,
-    gectorRequests,
+    genericRequests,
     llmProvider: config.llm.provider,
     apiKey: config.llm.apiKey,
     aiModel: config.llm.model,
@@ -162,93 +126,69 @@ export async function executeServiceRequests(
   ltResults: PromiseSettledResult<Response[]>;
   llmResults: PromiseSettledResult<LanguageToolError[][]>;
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>;
-  corpusResults: PromiseSettledResult<Response[]>;
-  feedbackResults: PromiseSettledResult<Response[]>;
-  gecResults: PromiseSettledResult<Response[]>;
-  gectorResults: PromiseSettledResult<Response[]>;
+  genericResults: Map<string, Map<string, unknown>>;
 }> {
   const essayStartTime = performance.now();
-  const {
-    ltRequests,
-    llmAssessmentRequests,
-    relevanceRequests,
-    corpusRequests,
-    feedbackRequests,
-    gecRequests,
-    gectorRequests,
-    modalService,
-  } = serviceRequests;
+  const { ltRequests, llmAssessmentRequests, relevanceRequests, genericRequests, modalService } =
+    serviceRequests;
 
-  const [
-    essayResult,
-    ltResults,
-    llmResults,
-    relevanceResults,
-    corpusResults,
-    feedbackResults,
-    gecResults,
-    gectorResults,
-  ] = await Promise.allSettled([
-    (async () => {
-      const start = performance.now();
-      const result = await modalService.gradeEssay(modalRequest);
-      timings["5a_essay_fetch"] = performance.now() - start;
-      return result;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(ltRequests.map((r) => r.request));
-      timings["5b_languagetool_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(llmAssessmentRequests.map((r) => r.request));
-      timings["5d_ai_assessment_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(relevanceRequests.map((r) => r.request));
-      timings["5c_relevance_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(corpusRequests.map((r) => r.request));
-      timings["5e_corpus_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(feedbackRequests.map((r) => r.request));
-      timings["5f_feedback_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(gecRequests.map((r) => r.request));
-      timings["5g_gec_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-    (async () => {
-      const start = performance.now();
-      const resolved = await Promise.all(gectorRequests.map((r) => r.request));
-      timings["5h_gector_fetch"] = performance.now() - start;
-      return resolved;
-    })(),
-  ]);
+  // Start parallel execution
+  const essayPromise = (async () => {
+    const start = performance.now();
+    const result = await modalService.gradeEssay(modalRequest);
+    timings["5a_essay_fetch"] = performance.now() - start;
+    return result;
+  })();
+
+  const ltPromise = (async () => {
+    const start = performance.now();
+    const resolved = await Promise.all(ltRequests.map((r) => r.request));
+    timings["5b_languagetool_fetch"] = performance.now() - start;
+    return resolved;
+  })();
+
+  const llmPromise = (async () => {
+    const start = performance.now();
+    const resolved = await Promise.all(llmAssessmentRequests.map((r) => r.request));
+    timings["5d_ai_assessment_fetch"] = performance.now() - start;
+    return resolved;
+  })();
+
+  const relevancePromise = (async () => {
+    const start = performance.now();
+    const resolved = await Promise.all(relevanceRequests.map((r) => r.request));
+    timings["5c_relevance_fetch"] = performance.now() - start;
+    return resolved;
+  })();
+
+  const genericPromise = executeServiceRequestsGeneric(genericRequests, timings);
+
+  const [essayResult, ltResults, llmResults, relevanceResults, genericResults] =
+    await Promise.allSettled([
+      essayPromise,
+      ltPromise,
+      llmPromise,
+      relevancePromise,
+      genericPromise,
+    ]);
 
   timings["5_parallel_services_total"] = performance.now() - essayStartTime;
+
+  // Unpack genericResults from PromiseSettledResult if successful, else generic empty map
+  const finalGenericResults =
+    genericResults.status === "fulfilled"
+      ? genericResults.value
+      : new Map<string, Map<string, unknown>>();
+
+  if (genericResults.status === "rejected") {
+    console.error("Generic services failed:", genericResults.reason);
+  }
 
   return {
     essayResult,
     ltResults,
     llmResults,
     relevanceResults,
-    corpusResults,
-    feedbackResults,
-    gecResults,
-    gectorResults,
+    genericResults: finalGenericResults,
   };
 }

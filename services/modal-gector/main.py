@@ -6,56 +6,69 @@ compared to Seq2Seq models.
 
 import os
 from typing import Any
-
 import modal
 
-# Modal app configuration
+# Import factory from shared package
+try:
+    from modal_utils import ModalServiceFactory
+except ImportError:
+    import sys
+
+    sys.path.append(
+        os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../../packages/shared/py")
+        )
+    )
+    from modal_utils import ModalServiceFactory
+
+# Configuration
 APP_NAME = "writeo-gector-service"
 VOLUME_NAME = "writeo-gector-models"
 VOLUME_MOUNT = "/models"
 
-# Function configuration
-TIMEOUT_SECONDS = 300
-GPU_TYPE = "T4"  # Cheaper GPU sufficient for encoder-only model
-SCALEDOWN_WINDOW_SECONDS = 60  # 1 min keep-warm
+# Dependencies
+# GECToR requires Python 3.11 and specific torch version
+PYTHON_VERSION = "3.11"
+SYSTEM_PACKAGES = ["git"]
+PIP_PACKAGES = [
+    "torch>=2.6.0",
+    "transformers>=4.36.0",
+    "fastapi[standard]",
+    "pydantic>=2.5.0",
+    "git+https://github.com/gotutiyan/gector.git",
+]
 
-# Path for app files
-REMOTE_APP_PATH = "/app"
-
-# Modal app and image setup
-app = modal.App(APP_NAME)
-
-# Create image with dependencies
-image = (
-    modal.Image.debian_slim(python_version="3.11")
-    .apt_install("git")  # Required for pip install from git
-    .pip_install(
-        "torch>=2.6.0",  # GECToR requires torch>=2.6.0
-        "transformers>=4.36.0",
-        "fastapi[standard]",
-        "pydantic>=2.5.0",
-        "git+https://github.com/gotutiyan/gector.git",  # GECToR package
-    )
-    .add_local_dir(os.path.dirname(__file__), remote_path=REMOTE_APP_PATH, copy=True)
+# Create app using factory
+app, image = ModalServiceFactory.create_app(
+    name=APP_NAME,
+    image_python_version=PYTHON_VERSION,
+    system_packages=SYSTEM_PACKAGES,
+    pip_packages=PIP_PACKAGES,
+    app_dir=os.path.dirname(__file__),
+    # Original service didn't mount shared package, but we can include it or not.
+    # Default is True, keeping it True is standard for new services.
 )
-
-# Create volume for model caching
-volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
 
 
 @app.function(
-    image=image,
-    volumes={VOLUME_MOUNT: volume},
-    timeout=TIMEOUT_SECONDS,
-    gpu=GPU_TYPE,
-    scaledown_window=SCALEDOWN_WINDOW_SECONDS,
+    **ModalServiceFactory.get_default_function_kwargs(
+        image=image,
+        volume_name=VOLUME_NAME,
+        volume_mount=VOLUME_MOUNT,
+        gpu="T4",
+        timeout=300,
+        scaledown_window=60,
+        # Default memory is 4096MB
+    )
 )
 @modal.asgi_app()
 def fastapi_app() -> Any:
     """FastAPI app for GECToR (Fast Grammar Error Correction) service."""
     import sys
 
-    sys.path.insert(0, REMOTE_APP_PATH)
+    if "/app" not in sys.path:
+        sys.path.insert(0, "/app")
+
     from api import create_fastapi_app
 
     return create_fastapi_app()

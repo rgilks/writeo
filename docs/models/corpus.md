@@ -40,11 +40,7 @@ The [Write & Improve corpus](https://www.cambridge.org/elt/blog/2018/08/07/write
 
 ### Data Preparation
 
-The [`prepare-corpus.py`](scripts/training/prepare-corpus.py) script:
-
-1. **Downloads** the raw corpus from Hugging Face
-2. **Extracts** essay text and CEFR labels
-3. **Converts** CEFR levels to numeric scores (A2=3.0, B1=4.5, B2=6.0, etc.)
+3. **Converts** CEFR levels to numeric scores
 4. **Splits** data based on original corpus metadata:
    - **Train**: 3,784 essays (80%) - used to train the model
    - **Dev**: 476 essays (10%) - used to tune hyperparameters
@@ -113,7 +109,7 @@ The training happens on **Modal's cloud GPU** to handle the computational load:
 
 ### 2. Training Configuration
 
-Key settings (from [`config.py`](scripts/training/config.py)):
+Key settings (from [`config.py`](../../scripts/training/config.py)):
 
 ```python
 # Model
@@ -298,7 +294,7 @@ The model is deployed as a FastAPI service on Modal:
 
 ### Usage in Application
 
-The model is called via [`ModalClient`](apps/api-worker/src/services/modal/client.ts):
+The model is called via- **[`ModalClient`](../../apps/api-worker/src/services/modal/client.ts)**: API interfacescript
 
 ```typescript
 async scoreCorpus(text: string): Promise<Response> {
@@ -366,10 +362,10 @@ async scoreCorpus(text: string): Promise<Response> {
 
 **Code & Implementation:**
 
-- 📁 [Training script](scripts/training/train-overall-score.py) - Full training implementation
-- 📁 [Evaluation](scripts/training/evaluate-model.py) - Metrics computation
-- 📁 [Validation](scripts/training/validate-assessors.py) - Production validation
-- 📁 [Configuration](scripts/training/config.py) - Hyperparameters
+- **Training**: [`train-overall-score.py`](../../scripts/training/train-overall-score.py)
+- **Evaluation**: [`evaluate-model.py`](../../scripts/training/evaluate-model.py)
+- **Validation**: [`validate-assessors.py`](../../scripts/training/validate-assessors.py)
+- **Configuration**: [`config.py`](../../scripts/training/config.py)
 
 **Research Papers:**
 
@@ -391,7 +387,7 @@ async scoreCorpus(text: string): Promise<Response> {
 1. **Start**: Watch [But what is a GPT?](https://www.youtube.com/watch?v=wjZofJX0v4M) (27 min)
 2. **Read**: [The Illustrated Transformer](https://jalammar.github.io/illustrated-transformer/) (30 min)
 3. **Understand**: [The Illustrated BERT](https://jalammar.github.io/illustrated-bert/) (20 min)
-4. **Apply**: Read our [training script](scripts/training/train-overall-score.py) with new context
+4. **Apply**: Read our [training script](../../scripts/training/train-overall-score.py) with new context
 5. **Metrics**: [Kappa Score Explained](https://towardsdatascience.com/interpretation-of-kappa-values-2acd1ca7b18f) (10 min)
 
 **Total time**: ~2 hours to solid understanding ✅

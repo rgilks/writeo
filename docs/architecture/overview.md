@@ -171,7 +171,10 @@ graph TB
 - DevTools integration for debugging
 - Automatic localStorage persistence
 
-See [STATE_MANAGEMENT.md](STATE_MANAGEMENT.md) for detailed documentation.
+See- [State Management](state-management.md)
+
+- [Legal Compliance](../reference/legal.md)
+- [Cost Analysis](../operations/cost.md)
 
 ### 3.2 Modal Services
 
@@ -468,7 +471,10 @@ sequenceDiagram
 - ⚠️ Data breach notification procedures needed
 - ⚠️ Age verification may be needed (if serving children)
 
-See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for detailed compliance information.
+See- [Legal Compliance](../reference/legal.md)
+
+- [Cost Analysis](../operations/cost.md)
+  compliance information.
 
 ### 5.6 Best Practices
 
@@ -518,7 +524,7 @@ See [LEGAL_COMPLIANCE.md](LEGAL_COMPLIANCE.md) for detailed compliance informati
 
 ### 6.3 Cost Information
 
-See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis, including per-submission costs, monthly estimates, and cost controls.
+See [Cost Analysis](../operations/cost.md) for detailed cost analysis, including per-submission costs, monthly estimates, and cost controls.
 
 ### 6.4 Performance Optimizations Implemented
 

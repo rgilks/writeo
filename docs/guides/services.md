@@ -61,7 +61,7 @@ modal deploy app.py
 
 ### Model Details
 
-See [MODELS.md](MODELS.md) for model documentation and comparison.
+See [Model Documentation](../models/overview.md) for model documentation and comparison.
 
 ## Modal LanguageTool Service
 
@@ -205,5 +205,6 @@ from schemas import (
 
 ## References
 
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
+- [Deployment Guide](../operations/deployment.md) - Deployment guide
+- [System Architecture](../architecture/overview.md) - System architecture
+- [Model Documentation](../models/overview.md) - Model details

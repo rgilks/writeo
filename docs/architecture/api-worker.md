@@ -850,9 +850,6 @@ The architecture prioritizes maintainability and developer experience while ensu
 
 ## References
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System-wide architecture and design
-- [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) - Complete API specification (Swagger UI)
-- [OpenAPI Spec](openapi.yaml) - Machine-readable API specification
-- [OPERATIONS.md](OPERATIONS.md) - Operations guide and environment configuration
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
-- [SERVICES.md](SERVICES.md) - Service documentation
+See [Services Guide](../guides/services.md) for more details.
+See [OpenAPI Spec](../reference/openapi.yaml) for endpoint definitions.
+See [Operations Guide](../operations/monitoring.md) for deployment info.

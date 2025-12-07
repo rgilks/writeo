@@ -80,7 +80,7 @@ describe("validation utilities", () => {
       const result = validateAssessmentResults(null);
       expect(result.isValid).toBe(false);
       expect(result.error).toBe(
-        "Invalid results format: missing required fields (status, template)",
+        "Invalid results format: missing required fields (status, requestedAssessors)",
       );
     });
 
@@ -88,7 +88,7 @@ describe("validation utilities", () => {
       const result = validateAssessmentResults(undefined);
       expect(result.isValid).toBe(false);
       expect(result.error).toBe(
-        "Invalid results format: missing required fields (status, template)",
+        "Invalid results format: missing required fields (status, requestedAssessors)",
       );
     });
 
@@ -96,30 +96,31 @@ describe("validation utilities", () => {
       const result = validateAssessmentResults("not an object");
       expect(result.isValid).toBe(false);
       expect(result.error).toBe(
-        "Invalid results format: missing required fields (status, template)",
+        "Invalid results format: missing required fields (status, requestedAssessors)",
       );
     });
 
     it("should return invalid for object without status", () => {
-      const result = validateAssessmentResults({ template: { name: "test" } });
+      const result = validateAssessmentResults({ requestedAssessors: [] });
       expect(result.isValid).toBe(false);
       expect(result.error).toBe(
-        "Invalid results format: missing required fields (status, template)",
+        "Invalid results format: missing required fields (status, requestedAssessors)",
       );
     });
 
-    it("should return invalid for object without template", () => {
+    it("should return invalid for object without requestedAssessors", () => {
       const result = validateAssessmentResults({ status: "success" });
       expect(result.isValid).toBe(false);
       expect(result.error).toBe(
-        "Invalid results format: missing required fields (status, template)",
+        "Invalid results format: missing required fields (status, requestedAssessors)",
       );
     });
 
-    it("should return valid for object with status and template", () => {
+    it("should return valid for object with status and requestedAssessors", () => {
       const result = validateAssessmentResults({
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: ["T-AES-CORPUS"],
+        activeAssessors: ["T-AES-CORPUS"],
       });
       expect(result.isValid).toBe(true);
       expect(result.error).toBeNull();
@@ -128,7 +129,8 @@ describe("validation utilities", () => {
     it("should return valid for object with additional properties", () => {
       const result = validateAssessmentResults({
         status: "success",
-        template: { name: "test", version: 1 },
+        requestedAssessors: ["T-AES-CORPUS"],
+        activeAssessors: ["T-AES-CORPUS"],
         results: { parts: [] },
         meta: {},
       });
@@ -140,7 +142,7 @@ describe("validation utilities", () => {
   describe("validateSubmissionResponse", () => {
     it("should return invalid when submissionId is missing", () => {
       const result = validateSubmissionResponse({
-        results: { status: "success", template: { name: "test" } },
+        results: { status: "success", requestedAssessors: [] },
       });
       expect(result.isValid).toBe(false);
       expect(result.error).toBe("No submission ID or results returned");
@@ -167,7 +169,7 @@ describe("validation utilities", () => {
       });
       expect(result.isValid).toBe(false);
       expect(result.error).toBe(
-        "Invalid results format: missing required fields (status, template)",
+        "Invalid results format: missing required fields (status, requestedAssessors)",
       );
     });
 
@@ -176,7 +178,8 @@ describe("validation utilities", () => {
         submissionId: "test-id",
         results: {
           status: "success",
-          template: { name: "test", version: 1 },
+          requestedAssessors: ["T-AES-CORPUS"],
+          activeAssessors: ["T-AES-CORPUS"],
         },
       });
       expect(result.isValid).toBe(true);

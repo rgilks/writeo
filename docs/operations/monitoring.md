@@ -241,11 +241,15 @@ Writeo supports two operational modes optimized for different use cases. See [MO
 - **🪙 Cheap Mode**: OpenAI GPT-4o-mini, scale-to-zero
 - **⚡ Turbo Mode**: Groq Llama 3.3 70B, keep warm
 
-See [COST_REVIEW.md](COST_REVIEW.md) for detailed cost analysis.
+See [Cost Analysis](cost.md) for detailed cost analysis.
 
 ## References
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
+- [System Architecture](../architecture/overview.md)
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
 - [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) - API specification (Swagger UI)
-- [OpenAPI Spec](openapi.yaml) - Machine-readable API specification
+- [OpenAPI Spec](../reference/openapi.yaml) - Machine-readable API specification
+
+```
+
+```

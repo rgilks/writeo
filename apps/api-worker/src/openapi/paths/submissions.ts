@@ -120,6 +120,13 @@ export const submissionsPath = {
                     version: { type: "integer" as const, example: 1 },
                   },
                 },
+                assessors: {
+                  type: "array" as const,
+                  items: { type: "string" as const },
+                  description:
+                    "Optional list of specific assessors to run. If omitted, all assessors enabled for the template will run. Example: ['T-AES-ESSAY', 'T-GEC-LT']",
+                  example: ["T-AES-ESSAY", "T-GEC-LT"],
+                },
                 storeResults: {
                   type: "boolean" as const,
                   description: "Whether to store results on the server (default: false)",

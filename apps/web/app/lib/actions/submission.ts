@@ -31,7 +31,7 @@ interface SubmissionBody {
     part: number;
     answers: AnswerPayload[];
   }>;
-  template: { name: string; version: number };
+  assessors?: string[]; // Optional - defaults to all enabled on server
   storeResults: boolean;
 }
 
@@ -65,7 +65,7 @@ export async function createSubmission(
         answers: [answerPayload],
       },
     ],
-    template: { name: "generic", version: 1 },
+    // assessors not specified = use all server defaults
     storeResults,
   };
 

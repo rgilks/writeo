@@ -13,7 +13,7 @@ import traceback
 from typing import Any
 from uuid import uuid4
 
-import requests  # type: ignore[import-untyped]
+import requests
 import uvicorn
 
 # Add the current directory to the path so we can import the modules

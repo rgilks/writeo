@@ -155,10 +155,7 @@ async function processServiceResults(
   ltResults: PromiseSettledResult<Response[]>,
   llmResults: PromiseSettledResult<LanguageToolError[][]>,
   relevanceResults: PromiseSettledResult<(RelevanceCheck | null)[]>,
-  corpusResults: PromiseSettledResult<Response[]>,
-  feedbackResults: PromiseSettledResult<Response[]>,
-  gecResults: PromiseSettledResult<Response[]>,
-  gectorResults: PromiseSettledResult<Response[]>,
+  genericResults: Map<string, Map<string, unknown>>,
   serviceRequests: ReturnType<typeof prepareServiceRequests>,
   modalRequest: ModalRequest,
   submissionId: string,
@@ -196,151 +193,6 @@ async function processServiceResults(
   );
   timings["9_process_relevance"] = performance.now() - processRelevanceStartTime;
 
-  // Process corpus scoring results
-  const processCorpusStartTime = performance.now();
-  const corpusScoresByAnswerId = new Map<string, { score: number; cefr_level: string }>();
-  if (corpusResults.status === "fulfilled") {
-    const responses = corpusResults.value;
-    for (let i = 0; i < responses.length; i++) {
-      const response = responses[i];
-      const answerId = serviceRequests.corpusRequests[i]?.answerId;
-      if (answerId && response && response.ok) {
-        try {
-          const data = (await response.json()) as { score: number; cefr_level: string };
-          corpusScoresByAnswerId.set(answerId, data);
-        } catch (e) {
-          // Ignore parsing errors for corpus results
-        }
-      }
-    }
-  }
-  timings["9b_process_corpus"] = performance.now() - processCorpusStartTime;
-
-  // Process feedback scoring results
-  const processFeedbackStartTime = performance.now();
-  const feedbackScoresByAnswerId = new Map<
-    string,
-    {
-      cefr_score: number;
-      cefr_level: string;
-      error_spans: Array<{ start: number; tokens: string[] }>;
-      error_types: Record<string, number>;
-    }
-  >();
-  if (feedbackResults.status === "fulfilled") {
-    const responses = feedbackResults.value;
-    for (let i = 0; i < responses.length; i++) {
-      const response = responses[i];
-      const answerId = serviceRequests.feedbackRequests[i]?.answerId;
-      if (answerId && response && response.ok) {
-        try {
-          const data = (await response.json()) as {
-            cefr_score: number;
-            cefr_level: string;
-            error_spans: Array<{ start: number; tokens: string[] }>;
-            error_types: Record<string, number>;
-          };
-          feedbackScoresByAnswerId.set(answerId, data);
-        } catch (e) {
-          // Ignore parsing errors for feedback results
-        }
-      }
-    }
-  }
-  timings["9c_process_feedback"] = performance.now() - processFeedbackStartTime;
-
-  // Process GEC correction results
-  const processGECStartTime = performance.now();
-  const gecScoresByAnswerId = new Map<
-    string,
-    {
-      original: string;
-      corrected: string;
-      edits: Array<{
-        start: number;
-        end: number;
-        original: string;
-        correction: string;
-        type: string;
-      }>;
-    }
-  >();
-  if (gecResults.status === "fulfilled") {
-    const responses = gecResults.value;
-    for (let i = 0; i < responses.length; i++) {
-      const response = responses[i];
-      const answerId = serviceRequests.gecRequests[i]?.answerId;
-      if (answerId && response && response.ok) {
-        try {
-          const data = (await response.json()) as {
-            original: string;
-            corrected: string;
-            edits: Array<{
-              start: number;
-              end: number;
-              original: string;
-              correction: string;
-              type: string;
-            }>;
-          };
-          gecScoresByAnswerId.set(answerId, data);
-        } catch (e) {
-          // Ignore parsing errors for GEC results
-          safeLogError("Failed to parse GEC response", { error: String(e), answerId }, null as any);
-        }
-      }
-    }
-  }
-  timings["9d_process_gec"] = performance.now() - processGECStartTime;
-
-  // Process GECToR results (T-GEC-GECTOR - fast version)
-  const processGectorStartTime = performance.now();
-  const gectorScoresByAnswerId = new Map<
-    string,
-    {
-      original: string;
-      corrected: string;
-      edits: Array<{
-        start: number;
-        end: number;
-        original: string;
-        correction: string;
-        type: string;
-      }>;
-    }
-  >();
-  if (gectorResults.status === "fulfilled") {
-    const responses = gectorResults.value;
-    for (let i = 0; i < responses.length; i++) {
-      const response = responses[i];
-      const answerId = serviceRequests.gectorRequests[i]?.answerId;
-      if (answerId && response && response.ok) {
-        try {
-          const data = (await response.json()) as {
-            original: string;
-            corrected: string;
-            edits: Array<{
-              start: number;
-              end: number;
-              original: string;
-              correction: string;
-              type: string;
-            }>;
-          };
-          gectorScoresByAnswerId.set(answerId, data);
-        } catch (e) {
-          // Ignore parsing errors for GECToR results
-          safeLogError(
-            "Failed to parse GECToR response",
-            { error: String(e), answerId },
-            null as any,
-          );
-        }
-      }
-    }
-  }
-  timings["9e_process_gector"] = performance.now() - processGectorStartTime;
-
   return {
     essayAssessment,
     ltErrorsByAnswerId,
@@ -348,10 +200,7 @@ async function processServiceResults(
     answerTextsByAnswerId,
     essayScoresByAnswerId,
     relevanceByAnswerId,
-    corpusScoresByAnswerId,
-    feedbackScoresByAnswerId,
-    gecScoresByAnswerId,
-    gectorScoresByAnswerId,
+    genericResults,
   };
 }
 
@@ -434,10 +283,7 @@ export async function processSubmission(
       ltResults,
       llmResults,
       relevanceResults,
-      corpusResults,
-      feedbackResults,
-      gecResults,
-      gectorResults,
+      genericResults, // New generic results map
     } = await executeServiceRequests(modalRequest, serviceRequests, config, timings);
 
     // Phase 4: Process service results
@@ -446,10 +292,7 @@ export async function processSubmission(
       ltResults,
       llmResults,
       relevanceResults,
-      corpusResults,
-      feedbackResults,
-      gecResults,
-      gectorResults,
+      genericResults,
       serviceRequests,
       modalRequest,
       submissionId,
@@ -491,10 +334,7 @@ export async function processSubmission(
       teacherFeedbackByAnswerId,
       languageToolEnabled,
       llmAssessmentEnabled,
-      processedResults.corpusScoresByAnswerId, // Add corpus scores
-      processedResults.feedbackScoresByAnswerId, // Add feedback scores
-      processedResults.gecScoresByAnswerId, // Add GEC Seq2Seq scores
-      processedResults.gectorScoresByAnswerId, // Add GECToR fast scores
+      processedResults.genericResults, // Pass generic results map
     );
     timings["10_merge_results"] = performance.now() - mergeStartTime;
 

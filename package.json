@@ -36,7 +36,6 @@
     "type-check": "npm run type-check --workspaces --if-present",
     "type-check:py": "mypy services/modal-essay --config-file services/modal-essay/pyproject.toml && mypy services/modal-lt --config-file services/modal-lt/pyproject.toml && mypy packages/shared/py --config-file packages/shared/py/pyproject.toml",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
-    "nuke": "./scripts/nuke.sh",
     "setup": "./scripts/setup.sh",
     "install-hooks": "./scripts/install-hooks.sh"
   },

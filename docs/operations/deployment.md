@@ -34,7 +34,8 @@ Writeo supports two operational modes:
 - **Performance:** 2-5s first request, 1-3s warm
 
 See [MODES.md](MODES.md) for quick mode switching guide.  
-See [OPERATIONS.md](OPERATIONS.md) for detailed mode comparison and configuration.
+See [Operations Guide](monitoring.md) for post-deployment management.
+See [OpenAPI Spec](../reference/openapi.yaml) for API details.
 
 ## Quick Deployment
 
@@ -146,7 +147,10 @@ wrangler secret put OPENAI_API_KEY
 wrangler secret list
 ```
 
-**Important**: The `API_KEY` must match the key used in your frontend's `.env.local` file (for local development) or Cloudflare environment variables (for production). See [OPERATIONS.md](OPERATIONS.md) for details.
+**Important**: The `API_KEY` must match the key used in your frontend's `.env.local` file (for local development) or Cloudflare environment variables (for production).
+
+- See [OpenAPI Spec](../reference/openapi.yaml) for endpoint details
+- See [Operations Guide](monitoring.md) for monitoring setup
 
 ### Step 4: Verify Configuration
 
@@ -237,7 +241,7 @@ curl -X POST "$API_BASE/v1/text/submissions" -H "Authorization: Token $API_KEY" 
 curl -H "Authorization: Token $API_KEY" "$API_BASE/v1/text/submissions/$SUBMISSION_ID"
 ```
 
-See the [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) or [OpenAPI Spec](openapi.yaml) for complete API examples.
+See the [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) or [OpenAPI Spec](../reference/openapi.yaml) for complete API examples.
 
 ### Frontend Testing
 
@@ -259,7 +263,7 @@ See the [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/d
 
 **Key Metrics:** Request count/errors, response times, KV/R2 usage
 
-See [docs/OPERATIONS.md](docs/OPERATIONS.md) for detailed logging and monitoring guidance.
+See [Operations Guide](monitoring.md) for detailed logging and monitoring guidance.
 
 ## Troubleshooting
 

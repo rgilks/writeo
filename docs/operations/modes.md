@@ -79,4 +79,5 @@ echo "groq" | wrangler secret put LLM_PROVIDER     # Turbo Mode
 **Cheap Mode:** Cost-conscious, variable traffic, development/testing  
 **Turbo Mode:** Low latency critical, production with steady traffic
 
-See [OPERATIONS.md](OPERATIONS.md) and [COST_REVIEW.md](COST_REVIEW.md) for detailed cost and performance information.
+See [Cost Analysis](cost.md) for detailed pricing.
+See [Operations Guide](monitoring.md) for more configuration options.

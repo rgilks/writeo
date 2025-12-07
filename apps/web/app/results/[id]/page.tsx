@@ -103,7 +103,7 @@ export default function ResultsPage() {
             typeof fetched === "object" &&
             fetched !== null &&
             "status" in fetched &&
-            "template" in fetched
+            "requestedAssessors" in fetched
           ) {
             const results = fetched as AssessmentResults;
             setData(results);

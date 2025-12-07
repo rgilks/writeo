@@ -28,6 +28,9 @@ const templateSchema = z.object({
   version: z.number({ invalid_type_error: "Template version must be a number" }),
 });
 
+// Assessor IDs validation - accepts any strings, invalid ones are filtered later
+const assessorsSchema = z.array(z.string()).optional();
+
 const answerTextValidator = (
   value: string,
   ctx: z.RefinementCtx,
@@ -83,7 +86,8 @@ const submissionSchema = z
     submission: z
       .array(submissionPartSchema, { required_error: "Submission array is required" })
       .min(1, "Submission must include at least one part"),
-    template: templateSchema,
+    assessors: assessorsSchema,
+    template: templateSchema.optional(), // Deprecated, kept for backward compat
     storeResults: z.boolean().optional(),
   })
   .passthrough()

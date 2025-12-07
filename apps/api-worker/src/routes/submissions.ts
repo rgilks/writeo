@@ -12,10 +12,13 @@ import { z } from "zod";
 const createSubmissionSchema = z.object({
   submissionId: z.string().uuid("Invalid submissionId format"),
   submission: z.array(z.any()),
-  template: z.object({
-    name: z.string(),
-    version: z.number(),
-  }),
+  assessors: z.array(z.string()).optional(),
+  template: z
+    .object({
+      name: z.string(),
+      version: z.number(),
+    })
+    .optional(), // Deprecated, kept for backward compat
   storeResults: z.boolean().optional(),
 });
 
@@ -53,7 +56,7 @@ export async function createSubmissionHandler(
     // Create submission body
     const submissionBody: CreateSubmissionRequest = {
       submission: parsed.data.submission,
-      template: parsed.data.template,
+      assessors: parsed.data.assessors,
       storeResults: parsed.data.storeResults,
     };
 

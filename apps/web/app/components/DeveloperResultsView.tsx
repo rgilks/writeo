@@ -415,8 +415,17 @@ export function DeveloperResultsView({ data, answerText }: DeveloperResultsViewP
         </div>
 
         <div style={{ marginBottom: "24px" }}>
-          <SectionHeader title="Template" copyText={JSON.stringify(data.template, null, 2)} />
-          <CodeBlock content={data.template} />
+          <SectionHeader
+            title="Assessors"
+            copyText={JSON.stringify(
+              { requested: data.requestedAssessors, active: data.activeAssessors },
+              null,
+              2,
+            )}
+          />
+          <CodeBlock
+            content={{ requested: data.requestedAssessors, active: data.activeAssessors }}
+          />
         </div>
 
         {data.meta && (

@@ -102,7 +102,7 @@ export async function buildModalRequest(
 
   return {
     submission_id: submissionId,
-    template: body.template,
+    assessors: body.assessors ?? [], // Will be resolved to defaults later if empty
     parts: modalParts,
   };
 }

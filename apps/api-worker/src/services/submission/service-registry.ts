@@ -114,7 +114,7 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
         type: "grader",
         overall: d.score,
         label: d.cefr_level,
-        meta: { model: "roberta-base", source: "Write & Improve corpus" },
+        meta: { model: "roberta-base", source: "Write & Improve corpus", devMode: true },
       };
     },
   },
@@ -137,7 +137,7 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
         overall: d.cefr_score,
         label: d.cefr_level,
         cefr: d.cefr_level,
-        meta: { model: "deberta-v3-base", errorTypes: d.error_types },
+        meta: { model: "deberta-v3-base", errorTypes: d.error_types, devMode: true },
       };
     },
   },
@@ -161,7 +161,12 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
         id: ASSESSOR_IDS.GEC,
         name: "GEC Seq2Seq",
         type: "feedback",
-        meta: { model: "flan-t5-base-gec", edits: d.edits, correctedText: d.corrected },
+        meta: {
+          model: "flan-t5-base-gec",
+          edits: d.edits,
+          correctedText: d.corrected,
+          devMode: true,
+        },
       };
     },
   },
@@ -181,7 +186,12 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
         id: ASSESSOR_IDS.GECTOR,
         name: "GECToR Fast",
         type: "feedback",
-        meta: { model: "gector-roberta-base-5k", edits: d.edits, correctedText: d.corrected },
+        meta: {
+          model: "gector-roberta-base-5k",
+          edits: d.edits,
+          correctedText: d.corrected,
+          devMode: true,
+        },
       };
     },
   },

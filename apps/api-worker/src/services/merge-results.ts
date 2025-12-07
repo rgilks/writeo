@@ -8,6 +8,7 @@ import type {
   RelevanceCheck,
 } from "@writeo/shared";
 import type { AIFeedback, TeacherFeedback } from "./feedback";
+import { ASSESSOR_REGISTRY } from "./submission/service-registry";
 
 const MAX_LLM_ERRORS = 10;
 const ASSESSOR_IDS = {
@@ -16,10 +17,6 @@ const ASSESSOR_IDS = {
   AI_FEEDBACK: "T-AI-FEEDBACK",
   RELEVANCE: "T-RELEVANCE-CHECK",
   TEACHER: "T-TEACHER-FEEDBACK",
-  CORPUS: "T-AES-CORPUS", // Dev mode corpus scoring
-  FEEDBACK: "T-AES-FEEDBACK", // Dev mode multi-task feedback
-  GEC: "T-GEC-SEQ2SEQ", // Seq2Seq GEC (slow but precise)
-  GECTOR: "T-GEC-GECTOR", // GECToR fast GEC
 } as const;
 
 function extractEssayAssessorResults(
@@ -191,135 +188,15 @@ function createTeacherFeedbackAssessor(
   };
 }
 
-function createCorpusAssessor(corpusData: { score: number; cefr_level: string }): AssessorResult {
-  return {
-    id: ASSESSOR_IDS.CORPUS,
-    name: "Corpus-Trained RoBERTa",
-    type: "grader",
-    overall: corpusData.score,
-    label: corpusData.cefr_level,
-    meta: {
-      model: "roberta-base",
-      source: "Write & Improve corpus",
-      devMode: true,
-    },
-  };
-}
-
-function createFeedbackAssessor(feedbackData: {
-  cefr_score: number;
-  cefr_level: string;
-  error_spans: Array<{ start: number; tokens: string[] }>;
-  error_types: Record<string, number>;
-}): AssessorResult {
-  return {
-    id: ASSESSOR_IDS.FEEDBACK,
-    name: "T-AES-FEEDBACK (Multi-Task)",
-    type: "grader",
-    overall: feedbackData.cefr_score,
-    label: feedbackData.cefr_level,
-    cefr: feedbackData.cefr_level,
-    meta: {
-      model: "deberta-v3-base",
-      checkpoint: "Epoch 3",
-      // errorSpans: feedbackData.error_spans, // User requested to remove this noise
-      errorTypes: feedbackData.error_types,
-      devMode: true,
-    },
-  };
-}
-
-function createGECAssessor(gecData: {
-  original: string;
-  corrected: string;
-  edits: Array<{
-    start: number;
-    end: number;
-    original: string;
-    correction: string;
-    type: string;
-  }>;
-}): AssessorResult {
-  return {
-    id: ASSESSOR_IDS.GEC,
-    name: "GEC Seq2Seq",
-    type: "feedback",
-    meta: {
-      model: "flan-t5-base-gec",
-      edits: gecData.edits,
-      correctedText: gecData.corrected,
-      devMode: true,
-    },
-  };
-}
-
-function createGECToRAssessor(gectorData: {
-  original: string;
-  corrected: string;
-  edits: Array<{
-    start: number;
-    end: number;
-    original: string;
-    correction: string;
-    type: string;
-  }>;
-}): AssessorResult {
-  return {
-    id: ASSESSOR_IDS.GECTOR,
-    name: "GECToR Fast",
-    type: "feedback",
-    meta: {
-      model: "gector-roberta-base-5k",
-      edits: gectorData.edits,
-      correctedText: gectorData.corrected,
-      devMode: true,
-    },
-  };
-}
-
 function buildAssessorResults(
-  _answerId: string,
+  answerId: string,
   essayAssessorResults: AssessorResult[],
   ltErrors: LanguageToolError[],
   llmErrors: LanguageToolError[],
   llmFeedback: AIFeedback | undefined,
   relevance: RelevanceCheck | undefined,
   teacher: TeacherFeedback | undefined,
-  corpusData: { score: number; cefr_level: string } | undefined,
-  feedbackData:
-    | {
-        cefr_score: number;
-        cefr_level: string;
-        error_spans: Array<{ start: number; tokens: string[] }>;
-        error_types: Record<string, number>;
-      }
-    | undefined,
-  gecData:
-    | {
-        original: string;
-        corrected: string;
-        edits: Array<{
-          start: number;
-          end: number;
-          original: string;
-          correction: string;
-          type: string;
-        }>;
-      }
-    | undefined,
-  gectorData:
-    | {
-        original: string;
-        corrected: string;
-        edits: Array<{
-          start: number;
-          end: number;
-          original: string;
-          correction: string;
-          type: string;
-        }>;
-      }
-    | undefined,
+  genericResults: Map<string, Map<string, unknown>>,
   language: string,
   llmProvider: string,
   aiModel: string,
@@ -353,24 +230,19 @@ function buildAssessorResults(
     assessorResults.push(createTeacherFeedbackAssessor(teacher, llmProvider, aiModel));
   }
 
-  // Add corpus assessor if available (dev mode)
-  if (corpusData) {
-    assessorResults.push(createCorpusAssessor(corpusData));
-  }
-
-  // Add feedback assessor if available (dev mode)
-  if (feedbackData) {
-    assessorResults.push(createFeedbackAssessor(feedbackData));
-  }
-
-  // Add GEC Seq2Seq assessor if available
-  if (gecData) {
-    assessorResults.push(createGECAssessor(gecData));
-  }
-
-  // Add GECToR fast assessor if available
-  if (gectorData) {
-    assessorResults.push(createGECToRAssessor(gectorData));
+  // Generic Registry Services (Corpus, Feedback, GEC, GECToR, etc.)
+  for (const service of ASSESSOR_REGISTRY) {
+    const serviceResults = genericResults.get(service.id);
+    if (serviceResults) {
+      const resultData = serviceResults.get(answerId);
+      if (resultData) {
+        try {
+          assessorResults.push(service.createAssessor(resultData));
+        } catch (e) {
+          console.error(`Failed to create assessor for service ${service.id}:`, e);
+        }
+      }
+    }
   }
 
   return assessorResults;
@@ -402,44 +274,7 @@ export function mergeAssessmentResults(
   teacherFeedback: Map<string, TeacherFeedback> = new Map(),
   languageToolEnabled: boolean = false,
   llmAssessmentEnabled: boolean = false,
-  corpusScores: Map<string, { score: number; cefr_level: string }> = new Map(),
-  feedbackScores: Map<
-    string,
-    {
-      cefr_score: number;
-      cefr_level: string;
-      error_spans: Array<{ start: number; tokens: string[] }>;
-      error_types: Record<string, number>;
-    }
-  > = new Map(),
-  gecScores: Map<
-    string,
-    {
-      original: string;
-      corrected: string;
-      edits: Array<{
-        start: number;
-        end: number;
-        original: string;
-        correction: string;
-        type: string;
-      }>;
-    }
-  > = new Map(),
-  gectorScores: Map<
-    string,
-    {
-      original: string;
-      corrected: string;
-      edits: Array<{
-        start: number;
-        end: number;
-        original: string;
-        correction: string;
-        type: string;
-      }>;
-    }
-  > = new Map(),
+  genericResults: Map<string, Map<string, unknown>> = new Map(),
 ): AssessmentResults {
   const parts: AssessmentPart[] = [];
 
@@ -456,10 +291,7 @@ export function mergeAssessmentResults(
         llmFeedback.get(answer.id),
         relevanceChecks.get(answer.id),
         teacherFeedback.get(answer.id),
-        corpusScores.get(answer.id),
-        feedbackScores.get(answer.id),
-        gecScores.get(answer.id),
-        gectorScores.get(answer.id),
+        genericResults,
         language,
         llmProvider,
         aiModel,
@@ -489,7 +321,8 @@ export function mergeAssessmentResults(
   return {
     status: parts.some((p) => p.status === "success") ? "success" : "error",
     results: { parts },
-    template: request.template,
+    requestedAssessors: request.assessors,
+    activeAssessors: request.assessors, // For now, all requested are active
     meta,
   };
 }

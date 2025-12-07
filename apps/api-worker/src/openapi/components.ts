@@ -211,6 +211,22 @@ export const sharedComponents = {
             },
           },
         },
+        requestedAssessors: {
+          type: "array",
+          items: {
+            type: "string",
+          },
+          description: "List of assessors requested by the client",
+          example: ["T-AES-ESSAY", "T-GEC-LT"],
+        },
+        activeAssessors: {
+          type: "array",
+          items: {
+            type: "string",
+          },
+          description: "List of assessors actually run",
+          example: ["T-AES-ESSAY", "T-GEC-LT"],
+        },
         template: {
           type: "object",
           description: "Template metadata (echoed from request)",
