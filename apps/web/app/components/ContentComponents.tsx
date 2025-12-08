@@ -79,7 +79,7 @@ export function ExternalLink({ href, children }: { href: string; children: React
 export function InternalLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Link href={href} style={{ color: "var(--primary-color)", textDecoration: "underline" }}>
-      {children}
+      <span>{children}</span>
     </Link>
   );
 }
