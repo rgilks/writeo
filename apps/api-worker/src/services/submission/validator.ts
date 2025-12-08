@@ -72,14 +72,14 @@ const answerSchema = z.object({
 const submissionPartSchema = z.object({
   part: z.number().int().positive("Part must be a positive integer"),
   answers: z
-    .array(answerSchema, { required_error: "Each submission part must include answers" })
+    .array(answerSchema, { message: "Each submission part must include answers" })
     .min(1, "Each submission part must include at least one answer"),
 });
 
 const submissionSchema = z
   .object({
     submission: z
-      .array(submissionPartSchema, { required_error: "Submission array is required" })
+      .array(submissionPartSchema, { message: "Submission array is required" })
       .min(1, "Submission must include at least one part"),
     assessors: assessorsSchema,
     storeResults: z.boolean().optional(),
@@ -125,7 +125,7 @@ export function validateSubmissionBody(
   const parsed = submissionSchema.safeParse(body);
   if (!parsed.success) {
     // Extract field path from zod error for better error reporting
-    const firstError = parsed.error.errors[0];
+    const firstError = parsed.error.issues[0];
     const fieldPath = firstError?.path?.join(".") || "unknown";
     return errorResponse(
       400,

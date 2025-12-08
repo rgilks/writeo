@@ -37,15 +37,17 @@
     "type-check:py": "mypy services/modal-essay --config-file services/modal-essay/pyproject.toml && mypy services/modal-lt --config-file services/modal-lt/pyproject.toml && mypy packages/shared/py --config-file packages/shared/py/pyproject.toml",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
     "setup": "./scripts/setup.sh",
-    "install-hooks": "./scripts/install-hooks.sh"
+    "install-hooks": "./scripts/install-hooks.sh",
+    "deps": "npx npm-check-updates",
+    "deps:update": "npx npm-check-updates -u"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0",
+    "@playwright/test": "^1.57.0",
     "@types/node": "^24.10.1",
     "dotenv": "^17.2.3",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.2.5",
-    "tsx": "^4.7.0",
-    "vitest": "^4.0.9"
+    "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.15"
   }
 }

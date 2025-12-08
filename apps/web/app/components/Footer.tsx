@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, type ReactNode, type ReactElement } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { GitHubIcon } from "./icons/GitHubIcon";
@@ -30,9 +30,9 @@ const SEPARATOR_STYLES = {
 
 interface FooterLinkProps {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
   external?: boolean;
-  icon?: React.ReactNode;
+  icon?: ReactElement;
 }
 
 function FooterLink({ href, children, external = false, icon }: FooterLinkProps) {
@@ -61,7 +61,7 @@ function FooterLink({ href, children, external = false, icon }: FooterLinkProps)
 
   return (
     <Link href={href} {...commonProps}>
-      {children}
+      <span>{children}</span>
     </Link>
   );
 }

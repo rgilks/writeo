@@ -51,12 +51,6 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  eslint: {
-    // Enable ESLint during builds
-    ignoreDuringBuilds: false,
-    // Only run ESLint on these directories
-    dirs: ["app", "components"],
-  },
   images: {
     remotePatterns: [
       {

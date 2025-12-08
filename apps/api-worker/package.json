@@ -8,17 +8,18 @@
     "dev": "wrangler dev --ip 0.0.0.0",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "deps:update": "npx npm-check-updates -u"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",
     "@writeo/shared": "file:../../packages/shared",
-    "hono": "^4.0.0",
-    "zod": "^3.22.3"
+    "hono": "^4.10.7",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240222.0",
-    "typescript": "^5.3.3",
-    "wrangler": "^4.49.0"
+    "@cloudflare/workers-types": "^4.20251205.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.53.0"
   }
 }
