@@ -103,7 +103,7 @@ def calibrate_from_corpus(model_score: float, word_count: int, vocab_diversity: 
     # - AES-ESSAY showed +0.8 bias (over-prediction)
     # - Applying -0.8 offset improved QWK from 0.27 to 0.58
     # - Adjacent accuracy improved from 40% to 90%
-    CORPUS_OFFSET = -0.8
-    final_score = _clamp(calibrated + CORPUS_OFFSET, 2.0, 9.0)
+    corpus_offset = -0.8
+    final_score = _clamp(calibrated + corpus_offset, 2.0, 9.0)
 
     return final_score

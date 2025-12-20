@@ -65,7 +65,7 @@ Deploy the services required for your chosen operational mode.
 
 **Prerequisites:**
 
-- Install Modal: `pip install modal`
+- Install Modal: `uv pip install modal`
 - Authenticate: `modal token new`
 
 #### 2.1 Primary Scoring (AES-DEBERTA) - _Required for Production_

@@ -31,7 +31,7 @@ base_image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "fastapi==0.104.1",
     "uvicorn==0.24.0",
     "transformers>=4.40.0",
-    "torch>=2.6.0",
+    "torch==2.2.0",
     "pydantic==2.5.0",
     "sentencepiece>=0.1.99",
     "safetensors>=0.4.2",

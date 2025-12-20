@@ -46,9 +46,7 @@ def create_fastapi_app() -> FastAPI:
 
         try:
             # Tokenize
-            encoding = tokenizer(
-                request.text, max_length=512, truncation=True, return_tensors="pt"
-            )
+            encoding = tokenizer(request.text, max_length=512, truncation=True, return_tensors="pt")
 
             # Move to GPU if available
             device = next(model.parameters()).device
@@ -74,21 +72,19 @@ def create_fastapi_app() -> FastAPI:
 
             # Apply confidence threshold: only mark as B-ERROR or I-ERROR if prob > 0.5
             span_preds = []
-            for i, (pred, probs) in enumerate(zip(span_preds_raw, span_probs)):
+            for _i, (pred, probs) in enumerate(zip(span_preds_raw, span_probs, strict=False)):
                 if pred != 0:  # If predicted as error (B or I)
                     confidence = probs[pred].item()
                     if confidence < 0.5:  # Not confident enough
                         pred = 0  # Mark as O (no error)
-                span_preds.append(
-                    pred.item() if isinstance(pred, torch.Tensor) else pred
-                )
+                span_preds.append(pred.item() if isinstance(pred, torch.Tensor) else pred)
 
             tokens = tokenizer.convert_ids_to_tokens(encoding["input_ids"][0])
 
             # Extract error spans
             errors = []
             current_error = None
-            for i, (token, label) in enumerate(zip(tokens, span_preds)):
+            for i, (token, label) in enumerate(zip(tokens, span_preds, strict=False)):
                 if token in ["[CLS]", "[SEP]", "[PAD]"]:
                     continue
 
@@ -105,17 +101,13 @@ def create_fastapi_app() -> FastAPI:
                     current_error["tokens"].append(token)
                 elif current_error:
                     errors.append(
-                        ErrorSpan(
-                            start=current_error["start"], tokens=current_error["tokens"]
-                        )
+                        ErrorSpan(start=current_error["start"], tokens=current_error["tokens"])
                     )
                     current_error = None
 
             if current_error:
                 errors.append(
-                    ErrorSpan(
-                        start=current_error["start"], tokens=current_error["tokens"]
-                    )
+                    ErrorSpan(start=current_error["start"], tokens=current_error["tokens"])
                 )
 
             # Error type predictions
@@ -139,7 +131,7 @@ def create_fastapi_app() -> FastAPI:
             )
 
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}") from e
 
     @app.get("/health")
     async def health_check():

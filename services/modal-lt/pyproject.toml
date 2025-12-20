@@ -28,12 +28,13 @@ select = [
     "ARG", # flake8-unused-arguments
     "SIM", # flake8-simplify
 ]
-ignore = [
-    "E501",   # line too long (handled by formatter)
-    "B008",   # do not perform function calls in argument defaults
-    "ARG001", # unused function argument (we use _ prefix)
-    "ARG002", # unused method argument
-]
+ignore = ["E501", "ARG001", "ARG002", "N812", "N999", "B008"] # line too long (handled by formatter)
+# The following comments are preserved as they were not explicitly removed by the instruction.
+# "B008",   # do not perform function calls in argument defaults
+# "ARG001", # unused function argument (we use _ prefix)
+# "ARG002", # unused method argument
+# The instruction provided a specific `ignore` line, which is applied.
+# The original comments for B008, ARG001, ARG002 are now orphaned due to the specific instruction.
 
 [tool.ruff.format]
 quote-style = "double"

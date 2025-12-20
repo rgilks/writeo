@@ -57,6 +57,7 @@ Writeo uses a serverless edge architecture:
 
 - Node.js 18+
 - Python 3.11+
+- [uv](https://github.com/astral-sh/uv) (for Python package management)
 - [Modal](https://modal.com) account and CLI
 - [Cloudflare](https://cloudflare.com) account and Wrangler CLI
 
@@ -71,11 +72,11 @@ cd writeo
 npm install
 
 # Install Python dependencies for Modal services
-cd services/modal-deberta && pip install -e .
-cd ../modal-corpus && pip install -e .
-cd ../modal-feedback && pip install -e .
-cd ../modal-gec && pip install -e .
-cd ../modal-lt && pip install -e .
+cd services/modal-deberta && uv pip install -e .
+cd ../modal-corpus && uv pip install -e .
+cd ../modal-feedback && uv pip install -e .
+cd ../modal-gec && uv pip install -e .
+cd ../modal-lt && uv pip install -e .
 ```
 
 ### 2. Configuration

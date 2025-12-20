@@ -26,20 +26,18 @@ app = modal.App(APP_NAME)
 base_image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "fastapi==0.104.1",
     "uvicorn==0.24.0",
-    "transformers==4.35.0",
-    "torch==2.1.0",
+    "transformers>=4.40.0",
+    "torch==2.2.0",
     "scikit-learn==1.3.2",
     "pydantic==2.5.0",
-    "sentencepiece==0.1.99",  # Required for DeBERTa tokenizer
+    "sentencepiece>=0.1.99",  # Required for DeBERTa tokenizer
 )
 
 # Create volume for model storage (same as training)
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=False)
 
 # Add the current directory to the image
-image = base_image.add_local_dir(
-    os.path.dirname(__file__), remote_path=REMOTE_APP_PATH, copy=True
-)
+image = base_image.add_local_dir(os.path.dirname(__file__), remote_path=REMOTE_APP_PATH, copy=True)
 
 
 @app.function(

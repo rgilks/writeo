@@ -6,17 +6,13 @@ set -e
 echo "=== Deploying Modal Service ==="
 echo ""
 
-# Check for uv (preferred) or pip
-if command -v uv &> /dev/null; then
-    echo "✓ uv found"
-    INSTALL_CMD="uv pip install"
-elif command -v pip3 &> /dev/null; then
-    echo "⚠ Using pip3 (consider installing uv for faster installs: curl -LsSf https://astral.sh/uv/install.sh | sh)"
-    INSTALL_CMD="pip3 install"
-else
-    echo "Error: Neither uv nor pip3 found. Please install Python package manager."
+# Check for uv
+if ! command -v uv &> /dev/null; then
+    echo "Error: uv not found. Please install uv: curl -LsSf https://astral.sh/uv/install.sh | sh"
     exit 1
 fi
+
+INSTALL_CMD="uv pip install"
 
 # Check for modal
 if ! command -v modal &> /dev/null; then

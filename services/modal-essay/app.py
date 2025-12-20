@@ -5,26 +5,23 @@ from typing import Any
 
 import modal
 
-# Import factory from shared package (assumes shared package is installed in environment)
-# Note: In local dev, we might need to adjust PYTHONPATH, but inside Modal it works via the package mount
-try:
-    from modal_utils import ModalServiceFactory
-except ImportError:
-    # For local dev where shared pkg might not be installed as a package yet
-    import sys
-
-    sys.path.append(
-        os.path.abspath(os.path.join(os.path.dirname(__file__), "../../packages/shared/py"))
-    )
-    from modal_utils import ModalServiceFactory
-
 # Configuration
 APP_NAME = "writeo-essay"
 VOLUME_NAME = "writeo-models"
 VOLUME_MOUNT = "/vol"
+REMOTE_APP_PATH = "/app"
 
-# Dependencies
-PIP_PACKAGES = [
+# Function configuration
+TIMEOUT_SECONDS = 60
+GPU_TYPE = "T4"
+MEMORY_MB = 4096
+SCALEDOWN_WINDOW_SECONDS = 30
+
+# Modal app and image setup
+app = modal.App(APP_NAME)
+
+# Create image with dependencies
+image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "fastapi==0.104.1",
     "uvicorn==0.24.0",
     "transformers>=4.40.0",
@@ -34,37 +31,31 @@ PIP_PACKAGES = [
     "sentencepiece>=0.2.0",
     "safetensors==0.4.2",
     "huggingface-hub>=0.20.0",
-]
-
-# Create app using factory
-app, image = ModalServiceFactory.create_app(
-    name=APP_NAME,
-    pip_packages=PIP_PACKAGES,
-    # Mount the local app directory so we can import 'api'
-    app_dir=os.path.dirname(__file__),
 )
+
+# Add the current directory to the image
+image = image.add_local_dir(os.path.dirname(__file__), remote_path=REMOTE_APP_PATH, copy=True)
+
+# Create volume for model storage
+volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
 
 
 @app.function(
-    **ModalServiceFactory.get_default_function_kwargs(
-        image=image,
-        volume_name=VOLUME_NAME,
-        volume_mount=VOLUME_MOUNT,
-        gpu="T4",
-        timeout=60,
-        memory=4096,
-        scaledown_window=30,
-        secrets=[modal.Secret.from_name("MODAL_API_KEY")],
-    )
+    image=image,
+    volumes={VOLUME_MOUNT: volume},
+    timeout=TIMEOUT_SECONDS,
+    gpu=GPU_TYPE,
+    memory=MEMORY_MB,
+    scaledown_window=SCALEDOWN_WINDOW_SECONDS,
+    secrets=[modal.Secret.from_name("MODAL_API_KEY")],
 )
 @modal.asgi_app()
 def fastapi_app() -> Any:
     """FastAPI app for essay scoring service."""
     import sys
 
-    # Ensure app directory is in path (factory mounts it to /app)
-    if "/app" not in sys.path:
-        sys.path.insert(0, "/app")
+    if REMOTE_APP_PATH not in sys.path:
+        sys.path.insert(0, REMOTE_APP_PATH)
 
     from api import create_fastapi_app
 

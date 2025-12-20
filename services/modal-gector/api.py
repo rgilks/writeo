@@ -2,7 +2,6 @@
 
 import os
 import time
-from typing import List
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -24,7 +23,7 @@ class Edit(BaseModel):
 class CorrectionResponse(BaseModel):
     original: str
     corrected: str
-    edits: List[Edit]
+    edits: list[Edit]
 
 
 # Global model holder (loaded once on startup)
@@ -82,7 +81,7 @@ def _load_model():
     print("GECToR model loaded successfully.")
 
 
-def _extract_edits(original: str, corrected: str) -> List[dict]:
+def _extract_edits(original: str, corrected: str) -> list[dict]:
     """Extract edits by comparing original and corrected text.
 
     Uses difflib.SequenceMatcher for proper word-level alignment.
@@ -197,9 +196,7 @@ def _correct_text(text: str) -> CorrectionResponse:
     # Split into sentences for better handling
     sentences = text.replace("\n", " ").split(". ")
     sentences = [
-        s.strip() + "." if not s.endswith(".") else s.strip()
-        for s in sentences
-        if s.strip()
+        s.strip() + "." if not s.endswith(".") else s.strip() for s in sentences if s.strip()
     ]
 
     if not sentences:
@@ -231,7 +228,7 @@ def _correct_text(text: str) -> CorrectionResponse:
     all_edits = []
     search_pos = 0
 
-    for orig_sent, corr_sent in zip(sentences, corrected_sentences):
+    for orig_sent, corr_sent in zip(sentences, corrected_sentences, strict=False):
         if orig_sent != corr_sent:
             # Find sentence position in original text
             sent_start = text.find(orig_sent.rstrip("."), search_pos)

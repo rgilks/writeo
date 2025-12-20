@@ -50,7 +50,7 @@ Primary scorer trained on the Write & Improve corpus. Provides the most accurate
 **Quick Start:**
 
 ```bash
-cd services/modal-corpus && modal deploy main.py
+cd services/modal-corpus && modal deploy app.py
 ```
 
 ### 2. DeBERTa Scoring Service (`modal-deberta`)
@@ -66,7 +66,7 @@ Advanced scorer providing multi-dimensional breakdown.
 **Quick Start:**
 
 ```bash
-cd services/modal-deberta && modal deploy main.py
+cd services/modal-deberta && modal deploy app.py
 ```
 
 ### 3. Legacy Essay Service (`modal-essay`)
@@ -166,7 +166,7 @@ import { AssessmentResults, mapScoreToCEFR } from "@writeo/shared";
 
 ```bash
 cd packages/shared/py
-pip install -e .
+uv pip install -e .
 ```
 
 **Usage:**

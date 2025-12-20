@@ -6,30 +6,26 @@ with ERRANT for edit extraction.
 
 import os
 from typing import Any
+
 import modal
-
-# Import factory from shared package
-try:
-    from modal_utils import ModalServiceFactory
-except ImportError:
-    import sys
-
-    sys.path.append(
-        os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../packages/shared/py")
-        )
-    )
-    from modal_utils import ModalServiceFactory
 
 # Configuration
 APP_NAME = "writeo-gec-service"
 VOLUME_NAME = "writeo-gec-models"
 VOLUME_MOUNT = "/checkpoints"
+REMOTE_APP_PATH = "/app"
 
-# Dependencies
-# Uses Python 3.11 matching original
-PYTHON_VERSION = "3.11"
-PIP_PACKAGES = [
+# Function configuration
+TIMEOUT_SECONDS = 600
+GPU_TYPE = "A10G"
+MEMORY_MB = 8192
+SCALEDOWN_WINDOW_SECONDS = 30
+
+# Modal app and image setup
+app = modal.App(APP_NAME)
+
+# Create image with dependencies
+image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "torch==2.1.0",
     "transformers==4.36.0",
     "accelerate==0.25.0",
@@ -39,36 +35,31 @@ PIP_PACKAGES = [
     "sentencepiece>=0.1.99",
     "pydantic>=2.5.0",
     "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl",
-]
-
-# Create app using factory
-app, image = ModalServiceFactory.create_app(
-    name=APP_NAME,
-    image_python_version=PYTHON_VERSION,
-    pip_packages=PIP_PACKAGES,
-    app_dir=os.path.dirname(__file__),
 )
+
+# Add the current directory to the image
+image = image.add_local_dir(os.path.dirname(__file__), remote_path=REMOTE_APP_PATH, copy=True)
+
+# Create volume for model storage
+volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
 
 
 @app.function(
-    **ModalServiceFactory.get_default_function_kwargs(
-        image=image,
-        volume_name=VOLUME_NAME,
-        volume_mount=VOLUME_MOUNT,
-        gpu="A10G",
-        timeout=600,
-        memory=8192,  # Explicitly setting higher memory for A10G/LLM
-        scaledown_window=30,
-        secrets=[modal.Secret.from_name("MODAL_API_KEY")],
-    )
+    image=image,
+    volumes={VOLUME_MOUNT: volume},
+    timeout=TIMEOUT_SECONDS,
+    gpu=GPU_TYPE,
+    memory=MEMORY_MB,
+    scaledown_window=SCALEDOWN_WINDOW_SECONDS,
+    secrets=[modal.Secret.from_name("MODAL_API_KEY")],
 )
 @modal.asgi_app()
 def fastapi_app() -> Any:
     """FastAPI app for GEC (Grammatical Error Correction) service."""
     import sys
 
-    if "/app" not in sys.path:
-        sys.path.insert(0, "/app")
+    if REMOTE_APP_PATH not in sys.path:
+        sys.path.insert(0, REMOTE_APP_PATH)
 
     from api import create_fastapi_app
 

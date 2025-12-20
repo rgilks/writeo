@@ -7,13 +7,14 @@ dependencies = [
     "modal>=0.64.0",
     "fastapi>=0.104.0",
     "transformers>=4.40.0",
-    "torch>=2.2.0",
+    "torch==2.2.0",
     "numpy>=1.24.0,<2.0",      # torch requires numpy <2.0
     "pydantic>=2.5.0",
     "uvicorn>=0.24.0",         # Required for local testing (test_local.py)
     "sentencepiece>=0.2.0",
     "safetensors>=0.4.2",
     "huggingface-hub>=0.20.0",
+    "writeo-shared",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +34,7 @@ select = [
     "W",   # pycodestyle warnings
     "F",   # pyflakes
     "I",   # isort
+    "N",   # pep8-naming
     "B",   # flake8-bugbear
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
@@ -44,6 +46,8 @@ ignore = [
     "B008",   # do not perform function calls in argument defaults
     "ARG001", # unused function argument (we use _ prefix)
     "ARG002", # unused method argument
+    "N812",   # allow torch.nn.functional as F
+    "N999",   # allow invalid module names (services)
 ]
 
 [tool.ruff.format]
@@ -83,3 +87,6 @@ warn_unused_ignores = false
 [[tool.mypy.overrides]]
 module = ["model_loader", "api.handlers_submission", "scoring.*", "utils"]
 warn_unused_ignores = false
+
+[tool.uv.sources]
+writeo-shared = { workspace = true }

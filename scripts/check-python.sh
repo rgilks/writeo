@@ -15,8 +15,7 @@ NC='\033[0m'
 check_command() {
     if ! command -v "$1" > /dev/null 2>&1; then
         echo "${RED}Error: $1 not found${NC}"
-        echo "${YELLOW}Install with: pip install $1${NC}"
-        echo "${YELLOW}Or use uv: uv pip install $1${NC}"
+        echo "${YELLOW}Install with: uv pip install $1${NC}"
         exit 1
     fi
 }

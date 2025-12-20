@@ -1,0 +1,32 @@
+[project]
+name = "modal-gec"
+version = "0.1.0"
+description = "Modal service for GEC (Grammatical Error Correction)"
+requires-python = ">=3.11"
+dependencies = [
+    "torch==2.2.0",
+    "transformers>=4.40.0",
+    "accelerate>=0.25.0",
+    "errant>=3.0.0",
+    "spacy>=3.7.2",
+    "fastapi>=0.104.1",
+    "sentencepiece>=0.1.99",
+    "pydantic>=2.5.0",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.1.0", "mypy>=1.0"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "ARG"]
+ignore = ["E501", "ARG001", "ARG002", "N812", "N999"]

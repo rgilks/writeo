@@ -173,17 +173,25 @@ export interface NewServiceResult {
 Create a new service in `services/modal-xxx/`:
 
 ```python
-# main.py
+# app.py
+import os
 import modal
+
 app = modal.App("writeo-xxx")
 
-image = modal.Image.debian_slim().pip_install(
+image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "fastapi[standard]", "torch", "transformers"
 )
+image = image.add_local_dir(os.path.dirname(__file__), remote_path="/app", copy=True)
 
-@app.function(image=image, gpu="T4", scaledown_window=60)
+volume = modal.Volume.from_name("writeo-xxx-models", create_if_missing=True)
+
+@app.function(image=image, volumes={"/vol": volume}, gpu="T4", scaledown_window=60)
 @modal.asgi_app()
 def fastapi_app():
+    import sys
+    if "/app" not in sys.path:
+        sys.path.insert(0, "/app")
     from api import create_fastapi_app
     return create_fastapi_app()
 ```

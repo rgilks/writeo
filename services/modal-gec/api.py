@@ -1,9 +1,9 @@
 """FastAPI API for GEC service."""
 
 import os
-from typing import List
-from pydantic import BaseModel
+
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 
 class CorrectionRequest(BaseModel):
@@ -22,7 +22,7 @@ class Edit(BaseModel):
 class CorrectionResponse(BaseModel):
     original: str
     corrected: str
-    edits: List[Edit]
+    edits: list[Edit]
 
 
 # Global model holder (loaded once on startup)
@@ -39,7 +39,8 @@ def _load_model():
         return
 
     import torch
-    from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+    from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
     from correction import ErrorExtractor
 
     # Check if fine-tuned model exists
@@ -58,9 +59,7 @@ def _load_model():
         model_name = model_path
 
     _tokenizer = AutoTokenizer.from_pretrained(model_name)
-    _model = AutoModelForSeq2SeqLM.from_pretrained(
-        model_name, torch_dtype=torch.float16
-    ).cuda()
+    _model = AutoModelForSeq2SeqLM.from_pretrained(model_name, torch_dtype=torch.float16).cuda()
     _extractor = ErrorExtractor(use_errant=True)
     print("Model loaded successfully.")
 
@@ -165,9 +164,7 @@ def _correct_text(text: str) -> CorrectionResponse:
         # Smart max_length: input length + 20% buffer (corrections rarely add much)
         input_len = inputs.input_ids.shape[1]
         max_output_len = min(512, int(input_len * 1.2) + 10)
-        print(
-            f"DEBUG: Tokenized batch: {inputs.input_ids.shape}, max_output={max_output_len}"
-        )
+        print(f"DEBUG: Tokenized batch: {inputs.input_ids.shape}, max_output={max_output_len}")
 
         # Batched generation - optimized for speed
         outputs = _model.generate(
@@ -217,24 +214,16 @@ def _correct_text(text: str) -> CorrectionResponse:
             )
 
     extract_time = time.time() - extract_start
-    print(
-        f"DEBUG: Extraction took {extract_time:.2f}s - {len(all_edits)} total edits found"
-    )
+    print(f"DEBUG: Extraction took {extract_time:.2f}s - {len(all_edits)} total edits found")
 
     # Reconstruct corrected text - use space join for spacy chunking, newline for fallback
-    if (
-        hasattr(_extractor, "annotator")
-        and _extractor.annotator
-        and len(valid_chunks) > 1
-    ):
+    if hasattr(_extractor, "annotator") and _extractor.annotator and len(valid_chunks) > 1:
         # We used spacy chunking - join with space
         final_corrected_text = " ".join(corrected_chunks)
     else:
         final_corrected_text = "\n".join(corrected_chunks)
 
-    return CorrectionResponse(
-        original=text, corrected=final_corrected_text, edits=all_edits
-    )
+    return CorrectionResponse(original=text, corrected=final_corrected_text, edits=all_edits)
 
 
 def create_fastapi_app() -> FastAPI:

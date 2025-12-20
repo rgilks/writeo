@@ -1,0 +1,34 @@
+[project]
+name = "modal-feedback"
+version = "0.1.0"
+description = "Modal service for AES-FEEDBACK model"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.1",
+    "uvicorn>=0.24.0",
+    "transformers>=4.40.0",
+    "torch==2.2.0",
+    "scikit-learn>=1.3.2",
+    "pydantic>=2.5.0",
+    "sentencepiece>=0.1.99",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM", "ARG"]
+ignore = ["E501", "ARG001", "ARG002", "N812", "N999"]

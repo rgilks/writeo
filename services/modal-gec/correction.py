@@ -1,5 +1,5 @@
 import difflib
-from typing import List, Dict, Any
+from typing import Any
 
 
 class ErrorExtractor:
@@ -17,9 +17,7 @@ class ErrorExtractor:
                 try:
                     self.annotator = errant.load("en")
                 except OSError:
-                    print(
-                        "Warning: Spacy model 'en' not found. Trying 'en_core_web_sm'."
-                    )
+                    print("Warning: Spacy model 'en' not found. Trying 'en_core_web_sm'.")
                     try:
                         nlp = spacy.load("en_core_web_sm")
                         self.annotator = errant.load("en", nlp=nlp)
@@ -27,12 +25,10 @@ class ErrorExtractor:
                         print(f"Warning: Could not load ERRANT annotator: {e}")
                         self.use_errant = False
             except ImportError:
-                print(
-                    "Warning: ERRANT or Spacy not installed. Falling back to simple diff."
-                )
+                print("Warning: ERRANT or Spacy not installed. Falling back to simple diff.")
                 self.use_errant = False
 
-    def extract_edits(self, source: str, target: str) -> List[Dict[str, Any]]:
+    def extract_edits(self, source: str, target: str) -> list[dict[str, Any]]:
         """
         Extract edits between source and target text.
         """
@@ -41,7 +37,7 @@ class ErrorExtractor:
         else:
             return self._extract_with_difflib(source, target)
 
-    def _extract_with_errant(self, source: str, target: str) -> List[Dict[str, Any]]:
+    def _extract_with_errant(self, source: str, target: str) -> list[dict[str, Any]]:
         """Use ERRANT to extract and classify edits with character positions."""
         # Parse with spacy (via errant's annotator)
         src = self.annotator.parse(source)
@@ -91,7 +87,7 @@ class ErrorExtractor:
 
         return results
 
-    def _extract_with_difflib(self, source: str, target: str) -> List[Dict[str, Any]]:
+    def _extract_with_difflib(self, source: str, target: str) -> list[dict[str, Any]]:
         """Fallback method using difflib with character positions."""
         source_words = source.split()
         target_words = target.split()
@@ -114,10 +110,7 @@ class ErrorExtractor:
             correction_text = " ".join(target_words[j1:j2])
 
             # Calculate character positions
-            if i1 < len(word_positions):
-                char_start = word_positions[i1][0]
-            else:
-                char_start = len(source)
+            char_start = word_positions[i1][0] if i1 < len(word_positions) else len(source)
 
             if i2 > 0 and i2 <= len(word_positions):
                 char_end = word_positions[i2 - 1][1]
@@ -135,14 +128,12 @@ class ErrorExtractor:
                 category = "grammar"  # Unnecessary word usually
             elif tag == "insert":
                 category = "grammar"  # Missing word usually
-            elif tag == "replace":
-                # Heuristics
-                if len(original_text) > 0 and len(correction_text) > 0:
-                    # Check for simple capitalization or punctuation
-                    if original_text.lower() == correction_text.lower():
-                        category = "mechanics"
-                    else:
-                        category = "grammar"
+            elif tag == "replace" and len(original_text) > 0 and len(correction_text) > 0:
+                # Heuristics: Check for simple capitalization or punctuation
+                if original_text.lower() == correction_text.lower():
+                    category = "mechanics"
+                else:
+                    category = "grammar"
 
             edits.append(
                 {

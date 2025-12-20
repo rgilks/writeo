@@ -1,7 +1,8 @@
 """Model loader for AES-FEEDBACK."""
 
-import torch
 from pathlib import Path
+
+import torch
 from transformers import AutoTokenizer
 
 
@@ -50,7 +51,7 @@ def get_feedback_model():
     print(f"✅ Model loaded successfully (Epoch {checkpoint.get('epoch', 'unknown')})")
 
     dev_loss = checkpoint.get("dev_loss", "unknown")
-    if isinstance(dev_loss, (int, float)):
+    if isinstance(dev_loss, int | float):
         print(f"   Dev loss: {dev_loss:.4f}")
     else:
         print(f"   Dev loss: {dev_loss}")
