@@ -14,7 +14,7 @@ const buildCSP = (): string => {
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'", // Next.js requires 'unsafe-inline' for injected styles
-    "img-src 'self' data: blob: https://storage.ko-fi.com",
+    "img-src 'self' data: blob:",
     "font-src 'self'",
     "media-src 'self' data:",
     `connect-src 'self' ${apiBase} https://*.groq.com https://*.cloudflare.com data:`,
@@ -52,13 +52,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "storage.ko-fi.com",
-        pathname: "/**",
-      },
-    ],
+    remotePatterns: [],
   },
   async headers() {
     return [

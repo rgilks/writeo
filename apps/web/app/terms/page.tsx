@@ -119,19 +119,6 @@ export default function TermsPage() {
             </Text>
           </SectionCard>
 
-          <SectionCard title="💰 Donations">
-            <Text>Writeo accepts voluntary donations through Ko-fi. Donations are:</Text>
-            <ContentList>
-              <li>Completely voluntary and not required to use the service</li>
-              <li>Processed through third-party payment processors (Ko-fi)</li>
-              <li>Non-refundable unless required by law</li>
-              <li>Used to support the development and maintenance of Writeo</li>
-            </ContentList>
-            <Text note>
-              By making a donation, you agree to Ko-fi's terms of service and privacy policy.
-            </Text>
-          </SectionCard>
-
           <SectionCard title="📝 Intellectual Property">
             <Text>
               <strong>Your Content:</strong> You retain all rights to the essays and content you

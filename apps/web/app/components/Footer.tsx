@@ -2,13 +2,10 @@
 
 import React, { useState, type ReactNode, type ReactElement } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { GitHubIcon } from "./icons/GitHubIcon";
 
-const KOFI_URL = "https://ko-fi.com/N4N31DPNUS";
 const DISCORD_URL = "https://discord.gg/YxuFAXWuzw";
 const GITHUB_URL = "https://github.com/rgilks/writeo";
-const KOFI_IMAGE_URL = "https://storage.ko-fi.com/cdn/kofi2.png?v=6";
 
 const LINK_STYLES = {
   fontSize: "14px",
@@ -74,40 +71,6 @@ function Separator() {
   );
 }
 
-interface KoFiButtonProps {
-  url: string;
-  imageUrl: string;
-}
-
-function KoFiButton({ url, imageUrl }: KoFiButtonProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: "inline-block",
-        transition: "opacity 0.2s",
-        opacity: isHovered ? 0.75 : 1,
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <Image
-        width={145}
-        height={36}
-        src={imageUrl}
-        alt="Buy Me a Coffee at ko-fi.com"
-        style={{ display: "block" }}
-        loading="lazy"
-        priority={false}
-      />
-    </a>
-  );
-}
-
 interface FooterLinkData {
   href: string;
   label: string;
@@ -147,8 +110,6 @@ export function Footer() {
           textAlign: "center",
         }}
       >
-        <KoFiButton url={KOFI_URL} imageUrl={KOFI_IMAGE_URL} />
-
         <nav
           style={{
             display: "flex",
