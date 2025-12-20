@@ -9,17 +9,18 @@ This document catalogs the datasets used to train our essay scoring models, spec
 > [!IMPORTANT]
 > Dataset licensing affects how trained models can be used. We document licensing status for all datasets used in training.
 
-| Dataset | License Type | Commercial Use | Notes |
-|---------|--------------|----------------|-------|
-| **IELTS-WT2-LLaMa3-1k** | Unknown (HuggingFace) | ⚠️ Check | No explicit license specified on HuggingFace |
-| **DREsS** | Consent Form Required | ⚠️ Academic | Requires signed consent form for access |
-| **Write & Improve** | Non-commercial only | ❌ No | Used only for calibration/validation, not primary training |
-| **ASAP++** | Research use | ⚠️ Check | Standard academic research license |
-| **ELLIPSE** | Kaggle Competition | ⚠️ Check | Competition rules apply |
+| Dataset                 | License Type          | Commercial Use | Notes                                                      |
+| ----------------------- | --------------------- | -------------- | ---------------------------------------------------------- |
+| **IELTS-WT2-LLaMa3-1k** | Unknown (HuggingFace) | ⚠️ Check       | No explicit license specified on HuggingFace               |
+| **DREsS**               | Consent Form Required | ⚠️ Academic    | Requires signed consent form for access                    |
+| **Write & Improve**     | Non-commercial only   | ❌ No          | Used only for calibration/validation, not primary training |
+| **ASAP++**              | Research use          | ⚠️ Check       | Standard academic research license                         |
+| **ELLIPSE**             | Kaggle Competition    | ⚠️ Check       | Competition rules apply                                    |
 
 ### Write & Improve Corpus Policy
 
 The W&I Corpus has restrictive licensing:
+
 - **Non-commercial use only** - prohibits commercial products/services
 - **No derived items without approval** - models trained primarily on this data require CUP&A approval
 - **No redistribution** - data cannot be shared publicly
@@ -55,14 +56,14 @@ These datasets are actively used in the training pipeline for **AES-DEBERTA**.
 
 **Purpose**: Dimensional Scoring Augmentation (Primary Training Data)
 
-| Attribute   | Value                                                      |
-| ----------- | ---------------------------------------------------------- |
+| Attribute   | Value                                                                  |
+| ----------- | ---------------------------------------------------------------------- |
 | **Size**    | ~48.9K samples (2.3K human-scored + 6.5K standardized + 40K synthetic) |
-| **Labels**  | **3 Dimensions** (Content, Organization, Language) on 1-5 scale |
-| **Mapping** | Content → TA, Organization → CC, Language → Vocab/Grammar |
-| **Source**  | [Official Website](https://haneul-yoo.github.io/dress/)    |
-| **License** | Consent form required for access (ACL 2025 paper)          |
-| **Usage**   | Used by `AES-DEBERTA` (Stage 1)                            |
+| **Labels**  | **3 Dimensions** (Content, Organization, Language) on 1-5 scale        |
+| **Mapping** | Content → TA, Organization → CC, Language → Vocab/Grammar              |
+| **Source**  | [Official Website](https://haneul-yoo.github.io/dress/)                |
+| **License** | Consent form required for access (ACL 2025 paper)                      |
+| **Usage**   | Used by `AES-DEBERTA` (Stage 1)                                        |
 
 **Pros:**
 
@@ -76,13 +77,13 @@ These datasets are actively used in the training pipeline for **AES-DEBERTA**.
 
 **Purpose**: CEFR Calibration & Validation Only
 
-| Attribute   | Value                                                       |
-| ----------- | ----------------------------------------------------------- |
-| **Size**    | ~3,800 training essays                                      |
-| **Labels**  | **Holistic CEFR** (A1-C2)                                   |
-| **Source**  | Cambridge University Press & Assessment                     |
-| **License** | Non-commercial, research use only, no redistribution        |
-| **Usage**   | Used by `AES-DEBERTA` (Stage 2 calibration only)            |
+| Attribute   | Value                                                |
+| ----------- | ---------------------------------------------------- |
+| **Size**    | ~3,800 training essays                               |
+| **Labels**  | **Holistic CEFR** (A1-C2)                            |
+| **Source**  | Cambridge University Press & Assessment              |
+| **License** | Non-commercial, research use only, no redistribution |
+| **Usage**   | Used by `AES-DEBERTA` (Stage 2 calibration only)     |
 
 > [!WARNING]
 > W&I license prohibits commercial use and requires approval for derived models. We use it only for calibration (aligning scores to CEFR scale) and validation (testing accuracy), not as primary training data.

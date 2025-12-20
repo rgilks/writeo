@@ -201,6 +201,51 @@ See **[Status](docs/reference/status.md)** for current production status, comple
 - **GitHub Issues**: [Report bugs or request features](https://github.com/rgilks/writeo/issues)
 - **Documentation**: [Full documentation index](docs/README.md)
 
+## ⚖️ Licensing & Third-Party Dependencies
+
+### Project License
+
+This project is open-source and **non-commercial**. Any donations received are solely for hosting and infrastructure costs. We do not sell access or services.
+
+### Third-Party Dependencies
+
+| Component        | License         | Notes                                                                      |
+| ---------------- | --------------- | -------------------------------------------------------------------------- |
+| **Next.js**      | MIT             | ✅ Fully permissive                                                        |
+| **React**        | MIT             | ✅ Fully permissive                                                        |
+| **Hono**         | MIT             | ✅ Fully permissive                                                        |
+| **LanguageTool** | LGPL 2.1        | ✅ Permissive for SaaS - we use it as a service, not distributing binaries |
+| **Transformers** | Apache 2.0      | ✅ Fully permissive                                                        |
+| **Modal**        | Commercial SaaS | ✅ Standard usage terms                                                    |
+
+### ML Models
+
+| Model              | Base License | Notes                       |
+| ------------------ | ------------ | --------------------------- |
+| **DeBERTa-v3**     | MIT          | ✅ Microsoft open-source    |
+| **Flan-T5** (GEC)  | Apache 2.0   | ✅ Google open-source       |
+| **GECToR-RoBERTa** | Apache 2.0   | ✅ Publicly available model |
+| **RoBERTa**        | MIT          | ✅ Meta open-source         |
+
+### Training Datasets
+
+| Dataset                 | License Status                | Our Usage                                            |
+| ----------------------- | ----------------------------- | ---------------------------------------------------- |
+| **IELTS-WT2-LLaMa3-1k** | Unknown (HuggingFace)         | Primary dimensional training                         |
+| **DREsS**               | Academic (consent form)       | Primary dimensional training                         |
+| **Write & Improve**     | Non-commercial, research only | Calibration & validation only (not primary training) |
+
+> **Note**: W&I Corpus is used **only for CEFR score calibration and validation**, not as primary training data. This aligns with research/educational use terms. We are happy to source alternative CEFR-labeled datasets if any licensing concerns arise.
+
+For detailed dataset licensing information, see [docs/models/datasets.md](docs/models/datasets.md).
+
+### LLM Providers
+
+- **Groq**: Used via their API under standard terms of service
+- **OpenAI**: Used via their API under standard terms of service
+
+No LLM model weights are distributed with this project.
+
 ## 📄 License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
