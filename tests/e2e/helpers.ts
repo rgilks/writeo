@@ -365,7 +365,39 @@ export class HomePage {
   }
 
   async clickHistoryLink() {
-    await this.page.click('a[href="/history"]');
+    const link = this.page.locator('a[href="/history"]');
+    await link.waitFor({ state: "visible", timeout: 15000 });
+    await link.scrollIntoViewIfNeeded();
+
+    // Click with retry pattern for hydration/animation issues (similar to clickTask)
+    const maxRetries = 3;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const navigationPromise = this.page.waitForURL("/history", {
+          timeout: 10000,
+          waitUntil: "domcontentloaded",
+        });
+
+        await link.click({ force: true }); // Force click in case of overlay/animation
+
+        await navigationPromise;
+        return; // Success
+      } catch (e) {
+        // If last retry, throw the error
+        if (i === maxRetries - 1) {
+          const currentUrl = this.page.url();
+          if (currentUrl.includes("/history")) {
+            return; // Actually succeeded but promise timed out
+          }
+          throw new Error(
+            `Navigation to /history failed after ${maxRetries} attempts. Current URL: ${currentUrl}.`,
+          );
+        }
+        // Otherwise wait a bit and retry
+        console.log(`Click attempt ${i + 1} failed, retrying...`);
+        await this.page.waitForTimeout(1000);
+      }
+    }
   }
 }
 
