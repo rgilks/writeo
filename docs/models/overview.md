@@ -16,16 +16,7 @@ This service supports multiple essay scoring models for comparison and selection
 - **Best For**: General purpose essay scoring, detailed dimensional feedback.
 - **Documentation**: [AES-DEBERTA](deberta.md)
 
-### 2. `AES-CORPUS` ✅ Verification
-
-- **Model**: Custom RoBERTa-base
-- **Type**: Regression
-- **Output**: Single CEFR score (0-9 scale) + CEFR Level
-- **Status**: ✅ Secondary / Verification
-- **Best For**: Validating `AES-DEBERTA` scores against the "Write & Improve" standard.
-- **Documentation**: [AES-CORPUS](corpus.md)
-
-### 3. `AES-FEEDBACK` 🟡 Experimental
+### 2. `AES-FEEDBACK` 🟡 Experimental
 
 - **Model**: DeBERTa-v3-base (Multi-task)
 - **Type**: Multi-task learning
@@ -34,7 +25,7 @@ This service supports multiple essay scoring models for comparison and selection
 - **Best For**: Secondary CEFR signal.
 - **Documentation**: [AES-FEEDBACK](feedback.md)
 
-### 4. `AES-ESSAY` (Legacy) 🔴 Deprecated
+### 3. `AES-ESSAY` (Legacy) 🔴 Deprecated
 
 - **Model**: `KevSun/Engessay_grading_ML`
 - **Output**: 6 dimensional scores
@@ -67,7 +58,6 @@ POST /grade
 
 ```bash
 POST /grade?model_key=deberta  # AES-DEBERTA
-POST /grade?model_key=corpus   # AES-CORPUS
 POST /grade?model_key=essay    # AES-ESSAY (Legacy)
 ```
 

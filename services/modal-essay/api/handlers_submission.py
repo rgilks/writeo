@@ -65,13 +65,8 @@ def process_answer(
     )
     model_name = config.get("name", "Essay scorer")
 
-    # Determine assessor ID based on model
-    if model_key == "corpus-roberta":
-        assessor_id = "AES-CORPUS"
-    elif model_key == "engessay":
-        assessor_id = "AES-ESSAY"
-    else:
-        assessor_id = "AES-ESSAY"  # Default
+    # All models use AES-ESSAY assessor ID
+    assessor_id = "AES-ESSAY"
 
     assessor_result = create_assessor_result(scores, model_name, assessor_id=assessor_id)
     return AnswerResult(id=answer.id, assessor_results=[assessor_result])

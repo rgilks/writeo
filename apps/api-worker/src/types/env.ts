@@ -10,7 +10,6 @@ export type Env = {
   // External service URLs
   MODAL_GRADE_URL: string;
   MODAL_LT_URL?: string;
-  MODAL_CORPUS_URL?: string; // Corpus-trained model service (dev mode)
   MODAL_FEEDBACK_URL?: string; // AES-FEEDBACK model service (dev mode)
   MODAL_GEC_URL?: string; // GEC-SEQ2SEQ model service (dev mode)
   MODAL_GECTOR_URL?: string; // GEC-GECTOR model service (fast GECToR)

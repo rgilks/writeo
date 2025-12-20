@@ -30,14 +30,6 @@ MODEL_CONFIGS: dict[str, dict[str, Any]] = {
         "output_dims": 1,
         "dimension_mapping": None,
     },
-    "corpus-roberta": {
-        "name": "corpus-trained-roberta",  # Custom trained model
-        "type": "roberta",
-        "output_dims": 1,  # Single overall score
-        "dimension_mapping": None,
-        "is_custom": True,  # Flag for custom trained models
-        "model_path": "/vol/models/corpus-trained-roberta",  # Path on Modal volume
-    },
 }
 
 # Model storage path

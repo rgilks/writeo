@@ -1,7 +1,3 @@
-/**
- * Unit tests for shared type utilities
- */
-
 import { describe, it, expect } from "vitest";
 import {
   mapScoreToCEFR,
@@ -9,7 +5,6 @@ import {
   findAssessorResultById,
   isAssessorResultWithId,
   getEssayAssessorResult,
-  getCorpusAssessorResult,
   getFeedbackAssessorResult,
   getLanguageToolAssessorResult,
   getLLMAssessorResult,
@@ -154,45 +149,6 @@ describe("getEssayAssessorResult", () => {
       { id: "AES-ESSAY", name: "Essay", type: "grader", overall: 7.5 },
     ];
     expect(getEssayAssessorResult(results)).toBeUndefined();
-  });
-});
-
-describe("getCorpusAssessorResult", () => {
-  it("should return corpus assessor with overall and label", () => {
-    const results: AssessorResult[] = [
-      {
-        id: "AES-CORPUS",
-        name: "Corpus-Trained RoBERTa",
-        type: "grader",
-        overall: 3.74,
-        label: "A2+",
-      },
-    ];
-
-    const result = getCorpusAssessorResult(results);
-    expect(result).toBeDefined();
-    expect(result?.id).toBe("AES-CORPUS");
-    expect(result?.overall).toBe(3.74);
-    expect(result?.label).toBe("A2+");
-  });
-
-  it("should return undefined if not found", () => {
-    const results: AssessorResult[] = [{ id: "AES-ESSAY", name: "Essay", type: "grader" }];
-    expect(getCorpusAssessorResult(results)).toBeUndefined();
-  });
-
-  it("should return undefined if overall is missing", () => {
-    const results: AssessorResult[] = [
-      { id: "AES-CORPUS", name: "Corpus", type: "grader", label: "B1" },
-    ];
-    expect(getCorpusAssessorResult(results)).toBeUndefined();
-  });
-
-  it("should return undefined if label is missing", () => {
-    const results: AssessorResult[] = [
-      { id: "AES-CORPUS", name: "Corpus", type: "grader", overall: 4.5 },
-    ];
-    expect(getCorpusAssessorResult(results)).toBeUndefined();
   });
 });
 

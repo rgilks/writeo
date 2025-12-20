@@ -13,7 +13,6 @@ import assessorConfig from "../config/assessors.json";
 export interface AssessorConfig {
   scoring: {
     essay: boolean;
-    corpus: boolean;
     feedback: boolean;
     deberta: boolean;
   };
@@ -33,7 +32,6 @@ export interface AppConfig {
   modal: {
     gradeUrl: string;
     ltUrl?: string;
-    corpusUrl: string; // Default to deployed service URL
     feedbackUrl: string; // AES-FEEDBACK service URL
     gecUrl: string; // GEC-SEQ2SEQ service URL
     gectorUrl: string; // GEC-GECTOR service URL (fast)
@@ -102,7 +100,6 @@ export function buildConfig(env: Env): AppConfig {
     modal: {
       gradeUrl: requireEnv("MODAL_GRADE_URL", env.MODAL_GRADE_URL),
       ltUrl: env.MODAL_LT_URL,
-      corpusUrl: env.MODAL_CORPUS_URL || "https://rob-gilks--writeo-corpus-fastapi-app.modal.run",
       feedbackUrl:
         env.MODAL_FEEDBACK_URL || "https://rob-gilks--writeo-feedback-fastapi-app.modal.run",
       gecUrl: env.MODAL_GEC_URL || "https://rob-gilks--writeo-gec-service-fastapi-app.modal.run",
@@ -128,7 +125,6 @@ export function buildConfig(env: Env): AppConfig {
       assessors: {
         scoring: {
           essay: assessorConfig.scoring.essay,
-          corpus: assessorConfig.scoring.corpus,
           feedback: assessorConfig.scoring.feedback,
           deberta: (assessorConfig.scoring as any).deberta ?? false,
         },

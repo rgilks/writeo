@@ -371,53 +371,6 @@ export class MockModalClient implements ModalService {
     });
   }
 
-  async scoreCorpus(text: string): Promise<Response> {
-    // Mock corpus CEFR scoring based on word count and complexity
-    if (!text || typeof text !== "string") {
-      return new Response(JSON.stringify({ error: "Invalid text input" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const wordCount = text.split(/\s+/).filter(Boolean).length;
-
-    // Simple heuristic for CEFR level
-    let score = 3.0; // Base A2
-    if (wordCount > 250)
-      score = 7.5; // C1
-    else if (wordCount > 200)
-      score = 6.0; // B2
-    else if (wordCount > 150)
-      score = 5.0; // B1+
-    else if (wordCount > 100)
-      score = 4.5; // B1
-    else if (wordCount > 50) score = 3.5; // A2+
-
-    // Determine CEFR level
-    let cefr = "A2";
-    if (score >= 8.0) cefr = "C1+";
-    else if (score >= 7.5) cefr = "C1";
-    else if (score >= 6.5) cefr = "B2+";
-    else if (score >= 6.0) cefr = "B2";
-    else if (score >= 5.0) cefr = "B1+";
-    else if (score >= 4.5) cefr = "B1";
-    else if (score >= 3.5) cefr = "A2+";
-    else if (score >= 3.0) cefr = "A2";
-
-    return new Response(
-      JSON.stringify({
-        score: Math.round(score * 100) / 100,
-        cefr_level: cefr,
-        model: "corpus-roberta-mock",
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
-  }
-
   async scoreFeedback(text: string): Promise<Response> {
     // Mock AES-FEEDBACK scoring
     if (!text || typeof text !== "string") {

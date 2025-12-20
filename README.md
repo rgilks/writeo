@@ -73,7 +73,6 @@ npm install
 
 # Install Python dependencies for Modal services
 cd services/modal-deberta && uv pip install -e .
-cd ../modal-corpus && uv pip install -e .
 cd ../modal-feedback && uv pip install -e .
 cd ../modal-gec && uv pip install -e .
 cd ../modal-lt && uv pip install -e .
@@ -111,9 +110,6 @@ Deploy the ML backend services to Modal:
 ```bash
 # Deploy Essay Scoring & Feedback Services
 cd services/modal-deberta
-modal deploy app.py
-
-cd ../modal-corpus
 modal deploy app.py
 
 cd ../modal-feedback

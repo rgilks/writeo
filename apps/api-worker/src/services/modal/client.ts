@@ -39,10 +39,6 @@ export class ModalClient implements ModalService {
     );
   }
 
-  async scoreCorpus(text: string): Promise<Response> {
-    return this.postJson(`${this.config.modal.corpusUrl}/score`, { text, max_length: 512 });
-  }
-
   async scoreFeedback(text: string): Promise<Response> {
     return this.postJson(`${this.config.modal.feedbackUrl}/score`, { text });
   }

@@ -12,7 +12,7 @@ NUM_THRESHOLDS = 7  # Thresholds for scores 2-8 (A2 to C2)
 MIN_SCORE = 2.0
 MAX_SCORE = 8.5
 
-# CEFR level thresholds (same as AES-CORPUS)
+# CEFR level thresholds (standard CEFR-to-score mapping)
 CEFR_THRESHOLDS = {
     "C2": 8.25,
     "C1+": 7.75,

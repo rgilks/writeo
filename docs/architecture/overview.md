@@ -26,7 +26,6 @@
 Writeo provides comprehensive essay assessment through a modular **Service Registry** architecture:
 
 - **Essay Scoring**:
-  - **Corpus Scorer (`AES-CORPUS`)**: High-correlation scorer trained on the Write & Improve corpus.
   - **DeBERTa Scorer (`AES-DEBERTA`)**: Deep learning model for dimensional scoring (Task Achievement, Coherence, Vocabulary, Grammar).
   - **Standard Scorer (`AES-ESSAY`)**: Legacy baseline scorer.
 - **Grammar Correction (GEC)**:
@@ -46,7 +45,7 @@ Writeo is highly configurable via environment variables and `assessors.json`. Wh
 
 - **LLM Provider:** `openai` (GPT-4o-mini)
 - **Services:** Scale-to-zero enabled
-- **Assessors:** `AES-CORPUS` (fast), `GEC-GECTOR` (fast), `GEC-LT` (very fast)
+- **Assessors:** `AES-DEBERTA` (accurate), `GEC-GECTOR` (fast), `GEC-LT` (very fast)
 
 **Characteristics:**
 
@@ -82,7 +81,6 @@ graph TB
 
     subgraph "Assessment Services (Modal)"
         direction TB
-        Corpus[🤖 Corpus Scorer]
         Deberta[🧠 DeBERTa Scorer]
         GEC[✍️ GEC Service]
         LT[📝 LanguageTool]
@@ -96,7 +94,6 @@ graph TB
     API -->|Store & Load| R2
     API -->|Cache Results| KV
 
-    API -->|Parallel Execution| Corpus
     API -->|Parallel Execution| Deberta
     API -->|Parallel Execution| GEC
     API -->|Parallel Execution| LT
@@ -122,14 +119,13 @@ graph TB
 
 Writeo uses [Modal](https://modal.com) to host Python-based ML services.
 
-| Service ID      | Model / Engine      | Description                                             | Type       |
-| :-------------- | :------------------ | :------------------------------------------------------ | :--------- |
-| **AES-CORPUS**  | RoBERTa-base        | Trained on W&I Corpus. High correlation with human CEFR | **Scorer** |
-| **AES-DEBERTA** | DeBERTa-v3-large    | Multi-dimensional scoring (TA, CC, Vocab, Grammar)      | **Scorer** |
-| **AES-ESSAY**   | RoBERTa-base        | Legacy baseline scorer                                  | **Scorer** |
-| **GEC-SEQ2SEQ** | Flan-T5-base-gec    | Sequence-to-sequence grammar correction (Best Quality)  | **GEC**    |
-| **GEC-GECTOR**  | GECToR-RoBERTa      | Fast iterative tagging correction (High Speed)          | **GEC**    |
-| **GEC-LT**      | LanguageTool (Java) | Rule-based checking for mechanics/typos                 | **GEC**    |
+| Service ID      | Model / Engine      | Description                                            | Type       |
+| :-------------- | :------------------ | :----------------------------------------------------- | :--------- |
+| **AES-DEBERTA** | DeBERTa-v3-large    | Multi-dimensional scoring (TA, CC, Vocab, Grammar)     | **Scorer** |
+| **AES-ESSAY**   | RoBERTa-base        | Legacy baseline scorer                                 | **Scorer** |
+| **GEC-SEQ2SEQ** | Flan-T5-base-gec    | Sequence-to-sequence grammar correction (Best Quality) | **GEC**    |
+| **GEC-GECTOR**  | GECToR-RoBERTa      | Fast iterative tagging correction (High Speed)         | **GEC**    |
+| **GEC-LT**      | LanguageTool (Java) | Rule-based checking for mechanics/typos                | **GEC**    |
 
 ### 3.3 LLM Providers
 
@@ -162,7 +158,7 @@ sequenceDiagram
 
     rect rgb(240, 248, 255)
         note right of API: Parallel Execution Phase
-        API->>ML: Execute Generic Services (Corpus, Deberta, GEC, LT)
+        API->>ML: Execute Generic Services (Deberta, GEC, LT)
         API->>LLM: Streaming Feedback (if requested)
     end
 
@@ -202,7 +198,7 @@ When `storeResults: true` is sent:
 | **Seq2Seq GEC**  | ~12-16s         | Slow generation (Beam search) - **Bottleneck**   |
 | **LLM Feedback** | ~1-3s           | Depends on provider (Groq is faster than OpenAI) |
 
-**Note**: Total request time is determined by the _slowest_ parallel service. If `GEC-SEQ2SEQ` is enabled, the request will take ~15s. If only `GEC-GECTOR` and `AES-CORPUS` are enabled, it can be < 3s.
+**Note**: Total request time is determined by the _slowest_ parallel service. If `GEC-SEQ2SEQ` is enabled, the request will take ~15s. If only `GEC-GECTOR` and `AES-DEBERTA` are enabled, it can be < 3s.
 
 ### 6.2 Throughput
 

@@ -30,11 +30,6 @@ export interface GECResult {
   }>;
 }
 
-export interface CorpusResult {
-  score: number;
-  cefr_level: string;
-}
-
 export interface FeedbackResult {
   cefr_score: number;
   cefr_level: string;
@@ -64,7 +59,6 @@ export interface DebertaResult {
 // ============================================================================
 
 export const ASSESSOR_IDS = {
-  CORPUS: "AES-CORPUS",
   FEEDBACK: "AES-FEEDBACK",
   GEC: "GEC-SEQ2SEQ",
   GECTOR: "GEC-GECTOR",
@@ -122,28 +116,6 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
   // -------------------------------------------------------------------------
   // Scoring Services (type: "grader")
   // -------------------------------------------------------------------------
-  {
-    assessorId: ASSESSOR_IDS.CORPUS,
-    id: "corpus",
-    displayName: "Corpus-Trained RoBERTa",
-    type: "grader",
-    configPath: "features.assessors.scoring.corpus",
-    timingKey: "5e_corpus_fetch",
-    model: "roberta-base",
-    createRequest: (text, modal) => modal.scoreCorpus(text),
-    parseResponse: (json) => json as CorpusResult,
-    createAssessor: (data) => {
-      const d = data as CorpusResult;
-      return {
-        id: ASSESSOR_IDS.CORPUS,
-        name: "Corpus-Trained RoBERTa",
-        type: "grader",
-        overall: d.score,
-        label: d.cefr_level,
-        meta: { model: "roberta-base", source: "Write & Improve corpus", devMode: true },
-      };
-    },
-  },
   {
     assessorId: ASSESSOR_IDS.FEEDBACK,
     id: "feedback",

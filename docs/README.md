@@ -36,7 +36,6 @@ How-to guides and service documentation.
 ML models and AI/LLM integration details.
 
 - **[Overview](models/overview.md)** - Essay scoring models comparison
-- **[Corpus Model](models/corpus.md)** - AES-CORPUS training details
 - **[DeBERTa Model](models/deberta.md)** - AES-DEBERTA (DeBERTa v3 Large) details
 - **[Feedback Model](models/feedback.md)** - AES-FEEDBACK multi-task model
 - **[GEC Models](models/gec.md)** - Grammar correction services (Seq2Seq + GECToR)

@@ -203,7 +203,6 @@ export function isValidUUID(uuid: string): boolean {
 export type AssessorResultId =
   | "AES-ESSAY"
   | "AES-DEBERTA" // DeBERTa-v3-large dimensional scorer
-  | "AES-CORPUS" // Corpus-trained RoBERTa model (dev mode)
   | "AES-FEEDBACK" // Multi-task feedback model (dev mode)
   | "GEC-LT"
   | "GEC-LLM"
@@ -270,26 +269,6 @@ export function getEssayAssessorResult(results: AssessorResult[]):
       overall: number;
       dimensions: NonNullable<AssessorResult["dimensions"]>;
     };
-  }
-  return undefined;
-}
-
-/**
- * Type-safe helper to get corpus assessor result from an array of assessor results.
- *
- * @param results - Array of assessor results to search
- * @returns Corpus assessor result with guaranteed overall score and label, or undefined if not found
- */
-export function getCorpusAssessorResult(results: AssessorResult[]):
-  | (AssessorResult & {
-      id: "AES-CORPUS";
-      overall: number;
-      label: string;
-    })
-  | undefined {
-  const result = findAssessorResultById(results, "AES-CORPUS");
-  if (result && "overall" in result && "label" in result) {
-    return result as AssessorResult & { id: "AES-CORPUS"; overall: number; label: string };
   }
   return undefined;
 }
