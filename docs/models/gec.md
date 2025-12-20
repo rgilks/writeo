@@ -39,7 +39,7 @@ Edits: "has" → "have", "book" → "books"
 
 - **Model:** `google/flan-t5-base` (220M params, fine-tuned on GEC data)
 - **GPU:** A10G
-- **Keep-Warm:** 60s
+- **Keep-Warm:** 30s
 - **Location:** `services/modal-gec/`
 
 ### Pros/Cons
@@ -73,7 +73,7 @@ Output: "I have three books"
 
 - **Model:** `gotutiyan/gector-roberta-base-5k`
 - **GPU:** T4 (cheaper)
-- **Keep-Warm:** 60s
+- **Keep-Warm:** 30s
 - **Location:** `services/modal-gector/`
 
 ### Pros/Cons

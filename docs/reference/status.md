@@ -8,7 +8,7 @@
 
 ### Completed Features
 
-- ✅ **Core Assessment** - Essay scoring, grammar checking, AI feedback
+- ✅ **Core Assessment** - Essay scoring, dimensional analysis (DeBERTa v3)
 - ✅ **GEC (Grammatical Error Correction)** - Dual services running in parallel:
   - Seq2Seq (Flan-T5) for high-quality corrections
   - GECToR (RoBERTa) for fast corrections (~10x faster)
@@ -20,7 +20,7 @@
 - ✅ **Metacognition Tools** - Reflection prompts, self-evaluation checklists
 - ✅ **Privacy & Security** - Token auth, rate limiting, privacy indicators
 - ✅ **Comprehensive Testing** - Automated tests, browser verification
-- ✅ **LanguageTool N-grams** - N-gram data enabled for improved precision (confusable words, context-aware detection)
+- ✅ **LanguageTool N-grams** - Server-side n-gram support (confusable words, context-aware detection)
 
 ### Verified Features
 
@@ -41,8 +41,11 @@ All critical features have been verified through comprehensive browser testing:
 
 ## ⚠️ Known Limitations
 
-- **Modal Cold Starts**: 8-15s (Essay Scoring), 2-5s (LanguageTool) - only affects first request after inactivity
-- **OpenAI API**: Pay-per-use (~$0.0025 per submission) - rate limited to 10/min (max ~$1,080/month)
+- **Modal Cold Starts**: 8-15s (Essay Scoring, GEC) - mitigated in Production mode via keep-warm settings (~30s).
+- **LLM Costs & Rate Limits**:
+  - **OpenAI**: Pay-per-use (~$0.0025/submission), strict rate limits.
+  - **Groq**: Currently free/low-cost, high throughput (Production default for Llama 3).
+- **AI Feedback**: `AES-FEEDBACK` service is currently experimental and disabled by default.
 
 ---
 
@@ -52,6 +55,11 @@ All critical features have been verified through comprehensive browser testing:
 Currently focused on stability and performance optimization. Future enhancements will be added based on user feedback.
 
 ### Technical Implementation Roadmap
+
+#### Performance & Streaming
+
+- [ ] **Groq Streaming**: Implement true streaming for Groq provider (currently simulated).
+- [ ] **Client-side Caching**: Improve caching for history and draft data.
 
 #### Testing Improvements
 
@@ -82,7 +90,7 @@ _Philosophy: Keep tests lean and focused._
 - ✅ **Browser Verification** - Critical features verified
 - ✅ **Manual Testing** - Comprehensive test plan available
 
-See- [Testing Guide](../operations/testing.md) for complete testing documentation.
+See [Testing Guide](../operations/testing.md) for complete testing documentation.
 
 ---
 

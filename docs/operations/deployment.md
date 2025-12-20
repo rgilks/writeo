@@ -5,7 +5,7 @@ Complete guide for deploying Writeo to production.
 ## Pre-Deployment Checklist
 
 - [ ] Test locally: `wrangler dev` and `npm run dev`
-- [ ] Choose operational mode: **Cheap Mode** (cost-optimized) or **Turbo Mode** (performance-optimized)
+- [ ] Choose operational mode coverage: **Production** (Recommended) or **Legacy/Minimal**
 - [ ] Verify all secrets are set (see Step 3)
 - [ ] Run tests: `npm run test:all` (or let pre-push hook handle it)
 - [ ] Code is formatted: `npm run format:check`
@@ -13,47 +13,33 @@ Complete guide for deploying Writeo to production.
 
 ## Operational Modes
 
-Writeo supports two operational modes:
+Writeo's architecture has evolved to use specialized models for different tasks.
 
-### 🪙 Cheap Mode (Cost-Optimized)
+### 🚀 Production Mode (Recommended)
 
-**Setup:**
+Uses the full suite of high-performance models for maximum accuracy:
 
-- Set `LLM_PROVIDER=openai` and `OPENAI_API_KEY`
-- Modal services automatically scale-to-zero (Essay Scoring: 30s, LanguageTool: 60s default scaledown)
-- **Cost:** ~$7.60-8.50/month (100 submissions/day)
-- **Performance:** 8-15s cold start, 3-10s warm
+- **AES-DEBERTA:** Primary assessor (Dimensional scoring, DeBERTa-v3-large)
+- **AES-CORPUS:** Secondary assessor (Verification, RoBERTa-base)
+- **GEC-SEQ2SEQ:** High-precision grammar correction (Flan-T5-base)
+- **GEC-GECTOR:** Low-latency grammar correction (RoBERTa-base)
 
-### ⚡ Turbo Mode (Performance-Optimized)
+**Cost:** Variable based on usage (Modal GPU time + LLM tokens).
+**Performance:** High accuracy, parallel execution of scoring and correction.
 
-**Setup:**
+### 🪙 Legacy / Minimal Mode
 
-- Set `LLM_PROVIDER=groq` and `GROQ_API_KEY`
-- Update Modal services: Set `scaledown_window=2` in both `services/modal-essay/app.py` and `services/modal-lt/app.py`, then redeploy both services
-- **Cost:** ~$25-40/month (100 submissions/day)
-- **Performance:** 2-5s first request, 1-3s warm
+Uses legacy or fewer models to save costs:
 
-See [MODES.md](MODES.md) for quick mode switching guide.  
-See [Operations Guide](monitoring.md) for post-deployment management.
-See [OpenAPI Spec](../reference/openapi.yaml) for API details.
+- **AES-ESSAY:** Legacy assessor (Single model, deprecated but functional)
+- **LanguageTool:** Rule-based grammar checking (CPU-only)
+
+**Note:** The application is configured to prefer the Production models (`AES-DEBERTA`) by default. Running in minimal mode requires adjusting `apps/api-worker/src/config/assessors.json`.
 
 ## Quick Deployment
 
-**For most deployments, use the automated script:**
-
-```bash
-./scripts/deploy-all.sh
-```
-
-This script handles all deployment steps automatically:
-
-- Deploys Modal service
-- Extracts and configures Modal URL secrets
-- Builds shared packages
-- Deploys all workers and frontend
-- Optionally runs smoke tests
-
-See below for manual step-by-step instructions if needed.
+> [!WARNING]
+> The automated scripts (`./scripts/deploy-all.sh`, `./scripts/deploy-modal.sh`) primarily support the legacy configuration. For a full production deployment, follow the **Step-by-Step Deployment** below.
 
 ## Step-by-Step Deployment
 
@@ -68,106 +54,167 @@ Run the setup script (creates R2 bucket and KV namespace):
 Or manually:
 
 ```bash
-wrangler r2 bucket create writeo-data-1  # Or use your preferred bucket name
-wrangler kv:namespace create "WRITEO_RESULTS"  # Copy ID to wrangler.toml
-wrangler kv:namespace create "WRITEO_RESULTS" --preview  # Copy preview_id
+wrangler r2 bucket create writeo-data-1
+wrangler kv:namespace create "WRITEO_RESULTS" # Copy ID to wrangler.toml
+wrangler kv:namespace create "WRITEO_RESULTS" --preview # Copy preview_id
 ```
-
-**Note:** The bucket name in `wrangler.toml` is `writeo-data-1`. You can use any bucket name, but make sure it matches what's configured in `wrangler.toml`.
 
 ### Step 2: Deploy Modal Services
 
-#### 2.1 Deploy Essay Scoring Service
+Deploy the services required for your chosen operational mode.
+
+**Prerequisites:**
+
+- Install Modal: `pip install modal`
+- Authenticate: `modal token new`
+
+#### 2.1 Primary Scoring (AES-DEBERTA) - _Required for Production_
+
+Dimensional scoring model (DeBERTa-v3-large).
 
 ```bash
-# Recommended: Use deployment script
-./scripts/deploy-modal.sh
-
-# Or manually
-cd services/modal-essay
-modal deploy app.py  # Copy endpoint URL from output
+cd services/modal-deberta
+modal deploy app.py
+# Copy the endpoint URL
 ```
 
-#### 2.2 Deploy LanguageTool Service (Optional)
+#### 2.2 Secondary Scoring (AES-CORPUS) - _Recommended_
+
+Verification model trained on corpus data.
+
+```bash
+cd services/modal-corpus
+modal deploy app.py
+# Copy the endpoint URL
+```
+
+#### 2.3 Grammar Correction (GEC-SEQ2SEQ) - _Recommended_
+
+High-precision grammar correction (Flan-T5).
+
+```bash
+cd services/modal-gec
+modal deploy main.py
+# Copy the endpoint URL
+```
+
+#### 2.4 Fast Grammar Correction (GEC-GECTOR) - _Recommended_
+
+Fast, token-classification based correction.
+
+```bash
+cd services/modal-gector
+modal deploy main.py
+# Copy the endpoint URL
+```
+
+#### 2.5 Feedback Model (AES-FEEDBACK) - _Optional_
+
+Experimental model for span-level feedback.
+
+```bash
+cd services/modal-feedback
+modal deploy app.py
+# Copy the endpoint URL
+```
+
+#### 2.6 Legacy Scoring (AES-ESSAY) - _Legacy/Fallback_
+
+Required by the API worker configuration unless explicitly disabled, or a placeholder URL is provided.
+
+```bash
+cd services/modal-essay
+modal deploy app.py
+# Copy the endpoint URL
+```
+
+#### 2.7 LanguageTool (GEC-LT) - _Optional_
+
+Rule-based grammar checking.
 
 ```bash
 cd services/modal-lt
-modal deploy app.py  # Copy endpoint URL from output
+modal deploy app.py
+# Copy the endpoint URL
 ```
-
-#### 2.3 Set Modal API Key Secret
-
-**Important:** Both Modal services require API key authentication. Set the same API key that you'll use for your Cloudflare Worker:
-
-```bash
-# Set Modal API key (use the same value as your Cloudflare Worker API_KEY)
-modal secret create MODAL_API_KEY <your-api-key>
-
-# Verify it's set
-modal secret list | grep MODAL_API_KEY
-```
-
-**Test endpoints:** `curl https://your-endpoint/health` (no auth required for health check)
 
 ### Step 3: Configure Secrets
+
+Set the secrets in Cloudflare Workers to connect your API to the deployed services.
 
 ```bash
 cd apps/api-worker
 
-# Set Essay Scoring Modal URL secret
+# --- Service URLs ---
+
+# Primary Scorer (DeBERTa)
+wrangler secret put MODAL_DEBERTA_URL
+# Paste modal-deberta URL
+
+# Secondary Scorer (Corpus)
+wrangler secret put MODAL_CORPUS_URL
+# Paste modal-corpus URL
+
+# Grammar Correction (Seq2Seq)
+wrangler secret put MODAL_GEC_URL
+# Paste modal-gec URL
+
+# Fast Grammar Correction (GECToR)
+wrangler secret put MODAL_GECTOR_URL
+# Paste modal-gector URL
+
+# Feedback Model (Optional)
+wrangler secret put MODAL_FEEDBACK_URL
+# Paste modal-feedback URL
+
+# Legacy Scorer (Required by config, can be dummy if unused)
 wrangler secret put MODAL_GRADE_URL
-# Paste the Essay Scoring Modal endpoint URL when prompted
+# Paste modal-essay URL
 
-# Set LanguageTool Modal URL secret (optional)
+# LanguageTool (Optional)
 wrangler secret put MODAL_LT_URL
-# Paste the LanguageTool Modal endpoint URL when prompted, or press Enter to skip
+# Paste modal-lt URL
 
-# Set LanguageTool language (optional)
-wrangler secret put LT_LANGUAGE
-# Paste language code (default: "en-GB") or press Enter to skip
+# --- API Configuration ---
 
 # Set API authentication key
 wrangler secret put API_KEY
-# Paste your API key when prompted (generate a secure random string or JWT)
+# Paste your API key (generate a secure random string)
 
-# Choose your LLM provider (set one):
-# Option 1: OpenAI (GPT-4o-mini) - Recommended for cost efficiency
+# Test API Key (Optional, for higher rate limits)
+wrangler secret put TEST_API_KEY
+# Paste a secondary key
+
+# --- LLM Provider ---
+
+# Helper: Set provider ("openai" or "groq")
 wrangler secret put LLM_PROVIDER
-# Enter "openai"
+
+# If using OpenAI:
 wrangler secret put OPENAI_API_KEY
-# Paste your OpenAI API key from https://platform.openai.com/api-keys
+# Paste OpenAI Key
 
-# Option 2: Groq (Llama 3.3 70B) - Recommended for speed
-# wrangler secret put LLM_PROVIDER
-# Enter "groq"
-# wrangler secret put GROQ_API_KEY
-# Paste your Groq API key from https://console.groq.com
-
-# Verify secrets are set
-wrangler secret list
+# If using Groq:
+wrangler secret put GROQ_API_KEY
+# Paste Groq Key
 ```
-
-**Important**: The `API_KEY` must match the key used in your frontend's `.env.local` file (for local development) or Cloudflare environment variables (for production).
-
-- See [OpenAPI Spec](../reference/openapi.yaml) for endpoint details
-- See [Operations Guide](monitoring.md) for monitoring setup
 
 ### Step 4: Verify Configuration
 
-Check `apps/api-worker/wrangler.toml`:
-
-- R2 bucket: `writeo-data-1`
-- KV namespace IDs set (production + preview)
+1.  Check `apps/api-worker/wrangler.toml`:
+    - R2 bucket: `writeo-data-1`
+    - KV namespace IDs present
+2.  Check `apps/api-worker/src/config/assessors.json`:
+    - Ensure the flags (e.g., `"deberta": true`) match the services you deployed. Disable any services you didn't deploy to prevent errors.
 
 ### Step 5: Deploy API Worker
 
 ```bash
 cd apps/api-worker
-wrangler dev  # Test locally first
-wrangler deploy  # Deploy to production
+wrangler deploy
 ```
 
-Test: `curl https://your-worker.workers.dev/health`
+Test health: `curl https://your-worker.workers.dev/health`
 
 ### Step 6: Deploy Frontend
 
@@ -176,169 +223,31 @@ cd apps/web
 npm run deploy
 ```
 
-**Note:** The `deploy` script automatically runs `build:cf` (which builds Next.js and OpenNext for Cloudflare) before deploying. Frontend uses Server Actions, so `API_BASE_URL` should be set in Cloudflare environment (not `.env.local`).
-
 ## Automated Deployment (GitHub Actions)
 
-The project includes GitHub Actions workflows for automated deployment:
+The repository includes `.github/workflows/deploy-and-test.yml`.
+Ensure you add the following secrets to your GitHub repository for it to work:
 
-**Workflow**: `.github/workflows/deploy-and-test.yml`
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `API_KEY`
 
-- **Triggers**: Runs automatically on push to `main` branch
-- **Process**:
-  1. Builds shared packages
-  2. Deploys API worker to Cloudflare
-  3. Deploys web app to Cloudflare
-  4. Runs API and E2E tests against deployed production site
-
-**Setup Required:**
-
-Configure GitHub secrets in Settings → Secrets and variables → Actions:
-
-- `API_KEY` - API authentication key (must match Cloudflare Workers secret)
-- `CLOUDFLARE_API_TOKEN` - Cloudflare API token with Workers edit permissions
-- `CLOUDFLARE_ACCOUNT_ID` - Your Cloudflare account ID
-- `TEST_API_KEY` (optional) - Test key with higher rate limits
-
-**Note**: Local tests are handled by git pre-push hooks, so the GitHub Action focuses on deployment and production verification.
-
-## Post-Deployment Testing
-
-**Smoke Test:**
-
-```bash
-API_BASE=https://your-worker.workers.dev ./scripts/smoke.sh
-```
-
-Verifies: Question/answer/submission creation and results retrieval.
-
-**Automated Testing:**
-
-The GitHub Actions workflow automatically runs tests after deployment. You can also run tests manually:
-
-```bash
-# Test against production
-API_BASE=https://your-worker.workers.dev API_KEY=your-key npm test
-PLAYWRIGHT_BASE_URL=https://your-site.com npm run test:e2e
-```
-
-### Manual API Testing
-
-```bash
-export API_BASE="https://your-worker.workers.dev"
-export API_KEY="your-api-key"
-
-# Quick test (creates question, answer, submission, polls for results)
-QUESTION_ID=$(uuidgen) && ANSWER_ID=$(uuidgen) && SUBMISSION_ID=$(uuidgen)
-# Answers must be sent inline with submissions
-# Questions can be sent inline or referenced by ID
-curl -X POST "$API_BASE/v1/text/submissions" -H "Authorization: Token $API_KEY" -H "Content-Type: application/json" -d "{\"submissionId\":\"$SUBMISSION_ID\",\"submission\":[{\"part\":1,\"answers\":[{\"id\":\"$ANSWER_ID\",\"questionId\":\"$QUESTION_ID\",\"questionText\":\"Describe your weekend.\",\"text\":\"I went to the park.\"}]}]}"
-
-# Or reference an existing question (create question first):
-curl -X PUT "$API_BASE/v1/text/questions/$QUESTION_ID" -H "Authorization: Token $API_KEY" -H "Content-Type: application/json" -d '{"text":"Describe your weekend."}'
-# Then submit with question reference:
-curl -X POST "$API_BASE/v1/text/submissions" -H "Authorization: Token $API_KEY" -H "Content-Type: application/json" -d "{\"submissionId\":\"$SUBMISSION_ID\",\"submission\":[{\"part\":1,\"answers\":[{\"id\":\"$ANSWER_ID\",\"questionId\":\"$QUESTION_ID\",\"text\":\"I went to the park.\"}]}]}"
-curl -H "Authorization: Token $API_KEY" "$API_BASE/v1/text/submissions/$SUBMISSION_ID"
-```
-
-See the [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) or [OpenAPI Spec](../reference/openapi.yaml) for complete API examples.
-
-### Frontend Testing
-
-1. Open frontend URL
-2. Submit an essay
-3. Verify results appear with scores, CEFR level, and grammar errors
-
-## Monitoring
-
-**Cloudflare Workers:**
-
-- Logs: `wrangler tail` (use `./scripts/check-logs.sh api-worker` for safe access)
-- Dashboard: https://dash.cloudflare.com → Workers & Pages → Analytics
-
-**Modal Services:**
-
-- Logs: `modal app logs writeo-essay` or `modal app logs writeo-lt`
-- Dashboard: https://modal.com → Your Apps
-
-**Key Metrics:** Request count/errors, response times, KV/R2 usage
-
-See [Operations Guide](monitoring.md) for detailed logging and monitoring guidance.
+**Note:** The GitHub Action currently deploys the Worker and Web App. It does **not** automatically deploy Modal services. You must deploy those manually using the steps above.
 
 ## Troubleshooting
 
-### Common Issues
+### "Service Unavailable" or 500 Errors
 
-**Modal service errors:**
+- Check `apps/api-worker` logs: `wrangler tail`
+- Verify the specific `MODAL_*_URL` secret is correct.
+- Ensure the service is running in Modal dashboard.
+- If a service is missing, disable it in `assessors.json` and redeploy the worker.
 
-- Verify `MODAL_GRADE_URL`, `API_KEY`, and `OPENAI_API_KEY` secrets are set correctly
-- Verify `MODAL_LT_URL` is set if grammar checking is needed (optional)
-- Check Modal service logs in dashboard: `modal app logs writeo-essay` or `modal app logs writeo-lt`
-- Test Modal endpoints directly:
-  - Essay Scoring: `curl https://your-essay-scoring-endpoint/health`
-  - LanguageTool: `curl https://your-lt-endpoint/health`
-- Verify Modal authentication: `modal token show`
+### "Authentication Failed" on Modal
 
-**KV not storing results:**
+- Ensure you set the `MODAL_API_KEY` secret within Modal if your services require it (check individual service `app.py` / `main.py`). Not all services enforce this at the Modal layer, but it's best practice.
 
-- Verify KV namespace IDs in wrangler.toml
-- Check KV namespace exists: `wrangler kv:namespace list`
-- Verify write permissions
-- Check worker logs for KV errors
+### Cost Management
 
-**R2 access errors:**
-
-- Verify bucket name matches: `writeo-data-1`
-- Check R2 bucket exists: `wrangler r2 bucket list`
-- Verify bucket bindings in wrangler.toml
-- Check bucket permissions
-
-**Results not appearing:**
-
-- Check API worker logs: `wrangler tail`
-- Verify Modal service is accessible
-- Check KV namespace permissions
-- Verify submission was created successfully
-
-**CORS errors:**
-
-- Ensure API worker has CORS headers configured
-- Check allowed origins in CORS configuration
-- Verify frontend is using correct API base URL
-
-### Rollback Plan
-
-If issues occur:
-
-1. **Revert to previous worker version:**
-   - Cloudflare dashboard → Workers → Versions
-   - Select previous version and promote
-
-2. **Or redeploy previous commit:**
-
-   ```bash
-   git checkout <previous-commit>
-   cd apps/api-worker
-   wrangler deploy
-   ```
-
-3. **Disable Modal services:**
-   - Remove or update `MODAL_GRADE_URL` secret (disables essay scoring)
-   - Remove or update `MODAL_LT_URL` secret (disables grammar checking)
-   - API will return errors but won't crash
-
-## Success Criteria
-
-- [ ] All smoke tests pass
-- [ ] Frontend can submit and receive results
-- [ ] Results format matches specification
-- [ ] No errors in worker logs
-- [ ] Modal service responds within acceptable time (< 30s)
-- [ ] CORS headers work correctly
-- [ ] KV storage persists results
-
-## Additional Resources
-
-- [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
-- [Modal Documentation](https://modal.com/docs)
-- [Wrangler CLI Reference](https://developers.cloudflare.com/workers/wrangler/)
+- Use `assessors.json` to disable expensive models (e.g., `deberta`, `gecSeq2seq`) if not needed for development.
+- Adjust `SCALEDOWN_WINDOW_SECONDS` in each Modal app file to control keep-warm costs.

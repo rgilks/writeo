@@ -71,7 +71,10 @@ cd writeo
 npm install
 
 # Install Python dependencies for Modal services
-cd services/modal-essay && pip install -e .
+cd services/modal-deberta && pip install -e .
+cd ../modal-corpus && pip install -e .
+cd ../modal-feedback && pip install -e .
+cd ../modal-gec && pip install -e .
 cd ../modal-lt && pip install -e .
 ```
 
@@ -105,16 +108,26 @@ GROQ_API_KEY=your_groq_key
 Deploy the ML backend services to Modal:
 
 ```bash
-# Deploy Essay Scoring Service
-cd services/modal-essay
+# Deploy Essay Scoring & Feedback Services
+cd services/modal-deberta
+modal deploy app.py
+
+cd ../modal-corpus
+modal deploy app.py
+
+cd ../modal-feedback
 modal deploy app.py
 
 # Deploy GEC Services
-cd services/modal-gec
+cd ../modal-gec
 modal deploy main.py
 
-cd services/modal-gector
+cd ../modal-gector
 modal deploy main.py
+
+# Deploy LanguageTool
+cd ../modal-lt
+modal deploy app.py
 ```
 
 ### 4. Run Locally

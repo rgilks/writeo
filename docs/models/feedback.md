@@ -69,13 +69,13 @@ Input: Essay text
 Output: {
   "cefr_score": 6.2,
   "cefr_level": "B2",
-  "error_distribution": {
+  "error_types": {
     "grammar": 0.65,      // 65% of errors are grammar
     "vocabulary": 0.20,   // 20% vocabulary
     "mechanics": 0.10,    // 10% spelling/punctuation
     "fluency": 0.05       // 5% awkward phrasing
   },
-  "problem_spans": [
+  "error_spans": [
     {
       "text": "have many books",
       "start": 12,
@@ -83,11 +83,6 @@ Output: {
       "confidence": 0.87,
       "likely_type": "grammar"  // Suggests SVA issue
     }
-  ],
-  "attention_heatmap": [
-    {"word": "student", "attention": 0.45},
-    {"word": "have", "attention": 0.89},  // High = likely error
-    ...
   ]
 }
 ```

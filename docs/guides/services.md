@@ -33,131 +33,119 @@ Edge worker that exposes the public API (`/v1/text/submissions`, `/v1/text/.../f
   npm run test:e2e  # Playwright suite (requires dev servers or run via pre-push hook)
   ```
 
-## Modal Essay Scoring Service
+---
 
-FastAPI service for essay scoring using ML models.
+## Modal Essay Services (Scoring)
+
+### 1. Corpus Scoring Service (`modal-corpus`)
+
+**Location:** `services/modal-corpus/`
+
+Primary scorer trained on the Write & Improve corpus. Provides the most accurate CEFR alignment (0.96 correlation).
+
+- **Model:** `roberta-base` fine-tuned on W&I data
+- **Output:** Overall Score + CEFR Level
+- **Performance:** Very fast (~200ms warm)
+
+**Quick Start:**
+
+```bash
+cd services/modal-corpus && modal deploy main.py
+```
+
+### 2. DeBERTa Scoring Service (`modal-deberta`)
+
+**Location:** `services/modal-deberta/`
+
+Advanced scorer providing multi-dimensional breakdown.
+
+- **Model:** `microsoft/deberta-v3-large`
+- **Output:** Dimensions: Task Achievement, Coherence & Cohesion, Vocabulary, Grammar
+- **Performance:** Slower (~400-800ms warm), requires GPU
+
+**Quick Start:**
+
+```bash
+cd services/modal-deberta && modal deploy main.py
+```
+
+### 3. Legacy Essay Service (`modal-essay`)
 
 **Location:** `services/modal-essay/`
 
-### Quick Start
+Original baseline scorer.
 
-```bash
-cd services/modal-essay
-uv sync  # or: pip install -e .
-modal deploy app.py
-```
+- **Model:** `engessay` (KevSun/Engessay_grading_ML)
+- **Status:** Legacy / Fallback
 
-### Endpoints
+---
 
-- `POST /grade` - Score an essay
-- `GET /health` - Health check
-- `GET /models` - List available models
+## Modal Grammar Services (GEC)
 
-### Configuration
-
-- **Default Model**: `engessay` (KevSun/Engessay_grading_ML)
-- **Model Selection**: Set `MODEL_NAME` env var or use `?model_key=` query param
-- **Model Caching**: Weights cached in Modal Volume for faster cold starts
-
-### Model Details
-
-See [Model Documentation](../models/overview.md) for model documentation and comparison.
-
-## Modal LanguageTool Service
-
-FastAPI service for grammar checking using LanguageTool.
-
-**Location:** `services/modal-lt/`
-
-### Quick Start
-
-```bash
-cd services/modal-lt
-uv sync  # or: pip install -e .
-modal deploy app.py
-```
-
-### Endpoints
-
-- `POST /check` - Check text for grammar errors
-- `GET /health` - Health check
-
-### Configuration
-
-- **LanguageTool Version**: 6.4
-- **N-grams**: ✅ Enabled (improves precision for confusable words)
-- **Storage**: JAR and n-gram data cached in Modal Volumes
-- **Cold Start**: ~2-3s (JAR cached), ~10-15min first time (n-gram download)
-- **Warm Check**: ~100-500ms
-
-## Modal GEC Service (Seq2Seq)
-
-FastAPI service for Grammatical Error Correction using Seq2Seq models.
+### 1. GEC Seq2Seq (`modal-gec`)
 
 **Location:** `services/modal-gec/`
 
-### Quick Start
+High-precision correction using Sequence-to-Sequence generation.
+
+- **Model:** `google/flan-t5-base` (Fine-tuned)
+- **Method:** Generates corrected text, then calculates diffs
+- **Pros:** Highest correction quality, handles complex rewrites
+- **Cons:** Slow (~12-16s), expensive
+
+**Quick Start:**
 
 ```bash
-cd services/modal-gec
-modal deploy main.py
+cd services/modal-gec && modal deploy main.py
 ```
 
-### Endpoints
-
-- `POST /gec_endpoint` - Correct text and return edits
-- `GET /health` - Health check
-
-### Configuration
-
-- **Model**: `google/flan-t5-base` (Fine-tuned)
-- **Method**: Seq2Seq generation + Diff-based extraction
-- **GPU**: A10G
-- **Keep-Warm**: 60s
-- **Speed**: ~12-16s per request (high quality, slow)
-
-## Modal GECToR Service (Fast)
-
-FastAPI service for fast Grammatical Error Correction using GECToR (Tag, Not Rewrite).
+### 2. GECToR Fast (`modal-gector`)
 
 **Location:** `services/modal-gector/`
 
-### Quick Start
+High-speed correction using iterative tagging.
+
+- **Model:** `gotutiyan/gector-roberta-base-5k`
+- **Method:** Token classification (Keep, Delete, Replace, etc.)
+- **Pros:** Fast (~1-2s), cheaper
+- **Cons:** Less capable of structural rewrites
+
+**Quick Start:**
 
 ```bash
-cd services/modal-gector
-modal deploy main.py
+cd services/modal-gector && modal deploy main.py
 ```
 
-### Endpoints
+### 3. LanguageTool (`modal-lt`)
 
-- `POST /gector_endpoint` - Correct text and return edits
-- `GET /health` - Health check
+**Location:** `services/modal-lt/`
 
-### Configuration
+Rule-based grammar and mechanics checking.
 
-- **Model**: `gotutiyan/gector-roberta-base-5k`
-- **Method**: Token-level tagging (encoder-only, all tokens in parallel)
-- **GPU**: T4 (cheaper than A10G)
-- **Keep-Warm**: 60s
-- **Speed**: ~1-2s per request (~10x faster than Seq2Seq)
+- **Engine:** LanguageTool 6.4 (Java)
+- **Pros:** CPU-only (cheap), explains errors well, catches mechanical issues
+- **Cons:** Misses complex phrasing issues
 
-### Performance Comparison
+**Quick Start:**
 
-| Service    | Speed  | Quality | Cost   |
-| ---------- | ------ | ------- | ------ |
-| Seq2Seq    | 12-16s | High    | Higher |
-| **GECToR** | 1-2s   | Good    | Lower  |
+```bash
+cd services/modal-lt && modal deploy app.py
+```
 
-Both services run in parallel and results appear as separate assessors (`GEC-SEQ2SEQ` and `GEC-GECTOR`).
+---
 
 ## Shared Package
 
-Shared TypeScript types, schemas, and utilities.
+Shared code library used by both the Frontend/API (TypeScript) and Python Services.
 
 **Location:** `packages/shared/`
 
-### TypeScript Package
+### Structure
+
+- `ts/`: TypeScript source (types, validation schemas, utilities)
+- `py/`: Python source (Pydantic models corresponding to TS types)
+
+### TypeScript
 
 **Building:**
 
@@ -169,16 +157,10 @@ npm run build
 **Usage:**
 
 ```typescript
-import {
-  CreateQuestionRequest,
-  CreateSubmissionRequest,
-  AssessmentResults,
-  isValidUUID,
-  mapScoreToCEFR,
-} from "@writeo/shared";
+import { AssessmentResults, mapScoreToCEFR } from "@writeo/shared";
 ```
 
-### Python Package
+### Python
 
 **Installation:**
 
@@ -190,21 +172,15 @@ pip install -e .
 **Usage:**
 
 ```python
-from schemas import (
-    ModalRequest,
-    AssessmentResults,
-    map_score_to_cefr,
-)
+from schemas import AssessmentResults, map_score_to_cefr
 ```
 
-### Notes
+**Note:** When changing a data structure, you must update both the TypeScript `zod` schemas/interfaces AND the Python `pydantic` models to ensure compatibility across the system.
 
-- TypeScript package must be built before other packages can use it
-- Python package uses Pydantic v2 for schema validation
-- Both packages maintain the same data structures for consistency
+---
 
 ## References
 
-- [Deployment Guide](../operations/deployment.md) - Deployment guide
-- [System Architecture](../architecture/overview.md) - System architecture
-- [Model Documentation](../models/overview.md) - Model details
+- [Deployment Guide](../operations/deployment.md)
+- [System Architecture](../architecture/overview.md)
+- [Add New Service](adding-services.md)

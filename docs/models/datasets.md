@@ -1,18 +1,67 @@
-# Essay Scoring Datasets for Multi-Dimensional Training
+# Essay Scoring Datasets
 
-This document catalogs publicly available datasets that could be used to train essay scoring models with **dimensional/multi-trait scoring** (TA, CC, Vocab, Grammar, etc.) rather than just holistic CEFR levels.
+This document catalogs the datasets used to train our essay scoring models, specifically focusing on **dimensional/multi-trait scoring** (Task Achievement, Coherence & Cohesion, Vocabulary, and Grammar).
 
-## Current Limitation
+## Use Case
 
-Our **AES-CORPUS** model (RoBERTa) was trained on the Write & Improve corpus which only has **holistic CEFR labels** (no dimensional breakdown). This is why we can't show consistent dimensional scores alongside the corpus score.
+We typically train in two stages:
+
+1.  **Dimensional Pre-training**: Learning distinct traits (Grammar vs Vocabulary) using specific datasets.
+2.  **CEFR Calibration**: Aligning scores to the CEFR standard using the Write & Improve corpus.
 
 ---
 
-## High-Priority Datasets
+## Active Datasets (Currently Used)
+
+These datasets are actively used in the training pipeline for **AES-DEBERTA**.
+
+### 1. Write & Improve Corpus (W&I)
+
+**Purpose**: CEFR Calibration & Main Baseline
+
+| Attribute  | Value                                                       |
+| ---------- | ----------------------------------------------------------- |
+| **Size**   | ~3,800 training essays                                      |
+| **Labels** | **Holistic CEFR** (A1-C2)                                   |
+| **Source** | Cambridge English (Real learners)                           |
+| **Usage**  | Used by `AES-CORPUS` (Main) and `AES-DEBERTA` (Stage 2 & 3) |
+
+### 2. IELTS-WT2-LLaMa3-1k
+
+**Purpose**: Dimensional Scoring Initialization
+
+| Attribute  | Value                                                                                                      |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| **Size**   | ~1,000 essays                                                                                              |
+| **Labels** | **4 Dimensions** (TA, CC, Vocab, Grammar) on 0-9 scale                                                     |
+| **Source** | [HuggingFace (`123Harr/IELTS-WT2-LLaMa3-1k`)](https://huggingface.co/datasets/123Harr/IELTS-WT2-LLaMa3-1k) |
+| **Usage**  | Used by `AES-DEBERTA` (Stage 1) to learn distinct traits.                                                  |
+
+**Pros:**
+
+- Exact match for our IELTS-style dimensions.
+- High-quality synthetic/augmented data.
+
+### 3. DREsS (Dataset for Rubric-based Essay Scoring)
+
+**Purpose**: Dimensional Scoring Augmentation
+
+| Attribute   | Value                                                     |
+| ----------- | --------------------------------------------------------- |
+| **Size**    | Varies                                                    |
+| **Labels**  | **3 Dimensions** (Content, Organization, Language)        |
+| **Mapping** | Content → TA, Organization → CC, Language → Vocab/Grammar |
+| **Usage**   | Used by `AES-DEBERTA` (Stage 1)                           |
+
+---
+
+## Candidate Datasets (Future Expansion)
+
+These datasets are high-quality candidates for improving model robustness in the future.
 
 ### 1. ASAP++ (Attribute-Specific Essay Grading)
 
-**Best choice for multi-dimensional scoring**
+**Best choice for US K-12 style scoring**
 
 | Attribute       | Value                                                                                        |
 | --------------- | -------------------------------------------------------------------------------------------- |
@@ -23,41 +72,24 @@ Our **AES-CORPUS** model (RoBERTa) was trained on the Write & Improve corpus whi
 | **Essays**      | [Kaggle ASAP-AES](https://www.kaggle.com/c/asap-aes/data)                                    |
 | **License**     | Research use                                                                                 |
 
-**Pros:**
-
-- Has true dimensional rubric scores from human graders
-- Well-documented, widely used in research
-- Easy to download
-
-**Cons:**
-
-- US K-12 essays (not adult EFL/IELTS style)
-- Fixed prompts (8 total)
-
----
+**Pros:** True human rubric scores, widely used in research.
+**Cons:** US K-12 prompts differ significantly from IELTS/EFL tasks.
 
 ### 2. ASAP 2.0 (2024)
 
-**Newest, largest dataset**
+**Newest, largest argumentative dataset**
 
 | Attribute    | Value                                                                                                |
 | ------------ | ---------------------------------------------------------------------------------------------------- |
 | **Size**     | ~24,000 essays                                                                                       |
 | **Focus**    | Argumentative writing (more relevant to IELTS)                                                       |
 | **Download** | [Kaggle ASAP 2.0](https://www.kaggle.com/competitions/learning-agency-lab-automated-essay-scoring-2) |
-| **Year**     | 2024                                                                                                 |
 
-**Pros:**
-
-- Large dataset
-- Argumentative essays (closer to IELTS Task 2)
-- Recent competition with active community
-
----
+**Pros:** Large size, argumentative focus.
 
 ### 3. ELLIPSE Dataset
 
-**Best for EFL learners**
+**Best for EFL learner specificity**
 
 | Attribute      | Value                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------- |
@@ -66,112 +98,28 @@ Our **AES-CORPUS** model (RoBERTa) was trained on the Write & Improve corpus whi
 | **Source**     | English Language Learners                                                                      |
 | **Download**   | [Kaggle ELLIPSE](https://www.kaggle.com/competitions/feedback-prize-english-language-learning) |
 
-**Pros:**
-
-- 6 dimensional scores!
-- Written by ELL students (matches our target users)
-- Vocabulary and Grammar as separate dimensions
-
-**Cons:**
-
-- US middle/high school students
+**Pros:** 6 dimensional scores, EFL student authors.
 
 ---
 
-### 4. DREsS (Dataset for Rubric-based Essay Scoring)
+## Training Strategy
 
-**Academic EFL focus**
+Our current `AES-DEBERTA` training strategy (`scripts/training/train-deberta-aes.py`) implements a **3-Stage Process**:
 
-| Attribute       | Value                                      |
-| --------------- | ------------------------------------------ |
-| **Size**        | Varies by source                           |
-| **Dimensions**  | Content, Organization, Language            |
-| **Score Range** | 1-5 (0.5 increments)                       |
-| **Paper**       | [ACL Anthology](https://aclanthology.org/) |
+1.  **Stage 1: Dimensional Pre-Training**
+    - Uses **IELTS-WT2** & **DREsS**
+    - Objective: Learn to distinguish between Content, Organization, and Grammar.
+    - Loss: MSE on dimensional scores (0-9 scale).
 
-**Pros:**
+2.  **Stage 2: CEFR Calibration**
+    - Uses **Write & Improve (W&I)**
+    - Objective: Calibrate the overall score to the specific CEFR standards (A2-C2).
+    - Loss: Ordinal Regression (CORN) on CEFR levels.
 
-- Combines multiple sources including ASAP++
-- Standardized rubric format
-- EFL-focused
-
----
-
-## IELTS-Specific Datasets
-
-### 5. IELTS Writing Scored Essays (Kaggle)
-
-| Attribute        | Value                                                                       |
-| ---------------- | --------------------------------------------------------------------------- |
-| **Dimensions**   | Task Achievement, Coherence & Cohesion, Lexical Resource, Grammatical Range |
-| **Score Range**  | 0-9 band scores                                                             |
-| **CEFR Mapping** | Direct (IELTS → CEFR is well-established)                                   |
-| **Download**     | [Kaggle Search](https://www.kaggle.com/search?q=ielts+writing+scored)       |
-
-**Pros:**
-
-- Exact match for IELTS dimensions (TA, CC, Vocab, Grammar)
-- Band scores map directly to CEFR
-
-**Cons:**
-
-- Various quality datasets on Kaggle
-- May need validation
-
----
-
-## Other Relevant Datasets
-
-| Dataset     | Size           | Dimensions    | Notes                                   |
-| ----------- | -------------- | ------------- | --------------------------------------- |
-| **ICLE**    | ~6,000         | Holistic      | International Corpus of Learner English |
-| **TOEFL11** | 12,100         | Holistic + L1 | Native language identification focus    |
-| **FCE**     | 1,244          | Holistic      | Cambridge First Certificate essays      |
-| **LOCNESS** | ~300,000 words | None          | Native English control corpus           |
-
----
-
-## Recommended Training Strategy
-
-### Option A: ASAP++ for Quick Multi-Dimensional Model
-
-1. Download ASAP++ attribute scores
-2. Download essays from Kaggle ASAP-AES
-3. Train multi-output RoBERTa model
-4. Map scores to IELTS-style dimensions
-
-### Option B: ELLIPSE for EFL-Specific Training
-
-1. Download ELLIPSE dataset from Kaggle
-2. Use 6 trait scores as targets
-3. Train multi-task model similar to AES-FEEDBACK
-
-### Option C: Combine Multiple Datasets
-
-1. ASAP++ for content/organization
-2. ELLIPSE for grammar/vocabulary
-3. Write & Improve for CEFR calibration
-4. Multi-task learning across all
-
----
-
-## Dimension Mapping
-
-| Our Dimensions       | ASAP++          | ELLIPSE                 | IELTS             |
-| -------------------- | --------------- | ----------------------- | ----------------- |
-| Task Achievement     | Content         | -                       | Task Response     |
-| Coherence & Cohesion | Organization    | Cohesion                | CC                |
-| Vocabulary           | Style (partial) | Vocabulary, Phraseology | Lexical Resource  |
-| Grammar              | Conventions     | Grammar, Syntax         | Grammatical Range |
-
----
-
-## Next Steps
-
-1. **Evaluate ASAP++ or ELLIPSE** as training data
-2. **Train multi-output model** with dimension-specific heads
-3. **Validate** against Write & Improve corpus (CEFR alignment)
-4. **Replace AES-ESSAY** with new dimensional model
+3.  **Stage 3: End-to-End Fine-Tuning**
+    - Uses **All Datasets**
+    - Objective: Balance dimensional accuracy with correct CEFR alignment.
+    - Loss: Combined Weighted Loss.
 
 ## References
 

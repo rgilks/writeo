@@ -220,6 +220,13 @@ paths:
                               description: Answer text (required - answers must always be sent inline). Maximum length: 50,000 characters.
                               example: "I went to the park yesterday and played football with my friends."
 
+                assessors:
+                  type: array
+                  description: Optional list of specific assessors to run (e.g., ["AES-ESSAY", "GEC-LT"]). If omitted, default assessors are used.
+                  items:
+                    type: string
+                  example: ["AES-ESSAY", "GEC-LT"]
+
                 storeResults:
                   type: boolean
                   description: Whether to store results on the server (default: false)
@@ -487,6 +494,13 @@ paths:
                               maxLength: 50000
                               description: Answer text (required - answers must always be sent inline). Maximum length: 50,000 characters.
                               example: "I went to the park yesterday and played football with my friends."
+
+                assessors:
+                  type: array
+                  description: Optional list of specific assessors to run (e.g., ["AES-ESSAY", "GEC-LT"]). If omitted, default assessors are used.
+                  items:
+                    type: string
+                  example: ["AES-ESSAY", "GEC-LT"]
 
                 storeResults:
                   type: boolean

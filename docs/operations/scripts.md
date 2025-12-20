@@ -1,6 +1,6 @@
 # Scripts Reference
 
-Utility scripts for deployment and operations.
+Utility scripts for deployment, operations, and evaluation.
 
 ## Git Hooks
 
@@ -21,21 +21,22 @@ See [TESTING.md](TESTING.md) for details on hook features including quick mode.
 
 ## Deployment Scripts
 
-- `deploy-all.sh` - Deploy all services (Modal + API + Web)
-- `deploy-modal.sh` - Deploy Modal services only
 - `setup.sh` - Initial Cloudflare resource setup (R2 bucket, KV namespace)
-- `check-logs.sh` - View Cloudflare Worker logs safely (with timeout)
-- `clear-cloudflare-data.sh` - Clear all data from Cloudflare R2 and KV storage (fast bucket recreation)
-- `set-mode.sh` - Switch between Cheap Mode and Turbo Mode (local development)
-- `set-mode-production.sh` - Switch between Cheap Mode and Turbo Mode (production)
+- `deploy-all.sh` - **Legacy**: Deployment script for older configurations.
+- `deploy-modal.sh` - **Legacy**: Deployment script for `modal-essay`.
 
-## Mode Switching Scripts
+> [!TIP]
+> For modern production deployment, prefer manual individual service deployment as described in [DEPLOYMENT.md](deployment.md).
+
+## Operational Modes
+
+Scripts to switch between **Economy** (Development) and **Production** (Turbo) modes.
 
 **Local Development:**
 
 ```bash
-./scripts/set-mode.sh cheap   # Switch to Cheap Mode
-./scripts/set-mode.sh turbo   # Switch to Turbo Mode
+./scripts/set-mode.sh cheap   # Switch to Economy Mode
+./scripts/set-mode.sh turbo   # Switch to Production Mode
 ```
 
 **Production:**
@@ -45,30 +46,96 @@ See [TESTING.md](TESTING.md) for details on hook features including quick mode.
 ./scripts/set-mode-production.sh turbo
 ```
 
-See [MODES.md](MODES.md) for detailed mode switching guide.
+See [MODES.md](modes.md) for detailed mode switching guide.
 
-## Data Management
+## Operations Scripts
+
+Helper scripts for managing the running application.
+
+### API Key Management
+
+Manage API keys stored in Cloudflare KV.
+
+```bash
+# Create a new key
+./scripts/manage-api-keys.sh create "Client Name"
+
+# Revoke a key
+./scripts/manage-api-keys.sh revoke <key>
+
+# Check key owner
+./scripts/manage-api-keys.sh get <key>
+```
+
+### Rate Limits
+
+Reset rate limit counters in Cloudflare KV without affecting other data.
+
+```bash
+./scripts/reset-rate-limits.sh
+```
+
+### Data Management
 
 **Clear Cloudflare Data:**
 
-```bash
-# Make sure you're logged in:
-wrangler login
+Permanently delete all data from R2 buckets and KV namespaces (useful for resetting dev/staging environments).
 
-# Then run:
+```bash
 ./scripts/clear-cloudflare-data.sh
 ```
 
-**How it works:**
+- ✅ **R2**: Deletes/Recreates bucket
+- ✅ **KV**: Deletes/Recreates namespace
+- ✅ **Auto-update**: Updates `wrangler.toml`
 
-- ✅ **R2**: Deletes the entire bucket and recreates it (instant, regardless of object count)
-- ✅ **KV**: Deletes the entire namespace and recreates it (instant, regardless of key count)
-- ✅ **Auth**: Automatically uses Wrangler's stored OAuth token
-- ✅ **Auto-update**: Automatically updates `wrangler.toml` with the new KV namespace ID
+### Log Checking
 
-⚠️ **Warning:** This script permanently deletes all data from R2 buckets and KV namespaces. Use with caution!
+Safe wrapper around `wrangler tail` with timeout protection.
+
+```bash
+./scripts/check-logs.sh api-worker "error" 20
+```
+
+## Evaluation & Testing
+
+Scripts for evaluating model performance and testing.
+
+### Assessor Evaluation
+
+Runs a comparative evaluation of all enabled assessors against the test dataset (`scripts/training/data/test.jsonl`).
+
+```bash
+# Evaluate against local API
+export API_KEY=your-key
+python scripts/evaluate_assessors.py
+```
+
+Generates an `assessor_report.md` with:
+
+- Individual essay scores vs Human labels
+- MAE (Mean Absolute Error) and Bias metrics
+- Performance recommendations
+
+### Latency Measurement
+
+Measure response latency of a specific endpoint (useful for checking Modal cold/warm starts).
+
+```bash
+python scripts/measure_latency.py
+```
+
+### Test Environment
+
+Starts the API Worker and Web App on test ports (8787/3000) for integration testing.
+
+```bash
+./scripts/start-test-env.sh
+```
 
 ## Calibration Scripts (Optional)
+
+Legacy scripts for calibrating corpus scores.
 
 - `calibrate-from-corpus.py` - Generate calibration data from corpus
 - `apply-corpus-calibration.py` - Generate calibration function code
@@ -83,10 +150,6 @@ python scripts/calibrate-from-corpus.py
 
 ## References
 
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
+- [DEPLOYMENT.md](deployment.md) - Deployment guide
 - [Operations Guide](monitoring.md) - Operations guide
-- [MODES.md](MODES.md) - Mode switching guide
-
-```
-
-```
+- [MODES.md](modes.md) - Mode switching guide

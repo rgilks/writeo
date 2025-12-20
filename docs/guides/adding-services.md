@@ -6,10 +6,10 @@ This guide explains how to add new Modal-based assessor services to Writeo.
 
 ## Quick Reference
 
-| Task                    | Files to Modify                    |
-| ----------------------- | ---------------------------------- |
-| Add new Modal service   | 3 files (see below)                |
-| Modify existing service | Usually just `service-registry.ts` |
+| Task                    | Files to Modify                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Add new Modal service   | 1. `service-registry.ts`<br>2. `modal/client.ts` & `modal/types.ts`<br>3. `config/assessors.json` & `services/config.ts` |
+| Modify existing service | Usually just `service-registry.ts`                                                                                       |
 
 ---
 
@@ -23,16 +23,23 @@ Add an entry to `ASSESSOR_REGISTRY`:
 
 ```typescript
 {
-  assessorId: "NEW-SERVICE",           // Unique ID shown to frontend
+  assessorId: "NEW-SERVICE",              // Unique ID shown to frontend (matches ASSESSOR_IDS constant)
   id: "newservice",                       // Short ID for internal use
   displayName: "My New Service",          // Human-readable name
   type: "grader" | "feedback",            // grader = scoring, feedback = errors
   configPath: "features.assessors.xxx",   // Path in AppConfig
   timingKey: "5x_newservice_fetch",       // For performance tracking
-  model: "model-name",                    // ML model identifier
-  createRequest: (text, modal) => modal.newServiceMethod(text),
+  model: "model-name",                    // ML model identifier for metadata
+
+  // createRequest: Creates the Promise<Response> for the service call
+  createRequest: (text, modal, answerId, config) => {
+      // access config if needed, e.g. config.features.languageTool.language
+      return modal.newServiceMethod(text);
+  },
+
   parseResponse: (json) => json as NewServiceResult,
-  createAssessor: (data) => {
+
+  createAssessor: (data, text) => {
     const d = data as NewServiceResult;
     return {
       id: "NEW-SERVICE",
@@ -47,7 +54,18 @@ Add an entry to `ASSESSOR_REGISTRY`:
 
 ### Step 2: Add ModalClient Method
 
+**File:** `apps/api-worker/src/services/modal/types.ts`
+Add the method definition to the `ModalService` interface:
+
+```typescript
+export interface ModalService {
+  // ... existing methods
+  newServiceMethod(text: string): Promise<Response>;
+}
+```
+
 **File:** `apps/api-worker/src/services/modal/client.ts`
+Implement the method in `ModalClient`:
 
 ```typescript
 async newServiceMethod(text: string): Promise<Response> {
@@ -55,11 +73,19 @@ async newServiceMethod(text: string): Promise<Response> {
 }
 ```
 
-Also add to `modal/types.ts` interface and `modal/mock.ts`.
+**File:** `apps/api-worker/src/services/modal/mock.ts`
+Implement the mock method in `MockModalClient` for testing:
 
-### Step 3: Add Config
+```typescript
+async newServiceMethod(text: string): Promise<Response> {
+  return new Response(JSON.stringify({ score: 5.0 }), { status: 200 });
+}
+```
+
+### Step 3: Add Configuration
 
 **File:** `apps/api-worker/src/config/assessors.json`
+Add the feature flag default:
 
 ```json
 {
@@ -72,7 +98,9 @@ Also add to `modal/types.ts` interface and `modal/mock.ts`.
 
 **File:** `apps/api-worker/src/services/config.ts`
 
-Add URL config and assessor flag.
+1. Add the URL to `AppConfig["modal"]`.
+2. Map the environment variable in `buildConfig`.
+3. Update `AppConfig["features"]["assessors"]` to read from `assessors.json`.
 
 ---
 
@@ -92,7 +120,7 @@ createAssessor: (data) => ({
 })
 ```
 
-**Examples:** AES-CORPUS, AES-FEEDBACK
+**Examples:** AES-CORPUS, AES-FEEDBACK, AES-DEBERTA
 
 ### Feedback Services
 
@@ -104,13 +132,13 @@ createAssessor: (data) => ({
   id: "GEC-XXX",
   type: "feedback",
   meta: {
-    edits: data.edits,           // Array of edits
+    edits: data.edits,           // Array of edits for UI highlighting
     correctedText: data.corrected,
   }
 })
 ```
 
-**Examples:** GEC-SEQ2SEQ, GEC-GECTOR
+**Examples:** GEC-SEQ2SEQ, GEC-GECTOR, GEC-LT
 
 ---
 
@@ -121,7 +149,7 @@ Add your response type at the top of `service-registry.ts`:
 ```typescript
 export interface NewServiceResult {
   score: number;
-  // ... other fields
+  // ... other fields matching the JSON response from Python
 }
 ```
 
@@ -132,11 +160,9 @@ export interface NewServiceResult {
 1. **Type check:** `npm run type-check`
 2. **Unit tests:** `npm run test:unit`
 3. **Integration test:**
-
    ```bash
    # Start local dev
    npm run dev
-
    # Submit an essay and check response includes your assessor
    ```
 
@@ -164,13 +190,14 @@ def fastapi_app():
 
 ```python
 # api.py
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 def create_fastapi_app():
     app = FastAPI()
 
     @app.post("/endpoint")
     async def score(request: Request):
+        data = await request.json()
         # Your ML logic here
         return {"score": 0.5}
 

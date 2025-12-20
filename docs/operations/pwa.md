@@ -19,8 +19,8 @@ This document describes the Progressive Web App (PWA) implementation for Writeo.
 ✅ **PWA Registration Component** (`apps/web/app/components/PWARegistration.tsx`)
 
 - Automatic service worker registration
-- Install prompt handling
-- Update detection
+- Update detection (Aggressive: automatically reloads page when new version activates)
+- Passive install prompt support (relies on browser defaults)
 
 ## Optional: Generate PNG Icons
 

@@ -25,14 +25,6 @@
 - Children's privacy section
 - Linked to Terms of Service
 
-### Cookie Policy
-
-- Comprehensive Cookie Policy page (`apps/web/app/cookies/page.tsx`)
-- States no HTTP cookies are used
-- Explains localStorage and sessionStorage usage
-- Clarifies browser storage doesn't require consent
-- Linked from footer
-
 ### Accessibility Statement
 
 - Comprehensive accessibility statement page (`apps/web/app/accessibility/page.tsx`)
@@ -58,6 +50,12 @@
 ---
 
 ## Pending Items
+
+### Cookie Policy
+
+- **Status**: MISSING (Page `apps/web/app/cookies/page.tsx` does not exist)
+- **Action**: Create policy page explaining localStorage usage (no actual HTTP cookies used).
+- **Note**: Strict cookie consent popups are likely not required as only functional localStorage is used, but a policy page is best practice.
 
 ### Data Deletion API
 
@@ -111,8 +109,8 @@ Required for users who opt into server storage:
 - ✅ Legal basis for processing stated (opt-in consent for server storage)
 - ✅ Data subject rights (access via localStorage by default, deletion via browser, export via localStorage)
 - ✅ Data breach notification procedures documented
-- ✅ Cookie consent (NOT REQUIRED - no cookies used, only localStorage/sessionStorage)
 - ✅ Age restrictions (NOT REQUIRED - no data collection by default)
+- ⚠️ Cookie Policy (Pending creation)
 
 ### CCPA Compliance (if serving California users)
 
@@ -131,9 +129,9 @@ Required for users who opt into server storage:
 
 - ✅ Terms of Service
 - ✅ Privacy Policy
-- ✅ Cookie Policy
 - ✅ Accessibility Statement
 - ✅ Contact information (Discord support: https://discord.gg/YxuFAXWuzw)
+- ⚠️ Cookie Policy (Pending)
 - ⚠️ Third-party licenses verification (pending)
 - ⚠️ Model licenses verification (pending)
 
@@ -158,6 +156,16 @@ Required for users who opt into server storage:
 
 ### Model Licenses
 
+**Primary Models:**
+
+- **AES**: `microsoft/deberta-v3-large` (MIT License)
+  - Fine-tuned for ordinal regression scoring.
+- **GEC**: `google/flan-t5-base` (Apache 2.0)
+  - Fine-tuned on error correction datasets.
+- **GECToR**: `gotutiyan/gector-roberta-base-5k` (Apache 2.0 / MIT depending on base)
+  - Base: `roberta-base` (MIT).
+
+**Legacy/Reference:**
+
 - KevSun/Engessay_grading_ML: https://huggingface.co/KevSun/Engessay_grading_ML
-  - Citation: Sun, K., & Wang, R. (2024). Automatic Essay Multi-dimensional Scoring with Fine-tuning and Multiple Regression. _ArXiv_. https://arxiv.org/abs/2406.01198
 - Michau96/distilbert-base-uncased-essay_scoring: https://huggingface.co/Michau96/distilbert-base-uncased-essay_scoring

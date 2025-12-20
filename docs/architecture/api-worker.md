@@ -43,7 +43,7 @@ The API Worker is a serverless application running on Cloudflare Workers that pr
 │  │  R2 Bucket   │  │  KV Store    │  │  AI Binding  │       │
 │  │  (Storage)   │  │  (Results)   │  │  (Cloudflare)│       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
-└─────────────────────────────────────────────────────────────┘
+6└─────────────────────────────────────────────────────────────┘
          │                    │                    │
          │                    │                    │
          ▼                    ▼                    ▼
@@ -116,10 +116,9 @@ Client Request
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 7. Route Handler                                            │
-│    - Questions: PUT /v1/text/questions/:question_id            │
-│    - Submissions: POST /v1/text/submissions (create)            │
-│    - Submissions: PUT /v1/text/submissions/:submission_id (update)│
-│    - Results: GET /v1/text/submissions/:submission_id          │
+│    - Questions: PUT /v1/text/questions/:question_id         │
+│    - Submissions: POST /v1/text/submissions (create)        │
+│    - Results: GET /v1/text/submissions/:submission_id       │
 │    - Feedback: POST /v1/text/submissions/:id/ai-feedback/stream│
 │    - Feedback: POST /v1/text/submissions/:id/teacher-feedback  │
 └─────────────────────────────────────────────────────────────┘
@@ -210,28 +209,27 @@ POST /v1/text/submissions (create) or PUT /v1/text/submissions/:submission_id (u
 │  • Auto-create questions/answers if needed                  │
 │  • Load existing data from R2 (if storeResults=true)        │
 │  • Build Modal request format                               │
-│  • Prepare service requests (essay, LT, LLM, relevance)     │
+│  • Prepare service requests using Assessor Registry         │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌──────────────────────────────────────────────────────────────┐
 │ Phase 3: Execute Services (PARALLEL)                         │
 │                                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
-│  │ Essay        │  │ LanguageTool │  │ LLM          │        │
-│  │ Assessment   │  │ Grammar      │  │ Assessment   │        │
-│  │ (Modal)      │  │ Check        │  │ (OpenAI/     │        │
-│  │              │  │ (Modal)      │  │  Groq)       │        │
-│  └──────────────┘  └──────────────┘  └──────────────┘        │
-│         │                  │                  │              │
-│         └──────────────────┼──────────────────┘              │
-│                            │                                 │
-│  ┌──────────────────────────────────────────────┐            │
-│  │ Relevance Check (Modal)                      │            │
-│  └──────────────────────────────────────────────┘            │
-│  ┌──────────────────────────────────────────────┐            │
-│  │ GEC Service (Modal - Seq2Seq)                │            │
-│  └──────────────────────────────────────────────┘            │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Legacy Services                                        │  │
+│  │  • LanguageTool (Modal)                                │  │
+│  │  • LLM Assessment (OpenAI/Groq)                        │  │
+│  │  • Relevance Check (Modal)                             │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                           │                                  │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ Generic Registry Services (via service-registry.ts)    │  │
+│  │  • Corpus Scorer (Modal)                               │  │
+│  │  • Feedback Scorer (Modal)                             │  │
+│  │  • GEC (Seq2Seq / GECToR) (Modal)                      │  │
+│  │  • Deberta Scorer (Modal)                              │  │
+│  └────────────────────────────────────────────────────────┘  │
 │                                                              │
 │  All services execute in parallel using Promise.allSettled() │
 └──────────────────────────────────────────────────────────────┘
@@ -239,16 +237,14 @@ POST /v1/text/submissions (create) or PUT /v1/text/submissions/:submission_id (u
     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Phase 4: Process Results                                    │
-│  • Process essay assessment results                         │
-│  • Process LanguageTool errors                              │
-│  • Process LLM assessment errors                            │
-│  • Process relevance check results                          │
+│  • Process generic registry results (Corpus, GEC, etc.)     │
+│  • Process legacy results (LanguageTool, LLM, Relevance)    │
 │  • Extract essay scores                                     │
 └─────────────────────────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Phase 5: Generate AI Feedback                               │
+│ Phase 5: Generate AI Feedback (if requested)                │
 │  • For each answer:                                         │
 │    - Generate combined feedback (LLM + Teacher)             │
 │    - Retry on failure (up to 3 attempts)                    │
@@ -280,11 +276,15 @@ Timings tracked:
 ├─ 1c_auto_create_entities
 ├─ 4_load_data_from_r2
 ├─ 5_parallel_services_total
-│  ├─ 5a_essay_fetch
+│  ├─ 5a_essay_fetch (Legacy)
 │  ├─ 5b_languagetool_fetch
 │  ├─ 5c_relevance_fetch
-│  └─ 5d_ai_assessment_fetch
-├─ 6_process_essay
+│  ├─ 5d_ai_assessment_fetch
+│  ├─ 5e_corpus_fetch
+│  ├─ 5f_feedback_fetch
+│  ├─ 5g_gec_fetch
+│  └─ 5i_deberta_fetch
+├─ 5_generic_services_total
 ├─ 7_process_languagetool
 ├─ 7b_process_ai_assessment
 ├─ 8_ai_feedback
@@ -299,85 +299,79 @@ Timings tracked:
 
 ## Service Architecture
 
-### Service Layer Organization
+### File Organization
 
 ```
-services/
-├── submission-processor.ts      # Main orchestration
-├── submission/
-│   ├── validator.ts            # Request validation
-│   ├── data-loader.ts          # Data loading & Modal request building
-│   ├── storage.ts              # Entity storage operations
-│   ├── services.ts             # Service request preparation & execution
-│   ├── results-essay.ts        # Essay result processing
-│   ├── results-languagetool.ts # LanguageTool result processing
-│   ├── results-llm.ts          # LLM result processing
-│   ├── results-relevance.ts    # Relevance check processing
-│   ├── results-scores.ts       # Score extraction
-│   └── metadata.ts             # Metadata building
-├── feedback.ts                 # Feedback generation orchestration
-├── feedback/
-│   ├── combined.ts            # Combined feedback generation
-│   ├── teacher.ts             # Teacher feedback generation
-│   ├── retry.ts               # Retry logic
-│   └── ...
-├── ai-assessment.ts           # LLM assessment logic
-├── merge-results.ts           # Result merging
-├── storage.ts                 # Storage service abstraction
-└── clients/
-    ├── base-client.ts         # Base HTTP client
-    ├── essay-client.ts        # Essay service client
-    └── languagetool-client.ts # LanguageTool client
+src/
+├── index.ts                     # Application entry point
+├── config/                      # Configuration management
+├── middleware/                  # Request middleware
+├── routes/                      # Route handlers
+│   ├── feedback/                # Feedback sub-routes (streaming/teacher)
+│   ├── health.ts                # Health checks
+│   ├── questions.ts             # Question CRUD
+│   └── submissions.ts           # Main submission handler
+├── services/                    # Business logic
+│   ├── ai-assessment/           # LLM-based assessment logic
+│   ├── clients/                 # HTTP clients
+│   ├── feedback/                # Feedback generation logic
+│   ├── modal/                   # Modal service integration
+│   ├── submission/              # Submission processing core
+│   │   ├── service-registry.ts  # Registry of all assessment services
+│   │   ├── services.ts          # Service execution orchestration
+│   │   ├── submission-processor.ts # Main orchestration logic
+│   │   └── ...                  # Result processing helpers
+│   └── storage.ts               # Storage abstraction
+├── utils/                       # Shared utilities
+└── types/                       # TypeScript definitions
 ```
+
+### Service Registry Pattern
+
+The API uses a **Service Registry** pattern (`src/services/submission/service-registry.ts`) to manage the diverse set of assessment services. This allows new services (scorers, grammar checkers) to be added with minimal code changes.
+
+Each service in the registry defines:
+
+- **ID**: Unique identifier (e.g., `AES-CORPUS`, `GEC-SEQ2SEQ`).
+- **Config Path**: Where to find its enabling flag in the app config.
+- **Request Factory**: How to build the request for the Modal service.
+- **Response Parser**: How to interpret the service's output.
 
 ### Service Dependencies
 
 ```
-processSubmission
+processSubmission (submission-processor.ts)
     │
-    ├─→ validateAndParseSubmission
-    │       │
-    │       └─→ validateSubmissionBody (Zod)
+    ├─→ validateSubmissionBody
     │
     ├─→ loadSubmissionData
     │       │
-    │       ├─→ storeSubmissionEntities
-    │       │       │
-    │       │       └─→ StorageService (R2)
-    │       │
-    │       └─→ buildModalRequest
+    │       └─→ prepareServiceRequests (services.ts)
     │               │
-    │               └─→ StorageService (R2)
+    │               └─→ createServiceRequests (service-registry.ts)
+    │                       Creates Generic Requests (Corpus, GEC, Deberta, etc.)
     │
-    ├─→ executeServiceRequests
+    ├─→ executeServiceRequests (services.ts)
     │       │
-    │       ├─→ EssayClient → Modal Service
-    │       ├─→ LanguageToolClient → Modal Service
-    │       ├─→ LLM Assessment → OpenAI/Groq
-    │       └─→ Relevance Check → Modal Service
+    │       ├─→ Generic Registry Services (Parallel Batch)
+    │       │
+    │       └─→ Legacy/Specialized Services
+    │             ├─→ LanguageTool
+    │             ├─→ LLM Assessment (OpenAI/Groq)
+    │             └─→ Relevance Check
     │
     ├─→ processServiceResults
     │       │
-    │       ├─→ processEssayResult
     │       ├─→ processLanguageToolResults
     │       ├─→ processLLMResults
-    │       ├─→ processRelevanceResults
-    │       └─→ extractEssayScores
+    │       └─→ processRelevanceResults
     │
-    ├─→ generateCombinedFeedback
+    ├─→ generateCombinedFeedback (feedback.ts)
     │       │
-    │       └─→ getCombinedFeedbackWithRetry
-    │               │
-    │               ├─→ generateCombinedFeedback
-    │               │       │
-    │               │       ├─→ generateTeacherFeedback
-    │               │       └─→ generateLLMFeedback
-    │               │
-    │               └─→ retry logic (up to 3 attempts)
+    │       └─→ LLM/Teacher Feedback (OpenAI/Groq)
     │
-    └─→ mergeAssessmentResults
-            │
-            └─→ StorageService (KV) - if storeResults=true
+    └─→ mergeAssessmentResults (merge-results.ts)
+            Merges all registry results + legacy results into final response
 ```
 
 ---
@@ -424,34 +418,6 @@ The API uses two Cloudflare storage services:
 └────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow: Storage Operations
-
-```
-Submission Request (storeResults=true)
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 1. Store Entities (if new)                                  │
-│    R2.putQuestion(questionId, { text })                     │
-│    R2.putAnswer(answerId, { question-id, text })            │
-│    R2.putSubmission(submissionId, fullSubmission)           │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 2. Load Existing Data (if needed)                           │
-│    R2.getQuestion(questionId) → question text               │
-│    R2.getAnswer(answerId) → answer data                     │
-│    KV.getResults(submissionId) → existing results           │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 3. Store Results (after processing)                         │
-│    KV.putResults(submissionId, results, ttl=90 days)        │
-└─────────────────────────────────────────────────────────────┘
-```
-
 ---
 
 ## External Services
@@ -467,57 +433,27 @@ API Worker
 ┌───────────────┐                                  ┌──────────────┐
 │ Modal Service │                                  │ OpenAI/Groq  │
 │               │                                  │              │
-│ • Essay       │                                  │ • LLM        │
-│   Assessment  │                                  │   Assessment │
+│ • Corpus      │                                  │ • LLM        │
+│   Scorer      │                                  │   Assessment │
 │               │                                  │              │
-│ • LanguageTool│                                  │ • Streaming  │
-│   Grammar     │                                  │   Feedback   │
-│   Check       │                                  │              │
-│               │                                  │ • Teacher    │
-│ • Relevance   │                                  │   Feedback   │
-│   Check       │                                  │              │
+│ • GEC Services│                                  │ • Streaming  │
+│   (Seq2Seq)   │                                  │   Feedback   │
+│               │                                  │              │
+│ • Deberta     │                                  │ • Teacher    │
+│   Scorer      │                                  │   Feedback   │
+│               │                                  │              │
+│ • LanguageTool│                                  │              │
 └───────────────┘                                  └──────────────┘
 ```
 
 ### Service Details
 
-| Service                 | Purpose                            | Endpoint          | Authentication    |
-| ----------------------- | ---------------------------------- | ----------------- | ----------------- |
-| **Modal Essay Service** | Essay scoring with band scores     | `MODAL_GRADE_URL` | API key in header |
-| **Modal LanguageTool**  | Grammar and style checking         | `MODAL_LT_URL`    | API key in header |
-| **Modal Relevance**     | Answer relevance checking          | `MODAL_GRADE_URL` | API key in header |
-| **OpenAI API**          | LLM assessment & feedback          | `api.openai.com`  | `OPENAI_API_KEY`  |
-| **Groq API**            | LLM assessment & feedback (faster) | `api.groq.com`    | `GROQ_API_KEY`    |
-
-### Service Request Flow
-
-```
-Parallel Service Execution
-    │
-    ├─→ Essay Service
-    │     │
-    │     └─→ POST MODAL_GRADE_URL
-    │           Body: { submission_id, parts }
-    │           Response: AssessmentResults
-    │
-    ├─→ LanguageTool Service
-    │     │
-    │     └─→ POST MODAL_LT_URL
-    │           Body: { text, language }
-    │           Response: LanguageToolError[]
-    │
-    ├─→ LLM Assessment
-    │     │
-    │     └─→ POST OpenAI/Groq API
-    │           Body: { model, messages, ... }
-    │           Response: LLM errors & suggestions
-    │
-    └─→ Relevance Check
-          │
-          └─→ POST MODAL_GRADE_URL
-                Body: { question, answer }
-                Response: RelevanceCheck
-```
+| Service                | Purpose                            | Endpoint          | Authentication    |
+| ---------------------- | ---------------------------------- | ----------------- | ----------------- |
+| **Modal Services**     | General assessment (Scorers, GEC)  | `MODAL_GRADE_URL` | API key in header |
+| **Modal LanguageTool** | Grammar and style checking         | `MODAL_LT_URL`    | API key in header |
+| **OpenAI API**         | LLM assessment & feedback          | `api.openai.com`  | `OPENAI_API_KEY`  |
+| **Groq API**           | LLM assessment & feedback (faster) | `api.groq.com`    | `GROQ_API_KEY`    |
 
 ---
 
@@ -570,208 +506,21 @@ All errors follow this format:
 
 ### Security Layers
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 1: Network Security                                   │
-│  • Cloudflare DDoS protection                               │
-│  • HTTPS only                                               │
-│  • Security headers (X-Content-Type-Options, etc.)          │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 2: Authentication                                     │
-│  • API key required (except /health, /docs)                 │
-│  • Key validation: Admin → Test → User (KV lookup)          │
-│  • Keys stored securely (Cloudflare secrets)                │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 3: Rate Limiting                                      │
-│  • Per-endpoint limits (submissions: 10/min)                │
-│  • Daily submission limits (100/day)                        │
-│  • IP-based or user-based tracking                          │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 4: Input Validation                                   │
-│  • Request body size limits (1MB max)                       │
-│  • Text validation (length, dangerous patterns)             │
-│  • Schema validation (Zod)                                  │
-└─────────────────────────────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│ Layer 5: Data Sanitization                                  │
-│  • Error messages sanitized in production                   │
-│  • Logs sanitized (API keys, tokens removed)                │
-│  • Sensitive data redacted                                  │
-└─────────────────────────────────────────────────────────────┘
-```
+1.  **Network Security**: Cloudflare DDoS protection, HTTPS only, Security headers.
+2.  **Authentication**: API key required (Admin/Test/User keys). keys stored in Cloudflare secrets.
+3.  **Rate Limiting**: Per-endpoint and daily limits. IP-based fallback.
+4.  **Input Validation**: Zod schemas, size limits (1MB), text validation.
+5.  **Data Sanitization**: Production-safe error messages, sensitive data redacted from logs.
 
 ### Security Features
 
-| Feature                | Implementation                                | Notes                                           |
-| ---------------------- | --------------------------------------------- | ----------------------------------------------- |
-| **API Key Auth**       | Required for all protected routes             | Keys validated in order: admin → test → user    |
-| **Rate Limiting**      | Per-endpoint and daily limits                 | Different limits for test vs production keys    |
-| **Input Validation**   | Zod schemas + custom validation               | Prevents injection, XSS, and oversized requests |
-| **Error Sanitization** | Production-safe error messages                | Prevents information leakage                    |
-| **Log Sanitization**   | Automatic redaction of sensitive data         | API keys, tokens, etc. removed from logs        |
-| **CORS**               | Configurable origin whitelist                 | Optional (security via API key)                 |
-| **Security Headers**   | X-Content-Type-Options, X-Frame-Options, etc. | Applied to all responses                        |
-
----
-
-## Request Tracing & Observability
-
-### Request ID Flow
-
-Every request gets a unique ID that flows through the system:
-
-```
-Request → requestId middleware
-    │
-    ├─→ Generate ID: crypto.randomUUID().split("-")[0]
-    │     Example: "a1b2c3d4"
-    │
-    ├─→ Store in context: c.set("requestId", id)
-    │
-    └─→ Include in all logs: [req-a1b2c3d4] Message here
-```
-
-### Logging Structure
-
-All logs include the request ID prefix:
-
-```
-[req-a1b2c3d4] Request completed {
-  submissionId: "123",
-  endpoint: "/text/submissions/123",
-  method: "PUT",
-  timings: { "0_total": 2345.67, ... },
-  totalMs: "2345.67"
-}
-```
-
-### Performance Metrics
-
-Performance metrics are logged at the end of each submission request:
-
-- **Timing breakdown**: Each phase is timed separately
-- **Total duration**: Overall request time
-- **Service timings**: Individual service call durations
-- **Response headers**: Timing data included in `X-Timing-Data` header
-
----
-
-## Key Design Decisions
-
-### 1. Synchronous Processing
-
-**Decision**: Results returned immediately in PUT response body
-
-**Rationale**:
-
-- Simpler client implementation (no polling needed)
-- Better user experience (immediate feedback)
-- Processing time is acceptable (3-10 seconds typical)
-
-### 2. Parallel Service Execution
-
-**Decision**: All assessment services run in parallel
-
-**Rationale**:
-
-- Faster overall processing time
-- Services are independent
-- Uses `Promise.allSettled()` for graceful degradation
-
-### 3. Fail-Safe Production Detection
-
-**Decision**: Defaults to production when environment is unclear
-
-**Rationale**:
-
-- Security: Better to sanitize errors than expose them
-- Prevents accidental information leakage
-- Explicit `ENVIRONMENT=development` required for dev mode
-
-### 4. Rate Limiting Fail-Open
-
-**Decision**: Rate limiting errors don't block requests
-
-**Rationale**:
-
-- Prevents rate limiting bugs from blocking legitimate traffic
-- Errors logged for monitoring
-- Better availability
-
-### 5. Minimal Documentation
-
-**Decision**: Only document non-obvious behavior
-
-**Rationale**:
-
-- Code should be self-documenting
-- Reduces maintenance burden
-- Focuses on what's actually helpful
-
----
-
-## File Organization
-
-```
-src/
-├── index.ts                    # Application entry point
-├── middleware/                 # Request middleware
-│   ├── auth.ts                # API key authentication
-│   ├── rate-limit.ts          # Rate limiting
-│   ├── request-id.ts          # Request ID generation
-│   └── security.ts            # Security headers
-├── routes/                    # Route handlers
-│   ├── health.ts              # Health check & docs
-│   ├── questions.ts           # Question management
-│   ├── submissions.ts         # Submission processing
-│   └── feedback.ts           # Feedback endpoints
-├── services/                  # Business logic
-│   ├── submission-processor.ts # Main orchestration
-│   ├── submission/            # Submission processing
-│   ├── feedback/              # Feedback generation
-│   ├── storage.ts             # Storage abstraction
-│   └── clients/               # External service clients
-├── utils/                     # Utility functions
-│   ├── errors.ts              # Error handling
-│   ├── logging.ts             # Logging utilities
-│   ├── validation.ts          # Input validation
-│   └── context.ts             # Context helpers
-└── types/                     # TypeScript types
-    └── env.ts                 # Environment bindings
-```
-
----
-
-## Performance Characteristics
-
-### Typical Request Times
-
-| Endpoint              | Typical Time | Notes                           |
-| --------------------- | ------------ | ------------------------------- |
-| Health Check          | <10ms        | No processing                   |
-| Question Creation     | <100ms       | Simple R2 write                 |
-| Submission Processing | 3-10s        | Parallel services + AI feedback |
-| Results Retrieval     | <50ms        | KV read                         |
-| Streaming Feedback    | 2-5s         | Depends on LLM response time    |
-
-### Optimization Strategies
-
-1. **Parallel Service Execution**: All assessment services run concurrently
-2. **Caching**: Results stored in KV for fast retrieval
-3. **Early Validation**: Invalid requests rejected before expensive operations
-4. **Graceful Degradation**: Service failures don't block entire request
-5. **Request Timeouts**: External service calls have timeouts
+| Feature                | Implementation                        | Notes                                           |
+| ---------------------- | ------------------------------------- | ----------------------------------------------- |
+| **API Key Auth**       | Required for all protected routes     | Keys validated in order: admin → test → user    |
+| **Rate Limiting**      | Per-endpoint and daily limits         | Different limits for test vs production keys    |
+| **Input Validation**   | Zod schemas + custom validation       | Prevents injection, XSS, and oversized requests |
+| **Error Sanitization** | Production-safe error messages        | Prevents information leakage                    |
+| **Log Sanitization**   | Automatic redaction of sensitive data | API keys, tokens, etc. removed from logs        |
 
 ---
 
@@ -804,52 +553,3 @@ Optional:
 - `WRITEO_DATA`: R2 bucket for questions/answers/submissions
 - `WRITEO_RESULTS`: KV namespace for results and rate limits
 - `AI`: Cloudflare AI binding (optional)
-
----
-
-## Future Considerations
-
-### Potential Improvements
-
-1. **Caching Layer**: Add caching for frequently accessed questions
-2. **Batch Processing**: Support batch submission processing
-3. **Webhooks**: Notify clients when processing completes
-4. **Metrics Aggregation**: Collect and aggregate performance metrics
-5. **Request Queuing**: Queue long-running requests for async processing
-
-### Scalability
-
-The current architecture scales well because:
-
-- Stateless workers (no shared state)
-- Cloudflare's global edge network
-- Parallel service execution
-- Efficient storage (R2 + KV)
-
-Limitations:
-
-- 30-second execution time limit (Cloudflare Workers)
-- KV write limits (1000 writes/second per namespace)
-- R2 operation limits (based on plan)
-
----
-
-## Conclusion
-
-The API Worker is designed for:
-
-- **Simplicity**: Clear separation of concerns, minimal abstractions
-- **Performance**: Parallel execution, efficient storage
-- **Reliability**: Graceful degradation, comprehensive error handling
-- **Security**: Multiple layers of protection
-- **Observability**: Request tracing and performance metrics
-
-The architecture prioritizes maintainability and developer experience while ensuring high performance and security.
-
----
-
-## References
-
-See [Services Guide](../guides/services.md) for more details.
-See [OpenAPI Spec](../reference/openapi.yaml) for endpoint definitions.
-See [Operations Guide](../operations/monitoring.md) for deployment info.

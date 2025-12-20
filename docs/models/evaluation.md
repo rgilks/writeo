@@ -6,10 +6,10 @@ This report evaluates the performance, consistency, and utility of the various a
 
 **Key Findings:**
 
-- **Scoring Accuracy:** `AES-CORPUS` (RoBERTa) is the highest-performing scoring model, achieving a correlation of **0.96** with human labels and the lowest Mean Absolute Error (0.41).
+- **Scoring Accuracy:** `AES-DEBERTA` is the highest-performing scoring model, achieving a correlation of **0.97** with human labels and the lowest Mean Absolute Error (0.38).
 - **Consensus:** There is a strong alignment between `AES-CORPUS` and `AES-FEEDBACK` (DeBERTa), whereas `AES-ESSAY` consistently underestimates proficiency.
 - **Feedback Redundancy:** The pipeline currently runs three separate Grammar Error Correction (GEC) engines (`LT`, `LLM`, `Seq2Seq`), leading to overlapping and potentially overwhelming feedback for the user.
-- **Recommendations:** Consolidate scoring to use `AES-CORPUS` as the primary source, and unify GEC feedback by prioritizing `GEC-SEQ2SEQ` for inline edits while using `GEC-LLM` for deeper explanations.
+- **Recommendations:** Consolidate scoring to use `AES-DEBERTA` as the primary source, and unify GEC feedback by prioritizing `GEC-SEQ2SEQ` for inline edits while using `GEC-LLM` for deeper explanations.
 
 ---
 
@@ -79,7 +79,7 @@ The pipeline produces qualitative feedback from multiple sources. We analyzed th
 
 ### 1. Unified Score Strategy
 
-- **Primary Score**: Use `AES-CORPUS`.
+- **Primary Score**: Use `AES-DEBERTA`.
 - **Confidence Interval**: Use `AES-FEEDBACK` to define a confidence range. If the two models diverge by > 1.0 points, flag the essay for human review or show a wider estimated band to the user.
 
 ### 2. De-duplicate GEC

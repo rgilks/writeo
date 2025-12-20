@@ -34,7 +34,8 @@ if [ "$MODE" == "cheap" ]; then
   echo "✅ Set LLM_PROVIDER=openai"
   echo ""
   echo "📝 Ensure OPENAI_API_KEY is set in $DEV_VARS_FILE"
-  echo "📝 Modal services use scaledown_window=30 (scale-to-zero) by default"
+  echo "📝 Modal services use scaledown_window=30 (scale-to-zero) by default."
+  echo "   No redeployment needed if you haven't changed defaults."
   
 elif [ "$MODE" == "turbo" ]; then
   echo "⚡ Configuring Turbo Mode (Llama 3.3 70B + Modal keep-warm)"
@@ -49,11 +50,17 @@ elif [ "$MODE" == "turbo" ]; then
   echo "✅ Set LLM_PROVIDER=groq"
   echo ""
   echo "📝 Ensure GROQ_API_KEY is set in $DEV_VARS_FILE"
-  echo "📝 For Turbo Mode, update Modal services:"
-  echo "   1. Edit services/modal-essay/app.py: Change scaledown_window=30 to scaledown_window=2"
-  echo "   2. Edit services/modal-lt/app.py: Change scaledown_window=30 to scaledown_window=2"
-  echo "   3. Redeploy: cd services/modal-essay && modal deploy app.py"
-  echo "                cd services/modal-lt && modal deploy app.py"
+  echo "📝 For Turbo Mode (Low Latency), update Modal services:"
+  echo "   1. Edit 'app.py' or 'main.py' in these directories:"
+  echo "      - services/modal-deberta (Primary)"
+  echo "      - services/modal-gec (Grammar)"
+  echo "      - services/modal-gector (Fast Grammar)"
+  echo "      - services/modal-corpus (Secondary)"
+  echo "   2. Change: scaledown_window=30  ->  scaledown_window=2"
+  echo "   3. Redeploy each modified service:"
+  echo "      cd services/modal-deberta && modal deploy app.py"
+  echo "      cd services/modal-gec && modal deploy main.py"
+  echo "      (repeat for others)"
 fi
 
 rm -f "$DEV_VARS_FILE.bak"

@@ -1,83 +1,110 @@
 # Operational Modes Guide
 
-Quick guide for switching between Cheap Mode and Turbo Mode.
+Writeo allows you to balance cost, performance, and feedback quality by adjusting three key levers:
 
-## Quick Reference
+1.  **LLM Provider**: Controls the feedback text generation speed and cost.
+2.  **Assessors**: Controls which AI models analyze the text.
+3.  **Service Scaling**: Controls the latency of cold starts.
 
-| Mode         | LLM Provider                 | Modal Scaling                       | Cost (100/day)    | Latency                 |
-| ------------ | ---------------------------- | ----------------------------------- | ----------------- | ----------------------- |
-| **🪙 Cheap** | OpenAI GPT-4o-mini           | Scale-to-zero (Essay: 30s, LT: 60s) | ~$7.60-8.50/month | 10-15s cold, 3-10s warm |
-| **⚡ Turbo** | Groq Llama 3.3 70B Versatile | Keep warm (2s)                      | ~$25-40/month     | 2-5s first, 1-3s warm   |
+## Modes Overview
 
-## Local Development
+### 🪙 Economy Mode (Development)
 
-### Quick Switch
+Best for development, testing, and low-budget deployments.
 
-```bash
-# Switch to Cheap Mode
-./scripts/set-mode.sh cheap
+- **LLM**: OpenAI GPT-4o-mini (Cost-efficient)
+- **Assessors**: Any configuration (typically minimal)
+- **Scaling**: Scale-to-zero (30s keep-warm)
+- **Cost**: ~$7-9/month (100 submissions/day)
+- **Latency**: 10-15s cold start, 3-10s warm
 
-# Switch to Turbo Mode
-./scripts/set-mode.sh turbo
-```
+### 🚀 Production Mode (Turbo)
 
-The script updates `apps/api-worker/.dev.vars` with the correct `LLM_PROVIDER`.
+Best for live user traffic where low latency is critical.
 
-**Cheap Mode:**
+- **LLM**: Groq Llama 3.3 70B (Extremely fast)
+- **Assessors**: Full Suite (DeBERTa, GEC, Corpus)
+- **Scaling**: Keep-warm (2s scaledown window)
+- **Cost**: ~$25-40/month
+- **Latency**: 2-5s first request, 1-3s warm
 
-- Sets `LLM_PROVIDER=openai`
-- Modal services use default scaledown windows (Essay: 30s, LanguageTool: 60s - scale-to-zero)
-- No Modal redeployment needed
+## Configuration Levers
 
-**Turbo Mode:**
+### 1. LLM Provider (Text Feedback)
 
-- Sets `LLM_PROVIDER=groq`
-- You need to manually update Modal services to `scaledown_window=2` and redeploy
+Controls which model generates the written feedback.
 
-### Manual Configuration
+| Provider   | Setting (`LLM_PROVIDER`) | Pros                    | Cons                        |
+| :--------- | :----------------------- | :---------------------- | :-------------------------- |
+| **OpenAI** | `openai`                 | Cheapest, very reliable | Slower (2-5s generation)    |
+| **Groq**   | `groq`                   | Instant (sub-second)    | More expensive/rate-limited |
 
-**Cheap Mode:**
-
-```bash
-# In apps/api-worker/.dev.vars
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your-openai-key
-```
-
-**Turbo Mode:**
+**To Switch:**
 
 ```bash
-# In apps/api-worker/.dev.vars
-LLM_PROVIDER=groq
-GROQ_API_KEY=your-groq-key
+# Local
+./scripts/set-mode.sh cheap   # Sets openai
+./scripts/set-mode.sh turbo   # Sets groq
 
-# Update Modal services (Essay: scaledown_window=30 → 2, LanguageTool: scaledown_window=60 → 2)
-# Then redeploy: cd services/modal-essay && modal deploy app.py
-# And: cd services/modal-lt && modal deploy app.py
-```
-
-## Production
-
-```bash
-# Switch to Cheap Mode
+# Production
 ./scripts/set-mode-production.sh cheap
-
-# Switch to Turbo Mode
 ./scripts/set-mode-production.sh turbo
 ```
 
-Or manually:
+### 2. Active Assessors (Scoring & Grammar)
 
-```bash
-cd apps/api-worker
-echo "openai" | wrangler secret put LLM_PROVIDER  # Cheap Mode
-echo "groq" | wrangler secret put LLM_PROVIDER     # Turbo Mode
+Controls which models run to analyze the text. Configured in `apps/api-worker/src/config/assessors.json`.
+
+**Recommended Production Config:**
+
+```json
+{
+  "scoring": {
+    "essay": false,
+    "corpus": true, // Secondary verification
+    "deberta": true // Primary Dimensional Scoring
+  },
+  "grammar": {
+    "gecSeq2seq": true, // High precision
+    "gecGector": true // Low latency
+  }
+}
 ```
 
-## When to Use Each Mode
+**Minimal / Local Config:**
+Disable `deberta` and `gecSeq2seq` to save on GPU usage during testing, unless specifically testing those components.
 
-**Cheap Mode:** Cost-conscious, variable traffic, development/testing  
-**Turbo Mode:** Low latency critical, production with steady traffic
+### 3. Service Scaling (Latency)
 
-See [Cost Analysis](cost.md) for detailed pricing.
-See [Operations Guide](monitoring.md) for more configuration options.
+Controls how long Modal services stay "warm" (active on GPU) after a request.
+
+**Scale-to-Zero (Economy Default):**
+
+- **Setting**: `SCALEDOWN_WINDOW_SECONDS = 30` (in `app.py` or `main.py`)
+- **Pros**: You only pay for seconds of usage.
+- **Cons**: "Cold starts" take 5-15s while models load.
+
+**Keep-Warm (Production):**
+
+- **Setting**: `SCALEDOWN_WINDOW_SECONDS = 2` (Logic: Aggressively keeps warm if requests are frequent, but technically this value is the _idle_ timeout. For true keep-warm, you'd use `keep_warm=1` in Modal, but we use a short timeout + frequent traffic strategy for cost balance, or manual `keep_warm` during events).
+- _Correction_: To _keep_ it warm, you typically increase the window or use `min_containers`. However, for "Turbo" mode in our scripts, we often toggle settings to ensure readiness.
+- **Current Script Logic**: The scripts suggest setting `scaledown_window=2` to _reduce_ broken billing overlaps or quickly free resources, **BUT** for true production speed, you typically want a _longer_ window or a `min_containers=1`. _Note: The previous documentation suggested 2s, which effectively makes it scale down instantly. For production, you usually want 60-300s._
+
+**Update:** The current best practice for "Turbo" in this project is to ensure services are warm. If you are experiencing cold starts, consider increasing the keep-warm time in `app.py`.
+
+## Quick Switch Scripts
+
+Use the helper scripts to switch `LLM_PROVIDER` and view instructions for Modal services.
+
+```bash
+# Local Development
+./scripts/set-mode.sh cheap
+./scripts/set-mode.sh turbo
+
+# Production
+./scripts/set-mode-production.sh cheap
+./scripts/set-mode-production.sh turbo
+```
+
+See [Cost Analysis](cost.md) for detailed pricing breakdown.
+See [Deployment Guide](deployment.md) for deployment instructions.

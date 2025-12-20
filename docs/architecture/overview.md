@@ -1,6 +1,6 @@
 # Writeo System Architecture
 
-**Version:** 2.0  
+**Version:** 2.1
 **Architecture Pattern:** Serverless Edge Computing with ML-as-a-Service
 
 **Live Services:**
@@ -23,71 +23,49 @@
 
 ## 1. System Overview
 
-Writeo provides comprehensive essay assessment:
+Writeo provides comprehensive essay assessment through a modular **Service Registry** architecture:
 
-- **Essay Scoring** - Multi-dimensional analysis (TA, CC, Vocab, Grammar, Overall) using ML models
-- **AI Feedback** - Context-aware feedback using OpenAI (GPT-4o-mini) or Groq (Llama 3.3 70B) - switchable providers
-- **Grammar Checking** - LanguageTool integration with inline error annotations
-- **Assessors** - Specify which assessors to run (e.g., `["AES-ESSAY", "GEC-LT"]`). If omitted, all enabled assessors run by default
-- **Relevance Checking** - Automated answer relevance checking
-- **CEFR Mapping** - Automatic conversion to A2-C2 proficiency levels
-- **Scale-to-Zero** - Cost-effective serverless architecture
+- **Essay Scoring**:
+  - **Corpus Scorer (`AES-CORPUS`)**: High-correlation scorer trained on the Write & Improve corpus.
+  - **DeBERTa Scorer (`AES-DEBERTA`)**: Deep learning model for dimensional scoring (Task Achievement, Coherence, Vocabulary, Grammar).
+  - **Standard Scorer (`AES-ESSAY`)**: Legacy baseline scorer.
+- **Grammar Correction (GEC)**:
+  - **Seq2Seq GEC (`GEC-SEQ2SEQ`)**: Transformer-based correction (high precision, slower).
+  - **GECToR (`GEC-GECTOR`)**: Iterative sequence tagging (fast, good precision).
+  - **LanguageTool (`GEC-LT`)**: Rule-based checking for mechanics and typos.
+- **AI Feedback**: Context-aware feedback using LLMs (OpenAI or Groq).
+- **Relevance Checking**: Automated answer relevance validation using embeddings.
 
-### Operational Modes
+### Operational Profiles
 
-Writeo supports two operational modes optimized for different use cases:
+Writeo is highly configurable via environment variables and `assessors.json`. While highly granular, we typically deploy in two primary profiles:
 
-#### 🪙 Cheap Mode (Cost-Optimized)
-
-**Configuration:**
-
-- **LLM:** OpenAI GPT-4o-mini
-- **Modal Services:** Scale-to-zero (Essay Scoring: 30s, LanguageTool: 60s)
-
-**Processing Flow:**
-
-```
-Client → API Worker → [Essay Scoring + LanguageTool + Relevance Check (parallel)] → OpenAI Feedback → KV Storage → Client
-```
-
-**Performance:**
-
-- **Cold Start:** 8-15s (first request after inactivity - Modal cold start)
-- **Warm:** 3-10s (subsequent requests)
-- **Best For:** Cost-conscious deployments, variable traffic
-
-#### ⚡ Turbo Mode (Performance-Optimized)
+#### 🪙 "Cheap" Profile (Cost-Optimized)
 
 **Configuration:**
 
-- **LLM:** Groq Llama 3.3 70B Versatile
-- **Modal Services:** Keep warm (reduced scaledown window)
+- **LLM Provider:** `openai` (GPT-4o-mini)
+- **Services:** Scale-to-zero enabled
+- **Assessors:** `AES-CORPUS` (fast), `GEC-GECTOR` (fast), `GEC-LT` (very fast)
 
-**Processing Flow:**
+**Characteristics:**
 
-```
-Client → API Worker → [Essay Scoring + LanguageTool + Relevance Check (parallel, warm)] → Groq Feedback (ultra-fast) → KV Storage → Client
-```
+- **Low Cost**: Minimal idle costs, cheap inference.
+- **Higher Latency**: Cold starts (8-15s) on first request after inactivity.
 
-**Performance:**
+#### ⚡ "Turbo" Profile (Performance-Optimized)
 
-- **First Request:** 2-5s (Modal warm, Groq ultra-fast)
-- **Warm:** 1-3s (all services warm)
-- **Best For:** Production deployments requiring low latency
+**Configuration:**
 
-### Current Implementation
+- **LLM Provider:** `groq` (Llama 3.3 70B)
+- **Services:** Keep-warm enabled (min instances > 0)
+- **Assessors:** `AES-DEBERTA` (high accuracy), `GEC-SEQ2SEQ` (best corrections), `GEC-LT`
 
-The system uses **synchronous processing** - all assessment is completed before returning results:
+**Characteristics:**
 
-**Key Features:**
-
-- Synchronous processing: Results returned immediately in PUT response body
-- Parallel processing: All services run concurrently
-- Streaming: Real-time AI feedback generation via Server-Sent Events (separate endpoint)
-  - Teacher feedback uses streaming by default in the UI for better user experience
-  - Feedback appears incrementally as it's generated, providing immediate visual feedback
-- Optimized: Combined LLM calls, parallelized R2 operations, model caching
-- Flexible scaling: Choose scale-to-zero (Cheap Mode) or keep-warm (Turbo Mode)
+- **Ultra-Low Latency**: ~2-4s end-to-end latency.
+- **Higher Quality**: Uses larger, more powerful models.
+- **Higher Cost**: Paying for idle GPU time and high-performance LLM tokens.
 
 ---
 
@@ -95,48 +73,37 @@ The system uses **synchronous processing** - all assessment is completed before 
 
 ```mermaid
 graph TB
-    External[🔌 External System<br/>API Client] -->|HTTPS REST API| API[⚡ API Worker<br/>Cloudflare Workers]
-    User[👤 End User] -->|Uses| Web[🌐 Web Frontend<br/>Next.js]
+    Client[👤 User / 🔌 API Client] -->|HTTPS REST| API[⚡ API Worker<br/>Cloudflare Workers]
 
-    Web -->|Server Actions| API
+    subgraph "Storage Layer"
+        R2[(💾 R2 Storage)]
+        KV[(🗄️ KV Store)]
+    end
 
-    API -->|Store/Retrieve| R2[(💾 R2 Storage<br/>Questions, Answers, Submissions)]
-    API -->|Store/Retrieve| KV[(🗄️ KV Store<br/>Assessment Results)]
-    API -->|POST /grade<br/>Parallel| Essay[🤖 Essay Scoring Service<br/>FastAPI + ML Models]
-    API -->|POST /check<br/>Parallel| LT[📝 LanguageTool Service<br/>FastAPI + LanguageTool]
-    API -->|Embeddings| RELEVANCE[🔍 Relevance Check<br/>Cloudflare AI Embeddings]
+    subgraph "Assessment Services (Modal)"
+        direction TB
+        Corpus[🤖 Corpus Scorer]
+        Deberta[🧠 DeBERTa Scorer]
+        GEC[✍️ GEC Service]
+        LT[📝 LanguageTool]
+    end
 
-    Essay -->|Essay Scores| API
-    LT -->|Grammar Errors| API
-    RELEVANCE -->|Similarity Score| API
-    API -->|With Context| AI[💬 AI Feedback<br/>OpenAI - GPT-4o-mini]
-    AI -->|Contextual Feedback| API
+    subgraph "AI Services"
+        LLM[💬 LLM Feedback<br/>OpenAI / Groq]
+        Rel[🔍 Relevance Check<br/>Cloudflare AI]
+    end
 
-    style User fill:#e1f5ff
-    style Web fill:#e1f5ff
-    style External fill:#ffe1e1
-    style API fill:#fff4e1
-    style R2 fill:#e1ffe1
-    style KV fill:#ffe1e1
-    style Essay fill:#ffe1f5
-    style LT fill:#e1f5ff
+    API -->|Store & Load| R2
+    API -->|Cache Results| KV
+
+    API -->|Parallel Execution| Corpus
+    API -->|Parallel Execution| Deberta
+    API -->|Parallel Execution| GEC
+    API -->|Parallel Execution| LT
+    API -->|Parallel Execution| Rel
+
+    API -->|Contextual Feedback| LLM
 ```
-
-**Processing Flow:**
-
-1. **End User** uses Web Frontend UI, OR **External System** calls API directly
-2. **If `storeResults: true` (opt-in):** API Worker stores questions, answers, and submission in R2 (parallelized)
-3. API Worker builds request from inline data (answers are always sent inline)
-4. API Worker calls **services in parallel**:
-   - Essay Scoring Service (`modal-essay`) for essay scoring
-   - LanguageTool Service (`modal-lt`) for grammar checking
-   - Relevance Check (Cloudflare AI embeddings) for fast relevance validation
-5. API Worker merges results from parallel services
-6. API Worker calls **AI Feedback** (OpenAI) with full context from Essay Scoring and LanguageTool results
-7. API Worker merges results from all services (including AI feedback)
-8. **If `storeResults: true` (opt-in):** Results stored in KV (90-day TTL)
-9. Results returned to client immediately in PUT response body (typically 3-10s, max <20s)
-10. **Default behavior:** Results stored only in browser localStorage (no server storage)
 
 ---
 
@@ -144,425 +111,101 @@ graph TB
 
 ### 3.1 Cloudflare Components
 
-| Component           | Technology                     | Responsibility                                                               | Scale-to-Zero        |
-| ------------------- | ------------------------------ | ---------------------------------------------------------------------------- | -------------------- |
-| **Web Frontend**    | Next.js 15+ (App Router) + PWA | User interface, form handling, result display, history page, offline support | ✅ Yes               |
-| **API Worker**      | Cloudflare Workers             | REST API, request validation, data orchestration                             | ✅ Yes               |
-| **R2 Storage**      | Cloudflare R2                  | Persistent storage for questions, answers, submissions (opt-in only)         | ❌ No (storage only) |
-| **KV Store**        | Cloudflare KV                  | Assessment results cache (90-day TTL, opt-in only)                           | ❌ No (storage only) |
-| **Browser Storage** | localStorage/sessionStorage    | Default storage location (client-side only)                                  | ✅ Yes (client-side) |
+| Component        | Technology         | Responsibility                                 |
+| ---------------- | ------------------ | ---------------------------------------------- |
+| **Web Frontend** | Next.js 15+        | UI, State Management (Zustand), PWA features   |
+| **API Worker**   | Cloudflare Workers | Request handling, Service Orchestration (Hono) |
+| **R2 Storage**   | Cloudflare R2      | Object storage (Essays, Questions)             |
+| **KV Store**     | Cloudflare KV      | Result caching (90-day TTL)                    |
 
-### 3.1.1 Frontend State Management
+### 3.2 Modal Services (ML-as-a-Service)
 
-**Technology Stack:**
+Writeo uses [Modal](https://modal.com) to host Python-based ML services.
 
-- **Zustand** - Global state management
-- **Immer** - Immutable state updates
-- **useState** - Component-specific UI state
+| Service ID      | Model / Engine      | Description                                             | Type       |
+| :-------------- | :------------------ | :------------------------------------------------------ | :--------- |
+| **AES-CORPUS**  | RoBERTa-base        | Trained on W&I Corpus. High correlation with human CEFR | **Scorer** |
+| **AES-DEBERTA** | DeBERTa-v3-large    | Multi-dimensional scoring (TA, CC, Vocab, Grammar)      | **Scorer** |
+| **AES-ESSAY**   | RoBERTa-base        | Legacy baseline scorer                                  | **Scorer** |
+| **GEC-SEQ2SEQ** | Flan-T5-base-gec    | Sequence-to-sequence grammar correction (Best Quality)  | **GEC**    |
+| **GEC-GECTOR**  | GECToR-RoBERTa      | Fast iterative tagging correction (High Speed)          | **GEC**    |
+| **GEC-LT**      | LanguageTool (Java) | Rule-based checking for mechanics/typos                 | **GEC**    |
 
-**Stores:**
+### 3.3 LLM Providers
 
-- **Draft Store** - Draft content, assessment results, draft history, progress tracking, achievements, streaks
-- **Preferences Store** - User preferences (view mode, storage settings)
+Configured via `LLM_PROVIDER` env var:
 
-**Key Features:**
-
-- Selective subscriptions prevent unnecessary re-renders
-- Computed selectors for expensive calculations
-- DevTools integration for debugging
-- Automatic localStorage persistence
-
-See- [State Management](state-management.md)
-
-- [Legal Compliance](../reference/legal.md)
-- [Cost Analysis](../operations/cost.md)
-
-### 3.2 Modal Services
-
-| Service                   | Technology             | Responsibility                    | Scale-to-Zero |
-| ------------------------- | ---------------------- | --------------------------------- | ------------- |
-| **Essay Scoring Service** | FastAPI + PyTorch      | ML model inference, essay scoring | ✅ Yes        |
-| **LanguageTool**          | FastAPI + LanguageTool | Grammar, spelling, style checking | ✅ Yes        |
-
-### 3.3 Cloudflare Workers AI
-
-| Service             | Technology            | Responsibility                             | Scale-to-Zero |
-| ------------------- | --------------------- | ------------------------------------------ | ------------- |
-| **AI Feedback**     | OpenAI API            | Context-aware essay feedback (GPT-4o-mini) | ✅ Yes        |
-| **Relevance Check** | Cloudflare Workers AI | Fast embeddings-based relevance validation | ✅ Yes        |
-
-**AI Feedback:**
-
-- **Multi-Provider Support**: Choose between OpenAI (GPT-4o-mini) or Groq (Llama 3.3 70B Versatile)
-- **OpenAI (GPT-4o-mini)**: Cost-effective, excellent quality, ~1-3s inference
-- **Groq (Llama 3.3 70B Versatile)**: Ultra-fast (~100-500ms inference), excellent quality
-- Receives full context from essay scores and LanguageTool errors
-- Provides contextual, actionable feedback tailored to student's level
-- Switch providers via `LLM_PROVIDER` environment variable
-
-**Relevance Check:**
-
-- Uses embeddings model (`@cf/baai/bge-base-en-v1.5`)
-- Fast cosine similarity calculation (~100-200ms)
-
-**Essay Scoring Service (`modal-essay`):**
-
-- Uses `KevSun/Engessay_grading_ML` model (default)
-  - Citation: Sun, K., & Wang, R. (2024). Automatic Essay Multi-dimensional Scoring with Fine-tuning and Multiple Regression. _ArXiv_. https://arxiv.org/abs/2406.01198
-  - Well-suited for academic argumentative writing practice
-  - Provides strong coverage of Coherence & Cohesion, Lexical Resource, and Grammatical Range & Accuracy
-  - Task Achievement assessed separately via LLM feedback for comprehensive evaluation
-- Multi-dimensional scoring: TA, CC, Vocab, Grammar, Overall
-- CEFR level mapping (A2-C2)
-- GPU/CPU inference with model caching
-
-**LanguageTool Service (`modal-lt`):**
-
-- Open-source grammar checker
-- Detects grammar, spelling, and style errors
-- Provides suggestions and corrections
-- CPU-only (no GPU needed)
-- Fast warm checks (~100-500ms)
-
-### 3.3 API Worker Components
-
-```mermaid
-graph TB
-    subgraph "API Worker"
-        Router[Hono Router]
-        Auth[Auth Middleware]
-        Validator[Request Validator]
-        SubmissionHandler[Submission Handler]
-        ResultsHandler[Results Handler]
-        R2Client[R2 Client]
-        KVClient[KV Client]
-        ModalClient[Modal Client]
-        LTClient[LanguageTool Client]
-        Merger[Result Merger]
-    end
-
-    Router --> Auth
-    Auth --> Validator
-    Validator --> SubmissionHandler
-    SubmissionHandler --> R2Client
-    SubmissionHandler --> ModalClient
-    SubmissionHandler --> LTClient
-    SubmissionHandler --> Merger
-    SubmissionHandler --> KVClient
-    ResultsHandler --> KVClient
-```
-
-**Key Components:**
-
-- **Submission Handler**: Orchestrates parallel calls to Essay Scoring and LanguageTool services
-- **Result Merger**: Combines essay scores and grammar errors into unified response
-- **R2/KV Clients**: Handle storage operations
+- **OpenAI**: Uses `gpt-4o-mini` (default). Reliable, cost-effective.
+- **Groq**: Uses `llama-3.3-70b-versatile`. Extremely fast inference (~100-300ms).
 
 ---
 
 ## 4. Data Flow
 
-### 4.1 Submission Processing Flow
+### 4.1 Submission Processing
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Client
     participant API as API Worker
-    participant R2 as R2 Storage
-    participant Essay as Essay Scoring Service
-    participant LT as LanguageTool Service
-    participant KV as KV Storage
+    participant Registry as Service Registry
+    participant ML as Modal Services (Parallel)
+    participant LLM as LLM Provider
+    participant Store as R2/KV
 
-    Client->>API: PUT /text/submissions/:id
-    API->>R2: Store submission
-    API->>R2: Read answers & questions
+    Client->>API: POST /submissions
+    API->>Store: Store submission data (if opt-in)
 
-    par Parallel Processing
-        API->>Essay: POST /grade
-        Essay-->>API: Essay scores
-    and
-        API->>LT: POST /check (for each answer)
-        LT-->>API: Grammar errors
+    API->>Registry: Create Service Requests
+    note right of Registry: Checks assessors.json & config
+
+    rect rgb(240, 248, 255)
+        note right of API: Parallel Execution Phase
+        API->>ML: Execute Generic Services (Corpus, Deberta, GEC, LT)
+        API->>LLM: Streaming Feedback (if requested)
     end
 
-    API->>API: Merge results
-    API->>KV: Store merged results
-    API-->>Client: 200 OK (with results in body)
+    ML-->>API: Assessment Results
 
-    Client->>API: GET /text/submissions/:id
-    API->>KV: Read results
-    API-->>Client: Assessment results
-```
-
-### 4.2 Assessment Results Structure
-
-**Merged Results Format:**
-
-```json
-{
-  "status": "success",
-  "results": {
-    "parts": [
-      {
-        "part": "1",
-        "status": "success",
-        "answers": [
-          {
-            "id": "answer-id",
-            "assessorResults": [
-              {
-                "id": "AES-ESSAY",
-                "name": "Essay scorer",
-                "type": "grader",
-                "overall": 6.5,
-                "label": "B2",
-                "dimensions": {
-                  "TA": 6.0,
-                  "CC": 6.5,
-                  "Vocab": 6.5,
-                  "Grammar": 6.0,
-                  "Overall": 6.5
-                }
-              },
-              {
-                "id": "GEC-LT",
-                "name": "LanguageTool (OSS)",
-                "type": "feedback",
-                "errors": [
-                  {
-                    "start": 2,
-                    "end": 6,
-                    "length": 4,
-                    "category": "GRAMMAR",
-                    "rule_id": "SVA",
-                    "message": "Possible subject–verb agreement error.",
-                    "suggestions": ["go", "went"],
-                    "source": "LT",
-                    "severity": "error"
-                  }
-                ],
-                "meta": {
-                  "language": "en-GB",
-                  "engine": "LT-OSS",
-                  "errorCount": 1
-                }
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-
-  "meta": {
-    "answerTexts": {
-      "answer-id": "Original essay text..."
-    }
-  }
-}
+    API->>API: Merge Results & Calculate Metadata
+    API->>Store: Cache Final Result (KV)
+    API-->>Client: 200 OK (JSON Results)
 ```
 
 ---
 
 ## 5. Storage Architecture
 
-**Important:** Writeo uses an **opt-in server storage model**. By default (`storeResults: false`), no data is stored on servers. Results are stored only in the user's browser (localStorage). Server storage (R2/KV) is only used when `storeResults: true` is explicitly set.
+**Default: Privacy-First**
+By default (`storeResults: false`), Writeo operates in a stateless manner. No data is stored on R2 or KV. Results are returned to the client and stored in `localStorage`.
 
-### 5.1 Browser Storage (Default)
+**Opt-in: Server Storage**
+When `storeResults: true` is sent:
 
-**Location:** Client-side localStorage/sessionStorage
-
-| Storage Type     | Purpose                             | Retention                      |
-| ---------------- | ----------------------------------- | ------------------------------ |
-| `localStorage`   | Persistent results storage          | Until user clears browser data |
-| `sessionStorage` | Temporary results during navigation | Until browser tab closes       |
-
-**Access Patterns:**
-
-- **Write**: Automatic after submission processing (including draft creation)
-  - Results are stored immediately in both `localStorage` and `sessionStorage` after creation
-  - This ensures immediate availability even when server storage is enabled (`storeResults: true`)
-  - Critical for draft tracking: draft results are available immediately after creation
-- **Read**: Immediate access from browser
-  - Results page checks `localStorage`/`sessionStorage` first before attempting server fetch
-  - This prevents "Results Not Available" errors when creating drafts with server storage enabled
-- **Privacy**: Data never leaves user's device (when `storeResults: false`)
-
-**Benefits:**
-
-- ✅ Maximum privacy (data never leaves user's device)
-- ✅ No legal compliance requirements (no server data collection)
-- ✅ User controls data lifecycle
-- ✅ No data retention policies needed
-- ✅ No deletion/export APIs needed
-- ✅ No data breach notification needed
-
-### 5.2 R2 Object Storage (Opt-in Only)
-
-**Bucket:** `writeo-data-1`  
-**Usage:** Only when `storeResults: true`
-
-| Path Pattern                       | Content Type       | Structure                                    |
-| ---------------------------------- | ------------------ | -------------------------------------------- |
-| `questions/{question_id}.json`     | `application/json` | `{text: string}`                             |
-| `answers/{answer_id}.json`         | `application/json` | `{question-id: string, answer-text: string}` |
-| `submissions/{submission_id}.json` | `application/json` | `{submission: Part[]}`                       |
-
-**Access Patterns:**
-
-- **Write**: Single PUT per resource creation (opt-in only)
-- **Read**: Batch reads during submission processing (opt-in only)
-- **TTL**: No automatic expiration (consider lifecycle policies)
-
-### 5.3 KV Storage (Opt-in Only)
-
-**Namespace:** `WRITEO_RESULTS`  
-**Usage:** Only when `storeResults: true`
-
-| Key Pattern                  | Value Type  | TTL                         |
-| ---------------------------- | ----------- | --------------------------- |
-| `submission:{submission_id}` | JSON string | 90 days (7,776,000 seconds) |
-
-**Access Patterns:**
-
-- **Write**: Single PUT after processing completes (opt-in only)
-- **Read**: Single GET per client poll request (opt-in only)
-- **Consistency**: Eventual consistency (read-after-write may have delay)
-
-### 5.4 API Behavior
-
-**PUT `/text/submissions/{id}`:**
-
-- **Default (`storeResults: false`):**
-  - Processes submission
-  - Returns results immediately in response body
-  - Stores results in browser localStorage
-  - Does NOT store on server (R2/KV)
-
-- **Opt-in (`storeResults: true`):**
-  - Processes submission
-  - Returns results immediately in response body
-  - Stores results in browser localStorage and sessionStorage immediately (critical for draft tracking)
-  - Also stores on server (R2/KV) for 90 days (may have slight delay)
-  - **Important**: Results are available immediately from localStorage even if server storage isn't ready yet
-
-**GET `/text/submissions/{id}`:**
-
-- Only works if `storeResults: true` was set during submission
-- Returns 404 if submission was not stored on server
-- Returns results if found (within 90-day retention period)
-
-### 5.5 Privacy & Legal Implications
-
-**Default (No Server Storage):**
-
-- ✅ No GDPR/CCPA requirements (no server data collection)
-- ✅ No COPPA requirements (no data collection from children)
-- ✅ No data deletion API needed
-- ✅ No data export API needed
-- ✅ No data breach notification needed
-- ✅ No age verification needed
-
-**Opt-in (Server Storage):**
-
-- ⚠️ GDPR/CCPA requirements apply (server data collection)
-- ⚠️ Data deletion API recommended
-- ⚠️ Data export API recommended
-- ⚠️ Data breach notification procedures needed
-- ⚠️ Age verification may be needed (if serving children)
-
-See- [Legal Compliance](../reference/legal.md)
-
-- [Cost Analysis](../operations/cost.md)
-  compliance information.
-
-### 5.6 Best Practices
-
-1. **Default to no storage**: Use `storeResults: false` by default
-2. **Make opt-in clear**: Explain benefits of server storage to users
-3. **Respect user choice**: Don't force server storage
-4. **Provide alternatives**: Browser storage is sufficient for most use cases
-5. **Document retention**: Clearly state 90-day retention for opt-in storage
-
-### 5.7 Data Size Estimates
-
-| Resource Type      | Average Size | Max Size | Storage Location (Default) | Storage Location (Opt-in) |
-| ------------------ | ------------ | -------- | -------------------------- | ------------------------- |
-| Question           | ~100 bytes   | 1 KB     | Not stored                 | R2                        |
-| Answer (essay)     | ~2 KB        | 50 KB    | Not stored                 | R2                        |
-| Submission         | ~500 bytes   | 5 KB     | Not stored                 | R2                        |
-| Assessment Results | ~1-5 KB      | 10 KB    | localStorage               | KV (90-day TTL)           |
+1.  **R2**: Stores the raw submission, questions, and answers (`writeo-data-1`).
+2.  **KV**: Stores the processing result with a 90-day TTL (`WRITEO_RESULTS`).
 
 ---
 
 ## 6. Performance
 
-### 6.1 Latency (Warm vs Cold)
+### 6.1 Latency Benchmarks (Warm)
 
-| Step                                  | Warm (P50) | Cold      | Notes                                |
-| ------------------------------------- | ---------- | --------- | ------------------------------------ |
-| **PUT /text/submissions/{id}**        | ~0.94s     | 11.3s     | Includes parallel Modal calls        |
-| **Modal POST /grade (Essay Scoring)** | ~0.2s      | 9.5-11.5s | GPU inference + model loading        |
-| **Modal POST /check (LanguageTool)**  | ~0.2-0.4s  | 7.5-8.5s  | CPU-only, JAR download on cold start |
-| **GET /text/submissions/{id}**        | 6ms        | n/a       | KV read                              |
-| **End-to-end (user experience)**      | ~1.8-2.5s  | ~12s      | Full submission → results visible    |
+| Service Type     | Typical Latency | Notes                                            |
+| ---------------- | :-------------- | :----------------------------------------------- |
+| **API Overhead** | < 50ms          | Cloudflare Workers routing & validation          |
+| **Corpus/Essay** | ~200ms          | Fast inference (RoBERTa)                         |
+| **DeBERTa**      | ~400-800ms      | Heavy model, requires GPU                        |
+| **LanguageTool** | ~200ms          | CPU-based, highly optimized                      |
+| **GECToR**       | ~1.5s           | Fast neural GEC                                  |
+| **Seq2Seq GEC**  | ~12-16s         | Slow generation (Beam search) - **Bottleneck**   |
+| **LLM Feedback** | ~1-3s           | Depends on provider (Groq is faster than OpenAI) |
 
-**Bottleneck Analysis:**
-
-- **Primary bottleneck**: AI Feedback generation (13-18 seconds per answer)
-- **Secondary bottleneck**: Modal cold starts (8-15s for Essay Scoring, 2-5s for LanguageTool)
-- **R2 Operations**: Already parallelized using `Promise.all()` for optimal performance
+**Note**: Total request time is determined by the _slowest_ parallel service. If `GEC-SEQ2SEQ` is enabled, the request will take ~15s. If only `GEC-GECTOR` and `AES-CORPUS` are enabled, it can be < 3s.
 
 ### 6.2 Throughput
 
-| Metric                   | Value                                   |
-| ------------------------ | --------------------------------------- |
-| **Max Requests per Day** | 100,000 (free tier limit)               |
-| **Concurrent Requests**  | Unlimited (auto-scales per request)     |
-| **Average Requests/sec** | ~1.2 requests/second (100k/day average) |
-| **Burst Capacity**       | Handles traffic spikes automatically    |
-
-### 6.3 Cost Information
-
-See [Cost Analysis](../operations/cost.md) for detailed cost analysis, including per-submission costs, monthly estimates, and cost controls.
-
-### 6.4 Performance Optimizations Implemented
-
-**Current Optimizations:**
-
-1. ✅ **Parallelized R2 Operations** - All R2 reads/writes use `Promise.all()`
-2. ✅ **Parallel Service Calls** - Essay Scoring, LanguageTool, and Relevance checks run concurrently
-3. ✅ **Combined AI Feedback Calls** - Single LLM call per answer (50% fewer API calls)
-4. ✅ **Model Caching** - Modal Volume caches model weights for faster cold starts
-5. ✅ **Synchronous Processing** - Results returned immediately in PUT response body (typically 3-10s)
-
----
-
-## Appendix: Technology Stack Details
-
-### Frontend Stack
-
-- **Framework**: Next.js 15+ (App Router)
-- **Language**: TypeScript 5+
-- **Styling**: Global CSS with CSS Variables
-- **API Client**: Server Actions (server-side only)
-- **PWA**: Service Worker, Web App Manifest, offline support, installable
-
-### API Worker Stack
-
-- **Runtime**: Cloudflare Workers
-- **Framework**: Hono 4+
-- **Language**: TypeScript 5+
-- **Storage**: R2 API, KV API
-
-### Modal Services Stack
-
-- **Platform**: Modal (serverless ML)
-- **Framework**: FastAPI 0.104+
-- **Language**: Python 3.11+
-- **ML Framework**: PyTorch 2.1.0+
-- **Models**: HuggingFace Transformers 4.35+
-- **Grammar**: LanguageTool 6.4+
-
----
+- **API**: Scales automatically with Cloudflare Workers.
+- **Modal**: Autoscales containers up to configured limits (typically 10-100 concurrent containers).
+- **LLM**: Subject to provider rate limits (TPM/RPM).

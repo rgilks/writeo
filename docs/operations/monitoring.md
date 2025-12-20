@@ -2,7 +2,7 @@
 
 Essential operations information for running Writeo in production.
 
-**Quick Mode Switching:** See [MODES.md](MODES.md) for easy mode switching guide.
+**Quick Mode Switching:** See [MODES.md](modes.md) for easy mode switching guide.
 
 ## Environment Variables
 
@@ -18,16 +18,25 @@ You need **different files for different parts**:
 
 **Production:** Set via `wrangler secret put`:
 
-- `MODAL_GRADE_URL` - Essay Scoring Modal endpoint
-- `API_KEY` - API authentication key (must match web app and Modal services)
 - **LLM Provider** (choose one):
   - `LLM_PROVIDER=openai` + `OPENAI_API_KEY` - Cost-effective option (GPT-4o-mini)
   - `LLM_PROVIDER=groq` + `GROQ_API_KEY` - Ultra-fast option (Llama 3.3 70B)
-- `MODAL_LT_URL` (optional) - LanguageTool Modal endpoint
-- `LT_LANGUAGE` (optional) - Default language code (default: `"en-GB"`)
-- `AI_MODEL` (optional) - Model name (default: `"gpt-4o-mini"` for OpenAI, `"llama-3.3-70b-versatile"` for Groq)
-- `TEST_API_KEY` (optional) - Test key with higher rate limits
-- `ALLOWED_ORIGINS` (optional) - CORS origins (default: all)
+
+- **Modal Service URLs** (Set via `wrangler secret put`):
+  - `MODAL_DEBERTA_URL` - AES-DEBERTA Service (Primary Scorer)
+  - `MODAL_CORPUS_URL` - AES-CORPUS Service (Secondary Scorer)
+  - `MODAL_GEC_URL` - GEC-SEQ2SEQ Service (Grammar)
+  - `MODAL_GECTOR_URL` - GEC-GECTOR Service (Fast Grammar)
+  - `MODAL_FEEDBACK_URL` - AES-FEEDBACK Service (Experimental)
+  - `MODAL_GRADE_URL` - AES-ESSAY Service (Legacy/Required)
+  - `MODAL_LT_URL` - LanguageTool Service (Optional)
+
+- **API Worker Config**:
+  - `API_KEY` - API authentication key (must match web app and Modal services)
+  - `TEST_API_KEY` (optional) - Test key with higher rate limits
+  - `ALLOWED_ORIGINS` (optional) - CORS origins (default: all)
+  - `LT_LANGUAGE` (optional) - Default language code (default: `"en-GB"`)
+  - `AI_MODEL` (optional) - Override default model name
 
 **Modal Services:** Set via `modal secret create`:
 
@@ -38,18 +47,6 @@ You need **different files for different parts**:
 ```bash
 cp apps/api-worker/.dev.vars.example apps/api-worker/.dev.vars
 # Then edit .dev.vars with your values
-```
-
-Example `.dev.vars`:
-
-```bash
-API_KEY=your-key
-MODAL_GRADE_URL=https://your-endpoint.modal.run
-# Choose your LLM provider:
-LLM_PROVIDER=openai  # or "groq"
-OPENAI_API_KEY=your-openai-key  # Required if LLM_PROVIDER=openai
-GROQ_API_KEY=your-groq-key  # Required if LLM_PROVIDER=groq
-MODAL_LT_URL=https://your-lt-endpoint.modal.run  # optional
 ```
 
 ### Web App
@@ -85,14 +82,6 @@ cp .env.example .env.local
 # Then edit .env.local with your values
 ```
 
-Example `.env.local`:
-
-```bash
-API_KEY=your-key
-API_BASE=http://localhost:8787
-PLAYWRIGHT_BASE_URL=http://localhost:3000
-```
-
 **Note:** `API_KEY` must match the API worker key (or use `TEST_API_KEY` for higher rate limits).
 
 ## Observability
@@ -101,155 +90,99 @@ PLAYWRIGHT_BASE_URL=http://localhost:3000
 
 **Cloudflare Workers Logging:**
 
-Logging is **enabled by default** for all Workers. All `console.log()`, `console.error()`, and `console.warn()` statements are automatically captured.
+Logging is **enabled by default**. View logs via:
 
-**View Logs:**
-
-1. **Cloudflare Dashboard (Recommended for Production):**
-   - Go to: https://dash.cloudflare.com → Workers & Pages → Your Worker → Observability → Logs
-   - Real-time logs with filtering and search
-   - No timeout issues, best for production monitoring
-
-2. **Command Line (for quick checks):**
-
+1. **Cloudflare Dashboard (Recommended)**: Workers & Pages → Your Worker → Observability → Logs
+2. **Command Line**:
    ```bash
-   # Use helper script (safe, with timeout)
    ./scripts/check-logs.sh api-worker "error" 20
-   ./scripts/check-logs.sh api-worker "LLM Assessment" 50
-   ./scripts/check-logs.sh api-worker "" 30  # Recent logs
    ```
-
-3. **Direct wrangler command (with timeout):**
-   ```bash
-   timeout 10s npx wrangler tail --format json --search "error" | head -20
-   ```
-
-**Log Levels:**
-
-- `console.log()` - Info/debug messages
-- `console.warn()` - Warnings (via `safeLogWarn()`)
-- `console.error()` - Errors (via `safeLogError()`)
-
-**Log Format:**
-All logs are automatically sanitized to remove sensitive data (API keys, tokens, etc.) via `safeLogError()`, `safeLogWarn()`, and `safeLogInfo()` utilities.
-
-### Tracing
-
-**Automatic Tracing (Enabled):**
-
-End-to-end request tracing is enabled with 5% sampling rate. This provides:
-
-- **Automatic instrumentation** of:
-  - Outbound HTTP requests (fetch calls)
-  - KV/R2 binding operations
-  - Worker invocation lifecycle
-  - CPU time and wall time metrics
-
-- **View Traces:**
-  - Cloudflare Dashboard → Workers & Pages → Your Worker → Observability → Traces
-  - See complete request flows, identify bottlenecks, and debug issues
-
-- **Cost:**
-  - Free during beta period
-  - After beta: 200,000 events/day included in free tier (5% sampling = ~10k requests/day)
-  - Each span in a trace counts as one event
-
-- **Export to External Tools (Future):**
-  - Can export to OTLP-compatible tools (Grafana, Honeycomb, etc.)
-  - Configure in Dashboard → Workers → Observability → Destinations
 
 ### Observability Dashboard
 
-**Unified View:**
+**Location:** Cloudflare Dashboard → Workers & Pages → Your Worker → Observability
 
-Access comprehensive observability data:
+**Features:**
 
-- **Location:** Cloudflare Dashboard → Workers & Pages → Your Worker → Observability
-- **Features:**
-  - Logs with query builder
-  - Traces with timeline visualization
-  - Metrics (CPU time, wall time, request counts)
-  - Invocation view (grouped logs per request)
-  - Custom visualizations
+- Real-time logs
+- Traces (5% sampling rate)
+- Metrics (CPU, requests, errors)
 
-**Modal Services:**
+### Monitoring Modal Services
+
+Use the `modal` CLI to view logs for specific services.
+
+**Primary Scoring:**
 
 ```bash
-modal app logs writeo-essay
-modal app logs writeo-lt
+modal app logs writeo-deberta  # AES-DEBERTA (Primary)
+modal app logs writeo-corpus   # AES-CORPUS (Secondary)
+```
+
+**Grammar Correction:**
+
+```bash
+modal app logs writeo-gec-service     # GEC-SEQ2SEQ (High Precision)
+modal app logs writeo-gector-service  # GEC-GECTOR (Low Latency)
+```
+
+**Other Services:**
+
+```bash
+modal app logs writeo-feedback # AES-FEEDBACK (Experimental)
+modal app logs writeo-essay    # AES-ESSAY (Legacy)
+modal app logs writeo-lt       # GEC-LT (Legacy)
 ```
 
 ## Performance
 
 **Typical Response Times:**
 
-- Warm: 3-10s (full processing)
-- Cold: 8-15s (Modal cold start)
+- **Full Assessment (Warm)**: 3-5s (using Parallel execution)
+- **Full Assessment (Cold)**: 15-20s (if multiple services cold start)
+
+**Service Latency Breakdown:**
+
+- **AES-DEBERTA**: ~300-500ms (Warm)
+- **GEC-GECTOR**: ~1-2s (Warm)
+- **GEC-SEQ2SEQ**: ~12-16s (Warm) - _Slowest component_
+- **AES-CORPUS**: ~100-200ms (Warm)
+- **LLM Feedback**: 2-5s (OpenAI) vs <1s (Groq)
 
 **Bottlenecks:**
 
-- AI Feedback: 3-8s per answer
-- Modal cold starts: 8-15s (Essay Scoring), 2-5s (LanguageTool)
+- **GEC-SEQ2SEQ**: High precision but significantly slower than GECToR. Use only when precision is critical.
+- **Cold Starts**: Modal services take 10-20s to boot. Use "Turbo Mode" (Keep-Warm) for production.
 
 **Optimizations:**
 
-- Parallel processing (Essay Scoring + LanguageTool + Relevance)
-- Combined AI feedback calls
-- Model caching via Modal Volumes
+- **Parellel Execution**: The API Worker requests all assessors in parallel.
+- **GEC Selection**: Prefer GECToR (`gecGector`) for real-time feedback; use Seq2Seq (`gecSeq2seq`) for final checks.
+- **LLM Streaming**: Feedback is streamed to the user to reduce perceived latency.
 
-## Monitoring
+## Monitoring Metrics
 
-**Key Metrics:**
+**Key Metrics to Watch:**
 
-- Request count/errors
-- Response times
-- KV/R2 usage
-- Error rates
-
-**Timing Headers:**
-
-- `X-Timing-Total`: Total processing time
-- `X-Timing-Slowest`: Top 5 slowest operations
-- `X-Timing-Data`: Full timing breakdown (JSON)
+- **Worker**: Request count, Error rate (5xx), CPU Time per request.
+- **Modal**: Active Containers, Backlog, GPU Memory usage.
+- **Storage**: R2 Class A/B operations, KV Read/Write units.
 
 ## Troubleshooting
 
-**Modal errors:**
+**Modal "Service Unavailable" / 500 Errors:**
 
-- Verify secrets: `wrangler secret list`
-- Check Modal logs: `modal app logs writeo-essay`
-- Test endpoint: `curl https://your-endpoint/health`
+- Check specific service logs: `modal app logs writeo-deberta`
+- Verify `MODAL_*_URL` secrets in `wrangler secret list`.
 
-**KV/R2 errors:**
+**Slow Response Times:**
 
-- Verify namespace IDs in `wrangler.toml`
-- Check bucket exists: `wrangler r2 bucket list`
-- Check namespace: `wrangler kv:namespace list`
-
-**Results not appearing:**
-
-- Check API logs: `./scripts/check-logs.sh api-worker`
-- Verify Modal service accessible
-- Check KV permissions
-
-## Operational Modes
-
-Writeo supports two operational modes optimized for different use cases. See [MODES.md](MODES.md) for detailed mode switching guide.
-
-**Quick Summary:**
-
-- **🪙 Cheap Mode**: OpenAI GPT-4o-mini, scale-to-zero
-- **⚡ Turbo Mode**: Groq Llama 3.3 70B, keep warm
-
-See [Cost Analysis](cost.md) for detailed cost analysis.
+- Check `X-Timing-Slowest` header in response.
+- If `GEC-SEQ2SEQ` is slow, verify if user needs high-precision (disable in `assessors.json` if not).
+- If Cold Starts are frequent, switch to Turbo Mode (`./scripts/set-mode.sh turbo`).
 
 ## References
 
 - [System Architecture](../architecture/overview.md)
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
+- [DEPLOYMENT.md](deployment.md) - Deployment guide
 - [Interactive API Docs](https://writeo-api-worker.rob-gilks.workers.dev/docs) - API specification (Swagger UI)
-- [OpenAPI Spec](../reference/openapi.yaml) - Machine-readable API specification
-
-```
-
-```

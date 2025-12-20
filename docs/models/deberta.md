@@ -21,7 +21,7 @@ The model provides scores (0-9 scale) for the following dimensions:
 - **Vocabulary (Vocab)**: Range and accuracy of lexical choices.
 - **Grammar**: Range and accuracy of grammatical structures.
 - **Overall**: A holistic score aggregating the above dimensions.
-- **CEFR Level**: An estimated CEFR level (A2-C2) derived from the Overall score.
+- **CEFR Level**: An estimated CEFR level (A2-C2) predicted by a **dedicated ordinal regression head** (CORN), optimizing independently for proficient alignment.
 
 ---
 
@@ -30,7 +30,8 @@ The model provides scores (0-9 scale) for the following dimensions:
 - **Base Model:** `microsoft/deberta-v3-large`
 - **Head Architecture:** Multi-head regression.
   - A shared encoder outputs a pooled representation.
-  - Five separate regression heads (linear layers) project the pooled output to the 5 target scores (TA, CC, Vocab, Grammar, Overall).
+  - Four separate regression heads project the pooled output to dimensional scores (TA, CC, Vocab, Grammar).
+  - One **ordinal regression head** (CORN) predicts the CEFR level.
 - **Max Sequence Length:** 1024 tokens (captures full essay context).
 - **Input:** Concatenated prompt and essay text.
 
@@ -92,7 +93,7 @@ _Note: Lower MAE (Mean Absolute Error) is better._
 The model is deployed as a Modal service and accessed via the API Worker.
 
 **Service ID:** `AES-DEBERTA`  
-**Endpoint:** `score_deberta(text: str)`
+**Endpoint:** `scoreDeberta(text: string)`
 
 **Request:**
 

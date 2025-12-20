@@ -32,7 +32,7 @@ if [ "$MODE" == "cheap" ]; then
   echo "📝 Ensure OPENAI_API_KEY is set:"
   echo "   wrangler secret put OPENAI_API_KEY"
   echo ""
-  echo "📝 Modal services will automatically scale-to-zero (no redeployment needed)"
+  echo "📝 Modal services should use default scaledown_window=30 (scale-to-zero)."
   
 elif [ "$MODE" == "turbo" ]; then
   echo "⚡ Configuring Turbo Mode (Llama 3.3 70B + Modal keep-warm)"
@@ -46,13 +46,15 @@ elif [ "$MODE" == "turbo" ]; then
   echo "📝 Ensure GROQ_API_KEY is set:"
   echo "   wrangler secret put GROQ_API_KEY"
   echo ""
-  echo "📝 Redeploy Modal services with reduced scaledown_window:"
-  echo "   cd ../../services/modal-essay && modal deploy app.py"
-  echo "   cd ../modal-lt && modal deploy app.py"
+  echo "📝 For low latency, reduce scaledown_window to 2s and redeploy relevant services:"
+  echo "   - services/modal-deberta (Primary)"
+  echo "   - services/modal-gec (Grammar)"
+  echo "   - services/modal-gector (Fast Grammar)"
   echo ""
-  echo "   Or edit scaledown_window in app.py files before deploying:"
-  echo "   - services/modal-essay/app.py: scaledown_window=2"
-  echo "   - services/modal-lt/app.py: scaledown_window=2"
+  echo "   Example:"
+  echo "   cd ../../services/modal-deberta"
+  echo "   # Edit app.py -> scaledown_window=2"
+  echo "   modal deploy app.py"
 fi
 
 echo ""

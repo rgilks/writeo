@@ -38,7 +38,7 @@ Writeo uses a modern, performant state management architecture:
 
 - `drafts`: Record of draft histories by submission ID
 - `progress`: Progress metrics per submission
-- `fixedErrors`: Tracked fixed errors per submission
+- `fixedErrors`: Tracked fixed errors per submission (array of string IDs)
 - `achievements`: Unlocked achievements
 - `streak`: Daily practice streak data
 
@@ -61,7 +61,6 @@ Writeo uses a modern, performant state management architecture:
 - `clearAllResults()`: Clear all stored results
 - `cleanupOldResults()`: Remove results older than specified age (default: 30 days)
 - `getAllSubmissionIds()`: Get all stored submission IDs
-- `getResultsCount()`: Get total number of stored results
 
 **Submission History Actions:**
 
@@ -87,7 +86,6 @@ Writeo uses a modern, performant state management architecture:
 
 - Uses Zustand's `persist` middleware for automatic localStorage persistence
 - Uses `createSafeStorage()` utility for error handling and quota management
-- Custom storage adapter handles `Set<string>` serialization/deserialization for `fixedErrors`
 - Auto-saves draft content after 2 seconds of inactivity (debounced in component layer)
 - Automatically saves on every state change
 - Automatically hydrates on store initialization
@@ -344,7 +342,7 @@ export const useDraftStore = create<DraftStore>()(
       })),
       {
         name: "writeo-draft-store",
-        storage: storageWithSetHandling, // Custom adapter for Set serialization
+        storage: createJSONStorage(() => createSafeStorage()),
       },
     ),
     { name: "DraftStore" },
@@ -380,22 +378,6 @@ export const usePreferencesStore = create<PreferencesStore>()(
 );
 ```
 
-## Implementation Details
-
-### Draft Store Persistence
-
-The draft store uses a custom storage adapter to handle `Set<string>` serialization:
-
-```typescript
-// Sets are converted to arrays when saving
-fixedErrors: Record<string, Set<string>> → Record<string, string[]>
-
-// Arrays are converted back to Sets when loading
-Record<string, string[]> → Record<string, Set<string>>
-```
-
-This is necessary because `Set` cannot be directly serialized to JSON. The custom adapter handles this conversion automatically.
-
 ## Testing
 
 Tests should use Zustand stores directly:
@@ -429,7 +411,3 @@ await page.evaluate(() => {
 - [Testing Guide](../operations/testing.md)
 - [Zustand Documentation](https://zustand-demo.pmnd.rs/) - Official Zustand documentation
 - [Immer Documentation](https://immerjs.github.io/immer/) - Official Immer documentation
-
-```
-
-```

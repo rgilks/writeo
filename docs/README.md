@@ -37,6 +37,7 @@ ML models and AI/LLM integration details.
 
 - **[Overview](models/overview.md)** - Essay scoring models comparison
 - **[Corpus Model](models/corpus.md)** - AES-CORPUS training details
+- **[DeBERTa Model](models/deberta.md)** - AES-DEBERTA (DeBERTa v3 Large) details
 - **[Feedback Model](models/feedback.md)** - AES-FEEDBACK multi-task model
 - **[GEC Models](models/gec.md)** - Grammar correction services (Seq2Seq + GECToR)
 - **[Datasets](models/datasets.md)** - Available datasets for training
@@ -51,6 +52,7 @@ Deployment, monitoring, and maintenance.
 - **[Cost Analysis](operations/cost.md)** - Cost analysis and pricing guardrails
 - **[Operational Modes](operations/modes.md)** - Switching between Cheap and Turbo modes
 - **[Scripts](operations/scripts.md)** - Scripts reference
+- **[Training Guide](operations/training.md)** - Model training pipeline
 - **[PWA Setup](operations/pwa.md)** - PWA configuration
 - **[Testing](operations/testing.md)** - Testing strategies
 

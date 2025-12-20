@@ -288,20 +288,20 @@ The model is deployed as a FastAPI service on Modal:
 {
   "score": 6.24,
   "cefr_level": "B2",
-  "model": "roberta-base-cefr"
+  "model": "corpus-roberta"
 }
 ```
 
 ### Usage in Application
 
-The model is called via- **[`ModalClient`](../../apps/api-worker/src/services/modal/client.ts)**: API interfacescript
+The model is called via **[`ModalClient`](../../apps/api-worker/src/services/modal/client.ts)**:
 
 ```typescript
 async scoreCorpus(text: string): Promise<Response> {
-  return fetch(`${this.config.modal.corpusUrl}/score`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, max_length: 512 }),
+  // Uses 'env.MODAL_CORPUS_URL' from config
+  return this.postJson(`${this.config.modal.corpusUrl}/score`, {
+    text,
+    max_length: 512
   });
 }
 ```
