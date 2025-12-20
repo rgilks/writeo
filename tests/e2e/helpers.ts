@@ -365,14 +365,32 @@ export class HomePage {
   }
 
   async clickHistoryLink() {
-    const link = this.page.locator('a[href="/history"]');
-    await link.waitFor({ state: "visible", timeout: 15000 });
-    await link.scrollIntoViewIfNeeded();
-
     // Click with retry pattern for hydration/animation issues (similar to clickTask)
+    // All element interactions are inside the retry loop to handle context destruction
     const maxRetries = 3;
     for (let i = 0; i < maxRetries; i++) {
       try {
+        // Re-locate and wait for element on each attempt to handle context changes
+        const link = this.page.locator('a[href="/history"]');
+        await link.waitFor({ state: "visible", timeout: 15000 });
+
+        // Scroll can fail with "Cannot find context" if page navigates during hydration
+        // Wrap in try-catch to handle gracefully
+        try {
+          await link.scrollIntoViewIfNeeded();
+        } catch (scrollError: any) {
+          // If scroll fails due to context issues, the page may have navigated
+          if (scrollError.message?.includes("Cannot find context")) {
+            const currentUrl = this.page.url();
+            if (currentUrl.includes("/history")) {
+              return; // Already navigated, success
+            }
+            // Otherwise continue to retry
+            throw scrollError;
+          }
+          throw scrollError;
+        }
+
         const navigationPromise = this.page.waitForURL("/history", {
           timeout: 10000,
           waitUntil: "domcontentloaded",
@@ -382,15 +400,17 @@ export class HomePage {
 
         await navigationPromise;
         return; // Success
-      } catch (e) {
+      } catch (e: any) {
+        // Check if we already navigated successfully
+        const currentUrl = this.page.url();
+        if (currentUrl.includes("/history")) {
+          return; // Actually succeeded
+        }
+
         // If last retry, throw the error
         if (i === maxRetries - 1) {
-          const currentUrl = this.page.url();
-          if (currentUrl.includes("/history")) {
-            return; // Actually succeeded but promise timed out
-          }
           throw new Error(
-            `Navigation to /history failed after ${maxRetries} attempts. Current URL: ${currentUrl}.`,
+            `Navigation to /history failed after ${maxRetries} attempts. Current URL: ${currentUrl}. Error: ${e.message}`,
           );
         }
         // Otherwise wait a bit and retry
