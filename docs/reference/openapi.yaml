@@ -222,10 +222,10 @@ paths:
 
                 assessors:
                   type: array
-                  description: Optional list of specific assessors to run (e.g., ["AES-ESSAY", "GEC-LT"]). If omitted, default assessors are used.
+                  description: Optional list of specific assessors to run (e.g., ["AES-DEBERTA", "GEC-LT"]). If omitted, default assessors are used.
                   items:
                     type: string
-                  example: ["AES-ESSAY", "GEC-LT"]
+                  example: ["AES-DEBERTA", "GEC-LT"]
 
                 storeResults:
                   type: boolean
@@ -319,8 +319,8 @@ paths:
                           answers:
                             - id: "550e8400-e29b-41d4-a716-446655440000"
                               assessorResults:
-                                - id: "AES-ESSAY"
-                                  name: "Essay scorer"
+                                - id: "AES-DEBERTA"
+                                  name: "DeBERTa Essay Scorer"
                                   type: "grader"
                                   overall: 6.5
                                   label: "B2"
@@ -331,8 +331,8 @@ paths:
                                     Grammar: 6.0
                                     Overall: 6.5
 
-                    requestedAssessors: ["AES-ESSAY", "GEC-LT"]
-                    activeAssessors: ["AES-ESSAY", "GEC-LT"]
+                    requestedAssessors: ["AES-DEBERTA", "GEC-LT"]
+                    activeAssessors: ["AES-DEBERTA", "GEC-LT"]
                     meta:
                       wordCount: 150
                       errorCount: 3
@@ -497,10 +497,10 @@ paths:
 
                 assessors:
                   type: array
-                  description: Optional list of specific assessors to run (e.g., ["AES-ESSAY", "GEC-LT"]). If omitted, default assessors are used.
+                  description: Optional list of specific assessors to run (e.g., ["AES-DEBERTA", "GEC-LT"]). If omitted, default assessors are used.
                   items:
                     type: string
-                  example: ["AES-ESSAY", "GEC-LT"]
+                  example: ["AES-DEBERTA", "GEC-LT"]
 
                 storeResults:
                   type: boolean
@@ -565,8 +565,8 @@ paths:
                           answers:
                             - id: "550e8400-e29b-41d4-a716-446655440000"
                               assessorResults:
-                                - id: "AES-ESSAY"
-                                  name: "Essay scorer"
+                                - id: "AES-DEBERTA"
+                                  name: "DeBERTa Essay Scorer"
                                   type: "grader"
                                   overall: 6.5
                                   label: "B2"
@@ -577,8 +577,8 @@ paths:
                                     Grammar: 6.0
                                     Overall: 6.5
 
-                    requestedAssessors: ["AES-ESSAY", "GEC-LT"]
-                    activeAssessors: ["AES-ESSAY", "GEC-LT"]
+                    requestedAssessors: ["AES-DEBERTA", "GEC-LT"]
+                    activeAssessors: ["AES-DEBERTA", "GEC-LT"]
                     meta:
                       wordCount: 150
                       errorCount: 3
@@ -1039,8 +1039,8 @@ paths:
                     - part: "1"
                       status: "success"
                       assessorResults:
-                        - id: "AES-ESSAY"
-                          name: "Essay scorer"
+                        - id: "AES-DEBERTA"
+                          name: "DeBERTa Essay Scorer"
                           type: "grader"
                           overall: 7.5
                           label: "C1"
@@ -1290,7 +1290,7 @@ components:
           items:
             type: string
           description: List of assessor IDs to run
-          example: ["AES-ESSAY", "GEC-LT"]
+          example: ["AES-DEBERTA", "GEC-LT"]
         parts:
           type: array
           description: List of submission parts
@@ -1305,11 +1305,11 @@ components:
         id:
           type: string
           description: Assessor identifier
-          example: "AES-ESSAY"
+          example: "AES-DEBERTA"
         name:
           type: string
           description: Human-readable assessor name
-          example: "Essay scorer"
+          example: "DeBERTa Essay Scorer"
         type:
           type: string
           enum: [grader, conf, ard]
@@ -1414,13 +1414,13 @@ components:
           items:
             type: string
           description: List of assessors requested by the client (or defaults if not specified)
-          example: ["AES-ESSAY", "GEC-LT"]
+          example: ["AES-DEBERTA", "GEC-LT"]
         activeAssessors:
           type: array
           items:
             type: string
           description: List of assessors actually run
-          example: ["AES-ESSAY", "GEC-LT"]
+          example: ["AES-DEBERTA", "GEC-LT"]
         error_message:
           type: string
           description: Error message if status is 'error'
