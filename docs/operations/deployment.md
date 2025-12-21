@@ -20,7 +20,6 @@ Writeo's architecture has evolved to use specialized models for different tasks.
 Uses the full suite of high-performance models for maximum accuracy:
 
 - **AES-DEBERTA:** Primary assessor (Dimensional scoring, DeBERTa-v3-large)
-- **AES-CORPUS:** Secondary assessor (Verification, RoBERTa-base)
 - **GEC-SEQ2SEQ:** High-precision grammar correction (Flan-T5-base)
 - **GEC-GECTOR:** Low-latency grammar correction (RoBERTa-base)
 
@@ -78,17 +77,7 @@ modal deploy app.py
 # Copy the endpoint URL
 ```
 
-#### 2.2 Secondary Scoring (AES-CORPUS) - _Recommended_
-
-Verification model trained on corpus data.
-
-```bash
-cd services/modal-corpus
-modal deploy app.py
-# Copy the endpoint URL
-```
-
-#### 2.3 Grammar Correction (GEC-SEQ2SEQ) - _Recommended_
+#### 2.2 Grammar Correction (GEC-SEQ2SEQ) - _Recommended_
 
 High-precision grammar correction (Flan-T5).
 
@@ -151,9 +140,6 @@ cd apps/api-worker
 wrangler secret put MODAL_DEBERTA_URL
 # Paste modal-deberta URL
 
-# Secondary Scorer (Corpus)
-wrangler secret put MODAL_CORPUS_URL
-# Paste modal-corpus URL
 
 # Grammar Correction (Seq2Seq)
 wrangler secret put MODAL_GEC_URL

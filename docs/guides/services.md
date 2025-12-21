@@ -37,31 +37,15 @@ Edge worker that exposes the public API (`/v1/text/submissions`, `/v1/text/.../f
 
 ## Modal Essay Services (Scoring)
 
-### 1. Corpus Scoring Service (`modal-corpus`)
-
-**Location:** `services/modal-corpus/`
-
-Primary scorer trained on the Write & Improve corpus. Provides the most accurate CEFR alignment (0.96 correlation).
-
-- **Model:** `roberta-base` fine-tuned on W&I data
-- **Output:** Overall Score + CEFR Level
-- **Performance:** Very fast (~200ms warm)
-
-**Quick Start:**
-
-```bash
-cd services/modal-corpus && modal deploy app.py
-```
-
-### 2. DeBERTa Scoring Service (`modal-deberta`)
+### 1. DeBERTa Scoring Service (`modal-deberta`)
 
 **Location:** `services/modal-deberta/`
 
-Advanced scorer providing multi-dimensional breakdown.
+Primary scorer providing multi-dimensional breakdown. This is the recommended scoring service.
 
 - **Model:** `microsoft/deberta-v3-large`
 - **Output:** Dimensions: Task Achievement, Coherence & Cohesion, Vocabulary, Grammar
-- **Performance:** Slower (~400-800ms warm), requires GPU
+- **Performance:** ~400-800ms warm, requires GPU
 
 **Quick Start:**
 
@@ -69,7 +53,7 @@ Advanced scorer providing multi-dimensional breakdown.
 cd services/modal-deberta && modal deploy app.py
 ```
 
-### 3. Legacy Essay Service (`modal-essay`)
+### 2. Legacy Essay Service (`modal-essay`)
 
 **Location:** `services/modal-essay/`
 

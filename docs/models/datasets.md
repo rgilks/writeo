@@ -98,14 +98,14 @@ These datasets are high-quality candidates for improving model robustness in the
 
 **Best choice for US K-12 style scoring**
 
-| Attribute       | Value                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| **Size**        | ~13,000 essays (8 prompts)                                                                   |
-| **Dimensions**  | Content, Organization, Style, Conventions                                                    |
-| **Score Range** | 0-6 per dimension                                                                            |
-| **Download**    | [https://banuadrian.github.io/asap-plus-plus/](https://banuadrian.github.io/asap-plus-plus/) |
-| **Essays**      | [Kaggle ASAP-AES](https://www.kaggle.com/c/asap-aes/data)                                    |
-| **License**     | Research use                                                                                 |
+| Attribute       | Value                                                              |
+| --------------- | ------------------------------------------------------------------ |
+| **Size**        | ~13,000 essays (8 prompts)                                         |
+| **Dimensions**  | Content, Organization, Style, Conventions                          |
+| **Score Range** | 0-6 per dimension                                                  |
+| **Paper**       | [ASAP++ Paper (ACL Anthology)](https://aclanthology.org/I17-1063/) |
+| **Essays**      | [Kaggle ASAP-AES](https://www.kaggle.com/c/asap-aes/data)          |
+| **License**     | Research use                                                       |
 
 **Pros:** True human rubric scores, widely used in research.
 **Cons:** US K-12 prompts differ significantly from IELTS/EFL tasks.
@@ -161,6 +161,6 @@ Our current `AES-DEBERTA` training strategy (`scripts/training/train-deberta-aes
 
 - [IELTS-WT2-LLaMa3-1k Dataset](https://huggingface.co/datasets/123Harr/IELTS-WT2-LLaMa3-1k)
 - [DREsS Dataset](https://haneul-yoo.github.io/dress/) - ACL 2025
-- [ASAP++ Project](https://banuadrian.github.io/asap-plus-plus/)
+- [ASAP++ Paper (ACL)](https://aclanthology.org/I17-1063/)
 - [Kaggle ASAP-AES](https://www.kaggle.com/c/asap-aes)
 - [Kaggle ELLIPSE](https://www.kaggle.com/competitions/feedback-prize-english-language-learning)

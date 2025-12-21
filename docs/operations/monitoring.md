@@ -24,7 +24,6 @@ You need **different files for different parts**:
 
 - **Modal Service URLs** (Set via `wrangler secret put`):
   - `MODAL_DEBERTA_URL` - AES-DEBERTA Service (Primary Scorer)
-  - `MODAL_CORPUS_URL` - AES-CORPUS Service (Secondary Scorer)
   - `MODAL_GEC_URL` - GEC-SEQ2SEQ Service (Grammar)
   - `MODAL_GECTOR_URL` - GEC-GECTOR Service (Fast Grammar)
   - `MODAL_FEEDBACK_URL` - AES-FEEDBACK Service (Experimental)
@@ -116,7 +115,6 @@ Use the `modal` CLI to view logs for specific services.
 
 ```bash
 modal app logs writeo-deberta  # AES-DEBERTA (Primary)
-modal app logs writeo-corpus   # AES-CORPUS (Secondary)
 ```
 
 **Grammar Correction:**
@@ -146,7 +144,6 @@ modal app logs writeo-lt       # GEC-LT (Legacy)
 - **AES-DEBERTA**: ~300-500ms (Warm)
 - **GEC-GECTOR**: ~1-2s (Warm)
 - **GEC-SEQ2SEQ**: ~12-16s (Warm) - _Slowest component_
-- **AES-CORPUS**: ~100-200ms (Warm)
 - **LLM Feedback**: 2-5s (OpenAI) vs <1s (Groq)
 
 **Bottlenecks:**

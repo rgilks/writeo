@@ -120,7 +120,7 @@ createAssessor: (data) => ({
 })
 ```
 
-**Examples:** AES-CORPUS, AES-FEEDBACK, AES-DEBERTA
+**Examples:** AES-FEEDBACK, AES-DEBERTA
 
 ### Feedback Services
 

@@ -23,7 +23,7 @@ modal run scripts/training/train-overall-score.py
 
 ### 3. Validate Assessors
 
-Compare AES-ESSAY and AES-CORPUS performance against the corpus test set (481 held-out essays):
+Compare AES-ESSAY and AES-DEBERTA performance against the corpus test set:
 
 ```bash
 # Quick test (10 essays)
@@ -33,23 +33,22 @@ python scripts/training/validate-assessors.py --limit 10
 python scripts/training/validate-assessors.py
 ```
 
-**Current Performance (post-calibration):**
+**Current Performance:**
 
-- **AES-CORPUS**: QWK 0.87 (excellent), MAE 0.32, 100% adjacent accuracy
+- **AES-DEBERTA**: Primary scorer with dimensional breakdown
 - **AES-ESSAY**: QWK 0.58 (moderate), MAE 0.55, 90% adjacent accuracy
 
 Results are saved to `validation_results.json` and `validation_report.md`.
 
 ### 4. Deployed Models
 
-**AES-CORPUS** (this model):
+**AES-DEBERTA** (Primary):
 
-- **URL**: `https://rob-gilks--writeo-corpus-fastapi-app.modal.run`
+- **Service**: `services/modal-deberta/`
 - **Endpoint**: `POST /score`
-- **Performance**: QWK 0.87 (excellent), MAE 0.32, 100% adjacent accuracy
-- **Guide**: See [Corpus Model Guide](../../docs/models/corpus.md) for details.
+- **Guide**: See [DeBERTa Model Guide](../models/deberta.md) for details.
 
-**AES-ESSAY** (engessay model):
+**AES-ESSAY** (Legacy):
 
 - **URL**: `https://rob-gilks--writeo-essay-fastapi-app.modal.run`
 - **Endpoint**: `POST /grade`
@@ -78,7 +77,7 @@ Results are saved to `validation_results.json` and `validation_report.md`.
 
 ### Deployment
 
-**Modal Service** (`services/modal-corpus/`)
+**Modal Service** (`services/modal-deberta/`)
 
 - FastAPI REST API
 - Loads trained model from Modal volume
@@ -215,17 +214,17 @@ After successful baseline training:
 The trained model is integrated as a Modal service:
 
 ```python
-# Service endpoint
-POST https://rob-gilks--writeo-corpus-fastapi-app.modal.run/score
+# Service endpoint (example)
+POST https://rob-gilks--writeo-deberta-fastapi-app.modal.run/score
 
 # Request
 {"text": "Essay text here", "max_length": 512}
 
 # Response
-{"score": 3.74, "cefr_level": "A2+", "model": "corpus-roberta"}
+{"score": 3.74, "cefr_level": "A2+", "model": "deberta-v3-large"}
 ```
 
-See `services/modal-corpus/` for deployment code.
+See `services/modal-deberta/` for deployment code.
 
 ## References
 

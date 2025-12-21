@@ -17,7 +17,7 @@ This installs:
 - `pre-commit` - Formats code, runs linting and type checking
 - `pre-push` - Runs all tests against local servers
 
-See [TESTING.md](TESTING.md) for details on hook features including quick mode.
+See [Testing Guide](testing.md) for details on hook features including quick mode.
 
 ## Deployment Scripts
 

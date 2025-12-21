@@ -332,7 +332,7 @@ The API uses a **Service Registry** pattern (`src/services/submission/service-re
 
 Each service in the registry defines:
 
-- **ID**: Unique identifier (e.g., `AES-CORPUS`, `GEC-SEQ2SEQ`).
+- **ID**: Unique identifier (e.g., `AES-DEBERTA`, `GEC-SEQ2SEQ`).
 - **Config Path**: Where to find its enabling flag in the app config.
 - **Request Factory**: How to build the request for the Modal service.
 - **Response Parser**: How to interpret the service's output.

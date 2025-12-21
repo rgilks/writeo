@@ -34,7 +34,7 @@ A comprehensive guide to the Multi-Task Feedback Model (AES-FEEDBACK).
 3. **Error type distribution** (% grammar, vocabulary, etc.) ❌ **Not working**
 4. **Attention heatmap** (shows model focus areas) ⏸️ **Not tested**
 
-**Why it exists:** Current models (AES-CORPUS, AES-ESSAY) only give scores. Learners need to know **where** and **what** to improve.
+**Why it exists:** Current models (AES-DEBERTA, AES-ESSAY) provide scores but learners need to know **where** and **what** to improve.
 
 **Model:** DeBERTa-v3-base fine-tuned with multi-task learning
 
@@ -46,11 +46,11 @@ A comprehensive guide to the Multi-Task Feedback Model (AES-FEEDBACK).
 
 ### Current System Limitations
 
-**AES-CORPUS** (existing):
+**AES-DEBERTA** (current primary):
 
 ```
 Input: Essay text
-Output: "Your essay is B2 level" (QWK 0.87)
+Output: "Your essay is B2 level" + dimensional scores (QWK 0.97)
 ```
 
 **AES-ESSAY** (existing):
@@ -423,7 +423,7 @@ bio_tags = ["O", "O", "B-ERROR", "O", "O", "O"]
 
 **⚠️ Issue:** Current implementation uses simplified BIO tagging that doesn't properly align with actual M2 error positions (see [Problems](#problems-encountered)).
 
-**Step 3: Generate enhanced dataset** ([`prepare-enhanced-corpus.py`](../../scripts/training/prepare-enhanced-corpus.py))
+**Step 3: Generate enhanced dataset**
 
 ```python
 # Combines CEFR labels + error annotations

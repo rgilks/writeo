@@ -34,7 +34,6 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 | ------------ | ------- | ----------- | ------------------------------ |
 | AES-DEBERTA  | ✅ ON   | ~$0.0003    | Default high-accuracy scorer   |
 | AES-ESSAY    | ❌ OFF  | ~$0.0001    | Legacy (deprecated)            |
-| AES-CORPUS   | ✅ ON   | ~$0.0001    | Best scorer (0.96 correlation) |
 | GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs, slow) |
 | GEC-GECTOR   | ✅ ON   | ~$0.00008   | Fast GEC (~10x faster)         |
 | GEC-LT       | ✅ ON   | ~$0.0001    | Typos, mechanics               |
@@ -47,7 +46,6 @@ Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaul
 | ------------------ | ---- | --------- | --------------- | ----------------------------- |
 | **modal-deberta**  | A10G | 30s       | ~$0.00030       | DeBERTa-v3 Multi-Head         |
 | **modal-essay**    | T4   | 30s       | ~$0.00008       | Legacy Essay Scoring          |
-| **modal-corpus**   | T4   | 30s       | ~$0.00008       | Corpus-trained scorer         |
 | **modal-feedback** | T4   | 30s       | ~$0.00008       | Feedback model (experimental) |
 | **modal-lt**       | CPU  | 30s       | ~$0.00002       | LanguageTool grammar check    |
 | **modal-gec**      | A10G | 30s       | ~$0.00015       | Seq2Seq GEC (Flan-T5, slow)   |

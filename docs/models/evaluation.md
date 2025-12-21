@@ -7,30 +7,28 @@ This report evaluates the performance, consistency, and utility of the various a
 **Key Findings:**
 
 - **Scoring Accuracy:** `AES-DEBERTA` is the highest-performing scoring model, achieving a correlation of **0.97** with human labels and the lowest Mean Absolute Error (0.38).
-- **Consensus:** There is a strong alignment between `AES-CORPUS` and `AES-FEEDBACK` (DeBERTa), whereas `AES-ESSAY` consistently underestimates proficiency.
+- **Consensus:** `AES-DEBERTA` is the primary scorer; `AES-FEEDBACK` provides a secondary signal. `AES-ESSAY` consistently underestimates proficiency.
 - **Feedback Redundancy:** The pipeline currently runs three separate Grammar Error Correction (GEC) engines (`LT`, `LLM`, `Seq2Seq`), leading to overlapping and potentially overwhelming feedback for the user.
-- **Recommendations:** Consolidate scoring to use `AES-DEBERTA` as the primary source, and unify GEC feedback by prioritizing `GEC-SEQ2SEQ` for inline edits while using `GEC-LLM` for deeper explanations.
+- **Recommendations:** Use `AES-DEBERTA` as the primary scorer, and unify GEC feedback by prioritizing `GEC-SEQ2SEQ` for inline edits while using `GEC-LLM` for deeper explanations.
 
 ---
 
 ## 2. Scoring Models Evaluation
 
-We evaluated three primary grading assessors against human-labeled CEFR scores converted to a 0-9 scale.
+We evaluated grading assessors against human-labeled CEFR scores converted to a 0-9 scale.
 
 ### Performance Metrics
 
 | Assessor         | Model Type           | MAE (Error) | Bias  | Correlation (r) | Status              |
 | ---------------- | -------------------- | ----------- | ----- | --------------- | ------------------- |
-| **AES-CORPUS**   | RoBERTa (Regression) | **0.41**    | +0.18 | **0.96**        | 🟢 **Recommended**  |
-| **AES-FEEDBACK** | DeBERTa (Multi-task) | 0.58        | +0.31 | 0.89            | 🟡 Secondary Signal |
 | **AES-DEBERTA**  | DeBERTa (Regression) | **0.38**    | +0.12 | **0.97**        | 🟢 **Primary**      |
+| **AES-FEEDBACK** | DeBERTa (Multi-task) | 0.58        | +0.31 | 0.89            | 🟡 Secondary Signal |
 | **AES-ESSAY**    | Standard ML          | 0.75        | -0.55 | 0.86            | 🔴 Deprecated       |
 
 ### Analysis
 
-- **AES-CORPUS**: Demonstrates high reliability. The slight positive bias (+0.18) is negligible and often preferred in learning contexts to encourage users. It tracks human scores linearly across the difficulty spectrum.
-- **AES-FEEDBACK**: Slightly overestimates performance (+0.31). It is useful as a corroborating signal but less precise than the corpus-trained specific model.
-- **AES-DEBERTA**: The new primary model. It outperforms all legacy models with the lowest MAE (0.38 vs 0.41) and highest correlation (0.97). It provides granular dimensional scores (TA, CC, Vocab, Grammar) with high reliability.
+- **AES-DEBERTA**: The primary model. It outperforms legacy models with the lowest MAE (0.38) and highest correlation (0.97). It provides granular dimensional scores (TA, CC, Vocab, Grammar) with high reliability.
+- **AES-FEEDBACK**: Slightly overestimates performance (+0.31). It is useful as a corroborating signal but less precise than the primary model.
 - **AES-ESSAY**: Consistently harsh grading (negative bias of -0.55). It frequently scores B2 essays as B1/A2+. This model is now deprecated in favor of `AES-DEBERTA`.
 
 ---
