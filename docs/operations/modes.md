@@ -23,7 +23,7 @@ Best for development, testing, and low-budget deployments.
 Best for live user traffic where low latency is critical.
 
 - **LLM**: Groq Llama 3.3 70B (Extremely fast)
-- **Assessors**: Full Suite (DeBERTa, GEC, Corpus)
+- **Assessors**: Full Suite (DeBERTa, GEC-SEQ2SEQ, GEC-GECTOR)
 - **Scaling**: Keep-warm (2s scaledown window)
 - **Cost**: ~$25-40/month
 - **Latency**: 2-5s first request, 1-3s warm
@@ -61,10 +61,11 @@ Controls which models run to analyze the text. Configured in `apps/api-worker/sr
 {
   "scoring": {
     "essay": false,
-    "corpus": true, // Secondary verification
+    "feedback": false,
     "deberta": true // Primary Dimensional Scoring
   },
   "grammar": {
+    "languageTool": true,
     "gecSeq2seq": true, // High precision
     "gecGector": true // Low latency
   }

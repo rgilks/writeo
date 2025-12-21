@@ -133,21 +133,6 @@ Starts the API Worker and Web App on test ports (8787/3000) for integration test
 ./scripts/start-test-env.sh
 ```
 
-## Calibration Scripts (Optional)
-
-Legacy scripts for calibrating corpus scores.
-
-- `calibrate-from-corpus.py` - Generate calibration data from corpus
-- `apply-corpus-calibration.py` - Generate calibration function code
-
-**Usage:**
-
-```bash
-export CORPUS_PATH=/path/to/corpus.tsv
-export MODAL_URL=https://your-endpoint.modal.run
-python scripts/calibrate-from-corpus.py
-```
-
 ## References
 
 - [DEPLOYMENT.md](deployment.md) - Deployment guide
