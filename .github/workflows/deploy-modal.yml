@@ -7,7 +7,7 @@ on:
     paths:
       - 'services/modal-deberta/**'
       - 'services/modal-lt/**'
-      - 'services/modal_gec/**'
+      - 'services/modal-gec/**'
       - 'packages/shared/py/**'
   workflow_dispatch:
 
@@ -59,8 +59,8 @@ jobs:
               echo "modal-lt=false" >> $GITHUB_OUTPUT
             fi
             
-            # Check for changes in modal_gec
-            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal_gec/"; then
+            # Check for changes in modal-gec
+            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-gec/"; then
               echo "modal-gec=true" >> $GITHUB_OUTPUT
             else
               echo "modal-gec=false" >> $GITHUB_OUTPUT
@@ -211,7 +211,7 @@ jobs:
           modal app list > /dev/null || echo "Authentication check complete"
 
       - name: Deploy Modal GEC Service
-        working-directory: services/modal_gec
+        working-directory: services/modal-gec
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
