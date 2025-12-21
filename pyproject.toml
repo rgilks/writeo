@@ -7,7 +7,6 @@ dependencies = []
 [tool.uv.workspace]
 members = [
     "services/modal-deberta",
-    "services/modal-essay",
     "services/modal-feedback",
     "services/modal-gec",
     "services/modal-lt",

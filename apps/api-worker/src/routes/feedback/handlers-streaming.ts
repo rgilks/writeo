@@ -34,7 +34,7 @@ function extractAssessmentData(results: AssessmentResults): {
   for (const part of results.results?.parts || []) {
     for (const answer of part.answers || []) {
       for (const assessor of answer.assessorResults || []) {
-        if (!essayScores && assessor.id === "AES-ESSAY") {
+        if (!essayScores && assessor.id === "AES-DEBERTA") {
           essayScores = { overall: assessor.overall, dimensions: assessor.dimensions };
         }
         if (!ltErrors && assessor.id === "GEC-LT") {

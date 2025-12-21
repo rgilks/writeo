@@ -26,19 +26,19 @@ Uses the full suite of high-performance models for maximum accuracy:
 **Cost:** Variable based on usage (Modal GPU time + LLM tokens).
 **Performance:** High accuracy, parallel execution of scoring and correction.
 
-### 🪙 Legacy / Minimal Mode
+### 🪙 Minimal Mode
 
-Uses legacy or fewer models to save costs:
+Uses fewer models to save costs:
 
-- **AES-ESSAY:** Legacy assessor (Single model, deprecated but functional)
 - **LanguageTool:** Rule-based grammar checking (CPU-only)
+- **AES-DEBERTA:** (Optional) Can be disabled for CPU-only operation, but scoring will be skipped.
 
 **Note:** The application is configured to prefer the Production models (`AES-DEBERTA`) by default. Running in minimal mode requires adjusting `apps/api-worker/src/config/assessors.json`.
 
 ## Quick Deployment
 
-> [!WARNING]
-> The automated scripts (`./scripts/deploy-all.sh`, `./scripts/deploy-modal.sh`) primarily support the legacy configuration. For a full production deployment, follow the **Step-by-Step Deployment** below.
+> [!TIP]
+> Use the automated scripts (`./scripts/deploy-all.sh`, `./scripts/deploy-modal.sh`) for a quick start. For a full manual deployment, follow the **Step-by-Step Deployment** below.
 
 ## Step-by-Step Deployment
 
@@ -107,16 +107,6 @@ modal deploy app.py
 # Copy the endpoint URL
 ```
 
-#### 2.6 Legacy Scoring (AES-ESSAY) - _Legacy/Fallback_
-
-Required by the API worker configuration unless explicitly disabled, or a placeholder URL is provided.
-
-```bash
-cd services/modal-essay
-modal deploy app.py
-# Copy the endpoint URL
-```
-
 #### 2.7 LanguageTool (GEC-LT) - _Optional_
 
 Rule-based grammar checking.
@@ -153,9 +143,7 @@ wrangler secret put MODAL_GECTOR_URL
 wrangler secret put MODAL_FEEDBACK_URL
 # Paste modal-feedback URL
 
-# Legacy Scorer (Required by config, can be dummy if unused)
-wrangler secret put MODAL_GRADE_URL
-# Paste modal-essay URL
+
 
 # LanguageTool (Optional)
 wrangler secret put MODAL_LT_URL

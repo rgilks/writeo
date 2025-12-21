@@ -22,8 +22,8 @@ See [Testing Guide](testing.md) for details on hook features including quick mod
 ## Deployment Scripts
 
 - `setup.sh` - Initial Cloudflare resource setup (R2 bucket, KV namespace)
-- `deploy-all.sh` - **Legacy**: Deployment script for older configurations.
-- `deploy-modal.sh` - **Legacy**: Deployment script for `modal-essay`.
+- `deploy-all.sh` - Deployment script for the full stack.
+- `deploy-modal.sh` - Deployment script for `modal-deberta` (Primary Scorer).
 
 > [!TIP]
 > For modern production deployment, prefer manual individual service deployment as described in [DEPLOYMENT.md](deployment.md).

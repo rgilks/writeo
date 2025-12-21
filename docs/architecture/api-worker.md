@@ -276,7 +276,7 @@ Timings tracked:
 ├─ 1c_auto_create_entities
 ├─ 4_load_data_from_r2
 ├─ 5_parallel_services_total
-│  ├─ 5a_essay_fetch (Legacy)
+
 │  ├─ 5b_languagetool_fetch
 │  ├─ 5c_relevance_fetch
 │  ├─ 5d_ai_assessment_fetch
@@ -448,12 +448,12 @@ API Worker
 
 ### Service Details
 
-| Service                | Purpose                            | Endpoint          | Authentication    |
-| ---------------------- | ---------------------------------- | ----------------- | ----------------- |
-| **Modal Services**     | General assessment (Scorers, GEC)  | `MODAL_GRADE_URL` | API key in header |
-| **Modal LanguageTool** | Grammar and style checking         | `MODAL_LT_URL`    | API key in header |
-| **OpenAI API**         | LLM assessment & feedback          | `api.openai.com`  | `OPENAI_API_KEY`  |
-| **Groq API**           | LLM assessment & feedback (faster) | `api.groq.com`    | `GROQ_API_KEY`    |
+| Service                | Purpose                            | Endpoint            | Authentication    |
+| ---------------------- | ---------------------------------- | ------------------- | ----------------- |
+| **Modal Services**     | General assessment (Scorers, GEC)  | `MODAL_DEBERTA_URL` | API key in header |
+| **Modal LanguageTool** | Grammar and style checking         | `MODAL_LT_URL`      | API key in header |
+| **OpenAI API**         | LLM assessment & feedback          | `api.openai.com`    | `OPENAI_API_KEY`  |
+| **Groq API**           | LLM assessment & feedback (faster) | `api.groq.com`      | `GROQ_API_KEY`    |
 
 ---
 
@@ -538,7 +538,7 @@ All errors follow this format:
 Required:
 
 - `API_KEY`: Admin API key
-- `MODAL_GRADE_URL`: Essay assessment service URL
+- `MODAL_DEBERTA_URL`: Essay assessment service URL
 - `OPENAI_API_KEY` or `GROQ_API_KEY`: LLM provider key
 
 Optional:

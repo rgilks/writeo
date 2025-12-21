@@ -58,7 +58,7 @@ export const sharedComponents = {
         id: {
           type: "string",
           description: "Assessor identifier",
-          example: "AES-ESSAY",
+          example: "AES-DEBERTA",
         },
         name: {
           type: "string",
@@ -217,7 +217,7 @@ export const sharedComponents = {
             type: "string",
           },
           description: "List of assessors requested by the client",
-          example: ["AES-ESSAY", "GEC-LT"],
+          example: ["AES-DEBERTA", "GEC-LT"],
         },
         activeAssessors: {
           type: "array",
@@ -225,7 +225,7 @@ export const sharedComponents = {
             type: "string",
           },
           description: "List of assessors actually run",
-          example: ["AES-ESSAY", "GEC-LT"],
+          example: ["AES-DEBERTA", "GEC-LT"],
         },
         error_message: {
           type: "string",

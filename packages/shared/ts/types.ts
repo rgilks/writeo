@@ -201,7 +201,6 @@ export function isValidUUID(uuid: string): boolean {
 
 // Utility types for AssessorResult lookups
 export type AssessorResultId =
-  | "AES-ESSAY"
   | "AES-DEBERTA" // DeBERTa-v3-large dimensional scorer
   | "AES-FEEDBACK" // Multi-task feedback model (dev mode)
   | "GEC-LT"
@@ -233,7 +232,7 @@ export function findAssessorResultById(
 
 /**
  * Type-safe helper to get essay assessor result from an array of assessor results.
- * Prioritizes AES-DEBERTA (new model), falls back to AES-ESSAY (legacy).
+ * Prioritizes AES-DEBERTA (new model).
  *
  * @param results - Array of assessor results to search
  * @returns Essay assessor result with guaranteed overall score and dimensions, or undefined if not found
@@ -246,7 +245,7 @@ export function findAssessorResultById(
  */
 export function getEssayAssessorResult(results: AssessorResult[]):
   | (AssessorResult & {
-      id: "AES-ESSAY" | "AES-DEBERTA";
+      id: "AES-DEBERTA";
       overall: number;
       dimensions: NonNullable<AssessorResult["dimensions"]>;
     })
@@ -261,15 +260,6 @@ export function getEssayAssessorResult(results: AssessorResult[]):
     };
   }
 
-  // Fallback to legacy model
-  const essayResult = findAssessorResultById(results, "AES-ESSAY");
-  if (essayResult && essayResult.overall !== undefined && essayResult.dimensions) {
-    return essayResult as AssessorResult & {
-      id: "AES-ESSAY";
-      overall: number;
-      dimensions: NonNullable<AssessorResult["dimensions"]>;
-    };
-  }
   return undefined;
 }
 

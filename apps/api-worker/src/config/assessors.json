@@ -1,6 +1,5 @@
 {
   "scoring": {
-    "essay": false,
     "feedback": false,
     "deberta": true
   },
@@ -13,7 +12,6 @@
   },
 
   "_defaults": {
-    "essay": "AES-ESSAY - Required for dimensional scores (TA, CC, Vocab, Grammar)",
     "feedback": "AES-FEEDBACK - Experimental, incomplete training (OFF by default)",
     "deberta": "AES-DEBERTA - DeBERTa-v3-large with dimensional scoring (New)",
     "languageTool": "GEC-LT - Typos, mechanics, punctuation",

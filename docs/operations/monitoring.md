@@ -27,7 +27,7 @@ You need **different files for different parts**:
   - `MODAL_GEC_URL` - GEC-SEQ2SEQ Service (Grammar)
   - `MODAL_GECTOR_URL` - GEC-GECTOR Service (Fast Grammar)
   - `MODAL_FEEDBACK_URL` - AES-FEEDBACK Service (Experimental)
-  - `MODAL_GRADE_URL` - AES-ESSAY Service (Legacy/Required)
+
   - `MODAL_LT_URL` - LanguageTool Service (Optional)
 
 - **API Worker Config**:
@@ -128,7 +128,7 @@ modal app logs writeo-gector-service  # GEC-GECTOR (Low Latency)
 
 ```bash
 modal app logs writeo-feedback # AES-FEEDBACK (Experimental)
-modal app logs writeo-essay    # AES-ESSAY (Legacy)
+
 modal app logs writeo-lt       # GEC-LT (Legacy)
 ```
 

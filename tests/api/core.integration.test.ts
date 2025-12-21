@@ -422,7 +422,7 @@ describe("API Core Tests", () => {
   });
 
   test.concurrent("modal - health check", async () => {
-    const modalUrl = process.env.MODAL_GRADE_URL;
+    const modalUrl = process.env.MODAL_DEBERTA_URL;
     if (!modalUrl) {
       // Skip test if MODAL_GRADE_URL not set
       return;

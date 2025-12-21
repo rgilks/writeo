@@ -119,8 +119,8 @@ describe("validation utilities", () => {
     it("should return valid for object with status and requestedAssessors", () => {
       const result = validateAssessmentResults({
         status: "success",
-        requestedAssessors: ["AES-ESSAY"],
-        activeAssessors: ["AES-ESSAY"],
+        requestedAssessors: ["AES-DEBERTA"],
+        activeAssessors: ["AES-DEBERTA"],
       });
       expect(result.isValid).toBe(true);
       expect(result.error).toBeNull();
@@ -129,8 +129,8 @@ describe("validation utilities", () => {
     it("should return valid for object with additional properties", () => {
       const result = validateAssessmentResults({
         status: "success",
-        requestedAssessors: ["AES-ESSAY"],
-        activeAssessors: ["AES-ESSAY"],
+        requestedAssessors: ["AES-DEBERTA"],
+        activeAssessors: ["AES-DEBERTA"],
         results: { parts: [] },
         meta: {},
       });
@@ -178,8 +178,8 @@ describe("validation utilities", () => {
         submissionId: "test-id",
         results: {
           status: "success",
-          requestedAssessors: ["AES-ESSAY"],
-          activeAssessors: ["AES-ESSAY"],
+          requestedAssessors: ["AES-DEBERTA"],
+          activeAssessors: ["AES-DEBERTA"],
         },
       });
       expect(result.isValid).toBe(true);

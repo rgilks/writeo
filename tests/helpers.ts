@@ -93,7 +93,7 @@ export async function createSubmission(
       },
     ],
     // Request standard assessors that tests expect (matching frontend behavior)
-    assessors: ["AES-ESSAY", "GEC-LT", "AI-FEEDBACK", "TEACHER-FEEDBACK"],
+    assessors: ["AES-DEBERTA", "GEC-LT", "AI-FEEDBACK", "TEACHER-FEEDBACK"],
     storeResults,
   });
 

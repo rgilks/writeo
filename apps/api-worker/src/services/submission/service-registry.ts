@@ -62,7 +62,6 @@ export const ASSESSOR_IDS = {
   FEEDBACK: "AES-FEEDBACK",
   GEC: "GEC-SEQ2SEQ",
   GECTOR: "GEC-GECTOR",
-  ESSAY: "AES-ESSAY",
   LT: "GEC-LT",
   DEBERTA: "AES-DEBERTA",
 } as const;
@@ -224,48 +223,7 @@ export const ASSESSOR_REGISTRY: AssessorDefinition[] = [
   // -------------------------------------------------------------------------
   // Essay & Legacy Services
   // -------------------------------------------------------------------------
-  {
-    assessorId: ASSESSOR_IDS.ESSAY,
-    id: "essay",
-    displayName: "Standard Essay Scorer",
-    type: "grader",
-    configPath: "features.assessors.scoring.essay",
-    timingKey: "5a_essay_fetch",
-    model: "roberta-base", // approximating main model
-    createRequest: async (text, modal, answerId) => {
-      // Construct a single-answer ModalRequest for this specific text
-      return modal.gradeEssay({
-        submission_id: "temp-sub-id",
-        parts: [
-          {
-            part: 1,
-            answers: [
-              {
-                id: answerId,
-                question_id: "q1",
-                question_text: "",
-                answer_text: text,
-              },
-            ],
-          },
-        ],
-        assessors: [],
-      } as any);
-    },
-    parseResponse: (json) => {
-      // Extract the first answer's result from the batch response
-      // json is AssessmentResults { results: { parts: [...] } }
-      const res = json as any;
-      const part = res.results?.parts?.[0];
-      const answer = part?.answers?.[0];
-      const essayResult = answer?.assessorResults?.find((ar: any) => ar.id === "AES-ESSAY");
-      return essayResult || null;
-    },
-    createAssessor: (data) => {
-      // data is already the AssessorResult extracted above
-      return data as AssessorResult;
-    },
-  },
+
   {
     assessorId: ASSESSOR_IDS.LT,
     id: "lt",

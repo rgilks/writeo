@@ -30,26 +30,26 @@ Writeo supports multiple LLM providers for AI-powered feedback. This document pr
 
 Assessors are configured via `apps/api-worker/src/config/assessors.json`. Defaults optimize for cost:
 
-| Assessor     | Default | Cost Impact | Notes                          |
-| ------------ | ------- | ----------- | ------------------------------ |
-| AES-DEBERTA  | ✅ ON   | ~$0.0003    | Default high-accuracy scorer   |
-| AES-ESSAY    | ❌ OFF  | ~$0.0001    | Legacy (deprecated)            |
-| GEC-SEQ2SEQ  | ✅ ON   | ~$0.0001    | Best GEC (precise diffs, slow) |
-| GEC-GECTOR   | ✅ ON   | ~$0.00008   | Fast GEC (~10x faster)         |
-| GEC-LT       | ✅ ON   | ~$0.0001    | Typos, mechanics               |
-| AES-FEEDBACK | ❌ OFF  | ~$0.0001    | Experimental                   |
-| GEC-LLM      | ❌ OFF  | ~$0.002     | Expensive, redundant           |
+| Assessor    | Default | Cost Impact | Notes                        |
+| ----------- | ------- | ----------- | ---------------------------- |
+| AES-DEBERTA | ✅ ON   | ~$0.0003    | Default high-accuracy scorer |
+
+| GEC-SEQ2SEQ | ✅ ON | ~$0.0001 | Best GEC (precise diffs, slow) |
+| GEC-GECTOR | ✅ ON | ~$0.00008 | Fast GEC (~10x faster) |
+| GEC-LT | ✅ ON | ~$0.0001 | Typos, mechanics |
+| AES-FEEDBACK | ❌ OFF | ~$0.0001 | Experimental |
+| GEC-LLM | ❌ OFF | ~$0.002 | Expensive, redundant |
 
 **Modal Services Cost Breakdown:**
 
-| Service            | GPU  | Keep-Warm | Cost/Invocation | Notes                         |
-| ------------------ | ---- | --------- | --------------- | ----------------------------- |
-| **modal-deberta**  | A10G | 30s       | ~$0.00030       | DeBERTa-v3 Multi-Head         |
-| **modal-essay**    | T4   | 30s       | ~$0.00008       | Legacy Essay Scoring          |
-| **modal-feedback** | T4   | 30s       | ~$0.00008       | Feedback model (experimental) |
-| **modal-lt**       | CPU  | 30s       | ~$0.00002       | LanguageTool grammar check    |
-| **modal-gec**      | A10G | 30s       | ~$0.00015       | Seq2Seq GEC (Flan-T5, slow)   |
-| **modal-gector**   | T4   | 30s       | ~$0.00008       | GECToR fast (~10x faster)     |
+| Service           | GPU  | Keep-Warm | Cost/Invocation | Notes                 |
+| ----------------- | ---- | --------- | --------------- | --------------------- |
+| **modal-deberta** | A10G | 30s       | ~$0.00030       | DeBERTa-v3 Multi-Head |
+
+| **modal-feedback** | T4 | 30s | ~$0.00008 | Feedback model (experimental) |
+| **modal-lt** | CPU | 30s | ~$0.00002 | LanguageTool grammar check |
+| **modal-gec** | A10G | 30s | ~$0.00015 | Seq2Seq GEC (Flan-T5, slow) |
+| **modal-gector** | T4 | 30s | ~$0.00008 | GECToR fast (~10x faster) |
 
 **GPU Pricing (Modal, as of Q4 2025):**
 

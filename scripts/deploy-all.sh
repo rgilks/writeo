@@ -37,7 +37,7 @@ echo ""
 MODAL_OUTPUT=$(./scripts/deploy-modal.sh 2>&1)
 echo "$MODAL_OUTPUT"
 
-# Extract Modal URL from output (look for https://...--writeo-essay-fastapi-app.modal.run or similar)
+# Extract Modal URL from output (look for https://...--writeo-deberta-debertaservice-fastapi-app.modal.run or similar)
 # Use sed for macOS compatibility (grep -P not available on macOS)
 MODAL_URL=$(echo "$MODAL_OUTPUT" | grep -o 'https://[^[:space:]]*--writeo-.*-fastapi-app\.modal\.run' | head -1)
 
@@ -56,9 +56,9 @@ fi
 
 echo ""
 echo "=== Step 2: Configure Secrets ==="
-echo "Setting MODAL_GRADE_URL secret for API worker..."
+echo "Setting MODAL_DEBERTA_URL secret for API worker..."
 cd apps/api-worker
-echo "$MODAL_URL" | $WRANGLER_CMD secret put MODAL_GRADE_URL
+echo "$MODAL_URL" | $WRANGLER_CMD secret put MODAL_DEBERTA_URL
 cd ../..
 
 echo ""

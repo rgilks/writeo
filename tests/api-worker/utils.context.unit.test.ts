@@ -7,8 +7,8 @@ import { getServices } from "../../apps/api-worker/src/utils/context";
 import { createContext } from "./helpers";
 
 describe("getServices", () => {
-  const mockR2 = {} as R2Bucket;
-  const mockKv = {} as KVNamespace;
+  const mockR2 = {} as any;
+  const mockKv = {} as any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -18,7 +18,7 @@ describe("getServices", () => {
     const c = createContext({
       env: {
         API_KEY: "test-key",
-        MODAL_GRADE_URL: "https://modal.example.com/grade",
+        MODAL_DEBERTA_URL: "https://modal.example.com/deberta",
         WRITEO_DATA: mockR2,
         WRITEO_RESULTS: mockKv,
         OPENAI_API_KEY: "openai-key",
@@ -38,7 +38,7 @@ describe("getServices", () => {
       env: {
         WRITEO_DATA: mockR2,
         WRITEO_RESULTS: mockKv,
-        // Missing API_KEY and MODAL_GRADE_URL - should throw
+        // Missing API_KEY and MODAL_DEBERTA_URL - should throw
       } as any,
     };
 

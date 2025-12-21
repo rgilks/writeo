@@ -118,7 +118,7 @@ describe("API Feedback Tests", () => {
     const firstPart = json.results.parts[0];
     const firstAnswer = firstPart.answers[0];
     const assessorResults = firstAnswer.assessorResults || [];
-    const essayAssessor = assessorResults.find((a: any) => a.id === "AES-ESSAY");
+    const debertaAssessor = assessorResults.find((a: any) => a.id === "AES-DEBERTA");
     const ltAssessor = assessorResults.find((a: any) => a.id === "GEC-LT");
 
     const requestBody: any = {
@@ -127,12 +127,12 @@ describe("API Feedback Tests", () => {
       questionText,
     };
 
-    if (essayAssessor || ltAssessor) {
+    if (debertaAssessor || ltAssessor) {
       requestBody.assessmentData = {
-        essayScores: essayAssessor
+        essayScores: debertaAssessor
           ? {
-              overall: essayAssessor.overall,
-              dimensions: essayAssessor.dimensions,
+              overall: debertaAssessor.overall,
+              dimensions: debertaAssessor.dimensions,
             }
           : undefined,
         ltErrors: ltAssessor?.errors || undefined,
@@ -231,7 +231,7 @@ describe("API Feedback Tests", () => {
     const firstPart = json.results.parts[0];
     const firstAnswer = firstPart.answers[0];
     const assessorResults = firstAnswer.assessorResults || [];
-    const essayAssessor = assessorResults.find((a: any) => a.id === "AES-ESSAY");
+    const debertaAssessor = assessorResults.find((a: any) => a.id === "AES-DEBERTA");
     const ltAssessor = assessorResults.find((a: any) => a.id === "GEC-LT");
     const llmAssessor = assessorResults.find((a: any) => a.id === "GEC-LLM");
     const relevanceAssessor = assessorResults.find((a: any) => a.id === "RELEVANCE-CHECK");
@@ -243,12 +243,12 @@ describe("API Feedback Tests", () => {
       questionText,
     };
 
-    if (essayAssessor || ltAssessor || llmAssessor || relevanceAssessor) {
+    if (debertaAssessor || ltAssessor || llmAssessor || relevanceAssessor) {
       requestBody.assessmentData = {
-        essayScores: essayAssessor
+        essayScores: debertaAssessor
           ? {
-              overall: essayAssessor.overall,
-              dimensions: essayAssessor.dimensions,
+              overall: debertaAssessor.overall,
+              dimensions: debertaAssessor.dimensions,
             }
           : undefined,
         ltErrors: ltAssessor?.errors || undefined,

@@ -8,7 +8,6 @@ export type Env = {
   WRITEO_RESULTS: KVNamespace;
 
   // External service URLs
-  MODAL_GRADE_URL: string;
   MODAL_LT_URL?: string;
   MODAL_FEEDBACK_URL?: string; // AES-FEEDBACK model service (dev mode)
   MODAL_GEC_URL?: string; // GEC-SEQ2SEQ model service (dev mode)

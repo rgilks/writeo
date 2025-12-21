@@ -12,7 +12,6 @@ import assessorConfig from "../config/assessors.json";
 /** Assessor configuration loaded from config/assessors.json */
 export interface AssessorConfig {
   scoring: {
-    essay: boolean;
     feedback: boolean;
     deberta: boolean;
   };
@@ -30,7 +29,6 @@ export interface AppConfig {
     testKey?: string;
   };
   modal: {
-    gradeUrl: string;
     ltUrl?: string;
     feedbackUrl: string; // AES-FEEDBACK service URL
     gecUrl: string; // GEC-SEQ2SEQ service URL
@@ -98,16 +96,17 @@ export function buildConfig(env: Env): AppConfig {
       testKey: env.TEST_API_KEY,
     },
     modal: {
-      gradeUrl: requireEnv("MODAL_GRADE_URL", env.MODAL_GRADE_URL),
       ltUrl: env.MODAL_LT_URL,
       feedbackUrl:
         env.MODAL_FEEDBACK_URL || "https://rob-gilks--writeo-feedback-fastapi-app.modal.run",
       gecUrl: env.MODAL_GEC_URL || "https://rob-gilks--writeo-gec-service-fastapi-app.modal.run",
       gectorUrl:
         env.MODAL_GECTOR_URL || "https://rob-gilks--writeo-gector-service-fastapi-app.modal.run",
-      debertaUrl:
+      debertaUrl: requireEnv(
+        "MODAL_DEBERTA_URL",
         env.MODAL_DEBERTA_URL ||
-        "https://rob-gilks--writeo-deberta-debertaservice-fastapi-app.modal.run",
+          "https://rob-gilks--writeo-deberta-debertaservice-fastapi-app.modal.run",
+      ),
     },
     llm: buildLLMConfig(env),
     storage: {
@@ -124,7 +123,6 @@ export function buildConfig(env: Env): AppConfig {
       // Edit that file to enable/disable assessors
       assessors: {
         scoring: {
-          essay: assessorConfig.scoring.essay,
           feedback: assessorConfig.scoring.feedback,
           deberta: (assessorConfig.scoring as any).deberta ?? false,
         },

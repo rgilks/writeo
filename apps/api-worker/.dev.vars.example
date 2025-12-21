@@ -13,9 +13,9 @@ TEST_API_KEY=your-test-api-key-here
 # Set to "true" to use mock implementations for Modal and LLM services
 USE_MOCK_SERVICES=true
 
-# Modal Essay Scoring service URL
-# Get this after deploying: cd services/modal-essay && modal deploy app.py
-MODAL_GRADE_URL=https://your-username--writeo-essay-fastapi-app.modal.run
+# Modal DeBERTa Scoring service URL
+# Get this after deploying: cd services/modal-deberta && modal deploy app.py
+MODAL_DEBERTA_URL=https://your-username--writeo-deberta-debertaservice-fastapi-app.modal.run
 
 # Optional: Modal LanguageTool service URL
 # Get this after deploying: cd services/modal-lt && modal deploy app.py

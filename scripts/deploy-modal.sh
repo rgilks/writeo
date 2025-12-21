@@ -30,7 +30,7 @@ fi
 
 echo "✓ Authenticated"
 
-cd services/modal-essay
+cd services/modal-deberta
 
 echo ""
 echo "Deploying Modal service..."
@@ -49,7 +49,7 @@ echo "   modal secret create MODAL_API_KEY <your-api-key>"
 echo ""
 echo "2. Copy the endpoint URL above and set it as a Cloudflare Worker secret:"
 echo "   cd apps/api-worker"
-echo "   wrangler secret put MODAL_GRADE_URL"
+echo "   wrangler secret put MODAL_DEBERTA_URL"
 echo "   (paste the endpoint URL when prompted)"
 echo ""
 echo "Note: The Modal service requires MODAL_API_KEY to be set. Use the same"

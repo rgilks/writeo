@@ -23,14 +23,14 @@ check_command() {
 run_format() {
     echo "${GREEN}Formatting Python code with ruff...${NC}"
     check_command ruff
-    ruff format services/modal-essay services/modal-lt packages/shared/py
+    ruff format services/modal-deberta services/modal-lt packages/shared/py
     echo "${GREEN}✓ Formatting complete${NC}"
 }
 
 run_format_check() {
     echo "${GREEN}Checking Python code formatting...${NC}"
     check_command ruff
-    if ruff format --check services/modal-essay services/modal-lt packages/shared/py; then
+    if ruff format --check services/modal-deberta services/modal-lt packages/shared/py; then
         echo "${GREEN}✓ Formatting check passed${NC}"
     else
         echo "${RED}✗ Formatting check failed. Run 'npm run format:py' to fix.${NC}"
@@ -41,7 +41,7 @@ run_format_check() {
 run_lint() {
     echo "${GREEN}Linting Python code with ruff...${NC}"
     check_command ruff
-    if ruff check services/modal-essay services/modal-lt packages/shared/py; then
+    if ruff check services/modal-deberta services/modal-lt packages/shared/py; then
         echo "${GREEN}✓ Linting passed${NC}"
     else
         echo "${RED}✗ Linting failed${NC}"
@@ -55,9 +55,9 @@ run_type_check() {
     
     ERRORS=0
     
-    if [ -d "services/modal-essay" ]; then
-        echo "${YELLOW}Checking services/modal-essay...${NC}"
-        if ! mypy services/modal-essay --config-file services/modal-essay/pyproject.toml; then
+    if [ -d "services/modal-deberta" ]; then
+        echo "${YELLOW}Checking services/modal-deberta...${NC}"
+        if ! mypy services/modal-deberta --config-file services/modal-deberta/pyproject.toml; then
             ERRORS=$((ERRORS + 1))
         fi
     fi

@@ -60,11 +60,11 @@ function extractEssayAssessorResults(
     return [];
   }
 
-  // Check if we have the essay assessor (AES-ESSAY)
-  const essayAssessor = assessorResults.find((ar) => ar.id === "AES-ESSAY");
+  // Check if we have the essay assessor (AES-DEBERTA)
+  const essayAssessor = assessorResults.find((ar) => ar.id === "AES-DEBERTA");
   if (!essayAssessor) {
     console.warn(
-      `[merge-results] Essay answer ${firstAnswer?.id} missing AES-ESSAY assessor - essay scores will be missing`,
+      `[merge-results] Essay answer ${firstAnswer?.id} missing AES-DEBERTA assessor - essay scores will be missing`,
       {
         answerId: firstAnswer?.id,
         availableAssessorIds: assessorResults.map((ar) => ar.id),

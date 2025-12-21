@@ -19,7 +19,7 @@ info:
     - **Edge API**: Cloudflare Workers for low-latency global access
     - **Storage**: R2 bucket for questions/answers/submissions, KV namespace for results
     - **ML Service**: Modal-hosted FastAPI service with transformer models for essay scoring
-    - **Models**: Multiple scoring models available (engessay, distilbert, fallback)
+    - **Models**: Multiple scoring models available (deberta-v3-large, flan-t5-base, roberta-base)
 
     ## Authentication
 
@@ -59,8 +59,8 @@ info:
 servers:
   - url: https://your-api-worker.workers.dev
     description: Production Text API server (configure via API_BASE_URL)
-  - url: https://your-username--writeo-essay-fastapi-app.modal.run
-    description: Production Essay Scorer API server (configure via MODAL_GRADE_URL)
+  - url: https://your-username--writeo-deberta-debertaservice-fastapi-app.modal.run
+    description: Production Essay Scorer API server (configure via MODAL_DEBERTA_URL)
   - url: http://localhost:8787
     description: Local Text API development server
 

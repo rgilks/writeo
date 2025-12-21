@@ -53,15 +53,6 @@ Primary scorer providing multi-dimensional breakdown. This is the recommended sc
 cd services/modal-deberta && modal deploy app.py
 ```
 
-### 2. Legacy Essay Service (`modal-essay`)
-
-**Location:** `services/modal-essay/`
-
-Original baseline scorer.
-
-- **Model:** `engessay` (KevSun/Engessay_grading_ML)
-- **Status:** Legacy / Fallback
-
 ---
 
 ## Modal Grammar Services (GEC)

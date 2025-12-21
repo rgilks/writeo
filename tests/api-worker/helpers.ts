@@ -48,9 +48,9 @@ export function createContext(options: CreateContextOptions = {}): Context<{ Bin
     },
     env: {
       API_KEY: "test-admin-key",
-      MODAL_GRADE_URL: "https://modal.example.com/grade",
-      WRITEO_DATA: {} as R2Bucket,
-      WRITEO_RESULTS: {} as KVNamespace,
+      MODAL_DEBERTA_URL: "https://modal.example.com/deberta",
+      WRITEO_DATA: {} as any,
+      WRITEO_RESULTS: {} as any,
       OPENAI_API_KEY: "test-openai-key",
       ...env,
     } as Env,
