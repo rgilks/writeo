@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'services/modal-essay/**'
+      - 'services/modal-deberta/**'
       - 'services/modal-lt/**'
       - 'services/modal_gec/**'
       - 'packages/shared/py/**'
@@ -15,10 +15,10 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      modal-essay: ${{ steps.changes.outputs.modal-essay }}
+      modal-deberta: ${{ steps.changes.outputs.modal-deberta }}
       modal-lt: ${{ steps.changes.outputs.modal-lt }}
       modal-gec: ${{ steps.changes.outputs.modal-gec }}
-      modal-corpus: ${{ steps.changes.outputs.modal-corpus }}
+
       modal-feedback: ${{ steps.changes.outputs.modal-feedback }}
       modal-gector: ${{ steps.changes.outputs.modal-gector }}
     steps:
@@ -32,10 +32,10 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Manual trigger - deploy all services
-            echo "modal-essay=true" >> $GITHUB_OUTPUT
+            echo "modal-deberta=true" >> $GITHUB_OUTPUT
             echo "modal-lt=true" >> $GITHUB_OUTPUT
             echo "modal-gec=true" >> $GITHUB_OUTPUT
-            echo "modal-corpus=true" >> $GITHUB_OUTPUT
+
             echo "modal-feedback=true" >> $GITHUB_OUTPUT
             echo "modal-gector=true" >> $GITHUB_OUTPUT
           else
@@ -45,11 +45,11 @@ jobs:
               BASE_SHA="HEAD^1"
             fi
             
-            # Check for changes in modal-essay
-            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-essay/|^packages/shared/py/"; then
-              echo "modal-essay=true" >> $GITHUB_OUTPUT
+            # Check for changes in modal-deberta
+            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-deberta/|^packages/shared/py/"; then
+              echo "modal-deberta=true" >> $GITHUB_OUTPUT
             else
-              echo "modal-essay=false" >> $GITHUB_OUTPUT
+              echo "modal-deberta=false" >> $GITHUB_OUTPUT
             fi
             
             # Check for changes in modal-lt
@@ -66,12 +66,7 @@ jobs:
               echo "modal-gec=false" >> $GITHUB_OUTPUT
             fi
 
-            # Check for changes in modal-corpus
-            if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-corpus/|^packages/shared/py/"; then
-              echo "modal-corpus=true" >> $GITHUB_OUTPUT
-            else
-              echo "modal-corpus=false" >> $GITHUB_OUTPUT
-            fi
+
 
             # Check for changes in modal-feedback
             if git diff --name-only "$BASE_SHA" "${{ github.sha }}" | grep -qE "^services/modal-feedback/|^packages/shared/py/"; then
@@ -88,9 +83,9 @@ jobs:
             fi
           fi
 
-  deploy-modal-essay:
+  deploy-modal-deberta:
     needs: detect-changes
-    if: needs.detect-changes.outputs.modal-essay == 'true'
+    if: needs.detect-changes.outputs.modal-deberta == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -117,18 +112,18 @@ jobs:
           # Modal CLI automatically uses MODAL_TOKEN_ID and MODAL_TOKEN_SECRET env vars
           modal app list > /dev/null || echo "Authentication check complete"
 
-      - name: Deploy Modal Essay Service
-        working-directory: services/modal-essay
+      - name: Deploy Modal DeBERTa Service
+        working-directory: services/modal-deberta
         env:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
-          echo "Deploying Modal Essay service..."
+          echo "Deploying Modal DeBERTa service..."
           modal deploy app.py
 
       - name: Extract Modal URL
         id: extract-url
-        working-directory: services/modal-essay
+        working-directory: services/modal-deberta
         run: |
           # Modal deploy outputs the URL, but we need to capture it
           # This is a best-effort extraction - the URL will be in the logs
@@ -224,42 +219,7 @@ jobs:
           echo "Deploying Modal GEC service..."
           modal deploy main.py
 
-  deploy-modal-corpus:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.modal-corpus == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Install Modal CLI
-        run: uv pip install --system modal
-
-      - name: Authenticate with Modal
-        env:
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: |
-          modal app list > /dev/null || echo "Authentication check complete"
-
-      - name: Deploy Modal Corpus Service
-        working-directory: services/modal-corpus
-        env:
-          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
-          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
-        run: |
-          echo "Deploying Modal Corpus service..."
-          modal deploy app.py
 
   deploy-modal-feedback:
     needs: detect-changes
