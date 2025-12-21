@@ -53,7 +53,9 @@ def load_model_from_path(path: str) -> tuple[ModelType, TokenizerType]:
     print(f"⚙️  Using device: {device}, dtype: {dtype}")
 
     # Initialize model structure
-    model = DeBERTaAESModel(model_name=path)  # Use local config from path
+    # Initialize model structure with base config to ensure correct architecture (1024 vs 1536 mismatch fix)
+    # We ignore the local config.json which might be incorrect
+    model = DeBERTaAESModel(model_name="microsoft/deberta-v3-large")
 
     # Load state dict
     state_dict_path = os.path.join(path, "pytorch_model.bin")
